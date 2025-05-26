@@ -16,6 +16,9 @@ RUN npm ci --omit=dev
 # 5. Копируем остальные файлы проекта
 COPY . .
 
+# Указываем Node.js, где искать модули (для поддержки baseUrl из tsconfig.json)
+ENV NODE_PATH=./
+
 # 6. Собираем Next.js приложение
 RUN npm run build
 
