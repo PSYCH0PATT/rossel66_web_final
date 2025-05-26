@@ -1,0 +1,1268 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Обновляем цветовую схему на изумрудный и лазурный */
+:root {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 160 64% 40%; /* изумрудный */
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 195 70% 50%; /* лазурный */
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 160 64% 40%; /* изумрудный */
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 160 64% 40%; /* изумрудный */
+  --content-scale: 1; /* Переменная для масштабирования контента */
+}
+
+/* Стили для масштабируемого контейнера */
+.scaled-content {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Убираем старые стили масштабирования */
+.navbar-fixed {
+  transform: none;
+  transform-origin: initial;
+}
+
+.scale-container {
+  transform: none;
+  transform-origin: initial;
+}
+
+/* Стили для масштабируемого контента */
+.content-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: center top;
+  transition: transform 0.3s ease;
+}
+
+/* Обертка для контента с фиксированной шириной */
+.content-wrapper {
+  position: relative;
+  margin: 0 auto;
+  overflow: visible;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Стили для фиксированного навбара */
+.fixed-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  transform: none !important;
+  display: flex;
+  justify-content: center;
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.fixed-navbar > div {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Фиксированные размеры для контейнеров секций */
+.container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
+}
+
+/* Удаляем сетку на фоне */
+.bg-grid-white\/\[0\.02\] {
+  background-size: 30px 30px;
+  background-image: none; /* Убираем сетку полностью */
+}
+
+/* Добавляем класс для звездного фона без сетки */
+.bg-stars {
+  background-color: black;
+  background-image: radial-gradient(white, rgba(255, 255, 255, 0.2) 2px, transparent 2px);
+  background-size: 100px 100px;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+
+/* Анимация переливающегося градиента для партнеров */
+@keyframes partner-gradient-flow {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.3;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.5;
+  }
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.3;
+  }
+}
+
+.partner-gradient {
+  background: linear-gradient(
+    -45deg,
+    rgba(16, 185, 129, 0.2),
+    rgba(6, 182, 212, 0.2),
+    rgba(16, 185, 129, 0.2),
+    rgba(6, 182, 212, 0.2)
+  );
+  background-size: 400% 400%;
+  animation: partner-gradient-flow 8s ease infinite;
+  border-radius: 1rem;
+}
+
+/* Стили для snap scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+body:not(.disable-snap) {
+  scroll-snap-type: y mandatory;
+
+/* Стили для секций */
+section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+
+/* Исправляем конфликт с псевдоэлементами */
+/* Добавляем индикатор для margin между секциями */
+section:not(#footer) {
+  position: relative;
+}
+
+section:not(#footer) .margin-indicator {
+  display: none;
+}
+
+/* Добавляем дополнительные индикаторы для верхнего и нижнего padding */
+.padding-top-border {
+  display: none;
+}
+
+.padding-bottom-border {
+  display: none;
+}
+
+/* Добавляем вертикальные линии по бокам для лучшей визуализации */
+.section-side-borders {
+  display: none;
+}
+
+.section-side-borders.left {
+  left: 0;
+}
+
+.section-side-borders.right {
+  right: 0;
+
+/* Добавляем адаптивные отступы между секциями при меньшей высоте экрана */
+@media (max-height: 1080px) {
+  section {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding: 60px 0;
+  margin-bottom: 40px; */
+  }
+}
+
+@media (max-height: 900px) {
+  section {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding: 120px 0;
+  margin-bottom: 90px; */
+  }
+}
+
+@media (max-height: 768px) {
+  section {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding: 100px 0;
+  margin-bottom: 80px; */
+  }
+}
+
+/* Первая секция (hero) не нуждается в отступе сверху */
+section#hero {
+  /* Базовый отступ будет установлен через JS */
+  margin-top: 0;
+}
+
+@media (max-height: 1080px) {
+  section#hero {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding-top: 60px; */
+  }
+}
+
+@media (max-height: 900px) {
+  section#hero {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding-top: 80px; */
+  }
+}
+
+@media (max-height: 768px) {
+  section#hero {
+    /* Удаляем фиксированные значения, они будут установлены через JS */
+    /* padding-top: 100px; */
+  }
+}
+
+/* Последняя секция (footer) не нуждается в отступе снизу */
+section#footer {
+  margin-bottom: 0;
+
+/* Обеспечиваем, чтобы контент был центрирован */
+section > div {
+  position: relative;
+  z-index: 2;
+  margin-top: var(--section-padding-top, 0);
+  margin-bottom: var(--section-padding-bottom, 0);
+  width: 100%;
+  max-width: 1200px; /* Изменено с 1920px на 1200px */
+  margin: 0 auto;
+  padding: 0 20px; /* Добавляем отступы по бокам */
+}
+
+.snap-start {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding-top: 5rem; /* Добавляем отступ сверху для всех секций */
+}
+
+/* Стили для прокрутки внутри блока */
+#services > div {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+}
+
+#services > div::-webkit-scrollbar {
+  width: 6px;
+}
+
+#services > div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#services > div::-webkit-scrollbar-thumb {
+  background-color: rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+}
+
+/* Убедимся, что snap работает правильно */
+.snap-y.snap-mandatory {
+  scroll-snap-type: y mandatory;
+}
+
+body.disable-snap .snap-y.snap-mandatory {
+  scroll-snap-type: none;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Стеклянные карточки */
+/* Улучшенная анимация для карточек артистов */
+.glass-card,
+.artist-card {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+  transform-origin: center center;
+}
+
+.glass-card:hover,
+.artist-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(16, 185, 129, 0.15);
+  z-index: 10;
+}
+
+/* Специальные стили для карточек артистов */
+.artist-card {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  height: 100%;
+}
+
+/* Диагональные линии */
+.diagonal-lines {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100px 100px;
+  transform: rotate(-10deg);
+  z-index: -1;
+}
+
+/* Цвета меню для разных секций */
+.nav-transparent {
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.nav-emerald {
+  background-color: rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.nav-cyan {
+  background-color: rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Добавляем новый класс для затемненного состояния при открытом меню */
+.nav-dark {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Анимация счетчика */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-count-up {
+  animation: countUp 0.5s ease-out forwards;
+
+/* Улучшенная адаптивность для центрирования */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Улучшенная адаптивность для секций */
+
+/* Добавим стили для эффекта свечения при наведении на карточки артистов */
+/* Добавьте эти стили в конец файла */
+
+/* Улучшенный эффект свечения для карточек */
+.glass-card.bg-emerald-500\/20:hover,
+.artist-card.bg-emerald-500\/20:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.glass-card.bg-cyan-500\/20:hover,
+.artist-card.bg-cyan-500\/20:hover {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
+/* Улучшенная читаемость текста на карточках */
+.glass-card p,
+.artist-card p {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card h3,
+.artist-card h3 {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Стили для группы hover */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1;
+}
+
+/* Добавим стиль для grid с автоматическим выравниванием строк */
+.auto-rows-fr {
+  grid-auto-rows: 1fr;
+}
+
+/* Добавляем стили для центрирования формы */
+#contact-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 2xl;
+  margin: 0 auto;
+}
+
+/* Обеспечиваем, чтобы все секции имели достаточный отступ от меню */
+section {
+  padding-top: 5rem;
+
+/* Первая секция (hero) не нуждается в отступе */
+section#hero {
+  padding-top: 0;
+}
+
+/* Стили для плавной прокрутки */
+html,
+body {
+  overflow: hidden;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+
+/* Отключаем стандартный scroll-behavior при активной анимации */
+body.animating {
+  scroll-behavior: auto;
+}
+
+.smooth-scroll-container {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+section {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Анимация появления контента */
+section .content {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+section.active .content {
+  opacity: 1;
+  transform: translateY(0);
+
+/* Обновляем стили для навигационных точек */
+.navigation {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+}
+
+.nav-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  margin: 10px 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-dot.active {
+  background-color: rgba(16, 185, 129, 0.8);
+  transform: scale(1.5);
+}
+
+/* Стрелки навигации */
+.scroll-arrow {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  animation: bounce 2s infinite;
+  z-index: 10;
+}
+
+.scroll-arrow::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-bottom: 4px solid rgba(16, 185, 129, 0.8);
+  border-right: 4px solid rgba(16, 185, 129, 0.8);
+  transform: rotate(45deg);
+}
+
+.scroll-arrow.up {
+  bottom: auto;
+  top: 30px;
+}
+
+.scroll-arrow.up::before {
+  transform: rotate(-135deg);
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0) translateX(-50%);
+  }
+  40% {
+    transform: translateY(-10px) translateX(-50%);
+  }
+  60% {
+    transform: translateY(-5px) translateX(-50%);
+  }
+}
+
+/* Анимация фона с пузырями */
+.background-animation {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  animation: float 8s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(0) translateX(20px);
+  }
+  75% {
+    transform: translateY(20px) translateX(10px);
+  }
+}
+
+/* Добавьте следующие стили в конец файла: */
+
+/* Стили для отладки */
+.debug-info {
+  display: none;
+
+/* Убедимся, что секции имеют правильную высоту */
+
+/* Отключаем стандартную прокрутку при активной анимации */
+body.scrolling {
+  overflow: hidden;
+}
+
+/* Стили для навигационных точек */
+.nav-dots {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-dot.active {
+  background-color: rgba(16, 185, 129, 0.8);
+  transform: scale(1.5);
+
+/* Центрирование для всех устройств */
+.flex-center-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Улучшенное центрирование для форм */
+#contact-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Улучшенное центрирование для секций */
+section > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+
+/* Исправление для карточек артистов на маленьких экранах */
+@media (max-width: 768px) {
+  .artist-card .flex-col.md\:flex-row {
+    flex-direction: column !important;
+  }
+
+  .artist-card .md\:w-2\/5,
+  .artist-card .md\:w-3\/5 {
+    width: 100% !important;
+  }
+}
+
+/* Исправление для слайдера партнеров на маленьких экранах */
+@media (max-width: 640px) {
+  .slider {
+    height: auto !important;
+  }
+
+  .slider .list .item {
+    width: 120px !important;
+    height: 50px !important;
+  }
+}
+
+/* Стили для масштабирования навигационных точек */
+.navigation {
+  transform: scale(calc(1 / var(--content-scale)));
+  transform-origin: right center;
+
+/* Стили для масштабирования навбара */
+
+/* Добавим стили для масштабируемых секций */
+.scaled-section {
+  transform-origin: center center;
+  transition: transform 0.3s ease;
+}
+
+/* Компенсация для масштабированных секций */
+.scaled-section-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Адаптивность для разных экранов */
+@media (max-width: 1200px) {
+  .content-wrapper {
+    width: 100%;
+  }
+}
+
+/* Исправление для центрирования контента */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Исправляем отступ для первой секции */
+section#hero {
+  padding-top: 0;
+}
+
+/* Исправляем стили для сеток */
+.grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Исправляем проблему с обрезанием контента при масштабировании */
+.content-container {
+  overflow: visible !important;
+}
+
+.content-wrapper {
+  overflow: visible !important;
+
+section {
+  overflow: visible !important;
+
+/* Добавляем стили для масштабирования в конец файла */
+
+/* Стили для масштабируемого контейнера */
+.scalable-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.scalable-content {
+  transform-origin: center top;
+  transition: transform 0.3s ease;
+  overflow: visible !important;
+}
+
+/* Предотвращаем обрезку контента при масштабировании */
+.scalable-content > * {
+  overflow: visible !important;
+}
+
+/* Фиксированные размеры для контейнеров секций */
+.content-wrapper {
+  width: 1200px;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: visible !important;
+}
+
+/* Добавляем стили для индикаторов отступов */
+.padding-indicator-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.2), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.padding-indicator-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to top, rgba(16, 185, 129, 0.2), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.padding-indicator-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.2), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Важно: отключаем трансформацию для секций внутри масштабируемого контейнера */
+.scale-applied section {
+  transform: none !important;
+}
+
+/* Визуализация отступов */
+.padding-visualizer {
+  display: none;
+}
+
+.padding-visualizer-top {
+  display: none;
+}
+
+.padding-visualizer-bottom {
+  display: none;
+}
+
+/* Добавляем индикатор масштаба */
+.scale-indicator {
+  display: none;
+}
+
+/* Улучшаем видимость индикаторов отступов */
+.padding-indicator {
+  display: none;
+}
+
+/* Добавляем стили для спейсеров и индикаторов */
+.padding-spacer {
+  pointer-events: none;
+  transform: none !important; /* Важно: отключаем трансформацию */
+}
+
+.padding-indicator {
+  display: none;
+}
+
+/* Удаляем старые стили, которые могут конфликтовать */
+.padding-spacer-top .padding-indicator {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.padding-spacer-bottom .padding-indicator {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Добавляем стили для контента секций, чтобы учесть спейсеры */
+section > div:not(.padding-spacer) {
+  position: relative;
+  z-index: 2;
+}
+
+/* Стили для мобильных устройств */
+@media (max-width: 767px) {
+  /* Убираем размытие на фоне меню для мобильных устройств */
+  .fixed-navbar {
+    backdrop-filter: none;
+  }
+  
+  /* Но возвращаем размытие для темного состояния */
+  .fixed-navbar.nav-dark {
+    backdrop-filter: blur(12px) !important;
+    background-color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  /* Отключаем фиксированную высоту для секций на мобильных устройствах */
+  section:not(#faq) {
+    height: auto !important;
+    min-height: 100vh;
+  }
+
+  /* Отключаем масштабирование на мобильных устройствах */
+  .scalable-content {
+    transform: none !important;
+  }
+
+  /* Отключаем JS-установленные отступы на мобильных устройствах */
+  section:not(#faq) .padding-spacer {
+    display: none !important;
+  }
+
+  /* Сбрасываем внутренние отступы для секций */
+  section:not(#faq) > div {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Убираем фиксированную высоту для контента секций */
+  section:not(#faq) .container,
+  section:not(#faq) > div:first-child {
+    height: auto !important;
+  }
+
+  /* Сохраняем фиксированную высоту только для секции FAQ */
+  section#faq {
+    height: 100vh;
+  }
+}
+
+/* Добавляем стили для мобильных устройств в конец файла */
+@media (max-width: 767px) {
+  /* Убираем верхние и нижние границы для секций "Услуги" и "Артисты" только на мобильных устройствах */
+  section#services,
+  section#artists {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border: none !important;
+    height: 100vh !important; /* Принудительно устанавливаем высоту 100vh */
+    min-height: 100vh !important;
+    background-color: black !important;
+  }
+
+  /* Убираем отступы у контейнеров внутри этих секций */
+  section#services > div,
+  section#artists > div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border: none !important;
+    height: 100% !important; /* Заполняем родительский контейнер */
+  }
+
+  /* Убираем отступы у мобильных слайдеров */
+  .mobile-services-slider,
+  .mobile-artists-slider {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border: none !important;
+    height: 100vh !important; /* Принудительно устанавливаем высоту 100vh */
+    min-height: 100vh !important;
+    background-color: black !important;
+  }
+
+  /* Убираем зеленые фоновые элементы */
+  .diagonal-lines {
+    display: none !important;
+  }
+
+  /* Убираем все возможные отступы в мобильном слайдере артистов */
+  .mobile-artists-slider,
+  .mobile-artists-slider > div,
+  .mobile-artists-slider > div > div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+  }
+
+  /* Дополнительные селекторы для секции артистов */
+  #artists,
+  #artists * {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+  }
+
+  /* Убираем все возможные отступы в мобильном слайдере артистов */
+  .mobile-artists-slider,
+  .mobile-artists-slider > div,
+  .mobile-artists-slider > div > div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border: none !important;
+    height: 100vh !important; /* Принудительно устанавливаем высоту 100vh */
+  }
+
+  /* Применяем стили к внутренним элементам слайдера артистов */
+  .swiper-container-artists,
+  .swiper-wrapper,
+  .swiper-slide {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    height: 100% !important;
+  }
+}
+
+/* Добавим более специфичные стили для мобильного слайдера артистов */
+@media (max-width: 767px) {
+  /* Стили для мобильного слайдера артистов */
+  .mobile-artists-slider {
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: black !important;
+    overflow: hidden !important;
+  }
+
+  /* Убедимся, что контент слайдера занимает всю высоту */
+  .mobile-artists-slider > div {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  /* Стили для секции артистов */
+  section#artists {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    position: relative !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background-color: black !important;
+  }
+
+  /* Убедимся, что контент внутри слайдера правильно позиционирован */
+  .mobile-artists-slider .relative.z-10.h-full {
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding-top: 15vh !important;
+    padding-bottom: 10vh !important;
+  }
+}
+
+/* Стили для индикаторов ширины секций */
+.section-width-indicator {
+  position: fixed;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* Стили для зеленых линий, отражающих ширину секций */
+.section-border-line {
+  position: fixed;
+  width: 2px;
+  background-color: rgba(16, 185, 129, 0.7);
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* Стили для текста с шириной секции */
+.width-text {
+  position: fixed;
+  z-index: 50;
+  color: rgba(16, 185, 129, 0.9);
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* Добавим стили для скрытия полосы прокрутки и мобильного слайдера */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE и Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari и Opera */
+}
+
+.mobile-slider-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Исправляем стили для мобильных устройств */
+@media (max-width: 767px) {
+  .slider {
+    width: 100% !important;
+    overflow-x: auto !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+
+  .slider .list {
+    display: flex !important;
+    flex-direction: row !important;
+    width: auto !important;
+    min-width: auto !important;
+    overflow-x: auto !important;
+  }
+
+  .slider .list .item {
+    position: relative !important;
+    left: 0 !important;
+    animation: none !important;
+    margin-right: 10px !important;
+  }
+}
+
+/* Добавим стили для слайдера в конец файла, чтобы они имели приоритет над другими стилями */
+
+/* Стили для слайдера партнеров - принудительно горизонтальное расположение */
+.slider {
+  position: relative !important;
+  width: 100% !important;
+  height: var(--height) !important;
+  overflow: hidden !important;
+  mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent) !important;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent) !important;
+}
+
+.slider[reverse="true"] .list {
+  animation-direction: reverse !important;
+}
+
+.slider .list {
+  position: absolute !important;
+  display: flex !important;
+  flex-direction: row !important;
+  width: calc(var(--width) * var(--quantity) * 2) !important;
+  animation: scroll 40s linear infinite !important;
+}
+
+.slider .list .item {
+  position: relative !important;
+  width: var(--width) !important;
+  height: var(--height) !important;
+  margin: 0 10px !important;
+  transition: all 0.3s ease !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.slider .list .item.emerald-border:hover {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+.slider .list .item.cyan-border:hover {
+  border-color: rgba(6, 182, 212, 0.5) !important;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3) !important;
+}
+
+.slider .list .item.grayscale {
+  filter: grayscale(0.8) brightness(0.8) !important;
+}
+
+.slider .list .item.hovered {
+  transform: scale(1.05) !important;
+  z-index: 10 !important;
+}
+
+.slider .list .item.paused {
+  animation-play-state: paused !important;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(var(--width) * var(--quantity) * -1));
+  }
+}
+
+/* Исправление для мобильных устройств */
+@media (max-width: 767px) {
+  .slider .list {
+    display: flex !important;
+    flex-direction: row !important;
+    width: auto !important;
+    min-width: auto !important;
+  }
+  
+  .slider .list .item {
+    position: relative !important;
+    left: 0 !important;
+    flex-shrink: 0 !important;
+    margin-right: 10px !important;
+  }
+}
+}
+
+/* Добавьте в конец файла globals.css */
+
+/* Исправление проблем с обработкой событий */
+.scalable-container {
+  pointer-events: none !important;
+}
+
+.scalable-content {
+  pointer-events: auto !important;
+}
+
+.scalable-content > * {
+  pointer-events: auto !important;
+}
+
+section {
+  pointer-events: auto !important;
+}
+
+/* Исправление для футера */
+section#footer {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Исправление для кнопок и интерактивных элементов */
+button, a, [role="button"], input, select, textarea {
+  pointer-events: auto !important;
+}
+
+/* Исправление для кастомного курсора */
+.custom-cursor {
+  pointer-events: none !important;
+}
+}
