@@ -8,7 +8,7 @@ export default function SectionOverlay() {
   useEffect(() => {
     const updateSectionsInfo = () => {
       const sectionElements = document.querySelectorAll("section")
-      const sectionsData = []
+      const sectionsData: { id: string; rect: DOMRect }[] = []
 
       sectionElements.forEach((section) => {
         const rect = section.getBoundingClientRect()

@@ -1,7 +1,6 @@
 import type React from "react"
-import { ScalableSection } from "../components/ScalableSection"
+import ScalableSection from "../components/ScalableSection"
 import { ScalableLayout } from "../components/ScalableLayout"
-import { StyledScalableSection } from "../components/styled/StyledScalableSection"
 import { ResponsiveScalableSection } from "../components/ResponsiveScalableSection"
 import { useScaling } from "../hooks/useScaling"
 import styles from "./ExamplePage.module.css"
@@ -50,13 +49,6 @@ export const ExamplePage: React.FC = () => {
             <p>Этот контент масштабируется вместе со всей страницей.</p>
           </div>
         </ScalableLayout>
-      </div>
-
-      <h2>3. Styled Components версия</h2>
-      <div className={styles.sectionWrapper}>
-        <StyledScalableSection scaleByWidth={true}>
-          <SectionContent />
-        </StyledScalableSection>
       </div>
 
       <h2>4. Адаптивная секция с сохранением пропорций</h2>
