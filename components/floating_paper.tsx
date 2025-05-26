@@ -5,7 +5,11 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import { memo } from "react"
 
-const FloatingPaper = memo(function FloatingPaper({ count = 6 }) {
+interface FloatingPaperProps {
+  count?: number // Делаем count необязательным, так как есть значение по умолчанию
+}
+
+const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperProps) {
   const dimensionsRef = useRef({ width: 1200, height: 800 })
   const [paperSize, setPaperSize] = useState(39)
   const [papers, setPapers] = useState<
