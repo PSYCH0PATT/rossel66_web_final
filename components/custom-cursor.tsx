@@ -11,7 +11,7 @@ export function CustomCursor() {
     const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
     setIsTouch(isTouchDevice)
 
-    // Если это сенсорное устройство, не создаем каст��мный курсор
+    // Если это сенсорное устройство, не создаем кастмный курсор
     if (isTouchDevice || !cursorRef.current) return
 
     // Создаем круги
@@ -59,11 +59,8 @@ export function CustomCursor() {
 
     const circles = document.querySelectorAll(".cursor-circle") as NodeListOf<HTMLDivElement>
 
-    // Initialize circle positions
-    circles.forEach((circle) => {
-      circle.x = 0
-      circle.y = 0
-    })
+    // Store circle positions separately
+    const circlePositions = Array.from(circles).map(() => ({ x: 0, y: 0 }))
 
     // Track mouse position
     const coords = { x: 0, y: 0 }
@@ -121,12 +118,17 @@ export function CustomCursor() {
 
         circle.style.scale = `${(circles.length - index) / circles.length}`
 
-        circle.x = x
-        circle.y = y
+        // Store position in our array
+        circlePositions[index].x = x
+        circlePositions[index].y = y
 
-        const nextCircle = circles[index + 1] || circles[0]
-        x += (nextCircle.x - x) * 0.3
-        y += (nextCircle.y - y) * 0.3
+        // Use the stored position of the next circle
+        const nextCircleIndex = (index + 1) % circles.length
+        const nextCircleX = circlePositions[nextCircleIndex].x
+        const nextCircleY = circlePositions[nextCircleIndex].y
+        
+        x += (nextCircleX - x) * 0.3
+        y += (nextCircleY - y) * 0.3
       })
 
       animationId = requestAnimationFrame(animateCircles)
