@@ -47,7 +47,8 @@ export default function MobileScroll({ children }: MobileScrollProps) {
         // Сбрасываем внутренние отступы
         const contentDivs = sectionEl.querySelectorAll(":scope > div:not(.padding-spacer)")
         contentDivs.forEach((div) => {
-          ;(div as HTMLElement).style.marginTop = "0"(div as HTMLElement).style.marginBottom = "0"
+          ;(div as HTMLElement).style.marginTop = "0";
+          (div as HTMLElement).style.marginBottom = "0"
         })
       })
 
