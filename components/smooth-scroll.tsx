@@ -75,13 +75,13 @@ export default function SmoothScroll() {
       const windowHeight = window.innerHeight;
       
       if (servicesSection) {
-        servicesSection.style.height = `${windowHeight * 4}px`;
+        servicesSection.style.height = `${windowHeight * 2}px`;
         servicesSection.style.overflow = 'visible';
         servicesSection.style.position = 'relative';
       }
       
       if (artistsSection) {
-        artistsSection.style.height = `${windowHeight * 4}px`;
+        artistsSection.style.height = `${windowHeight * 2}px`;
         artistsSection.style.overflow = 'visible';
         artistsSection.style.position = 'relative';
       }
