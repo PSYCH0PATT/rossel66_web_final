@@ -153,18 +153,19 @@ export default function FAQPage() {
     
     // Cleanup function to restore styles properly for main page
     return () => {
-      // Проверяем, если мы возвращаемся на главную страницу (мобильное устройство)
-      const isMobile = window.innerWidth <= 767;
+      // Не устанавливаем конкретные стили при cleanup, позволяем главной странице
+      // самой управлять своими стилями через CSS и SmoothScroll компонент
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
       
-      if (isMobile) {
-        // Устанавливаем мобильные стили для главной страницы
-        document.body.style.overflow = "hidden";
-        document.documentElement.style.overflow = "hidden";
-      } else {
-        // Восстанавливаем исходные стили для десктопа
-        document.body.style.overflow = originalBodyOverflow || "";
-        document.documentElement.style.overflow = originalHtmlOverflow || "";
-      }
+      // Добавляем небольшую задержку для корректной инициализации главной страницы
+      setTimeout(() => {
+        // Если мы находимся на главной странице, запускаем событие реинициализации
+        if (window.location.pathname === '/') {
+          const event = new CustomEvent('pageReinitialization');
+          document.dispatchEvent(event);
+        }
+      }, 100);
     }
   }, [])
 

@@ -332,10 +332,55 @@ export default function Home() {
         }
       };
       
+      // Валидация и принудительная реинициализация высот секций
+      const validateAndFixSectionHeights = () => {
+        const servicesSection = document.getElementById('services');
+        const artistsSection = document.getElementById('artists');
+        const windowHeight = window.innerHeight;
+        const expectedHeight = windowHeight * 2;
+        
+        let needsReinitialization = false;
+        
+        if (servicesSection) {
+          const currentHeight = servicesSection.offsetHeight;
+          if (Math.abs(currentHeight - expectedHeight) > 50) { // Допуск 50px
+            console.log(`Services section height mismatch: expected ${expectedHeight}, got ${currentHeight}`);
+            needsReinitialization = true;
+          }
+        }
+        
+        if (artistsSection) {
+          const currentHeight = artistsSection.offsetHeight;
+          if (Math.abs(currentHeight - expectedHeight) > 50) { // Допуск 50px
+            console.log(`Artists section height mismatch: expected ${expectedHeight}, got ${currentHeight}`);
+            needsReinitialization = true;
+          }
+        }
+        
+        if (needsReinitialization) {
+          console.log('Reinitializing section heights due to validation failure');
+          initializeSectionHeights();
+        }
+      };
+      
       // Выполняем инициализацию с небольшой задержкой
       const timeoutId = setTimeout(initializeSectionHeights, 100);
       
-      return () => clearTimeout(timeoutId);
+      // Добавляем валидацию через 500ms после инициализации
+      const validationTimeoutId = setTimeout(validateAndFixSectionHeights, 600);
+      
+      // Добавляем обработчик события resize для реинициализации при изменении размера окна
+      const handleResize = () => {
+        initializeSectionHeights();
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(validationTimeoutId);
+        window.removeEventListener('resize', handleResize);
+      };
     }
   }, [isMobile])
 

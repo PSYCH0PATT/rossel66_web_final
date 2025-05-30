@@ -57,35 +57,41 @@ export default function SmoothScroll() {
     totalSectionsRef.current = sectionElements.length
     footerRef.current = document.getElementById("footer")
 
+    const initializeMobileStyles = () => {
+      if (isMobile) {
+        // Принудительно устанавливаем мобильные стили overflow при инициализации
+        // Это исправляет проблему при возвращении с FAQ страницы
+        const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
+        if (scrollHost) {
+          scrollHost.style.height = '400vh';
+          scrollHost.style.overflowY = 'scroll';
+          scrollHost.style.overflowX = 'hidden';
+          scrollHost.style.scrollSnapType = 'y mandatory';
+          scrollHost.style.scrollBehavior = 'smooth';
+        }
+        
+        // Принудительно устанавливаем правильные высоты для секций services и artists
+        const servicesSection = document.getElementById('services');
+        const artistsSection = document.getElementById('artists');
+        const windowHeight = window.innerHeight;
+        
+        if (servicesSection) {
+          servicesSection.style.height = `${windowHeight * 2}px`;
+          servicesSection.style.overflow = 'visible';
+          servicesSection.style.position = 'relative';
+        }
+        
+        if (artistsSection) {
+          artistsSection.style.height = `${windowHeight * 2}px`;
+          artistsSection.style.overflow = 'visible';
+          artistsSection.style.position = 'relative';
+        }
+      }
+    };
+
+    initializeMobileStyles();
+
     if (isMobile) {
-      // Принудительно устанавливаем мобильные стили overflow при инициализации
-      // Это исправляет проблему при возвращении с FAQ страницы
-      const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
-      if (scrollHost) {
-        scrollHost.style.height = '400vh';
-        scrollHost.style.overflowY = 'scroll';
-        scrollHost.style.overflowX = 'hidden';
-        scrollHost.style.scrollSnapType = 'y mandatory';
-        scrollHost.style.scrollBehavior = 'smooth';
-      }
-      
-      // Принудительно устанавливаем правильные высоты для секций services и artists
-      const servicesSection = document.getElementById('services');
-      const artistsSection = document.getElementById('artists');
-      const windowHeight = window.innerHeight;
-      
-      if (servicesSection) {
-        servicesSection.style.height = `${windowHeight * 2}px`;
-        servicesSection.style.overflow = 'visible';
-        servicesSection.style.position = 'relative';
-      }
-      
-      if (artistsSection) {
-        artistsSection.style.height = `${windowHeight * 2}px`;
-        artistsSection.style.overflow = 'visible';
-        artistsSection.style.position = 'relative';
-      }
-      
       // Логика для мобильных с IntersectionObserver
       if (observerRef.current) {
         observerRef.current.disconnect()
@@ -159,10 +165,21 @@ export default function SmoothScroll() {
       }
     }
 
+    // Добавляем обработчик события реинициализации страницы
+    const handlePageReinitialization = () => {
+      console.log('Page reinitialization triggered - reinitializing mobile styles');
+      setTimeout(() => {
+        initializeMobileStyles();
+      }, 50);
+    };
+
+    document.addEventListener('pageReinitialization', handlePageReinitialization);
+
     return () => { // Общий cleanup
       if (observerRef.current) {
         observerRef.current.disconnect()
       }
+      document.removeEventListener('pageReinitialization', handlePageReinitialization);
     }
   }, [isMobile, dispatchInternalSectionUpdate])
 
