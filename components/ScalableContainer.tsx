@@ -51,20 +51,23 @@ export default function ScalableContainer({
       }
 
       contentRef.current.style.width = `${baseWidth}px`;
-      
       contentRef.current.style.left = "50%";
       contentRef.current.style.transform = `translate(-50%, 0) scale(${finalAppliedScale})`;
       contentRef.current.style.transformOrigin = "center top";
       
       contentRef.current.style.top = "0";
 
-      document.documentElement.style.setProperty("--content-scale", finalAppliedScale.toString());
       contentRef.current.classList.add("scale-applied");
       contentRef.current.setAttribute("data-scale", finalAppliedScale.toString());
       document.documentElement.style.setProperty("--inverse-scale", `${1 / finalAppliedScale}`);
 
       const scaleEvent = new CustomEvent("scalechange", { detail: { scale: finalAppliedScale } });
       document.dispatchEvent(scaleEvent);
+      
+      contentRef.current.style.setProperty("--content-scale", finalAppliedScale.toString())
+
+      setTimeout(() => {
+      }, 100)
     }
   }, [hookScale, dimensions.width, dimensions.height, isMobile, baseWidth, minScale]);
 
@@ -99,7 +102,7 @@ export default function ScalableContainer({
       style={{
         width: "100%",
         height: "100%",
-        overflow: "hidden",
+        overflow: isMobile ? "visible" : "hidden",
         position: "relative",
         display: "flex",
         justifyContent: "center",

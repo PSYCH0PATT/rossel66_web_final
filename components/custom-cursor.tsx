@@ -149,8 +149,16 @@ export function CustomCursor() {
     }
   }, [])
 
-  // Не рендерим курсор на сенсорных устройствах
+  // Если это сенсорное устройство, не рендерим компонент вообще
   if (isTouch) return null
 
-  return <div ref={cursorRef} className="fixed inset-0 pointer-events-none z-[99999]" />
+  return (
+    <div
+      ref={cursorRef}
+      className="fixed top-0 left-0 w-full h-full pointer-events-none z-50"
+      style={{ display: isTouch ? 'none' : 'block' }}
+    >
+      {/* ... existing code ... */}
+    </div>
+  )
 }

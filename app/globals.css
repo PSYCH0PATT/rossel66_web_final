@@ -55,13 +55,13 @@
 
 html, body {
   overscroll-behavior-y: none !important;
-  overflow-x: hidden !important;
+  overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
 }
 
 body {
   @apply bg-background text-foreground;
   overscroll-behavior-y: none;
-  overflow-x: hidden !important;
+  overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -73,7 +73,9 @@ body {
 main {
   flex: 1;
   position: relative;
-  overflow-x: hidden !important;
+  /* overflow: hidden; */ /* Убираем глобальное скрытие overflow */
+  overflow-y: visible; /* Разрешаем вертикальный overflow по умолчанию */
+  overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
@@ -357,112 +359,66 @@ section {
   }
   /* .slider .list .item:last-child {} */ /* Not needed for absolute positioning */
 
-  /* Исправление для масштабируемого контейнера */
+  /* Новый контейнер для скролла секций */
+  .sections-scroll-host {
+    height: 200vh !important; 
+    overflow-y: scroll !important;
+    overflow-x: hidden !important; /* Скрываем горизонтальное переполнение */
+    scroll-snap-type: y mandatory; 
+    scroll-behavior: smooth;
+    position: relative; 
+    z-index: 1; 
+  }
+
+  /* Стиль для .scalable-container на мобильных */
   .scalable-container {
-    max-height: none !important;
-    overflow: hidden !important;
-    width: 100% !important;
-    height: 100% !important;
-    box-sizing: border-box;
+    overflow: visible !important; /* Важно для видимости слайдеров */
+    height: 200vh !important; /* Устанавливаем высоту 200vh */
   }
 
-  /* Отключаем масштабирование на мобильных устройствах */
-  .scalable-content {
-    overflow: visible !important;
-    box-sizing: border-box;
-  }
-
-  /* Общие стили для секций на мобильных (возвращаем к нормальным) */
-  section {
-    box-sizing: border-box !important;
-    display: flex;
-    flex-direction: column;
+  /* Элементы, к которым будет применяться snap */
+  .sections-scroll-host > section {
+    scroll-snap-align: start; 
+    display: flex; 
+    flex-direction: column; 
     justify-content: center; 
-    width: 100% !important;
-    max-width: 100vw !important;
+    width: 100%; 
+    box-sizing: border-box;
+    overflow: visible !important; /* Добавляем overflow visible */
+  }
+
+  /* Специальные стили для services и artists */
+  .sections-scroll-host > section#services,
+  .sections-scroll-host > section#artists {
     overflow: visible !important;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-left: 0;
-    margin-right: 0;
+    position: relative !important;
+    z-index: 20 !important;
   }
 
-  section#hero,
-  section#faq {
-    /* min-height: 100vh !important; */ /* Commenting out */
-    /* height: 100vh !important; */ /* Commenting out */
-    /* padding-top: 0 !important; */   
-    /* padding-bottom: 0 !important; */ 
-    overflow: visible !important; 
-  }
-
-  section#hero > div,
-  section#faq > div {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100%; 
-    width: 100%;
-    padding: 1rem; 
-    box-sizing: border-box;
-  }
-  
-  section#services, 
-  section#artists {
-    overflow: hidden; /* Для корректной работы внутренних слайдеров */
-  }
-  
-  section#services > div,
-  section#artists > div {
-    padding-left: 0 !important; 
-    padding-right: 0 !important;
-  }
-
-  /* Возвращаем стили для section > div:not(.padding-spacer), если они были закомментированы */
-  section > div:not(.padding-spacer) {
-    width: 100%;
-    max-width: 100%; 
-    padding-left: 1rem; 
-    padding-right: 1rem;
-    box-sizing: border-box;
+  /* Футер */
+  .sections-scroll-host > section#footer {
+    scroll-snap-align: end; 
     height: auto; 
-    display: flex;
-    flex-direction: column;
-    align-items: center; 
+    min-height: fit-content; 
   }
 
-  /* Отключаем масштабирование на мобильных устройствах */
-  .scalable-content {
+  /* Убедимся, что main и body не мешают ТОЛЬКО на главной странице */
+  body:has([data-page="home"]) main {
+    overflow-y: hidden !important; 
+    overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
+  }
+  
+  body:has([data-page="home"]) {
+    overflow-y: hidden !important; 
+    overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
   }
 
-  section .container {
-    max-width: 100% !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    box-sizing: border-box !important;
-    width: 100% !important; 
+  body {
+    /* overflow: hidden !important; */ /* Эта строка дублируется и уже есть выше, но с y:hidden, x:visible */
   }
-
-  section .container > * { /* Прямые потомки контейнера секции */
-  }
-
-  /* Reduce side paddings for specific sections on mobile to make content appear wider */
-  section#hero .container,
-  section#facts .container,
-  section#partners .container,
-  section#contact .container,
-  section#faq .container {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-  }
-
-  /* Keep original paddings for services and artists sections */
-  section#services .container,
-  section#artists .container {
-    padding-left: 1rem !important; /* Explicitly keep original padding */
-    padding-right: 1rem !important; /* Explicitly keep original padding */
-  }
+  /* Однако, SmoothScroll.tsx будет пытаться установить document.body.style.overflow = "auto" для isMobile. */
+  /* Это нужно будет согласовать. Либо в JS не менять body.overflow, либо здесь быть менее строгим. */
+  /* Пока оставим !important, чтобы CSS имел приоритет. */
 }
 
 /* Стили для snap scrolling */
@@ -950,11 +906,6 @@ section.active .content {
 
 /* Добавьте следующие стили в конец файла: */
 
-/* Стили для отладки */
-.debug-info {
-  display: none;
-}
-
 /* Убедимся, что секции имеют правильную высоту */
 
 /* Отключаем стандартную прокрутку при активной анимации */
@@ -1124,6 +1075,17 @@ section#hero {
 /* Важно: отключаем трансформацию для секций внутри масштабируемого контейнера */
 .scale-applied section {
   transform: none !important;
+  overflow: visible !important; /* Добавляем overflow visible */
+  width: 100% !important; /* Гарантируем ширину 100% */
+  max-width: 100vw !important; /* Максимальная ширина - ширина экрана */
+  position: relative !important; /* Добавляем позиционирование */
+}
+
+/* Добавляем специальные стили для секций services и artists в scale-applied */
+.scale-applied section#services,
+.scale-applied section#artists {
+  overflow: visible !important;
+  z-index: 20 !important;
 }
 
 /* Визуализация отступов */
@@ -1227,7 +1189,10 @@ section > div:not(.padding-spacer) {
   
   section#services,
   section#artists {
-    overflow: hidden; /* Для корректной работы внутренних слайдеров */
+    overflow: visible !important; /* Для корректного отображения слайдеров */
+    position: relative !important;
+    z-index: 10;
+    transform: none !important; /* Предотвращаем конфликты трансформаций */
   }
   
   section#services > div,
@@ -1251,6 +1216,7 @@ section > div:not(.padding-spacer) {
 
   /* Отключаем масштабирование на мобильных устройствах */
   .scalable-content {
+    /* Удаляем стили, которые переопределяют масштаб */
   }
 
   section .container {
@@ -1381,3 +1347,74 @@ html, body {
     overflow: visible !important;
 }
 }
+
+/* CSS Scroll Snap для мобильных устройств */
+@media (max-width: 767px) {
+  /* Удаляем старые стили для main.snap-container */
+  /* main.snap-container {
+    overflow-y: scroll !important; 
+    scroll-snap-type: y mandatory; 
+    height: 100vh; 
+  } */
+
+  /* Новый контейнер для скролла секций */
+  .sections-scroll-host {
+    height: 200vh !important; 
+    overflow-y: scroll !important;
+    overflow-x: hidden !important; /* Скрываем горизонтальное переполнение */
+    scroll-snap-type: y mandatory; 
+    scroll-behavior: smooth;
+    position: relative; 
+    z-index: 1; 
+}
+
+  /* Стиль для .scalable-container на мобильных */
+  .scalable-container {
+    overflow: visible !important; /* Важно для видимости слайдеров */
+    height: 200vh !important; /* Устанавливаем высоту 200vh */
+  }
+
+  /* Элементы, к которым будет применяться snap */
+  .sections-scroll-host > section {
+    scroll-snap-align: start; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    width: 100%; 
+    box-sizing: border-box;
+    overflow: visible !important; /* Добавляем overflow visible */
+  }
+
+  /* Специальные стили для services и artists */
+  .sections-scroll-host > section#services,
+  .sections-scroll-host > section#artists {
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 20 !important;
+}
+
+  /* Футер */
+  .sections-scroll-host > section#footer {
+    scroll-snap-align: end; 
+    height: auto; 
+    min-height: fit-content; 
+}
+
+  /* Убедимся, что main и body не мешают ТОЛЬКО на главной странице */
+  body:has([data-page="home"]) main {
+    overflow-y: hidden !important; 
+    overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
+  }
+  
+  body:has([data-page="home"]) {
+    overflow-y: hidden !important; 
+    overflow-x: hidden !important; /* Возвращаем скрытие горизонтальной прокрутки */
+  }
+  body {
+    /* overflow: hidden !important; */ /* Эта строка дублируется и уже есть выше, но с y:hidden, x:visible */
+  }
+  /* Однако, SmoothScroll.tsx будет пытаться установить document.body.style.overflow = "auto" для isMobile. */
+  /* Это нужно будет согласовать. Либо в JS не менять body.overflow, либо здесь быть менее строгим. */
+  /* Пока оставим !important, чтобы CSS имел приоритет. */
+}
+

@@ -156,34 +156,34 @@ export default function Hero({ onContactClick }: HeroProps) {
           // Компьютерная версия
           <>
             <div className="flex-grow flex flex-col items-center justify-center text-center w-full">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <h1 className={titleClass}>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">
-                    ROSSEL 66 MUSIC
-                  </span>
-                </h1>
-              </motion.div>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className={subtitleClass}
-              >
-                Деловые отношения, дружеская атмосфера
-              </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <h1 className={titleClass}>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">
+                  ROSSEL 66 MUSIC
+                </span>
+              </h1>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className={subtitleClass}
+            >
+              Деловые отношения, дружеская атмосфера
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
                 className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8" // Добавил mt-8 для отступа кнопки
-              >
+            >
                 <motion.div whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-                  <Button size="lg" className={buttonClass} onClick={onContactClick}>
-                    Отправить заявку
-                  </Button>
-                </motion.div>
+                <Button size="lg" className={buttonClass} onClick={onContactClick}>
+                  Отправить заявку
+                </Button>
               </motion.div>
-            </div>
+            </motion.div>
+          </div>
             {/* Размещаем логотип в правом нижнем углу этого flex-контейнера (innerContainer) */}
             <div className="absolute bottom-8 right-8 z-10">
               <AnimatedLogo />

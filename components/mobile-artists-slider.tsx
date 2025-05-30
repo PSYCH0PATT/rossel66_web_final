@@ -44,6 +44,13 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
 
+  // Рассчитываем ширину слайдера с учетом масштаба (КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ)
+  const widthMultiplier = Math.min(1 / scale, 2) // Ограничиваем максимальное увеличение до 2x
+  const marginOffset = `${(widthMultiplier - 1) * 50}%`
+
+  // Отладочные логи (только для текущей отладки)
+  console.log('MobileArtistsSlider scale:', scale, 'widthMultiplier:', widthMultiplier)
+
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX)
@@ -81,11 +88,6 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
 
     return () => clearInterval(interval)
   }, [currentSlide])
-
-  // Рассчитываем ширину слайдера с учетом масштаба
-  // Используем новую формулу для расчета ширины
-  const widthMultiplier = Math.min(1 / scale, 2) // Ограничиваем максимальное увеличение до 2x
-  const marginOffset = `${(widthMultiplier - 1) * 50}%`
 
   return (
     <div
@@ -131,9 +133,11 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
                   alt={artists[currentSlide].name}
                   fill
                   className="object-cover"
+                  priority
                 />
               )}
-              <div className="absolute inset-0 bg-black/40"></div>
+              {/* Используем точно такой же оверлей, как в секции "Сервисы" */}
+              <div className="absolute inset-0 bg-black/50"></div>
             </motion.div>
           </AnimatePresence>
         </div>

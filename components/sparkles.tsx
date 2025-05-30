@@ -47,8 +47,13 @@ export const SparklesCore = memo(function SparklesCore({
   const mouseDeltaRef = useRef({ x: 0, y: 0 })
   const timeRef = useRef(0)
   const isInitializedRef = useRef(false)
+  const [isTouch, setIsTouch] = useState(false)
 
   useEffect(() => {
+    // Проверяем, является ли устройство сенсорным
+    const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+    setIsTouch(isTouchDevice)
+
     if (typeof window === "undefined") return
 
     setDimensions({
@@ -153,14 +158,18 @@ export const SparklesCore = memo(function SparklesCore({
       if (!ctx || !canvas) return
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      // Обновляем дельту движения мыши только если это не сенсорное устройство
+      if (!isTouch) {
       updateMouseDelta()
+      }
 
       // Увеличиваем время для пассивного движения
       timeRef.current += 0.01
 
-      // Коэффициент влияния движения мыши
-      const moveFactorX = -mouseDeltaRef.current.x * 0.1
-      const moveFactorY = -mouseDeltaRef.current.y * 0.1
+      // Коэффициент влияния движения мыши (только для не-сенсорных устройств)
+      const moveFactorX = isTouch ? 0 : -mouseDeltaRef.current.x * 0.1
+      const moveFactorY = isTouch ? 0 : -mouseDeltaRef.current.y * 0.1
 
       // Обновляем позиции всех частиц
       for (let i = 0; i < particlesRef.current.length; i++) {
@@ -178,7 +187,8 @@ export const SparklesCore = memo(function SparklesCore({
         particle.originalX += particle.speedX
         particle.originalY += particle.speedY
 
-        // Добавляем эффект отталкивания от курсора
+        // Добавляем эффект отталкивания от курсора только если это не сенсорное устройство
+        if (!isTouch) {
         const distX = particle.x - mousePosition.x
         const distY = particle.y - mousePosition.y
         const distance = Math.sqrt(distX * distX + distY * distY)
@@ -197,6 +207,17 @@ export const SparklesCore = memo(function SparklesCore({
           particle.y += normY * repelStrength
         } else {
           // Возвращаем частицу к исходной позиции
+            const returnX = particle.originalX - particle.x
+            const returnY = particle.originalY - particle.y
+            const returnDist = Math.sqrt(returnX * returnX + returnY * returnY)
+
+            if (returnDist > 0.1) {
+              particle.x += returnX * particle.returnSpeed
+              particle.y += returnY * particle.returnSpeed
+            }
+          }
+        } else {
+          // Если это сенсорное устройство, просто возвращаем частицу к исходной позиции без учета мыши
           const returnX = particle.originalX - particle.x
           const returnY = particle.originalY - particle.y
           const returnDist = Math.sqrt(returnX * returnX + returnY * returnY)
@@ -279,7 +300,7 @@ export const SparklesCore = memo(function SparklesCore({
         cancelAnimationFrame(animationFrameIdRef.current)
       }
     }
-  }, [maxSize, minSize, particleColor, mousePosition.x, mousePosition.y, particleDensity, emeraldParticles])
+  }, [maxSize, minSize, particleColor, mousePosition.x, mousePosition.y, particleDensity, emeraldParticles, isTouch])
 
   return (
     <canvas
@@ -290,6 +311,7 @@ export const SparklesCore = memo(function SparklesCore({
         background,
         width: dimensions.width,
         height: dimensions.height,
+        pointerEvents: isTouch ? 'none' : 'auto'
       }}
     />
   )

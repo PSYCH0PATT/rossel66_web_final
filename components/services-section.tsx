@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { Radio, Target, Mic, MessageSquare, Video, Briefcase } from "lucide-react"
 import { useMobileDetector } from "@/hooks/use-mobile-detector"
-import MobileServicesSlider from "./mobile-services-slider"
+import MobileServicesSlider from "@/components/mobile-services-slider"
 
 interface ServicesSectionProps {
   windowSize: {

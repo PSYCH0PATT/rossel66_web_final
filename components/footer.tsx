@@ -14,8 +14,8 @@ export default function Footer() {
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768)
-    }
-    
+      }
+
     checkIfMobile()
     window.addEventListener("resize", checkIfMobile)
 
@@ -69,7 +69,7 @@ export default function Footer() {
             justifyContent: "space-between",
             alignItems: "center",
           }}
-        >
+    >
           <div className="flex flex-col items-center w-full space-y-8">
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center mb-4">

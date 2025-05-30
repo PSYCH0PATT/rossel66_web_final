@@ -35,8 +35,8 @@ const LogoSlider = memo(function LogoSlider({
     <div
       className="slider"
       style={{
-        "--width": sliderWidth,
-        "--height": sliderHeight,
+          "--width": sliderWidth,
+          "--height": sliderHeight,
         "--quantity": quantity, // Передаем quantity, как в примере пользователя
       } as React.CSSProperties}
       data-reverse={reverse ? "true" : "false"} // Используем data-атрибут для reverse
@@ -53,13 +53,13 @@ const LogoSlider = memo(function LogoSlider({
               "--position": (index % items.length) + 1,
             } as React.CSSProperties}
           >
-            <Image
-              src={item.image || "/placeholder.svg"}
-              alt={item.alt}
+              <Image
+                src={item.image || "/placeholder.svg"}
+                alt={item.alt}
               width={Number.parseInt(sliderWidth) * 0.8} // 80% от ширины элемента, как было
               height={Number.parseInt(sliderHeight) * 0.8} // 80% от высоты элемента, как было
-              className="object-contain"
-            />
+                className="object-contain"
+              />
           </div>
         ))}
       </div>
@@ -160,7 +160,7 @@ const PartnersSection = function PartnersSection({ windowSize }: PartnersSection
         currentMaxWidth = MIN_WIDTH;
       }
       setDynamicContentStyle({ width: '100%', maxWidth: `${currentMaxWidth}px` });
-    }
+      }
   }, [windowSize.width, isMobile]);
 
   // Удаляем неиспользуемую переменную

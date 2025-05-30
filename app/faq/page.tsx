@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ChevronDown, ChevronUp, ArrowLeft } from "lucide-react"
 import Link from "next/link"
@@ -132,14 +132,41 @@ export default function FAQPage() {
   }
 
   // Устанавливаем размеры окна при монтировании компонента
-  useState(() => {
+  useEffect(() => {
     if (typeof window !== "undefined") {
       setWindowSize({
         width: window.innerWidth,
         height: window.innerHeight,
       })
     }
-  })
+  }, [])
+
+  // Обеспечиваем свободную прокрутку на странице FAQ
+  useEffect(() => {
+    // Сохраняем исходные стили
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    
+    // Устанавливаем свободную прокрутку для FAQ страницы
+    document.body.style.overflow = "auto"
+    document.documentElement.style.overflow = "auto"
+    
+    // Cleanup function to restore styles properly for main page
+    return () => {
+      // Проверяем, если мы возвращаемся на главную страницу (мобильное устройство)
+      const isMobile = window.innerWidth <= 767;
+      
+      if (isMobile) {
+        // Устанавливаем мобильные стили для главной страницы
+        document.body.style.overflow = "hidden";
+        document.documentElement.style.overflow = "hidden";
+      } else {
+        // Восстанавливаем исходные стили для десктопа
+        document.body.style.overflow = originalBodyOverflow || "";
+        document.documentElement.style.overflow = originalHtmlOverflow || "";
+      }
+    }
+  }, [])
 
   return (
     <main className="min-h-screen overflow-y-auto overflow-x-hidden bg-black/[0.96] antialiased bg-grid-white/[0.02] relative">

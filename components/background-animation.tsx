@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface BackgroundAnimationProps {
   count?: number
@@ -12,8 +12,13 @@ export default function BackgroundAnimation({
   color = "rgba(255, 255, 255, 0.2)",
 }: BackgroundAnimationProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isTouch, setIsTouch] = useState(false)
 
   useEffect(() => {
+    // Проверяем, является ли устройство сенсорным
+    const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+    setIsTouch(isTouchDevice)
+
     if (!containerRef.current) return
 
     const container = containerRef.current
@@ -53,5 +58,11 @@ export default function BackgroundAnimation({
     }
   }, [count, color])
 
-  return <div ref={containerRef} className="background-animation" />
+  return (
+    <div 
+      ref={containerRef} 
+      className="background-animation" 
+      style={{ pointerEvents: isTouch ? 'none' : 'auto' }}
+    />
+  )
 }

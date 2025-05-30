@@ -49,10 +49,10 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
     const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
     const sectionIndex = sectionIds.indexOf(targetId)
 
-    // Отправляем событие для обновления текущей секции
+    // Отправляем событие для обновления текущей секции с информацией о том, что это навигация через меню
     if (sectionIndex !== -1) {
       const event = new CustomEvent("sectionChange", {
-        detail: { index: sectionIndex },
+        detail: { index: sectionIndex, source: "navbar" },
       })
       document.dispatchEvent(event)
     }

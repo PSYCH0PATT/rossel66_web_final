@@ -56,21 +56,28 @@ const services = [
 ]
 
 // Получение цвета иконки в зависимости от индекса слайда
-const getIconColor = (index: number) => {
+const getIconColorClasses = (index: number) => {
   const totalSlides = services.length - 1
   const position = index / totalSlides
 
-  if (position < 0.2) return "emerald-400"
-  if (position < 0.4) return "emerald-300"
-  if (position < 0.6) return "teal-400"
-  if (position < 0.8) return "cyan-400"
-  return "cyan-300"
+  if (position < 0.2) return { text: "text-emerald-400", bg: "bg-emerald-400" }
+  if (position < 0.4) return { text: "text-emerald-300", bg: "bg-emerald-300" }
+  if (position < 0.6) return { text: "text-teal-400", bg: "bg-teal-400" }
+  if (position < 0.8) return { text: "text-cyan-400", bg: "bg-cyan-400" }
+  return { text: "text-cyan-300", bg: "bg-cyan-300" }
 }
 
 export default function MobileServicesSlider({ scale = 1 }: MobileServicesSliderProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
+
+  // Рассчитываем ширину слайдера с учетом масштаба (КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ)
+  const widthMultiplier = Math.min(1 / scale, 2) // Ограничиваем максимальное увеличение до 2x
+  const marginOffset = `${(widthMultiplier - 1) * 50}%`
+
+  // Отладочные логи (только для текущей отладки)
+  console.log('MobileServicesSlider scale:', scale, 'widthMultiplier:', widthMultiplier)
 
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -109,11 +116,6 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
 
     return () => clearInterval(interval)
   }, [currentSlide])
-
-  // Рассчитываем ширину слайдера с учетом масштаба
-  // Используем новую формулу для расчета ширины
-  const widthMultiplier = Math.min(1 / scale, 2) // Ограничиваем максимальное увеличение до 2x
-  const marginOffset = `${(widthMultiplier - 1) * 50}%`
 
   return (
     <div
@@ -182,10 +184,10 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
             >
               <div className="mb-6 flex items-center">
                 {/* Цветные иконки в зависимости от типа услуги */}
-                <div className={`mr-4 text-${getIconColor(currentSlide)}`}>
+                <div className={`mr-4 ${getIconColorClasses(currentSlide).text}`}>
                   {React.cloneElement(services[currentSlide].icon as React.ReactElement, { className: "w-8 h-8" })}
                 </div>
-                <div className={`w-12 h-0.5 bg-${getIconColor(currentSlide)}`}></div>
+                <div className={`w-12 h-0.5 ${getIconColorClasses(currentSlide).bg}`}></div>
               </div>
 
               <h3 className="text-4xl sm:text-5xl font-bold mb-4">{services[currentSlide].title}</h3>

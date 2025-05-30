@@ -14,6 +14,8 @@ import Footer from "@/components/footer"
 import { CustomCursor } from "@/components/custom-cursor"
 import SmoothScroll from "@/components/smooth-scroll"
 import ScalableContainer from "@/components/ScalableContainer"
+// Удаляем импорт MobileServicesSlider
+// import MobileServicesSlider from "@/components/mobile-services-slider"
 // Удаляем импорт SimpleDebugIndicator
 // import SimpleDebugIndicator from "@/components/simple-debug-indicator"
 import { useMobileDetector } from "@/hooks/use-mobile-detector"
@@ -80,7 +82,6 @@ export default function Home() {
       const sections = document.querySelectorAll("section");
       const currentWindowHeight = window.innerHeight;
       const currentScaleFactor = parseFloat(document.documentElement.style.getPropertyValue("--content-scale") || "1");
-      const inverseScaleFactor = 1 / currentScaleFactor;
 
       sections.forEach((section) => {
         const sectionEl = section as HTMLElement;
@@ -106,13 +107,15 @@ export default function Home() {
           targetSectionHeight = currentWindowHeight * 2; // Set target for the section itself to be 2x screen height
           sectionEl.style.height = `${targetSectionHeight}px`; // Section height is 2x screen height
           
-          // sectionEl.style.width = "100%"; /* Commenting out */
+          // Убираем изменение ширины - оставляем 100%
+          sectionEl.style.width = "100%"; // Возвращаем обратно к 100%
+          
           sectionEl.style.paddingTop = "0px";
           sectionEl.style.paddingBottom = "0px";
           sectionEl.style.marginLeft = "0px"; 
           sectionEl.style.marginRight = "0px"; 
           sectionEl.style.boxSizing = "border-box"; 
-          sectionEl.style.overflow = "hidden"; 
+          sectionEl.style.overflow = "visible"; /* CHANGED FROM hidden to visible */
           
           // sectionEl.style.transform = "none"; /* Commenting out */
           // sectionEl.style.transformOrigin = "initial"; /* Commenting out */
@@ -157,7 +160,11 @@ export default function Home() {
         // sectionEl.style.paddingTop = "0px"; 
         // sectionEl.style.paddingBottom = "0px"; 
         sectionEl.style.boxSizing = "border-box";
-        sectionEl.style.overflow = "hidden"; 
+        // sectionEl.style.overflow = "hidden"; /* This was the general rule, but services/artists now have visible */
+
+        if (!(isMobile && (sectionId === "services" || sectionId === "artists"))) {
+          sectionEl.style.overflow = "hidden"; // Apply hidden for other sections
+        }
 
         if (!showBorders) {
           sectionEl.style.border = "none";
@@ -180,7 +187,7 @@ export default function Home() {
               ccEl.style.zoom = "1.3";
             } else {
               ccEl.style.zoom = "1"; 
-            }
+              }
 
             // ---- РАСКОММЕНТИРУЕМ РАСЧЕТ ОТСТУПОВ ДЛЯ ВСЕХ ----
             requestAnimationFrame(() => {
@@ -192,18 +199,10 @@ export default function Home() {
               // const finalMarginTop = visualPaddingTop * inverseScaleFactor; // Не используется
               // const finalMarginBottom = visualPaddingBottom * inverseScaleFactor; // Не используется
 
-              if ((sectionId === "hero" || sectionId === "facts" || sectionId === "contact" || sectionId === "faq") && isMobile) {
-                console.log(`[MOBILE ${sectionId} / Sizing (Paddings Enabled)] -------------`);
-                console.log(`  window.innerHeight: ${currentWindowHeight}`);
-                console.log(`  targetSectionHeight: ${targetSectionHeight}`);
-                console.log(`  currentScaleFactor: ${currentScaleFactor}`);
-                console.log(`  inverseScaleFactor: ${inverseScaleFactor}`);
-                console.log(`  unscaledContentHeight: ${unscaledContentHeight}`);
-                console.log(`  visualContentHeight: ${visualContentHeight}`);
-                console.log(`  totalVisualPaddingNeeded: ${totalVisualPaddingNeeded}`);
-                console.log(`  visualPaddingTop: ${visualPaddingTop}`);
-                console.log(`  visualPaddingBottom: ${visualPaddingBottom}`);
-              }
+              // Убираем все отладочные логи
+              // if ((sectionId === "hero" || sectionId === "facts" || sectionId === "contact" || sectionId === "faq") && isMobile) {
+              //   console.log(...);
+              // }
 
               // Убираем установку margin для ccEl
               // ccEl.style.marginTop = `${finalMarginTop}px`;
@@ -256,30 +255,39 @@ export default function Home() {
   // Получаем текущий масштаб
   const [currentScale, setCurrentScale] = useState(1)
 
-  // Отслеживаем текущий масштаб
+  // Отслеживаем текущий масштаб с debounce для предотвращения циклов
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const updateScale = () => {
       const scalableContent = document.querySelector(".scalable-content")
-      const scale = scalableContent ? Number.parseFloat(scalableContent.getAttribute("data-scale") || "1") : 1
+      if (scalableContent) {
+        const scale = Number.parseFloat(scalableContent.getAttribute("data-scale") || "1")
+        // Только обновляем если значение действительно изменилось
+        if (Math.abs(scale - currentScale) > 0.001) {
       setCurrentScale(scale)
     }
+      }
+    }
 
-    // Инициализация
+    const debouncedUpdateScale = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(updateScale, 100) // Debounce 100ms
+    }
+
+    // Инициализация без debounce
     updateScale()
 
-    // Обновляем при изменении масштаба
-    const handleScaleChange = () => {
-      updateScale()
-    }
-
-    window.addEventListener("resize", handleScaleChange)
-    document.addEventListener("scalechange", handleScaleChange)
+    // Обновляем при изменении масштаба с debounce
+    document.addEventListener("scalechange", debouncedUpdateScale)
+    window.addEventListener("resize", debouncedUpdateScale)
 
     return () => {
-      window.removeEventListener("resize", handleScaleChange)
-      document.removeEventListener("scalechange", handleScaleChange)
+      clearTimeout(timeoutId)
+      window.removeEventListener("resize", debouncedUpdateScale)
+      document.removeEventListener("scalechange", debouncedUpdateScale)
     }
-  }, [])
+  }, [currentScale]) // Добавляем currentScale в зависимости для корректного сравнения
 
   // Получаем масштаб для мобильных секций
   const getMobileScale = useCallback(
@@ -297,14 +305,48 @@ export default function Home() {
     [isMobile, currentScale],
   )
 
+  useEffect(() => {
+    // Убираем отладочный оверлей
+  }, [isMobile])
+
+  // Принудительная инициализация высот секций при монтировании (исправляет проблему после FAQ)
+  useEffect(() => {
+    if (isMobile) {
+      const initializeSectionHeights = () => {
+        const servicesSection = document.getElementById('services');
+        const artistsSection = document.getElementById('artists');
+        const windowHeight = window.innerHeight;
+        
+        if (servicesSection) {
+          servicesSection.style.height = `${windowHeight * 2}px`;
+          servicesSection.style.overflow = 'visible';
+          servicesSection.style.position = 'relative';
+          servicesSection.style.width = '100%';
+        }
+        
+        if (artistsSection) {
+          artistsSection.style.height = `${windowHeight * 2}px`;
+          artistsSection.style.overflow = 'visible';
+          artistsSection.style.position = 'relative';
+          artistsSection.style.width = '100%';
+        }
+      };
+      
+      // Выполняем инициализацию с небольшой задержкой
+      const timeoutId = setTimeout(initializeSectionHeights, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isMobile])
+
   return (
     <main
       ref={mainRef}
-      className="h-screen overflow-hidden bg-black/[0.96] antialiased bg-grid-white/[0.02] relative"
-      // Добавляем стили для предотвращения прокрутки за пределы подвала
-      style={{ 
-        pointerEvents: "auto", 
-        overscrollBehavior: "none",
+      data-page="home"
+      className={`h-screen ${isMobile ? 'overflow-visible' : 'overflow-hidden'} bg-black/[0.96] antialiased bg-grid-white/[0.02] relative ${isMobile ? 'snap-container' : ''}`}
+      style={{
+        pointerEvents: "auto",
+        overscrollBehavior: isMobile ? 'auto' : "none", // Разрешаем overscroll для snap на мобильных
         WebkitOverflowScrolling: "touch",
         display: "flex",
         flexDirection: "column"
@@ -352,7 +394,7 @@ export default function Home() {
         className="relative z-10"
         isMobileProp={isMobile}
       >
-        <div className="w-full flex flex-col items-center">
+        <div className={`w-full flex flex-col items-center ${isMobile ? 'sections-scroll-host' : ''}`}>
           {/* Hero Section */}
           <section id="hero" className="h-screen w-full flex items-center justify-center relative">
             <Hero onContactClick={scrollToContactForm} />
