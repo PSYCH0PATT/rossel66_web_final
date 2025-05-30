@@ -104,8 +104,8 @@ export default function Home() {
           return; 
         } else if (isMobile && (sectionId === "services" || sectionId === "artists")) {
           // Специальная обработка для секций services и artists на мобильных
-          targetSectionHeight = currentWindowHeight * 2; // Set target for the section itself to be 2x screen height
-          sectionEl.style.height = `${targetSectionHeight}px`; // Section height is 2x screen height
+          targetSectionHeight = currentWindowHeight * 4; // Set target for the section itself to be 4x screen height
+          sectionEl.style.height = `${targetSectionHeight}px`; // Section height is 4x screen height
           
           // Убираем изменение ширины - оставляем 100%
           sectionEl.style.width = "100%"; // Возвращаем обратно к 100%
@@ -144,7 +144,7 @@ export default function Home() {
           }
 
         } else if (isMobile) { 
-          targetSectionHeight = currentWindowHeight * 2;
+          targetSectionHeight = currentWindowHeight * 2; // Обычные мобильные секции включая FAQ
         } else {
           // For hero and faq on desktop, also use BASE_HEIGHT, they won't typically scroll
           // For other sections on desktop, they take BASE_HEIGHT and internal content might scroll if larger
@@ -318,14 +318,14 @@ export default function Home() {
         const windowHeight = window.innerHeight;
         
         if (servicesSection) {
-          servicesSection.style.height = `${windowHeight * 2}px`;
+          servicesSection.style.height = `${windowHeight * 4}px`;
           servicesSection.style.overflow = 'visible';
           servicesSection.style.position = 'relative';
           servicesSection.style.width = '100%';
         }
         
         if (artistsSection) {
-          artistsSection.style.height = `${windowHeight * 2}px`;
+          artistsSection.style.height = `${windowHeight * 4}px`;
           artistsSection.style.overflow = 'visible';
           artistsSection.style.position = 'relative';
           artistsSection.style.width = '100%';
@@ -444,7 +444,7 @@ export default function Home() {
           </section>
 
           {/* FAQ Section */}
-          <section id="faq" className="min-h-screen w-full flex items-center justify-center relative"> {/* Оставляем min-h-screen для FAQ */}
+          <section id="faq" className="h-screen w-full flex items-center justify-center relative"> {/* Изменяем на h-screen для точной высоты экрана */}
             <FAQSection windowSize={windowSize} />
           </section>
 
