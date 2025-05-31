@@ -51,7 +51,7 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
 
   // Принудительная проверка и исправление высоты слайдера
   const forceHeightCorrection = () => {
-    if (sliderRef.current && typeof window !== 'undefined') {
+    if (sliderRef.current && typeof window !== 'undefined' && window.innerWidth < 768) {
       const expectedHeight = window.innerHeight * 2
       
       // Фокусируемся только на коррекции родительского контейнера
@@ -93,6 +93,19 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
       sliderRef.current.style.transform = 'none'
       
       console.log(`MobileArtistsSlider: Height correction applied - ${expectedHeight}px`)
+    } else if (sliderRef.current && typeof window !== 'undefined') {
+      // Для десктопа, просто сбрасываем стили, которые могли быть применены ранее
+      const artistsSection = document.getElementById('artists');
+      if (artistsSection) {
+        artistsSection.style.height = ''
+        artistsSection.style.minHeight = ''
+        // artistsSection.style.overflow = '' // Оставим, т.к. может быть нужно
+        // artistsSection.style.position = '' // Оставим, т.к. может быть нужно
+      }
+      sliderRef.current.style.height = ''
+      sliderRef.current.style.minHeight = ''
+      sliderRef.current.style.transform = ''
+      console.log('MobileArtistsSlider: Desktop mode, styles reset');
     }
   }
 

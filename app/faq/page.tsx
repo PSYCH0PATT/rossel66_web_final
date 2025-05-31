@@ -184,29 +184,33 @@ export default function FAQPage() {
           setTimeout(() => {
             const servicesSection = document.getElementById('services');
             const artistsSection = document.getElementById('artists');
-            const expectedHeight = window.innerHeight * 2;
             
-            if (servicesSection) {
-              const currentHeight = servicesSection.offsetHeight;
-              if (Math.abs(currentHeight - expectedHeight) > 50) {
-                console.log(`FAQ cleanup: Services section height correction needed. Current: ${currentHeight}, Expected: ${expectedHeight}`);
-                servicesSection.style.height = `${expectedHeight}px`;
-                servicesSection.style.minHeight = `${expectedHeight}px`;
-                servicesSection.style.overflow = 'visible';
-                servicesSection.style.position = 'relative';
-              }
-            }
+            // Проверяем, является ли устройство мобильным -- применяем ТОЛЬКО для мобильных
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              const expectedHeight = window.innerHeight * 2;
             
-            if (artistsSection) {
-              const currentHeight = artistsSection.offsetHeight;
-              if (Math.abs(currentHeight - expectedHeight) > 50) {
-                console.log(`FAQ cleanup: Artists section height correction needed. Current: ${currentHeight}, Expected: ${expectedHeight}`);
-                artistsSection.style.height = `${expectedHeight}px`;
-                artistsSection.style.minHeight = `${expectedHeight}px`;
-                artistsSection.style.overflow = 'visible';
-                artistsSection.style.position = 'relative';
+              if (servicesSection) {
+                const currentHeight = servicesSection.offsetHeight;
+                if (Math.abs(currentHeight - expectedHeight) > 50) {
+                  console.log(`FAQ cleanup: Services section height correction needed (mobile). Current: ${currentHeight}, Expected: ${expectedHeight}`);
+                  servicesSection.style.height = `${expectedHeight}px`;
+                  servicesSection.style.minHeight = `${expectedHeight}px`;
+                  servicesSection.style.overflow = 'visible';
+                  servicesSection.style.position = 'relative';
+                }
               }
-            }
+              
+              if (artistsSection) {
+                const currentHeight = artistsSection.offsetHeight;
+                if (Math.abs(currentHeight - expectedHeight) > 50) {
+                  console.log(`FAQ cleanup: Artists section height correction needed (mobile). Current: ${currentHeight}, Expected: ${expectedHeight}`);
+                  artistsSection.style.height = `${expectedHeight}px`;
+                  artistsSection.style.minHeight = `${expectedHeight}px`;
+                  artistsSection.style.overflow = 'visible';
+                  artistsSection.style.position = 'relative';
+                }
+              }
+            } 
             
             // КРИТИЧЕСКИ ВАЖНО: Сбрасываем позицию прокрутки контейнера
             const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;

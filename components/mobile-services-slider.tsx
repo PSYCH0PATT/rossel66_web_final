@@ -79,7 +79,7 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
 
   // Принудительная проверка и исправление высоты слайдера
   const forceHeightCorrection = () => {
-    if (sliderRef.current && typeof window !== 'undefined') {
+    if (sliderRef.current && typeof window !== 'undefined' && window.innerWidth < 768) {
       const expectedHeight = window.innerHeight * 2
       
       // Фокусируемся только на коррекции родительского контейнера
@@ -121,6 +121,19 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
       sliderRef.current.style.transform = 'none'
       
       console.log(`MobileServicesSlider: Height correction applied - ${expectedHeight}px`)
+    } else if (sliderRef.current && typeof window !== 'undefined') {
+      // Для десктопа, просто сбрасываем стили, которые могли быть применены ранее
+      const servicesSection = document.getElementById('services');
+      if (servicesSection) {
+        servicesSection.style.height = ''
+        servicesSection.style.minHeight = ''
+        // servicesSection.style.overflow = '' // Оставим, т.к. может быть нужно
+        // servicesSection.style.position = '' // Оставим, т.к. может быть нужно
+      }
+      sliderRef.current.style.height = ''
+      sliderRef.current.style.minHeight = ''
+      sliderRef.current.style.transform = ''
+       console.log('MobileServicesSlider: Desktop mode, styles reset');
     }
   }
 
