@@ -322,6 +322,14 @@ export default function Home() {
           servicesSection.style.overflow = 'visible';
           servicesSection.style.position = 'relative';
           servicesSection.style.width = '100%';
+          
+          // ДОПОЛНИТЕЛЬНО: Принудительный сброс позиционирования
+          servicesSection.style.transform = 'none';
+          servicesSection.style.top = 'auto';
+          servicesSection.style.left = 'auto';
+          servicesSection.style.marginTop = '0';
+          servicesSection.style.marginBottom = '0';
+          servicesSection.style.zIndex = 'auto';
         }
         
         if (artistsSection) {
@@ -329,6 +337,14 @@ export default function Home() {
           artistsSection.style.overflow = 'visible';
           artistsSection.style.position = 'relative';
           artistsSection.style.width = '100%';
+          
+          // ДОПОЛНИТЕЛЬНО: Принудительный сброс позиционирования
+          artistsSection.style.transform = 'none';
+          artistsSection.style.top = 'auto';
+          artistsSection.style.left = 'auto';
+          artistsSection.style.marginTop = '0';
+          artistsSection.style.marginBottom = '0';
+          artistsSection.style.zIndex = 'auto';
         }
       };
       
@@ -347,6 +363,15 @@ export default function Home() {
             console.log(`Services section height mismatch: expected ${expectedHeight}, got ${currentHeight}`);
             needsReinitialization = true;
           }
+          
+          // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Принудительная коррекция позиционирования секции services
+          servicesSection.style.position = 'relative';
+          servicesSection.style.transform = 'none';
+          servicesSection.style.top = 'auto';
+          servicesSection.style.left = 'auto';
+          servicesSection.style.marginTop = '0';
+          servicesSection.style.marginBottom = '0';
+          servicesSection.style.zIndex = 'auto';
         }
         
         if (artistsSection) {
@@ -355,12 +380,63 @@ export default function Home() {
             console.log(`Artists section height mismatch: expected ${expectedHeight}, got ${currentHeight}`);
             needsReinitialization = true;
           }
+          
+          // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Принудительная коррекция позиционирования секции artists
+          artistsSection.style.position = 'relative';
+          artistsSection.style.transform = 'none';
+          artistsSection.style.top = 'auto';
+          artistsSection.style.left = 'auto';
+          artistsSection.style.marginTop = '0';
+          artistsSection.style.marginBottom = '0';
+          artistsSection.style.zIndex = 'auto';
         }
         
         if (needsReinitialization) {
           console.log('Reinitializing section heights due to validation failure');
           initializeSectionHeights();
         }
+      };
+      
+      // Обработчик для восстановления после возвращения с других страниц
+      const handlePageRestoration = () => {
+        console.log('Home page: Handling page restoration, checking section heights');
+        
+        // Проверяем, была ли страница загружена из кэша или после навигации
+        const isPageRestoration = document.visibilityState === 'visible' && 
+                                 performance.navigation?.type === performance.navigation.TYPE_BACK_FORWARD;
+        
+        if (isPageRestoration) {
+          console.log('Home page: Back/forward navigation detected, forcing section reinitialization');
+        }
+        
+        setTimeout(() => {
+          initializeSectionHeights();
+          validateAndFixSectionHeights();
+          
+          // ДОПОЛНИТЕЛЬНО: Восстанавливаем позицию прокрутки контейнера
+          const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
+          if (scrollHost) {
+            console.log(`Home page: Checking scroll position. Current scrollTop: ${scrollHost.scrollTop}`);
+            
+            // Если прокрутка не в начале, но мы должны быть в начале (или на определенной секции)
+            // то восстанавливаем правильную позицию
+            const expectedPosition = 0; // По умолчанию возвращаемся к началу
+            const currentPosition = scrollHost.scrollTop;
+            const tolerance = 100;
+            
+            if (Math.abs(currentPosition - expectedPosition) > tolerance) {
+              console.log(`Home page: Correcting scroll position from ${currentPosition} to ${expectedPosition}`);
+              scrollHost.style.scrollBehavior = 'auto';
+              scrollHost.scrollTop = expectedPosition;
+              
+              setTimeout(() => {
+                if (scrollHost) {
+                  scrollHost.style.scrollBehavior = 'smooth';
+                }
+              }, 100);
+            }
+          }
+        }, 100);
       };
       
       // Выполняем инициализацию с небольшой задержкой
@@ -374,12 +450,50 @@ export default function Home() {
         initializeSectionHeights();
       };
       
+      // Добавляем обработчик для события видимости страницы (когда возвращаемся на страницу)
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          setTimeout(handlePageRestoration, 50);
+        }
+      };
+      
+      // Добавляем обработчик для события pageshow (когда страница показывается из кэша)
+      const handlePageShow = (event: PageTransitionEvent) => {
+        if (event.persisted) {
+          console.log('Home page: Page loaded from cache, forcing reinitialization');
+          setTimeout(handlePageRestoration, 50);
+        }
+      };
+      
+      // Добавляем обработчик для кастомного события реинициализации
+      const handleCustomReinitialization = () => {
+        console.log('Home page: Custom reinitialization event received');
+        setTimeout(() => {
+          initializeSectionHeights();
+          validateAndFixSectionHeights();
+        }, 50);
+      };
+      
       window.addEventListener('resize', handleResize);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pageshow', handlePageShow);
+      document.addEventListener('pageReinitialization', handleCustomReinitialization);
+      
+      // Также проверяем при фокусе на окне
+      const handleFocus = () => {
+        setTimeout(handlePageRestoration, 100);
+      };
+      
+      window.addEventListener('focus', handleFocus);
       
       return () => {
         clearTimeout(timeoutId);
         clearTimeout(validationTimeoutId);
         window.removeEventListener('resize', handleResize);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('pageshow', handlePageShow);
+        document.removeEventListener('pageReinitialization', handleCustomReinitialization);
+        window.removeEventListener('focus', handleFocus);
       };
     }
   }, [isMobile])

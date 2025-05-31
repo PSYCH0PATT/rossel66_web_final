@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Radio, Target, Mic, MessageSquare, Video, Briefcase } from "lucide-react"
 import Image from "next/image"
@@ -71,13 +71,111 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
+  const sliderRef = useRef<HTMLDivElement>(null)
 
   // Рассчитываем ширину слайдера с учетом масштаба (КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ)
   const widthMultiplier = Math.min(1 / scale, 2) // Ограничиваем максимальное увеличение до 2x
   const marginOffset = `${(widthMultiplier - 1) * 50}%`
 
+  // Принудительная проверка и исправление высоты слайдера
+  const forceHeightCorrection = () => {
+    if (sliderRef.current && typeof window !== 'undefined') {
+      const expectedHeight = window.innerHeight * 2
+      
+      // Фокусируемся только на коррекции родительского контейнера
+      const servicesSection = document.getElementById('services')
+      if (servicesSection) {
+        servicesSection.style.height = `${expectedHeight}px`
+        servicesSection.style.minHeight = `${expectedHeight}px`
+        servicesSection.style.overflow = 'visible'
+        servicesSection.style.position = 'relative'
+        
+        // Убеждаемся, что секция имеет правильные классы
+        if (!servicesSection.classList.contains('flex')) {
+          servicesSection.classList.add('flex')
+        }
+        if (!servicesSection.classList.contains('items-center')) {
+          servicesSection.classList.add('items-center')
+        }
+        if (!servicesSection.classList.contains('justify-center')) {
+          servicesSection.classList.add('justify-center')
+        }
+      }
+      
+      // Принудительно устанавливаем высоту слайдера
+      sliderRef.current.style.height = `${expectedHeight}px`
+      sliderRef.current.style.minHeight = `${expectedHeight}px`
+      
+      // Для слайдера убеждаемся, что классы центрирования есть
+      if (!sliderRef.current.classList.contains('flex')) {
+        sliderRef.current.classList.add('flex')
+      }
+      if (!sliderRef.current.classList.contains('items-center')) {
+        sliderRef.current.classList.add('items-center')
+      }
+      if (!sliderRef.current.classList.contains('justify-center')) {
+        sliderRef.current.classList.add('justify-center')
+      }
+      
+      // Только сброс transform, без position свойств
+      sliderRef.current.style.transform = 'none'
+      
+      console.log(`MobileServicesSlider: Height correction applied - ${expectedHeight}px`)
+    }
+  }
+
   // Отладочные логи (только для текущей отладки)
   console.log('MobileServicesSlider scale:', scale, 'widthMultiplier:', widthMultiplier)
+
+  // Эффект для принудительной коррекции высоты при монтировании и изменении размера
+  useEffect(() => {
+    // Немедленная проверка
+    const immediateCheck = () => {
+      forceHeightCorrection()
+    }
+    
+    // Проверка с задержкой для случаев, когда DOM еще не полностью готов
+    const delayedCheck = setTimeout(() => {
+      forceHeightCorrection()
+    }, 100)
+    
+    // Дополнительная проверка через более длительное время
+    const additionalCheck = setTimeout(() => {
+      forceHeightCorrection()
+    }, 500)
+    
+    immediateCheck()
+    
+    // Обработчик изменения размера окна
+    const handleResize = () => {
+      setTimeout(forceHeightCorrection, 50)
+    }
+    
+    // Обработчик события реинициализации страницы
+    const handlePageReinitialization = () => {
+      console.log('MobileServicesSlider: Page reinitialization detected, forcing height correction')
+      setTimeout(forceHeightCorrection, 100)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('pageReinitialization', handlePageReinitialization)
+    
+    return () => {
+      clearTimeout(delayedCheck)
+      clearTimeout(additionalCheck)
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('pageReinitialization', handlePageReinitialization)
+    }
+  }, [])
+
+  // Эффект для проверки высоты при изменении масштаба
+  useEffect(() => {
+    const checkAfterScaleChange = setTimeout(() => {
+      forceHeightCorrection()
+    }, 200)
+    
+    return () => clearTimeout(checkAfterScaleChange)
+  }, [scale])
 
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -119,21 +217,23 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
 
   return (
     <div
-      className="mobile-services-slider w-full min-h-screen flex items-center justify-center"
+      ref={sliderRef}
+      className="mobile-services-slider w-full flex items-center justify-center"
       style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        transform: 'none', // Принудительно сбрасываем любые трансформации
         width: `${widthMultiplier * 100}vw`,
         maxWidth: `${widthMultiplier * 100}vw`,
+        height: `${typeof window !== 'undefined' ? window.innerHeight * 2 : 1600}px`, // Принудительная высота
+        minHeight: `${typeof window !== 'undefined' ? window.innerHeight * 2 : 1600}px`,
         margin: 0,
         padding: 0,
         marginLeft: `-${marginOffset}`,
         marginRight: `-${marginOffset}`,
+        marginTop: 0, // Принудительно сбрасываем отступы
+        marginBottom: 0,
         transition: "width 0.3s ease, margin 0.3s ease",
         background: "black",
+        zIndex: 1, // Устанавливаем предсказуемый z-index
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

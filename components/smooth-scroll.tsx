@@ -68,6 +68,32 @@ export default function SmoothScroll() {
           scrollHost.style.overflowX = 'hidden';
           scrollHost.style.scrollSnapType = 'y mandatory';
           scrollHost.style.scrollBehavior = 'smooth';
+          
+          // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Восстанавливаем правильную позицию прокрутки
+          // Проверяем, если мы не в начале страницы, то сбрасываем к началу или к текущей секции
+          const isAtTop = scrollHost.scrollTop === 0;
+          const currentSectionIndex = currentSectionRef.current;
+          
+          if (!isAtTop || currentSectionIndex > 0) {
+            console.log(`SmoothScroll: Restoring scroll position. Current section: ${currentSectionIndex}, ScrollTop: ${scrollHost.scrollTop}`);
+            
+            // Если мы должны быть на конкретной секции, прокручиваем к ней
+            if (sectionsRef.current[currentSectionIndex]) {
+              const targetPosition = sectionsRef.current[currentSectionIndex].offsetTop;
+              console.log(`SmoothScroll: Scrolling to section ${currentSectionIndex} at position ${targetPosition}`);
+              
+              // Временно отключаем smooth behavior для точного позиционирования
+              scrollHost.style.scrollBehavior = 'auto';
+              scrollHost.scrollTop = targetPosition;
+              
+              // Возвращаем smooth behavior через небольшую задержку
+              setTimeout(() => {
+                if (scrollHost) {
+                  scrollHost.style.scrollBehavior = 'smooth';
+                }
+              }, 100);
+            }
+          }
         }
         
         // Принудительно устанавливаем правильные высоты для секций services и artists
@@ -170,6 +196,35 @@ export default function SmoothScroll() {
       console.log('Page reinitialization triggered - reinitializing mobile styles');
       setTimeout(() => {
         initializeMobileStyles();
+        
+        // Дополнительная проверка и коррекция позиции прокрутки
+        if (isMobile) {
+          const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
+          if (scrollHost) {
+            const currentSectionIndex = currentSectionRef.current;
+            
+            // Принудительно проверяем, что мы находимся в правильной позиции
+            setTimeout(() => {
+              if (sectionsRef.current[currentSectionIndex]) {
+                const targetPosition = sectionsRef.current[currentSectionIndex].offsetTop;
+                const currentPosition = scrollHost.scrollTop;
+                const tolerance = 50; // Допуск в пикселях
+                
+                if (Math.abs(currentPosition - targetPosition) > tolerance) {
+                  console.log(`Page reinitialization: Position correction needed. Current: ${currentPosition}, Target: ${targetPosition}`);
+                  scrollHost.style.scrollBehavior = 'auto';
+                  scrollHost.scrollTop = targetPosition;
+                  
+                  setTimeout(() => {
+                    if (scrollHost) {
+                      scrollHost.style.scrollBehavior = 'smooth';
+                    }
+                  }, 50);
+                }
+              }
+            }, 150);
+          }
+        }
       }, 50);
     };
 

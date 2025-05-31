@@ -158,14 +158,76 @@ export default function FAQPage() {
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
       
-      // Добавляем небольшую задержку для корректной инициализации главной страницы
-      setTimeout(() => {
-        // Если мы находимся на главной странице, запускаем событие реинициализации
+      // Улучшенная логика реинициализации с множественными попытками
+      const triggerReinitialization = () => {
         if (window.location.pathname === '/') {
-          const event = new CustomEvent('pageReinitialization');
-          document.dispatchEvent(event);
+          console.log('FAQ cleanup: Triggering page reinitialization');
+          
+          // Первая попытка реинициализации
+          const event1 = new CustomEvent('pageReinitialization');
+          document.dispatchEvent(event1);
+          
+          // Дополнительные попытки с задержкой для надежности
+          setTimeout(() => {
+            const event2 = new CustomEvent('pageReinitialization');
+            document.dispatchEvent(event2);
+            console.log('FAQ cleanup: Second reinitialization attempt');
+          }, 200);
+          
+          setTimeout(() => {
+            const event3 = new CustomEvent('pageReinitialization');
+            document.dispatchEvent(event3);
+            console.log('FAQ cleanup: Third reinitialization attempt');
+          }, 500);
+          
+          // Принудительная проверка высоты секций
+          setTimeout(() => {
+            const servicesSection = document.getElementById('services');
+            const artistsSection = document.getElementById('artists');
+            const expectedHeight = window.innerHeight * 2;
+            
+            if (servicesSection) {
+              const currentHeight = servicesSection.offsetHeight;
+              if (Math.abs(currentHeight - expectedHeight) > 50) {
+                console.log(`FAQ cleanup: Services section height correction needed. Current: ${currentHeight}, Expected: ${expectedHeight}`);
+                servicesSection.style.height = `${expectedHeight}px`;
+                servicesSection.style.minHeight = `${expectedHeight}px`;
+                servicesSection.style.overflow = 'visible';
+                servicesSection.style.position = 'relative';
+              }
+            }
+            
+            if (artistsSection) {
+              const currentHeight = artistsSection.offsetHeight;
+              if (Math.abs(currentHeight - expectedHeight) > 50) {
+                console.log(`FAQ cleanup: Artists section height correction needed. Current: ${currentHeight}, Expected: ${expectedHeight}`);
+                artistsSection.style.height = `${expectedHeight}px`;
+                artistsSection.style.minHeight = `${expectedHeight}px`;
+                artistsSection.style.overflow = 'visible';
+                artistsSection.style.position = 'relative';
+              }
+            }
+            
+            // КРИТИЧЕСКИ ВАЖНО: Сбрасываем позицию прокрутки контейнера
+            const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
+            if (scrollHost) {
+              console.log(`FAQ cleanup: Resetting scroll position. Current: ${scrollHost.scrollTop}`);
+              scrollHost.style.scrollBehavior = 'auto';
+              scrollHost.scrollTop = 0; // Принудительно сбрасываем к началу
+              
+              setTimeout(() => {
+                if (scrollHost) {
+                  scrollHost.style.scrollBehavior = 'smooth';
+                  console.log(`FAQ cleanup: Scroll position reset complete. New position: ${scrollHost.scrollTop}`);
+                }
+              }, 50);
+            }
+          }, 600);
         }
-      }, 100);
+      };
+      
+      // Добавляем небольшую задержку для корректной инициализации главной страницы
+      setTimeout(triggerReinitialization, 100);
     }
   }, [])
 
