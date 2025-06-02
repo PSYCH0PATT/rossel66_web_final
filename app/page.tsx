@@ -40,6 +40,7 @@ export default function Home() {
     heightRatio: 0,
   }) */ // Removed unused variable
   const isMobile = useMobileDetector()
+  const initialHashProcessed = useRef(false); // Flag for initial hash scroll
 
   // В компоненте Home, добавим новое состояние для хранения коэффициентов уменьшения секций
   // const [sectionScaleFactors, setSectionScaleFactors] = useState<Record<string, number>>({}) // Removed unused variable
@@ -401,11 +402,10 @@ export default function Home() {
       const handlePageRestoration = () => {
         console.log('Home page: Handling page restoration, checking section heights');
         
-        // Проверяем, была ли страница загружена из кэша или после навигации
-        const isPageRestoration = document.visibilityState === 'visible' && 
+        const isPageRestorationEvent = document.visibilityState === 'visible' && 
                                  performance.navigation?.type === performance.navigation.TYPE_BACK_FORWARD;
         
-        if (isPageRestoration) {
+        if (isPageRestorationEvent) {
           console.log('Home page: Back/forward navigation detected, forcing section reinitialization');
         }
         
@@ -413,27 +413,36 @@ export default function Home() {
           initializeSectionHeights();
           validateAndFixSectionHeights();
           
-          // ДОПОЛНИТЕЛЬНО: Восстанавливаем позицию прокрутки контейнера
           const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
           if (scrollHost) {
-            console.log(`Home page: Checking scroll position. Current scrollTop: ${scrollHost.scrollTop}`);
-            
-            // Если прокрутка не в начале, но мы должны быть в начале (или на определенной секции)
-            // то восстанавливаем правильную позицию
-            const expectedPosition = 0; // По умолчанию возвращаемся к началу
-            const currentPosition = scrollHost.scrollTop;
-            const tolerance = 100;
-            
-            if (Math.abs(currentPosition - expectedPosition) > tolerance) {
-              console.log(`Home page: Correcting scroll position from ${currentPosition} to ${expectedPosition}`);
-              scrollHost.style.scrollBehavior = 'auto';
-              scrollHost.scrollTop = expectedPosition;
-              
-              setTimeout(() => {
-                if (scrollHost) {
-                  scrollHost.style.scrollBehavior = 'smooth';
+            // If initialHashProcessed.current is true, it means we've just tried to scroll to a hash.
+            // We should give that scroll a chance to settle and not immediately override it.
+            const anInitialHashWasJustProcessed = initialHashProcessed.current;
+
+            if (initialHashProcessed.current) {
+                // Reset the flag after a short delay so subsequent restorations behave normally.
+                setTimeout(() => { initialHashProcessed.current = false; }, 500); 
+            }
+
+            if (anInitialHashWasJustProcessed) {
+                console.log('Home page: Initial hash scroll detected, handlePageRestoration will not force scroll to top.');
+            } else {
+                console.log(`Home page: Checking scroll position. Current scrollTop: ${scrollHost.scrollTop}`);
+                const expectedPosition = 0; // По умолчанию возвращаемся к началу
+                const currentPosition = scrollHost.scrollTop;
+                const tolerance = 100;
+                
+                if (Math.abs(currentPosition - expectedPosition) > tolerance) {
+                    console.log(`Home page: Correcting scroll position from ${currentPosition} to ${expectedPosition}`);
+                    scrollHost.style.scrollBehavior = 'auto';
+                    scrollHost.scrollTop = expectedPosition;
+                    
+                    setTimeout(() => {
+                        if (scrollHost) {
+                            scrollHost.style.scrollBehavior = 'smooth';
+                        }
+                    }, 100);
                 }
-              }, 100);
             }
           }
         }, 100);
@@ -497,6 +506,28 @@ export default function Home() {
       };
     }
   }, [isMobile])
+
+  // useEffect to handle scroll to section from URL hash on page load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "")
+      if (hash) {
+        const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
+        const sectionIndex = sectionIds.indexOf(hash)
+        if (sectionIndex !== -1) {
+          initialHashProcessed.current = true; // Set the flag
+          // Dispatch event to scroll to the section
+          const event = new CustomEvent("sectionChange", {
+            detail: { index: sectionIndex, source: "url_hash" }, // Added source for clarity
+          })
+          document.dispatchEvent(event)
+
+          // Optional: Clear the hash from the URL after scrolling
+          // history.pushState("", document.title, window.location.pathname + window.location.search);
+        }
+      }
+    }
+  }, []) // Empty dependency array ensures this runs only once on mount
 
   return (
     <main

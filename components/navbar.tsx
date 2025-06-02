@@ -45,16 +45,23 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
     e.preventDefault()
     const targetId = href.replace("#", "")
 
-    // Определяем индекс секции по ID
-    const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
-    const sectionIndex = sectionIds.indexOf(targetId)
+    // Check if we are on the main page
+    const isOnMainPage = window.location.pathname === "/"
 
-    // Отправляем событие для обновления текущей секции с информацией о том, что это навигация через меню
-    if (sectionIndex !== -1) {
-      const event = new CustomEvent("sectionChange", {
-        detail: { index: sectionIndex, source: "navbar" },
-      })
-      document.dispatchEvent(event)
+    if (isOnMainPage) {
+      // If on main page, dispatch event for smooth scrolling
+      const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
+      const sectionIndex = sectionIds.indexOf(targetId)
+
+      if (sectionIndex !== -1) {
+        const event = new CustomEvent("sectionChange", {
+          detail: { index: sectionIndex, source: "navbar" },
+        })
+        document.dispatchEvent(event)
+      }
+    } else {
+      // If not on main page, navigate to main page with hash
+      window.location.href = `/${href}`
     }
 
     // Закрываем мобильное меню при клике

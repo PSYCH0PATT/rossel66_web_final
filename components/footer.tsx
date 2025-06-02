@@ -6,7 +6,11 @@ import { ExternalLink, Mail } from "lucide-react"
 import { useEffect, useState, useMemo } from "react"
 import { motion } from "framer-motion"
 
-export default function Footer() {
+interface FooterProps {
+  forceTransparentBackground?: boolean;
+}
+
+export default function Footer({ forceTransparentBackground = false }: FooterProps) {
   const currentYear = new Date().getFullYear()
   const [isMobile, setIsMobile] = useState(false)
 
@@ -26,7 +30,6 @@ export default function Footer() {
 
   const footerStyle: React.CSSProperties = useMemo(() => {
     const baseStyle: React.CSSProperties = {
-      // backgroundColor: 'rgba(0, 0, 0, 0.5)', // Убираем фон
       height: "auto",
       maxHeight: "none",
       overflow: "visible",
@@ -35,6 +38,10 @@ export default function Footer() {
       transform: "none",
       boxSizing: "border-box"
     };
+
+    if (forceTransparentBackground) {
+      baseStyle.backgroundColor = 'transparent';
+    }
 
     if (isMobile) {
       const widthMultiplier = 2.0; // 200%
@@ -51,12 +58,12 @@ export default function Footer() {
     }
 
     return baseStyle;
-  }, [isMobile]);
+  }, [isMobile, forceTransparentBackground]);
 
   return (
     <footer
       id="footer"
-      className={`w-full /* backdrop-blur */ border-t border-white/[.05] ${isMobile ? "py-10" : "py-8 sm:pt-12 sm:pb-8"}`}
+      className={`w-full backdrop-blur-sm ${isMobile ? "py-10" : "py-8 sm:pt-12 sm:pb-8"}`}
       style={footerStyle}
     >
       {isMobile && (
