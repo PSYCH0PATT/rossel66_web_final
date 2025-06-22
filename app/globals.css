@@ -1420,3 +1420,46 @@ html, body {
   /* Пока оставим !important, чтобы CSS имел приоритет. */
 }
 
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-emerald-600 rounded-md;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-emerald-500;
+}
+
+/* Styling for Date Input Calendar Icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(40%) sepia(100%) saturate(400%) hue-rotate(115deg) brightness(100%) contrast(100%);
+  /* This filter aims to turn a black icon to approx emerald-500 (#10b981) */
+  /* Adjust if color is not quite right */
+  cursor: pointer;
+  transition: filter 0.2s ease-in-out;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(40%) sepia(100%) saturate(500%) hue-rotate(115deg) brightness(110%) contrast(100%); /* Slightly brighter on hover */
+}
+
+/* For Firefox - more limited styling options */
+input[type="date"] {
+  color-scheme: dark; /* This might influence the picker's theme in Firefox if it respects color-scheme */
+}
+
+body:has([data-page="home"]) main,
+body:has([data-page="home"]) {
+  @media (max-width: 768px) {
+    /* ... existing code ... */
+  }
+}
+

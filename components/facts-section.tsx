@@ -152,7 +152,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           <FactCard
             icon={<Music className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
             title="Музыкальное сообщество"
-            description="Дадим дорогу в большое музыкальное сообщество"
+            description="Откроем двери в профессиональное творческое окружение"
             delay={3}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -161,7 +161,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           <FactCard
             icon={<Palette className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
             title="Коммерческий образ"
-            description="Поможем сформировать коммерческий образ"
+            description="Сформируем сильный и узнаваемый имидж артиста"
             delay={4}
             cardPadding={cardPadding}
             windowSize={windowSize}

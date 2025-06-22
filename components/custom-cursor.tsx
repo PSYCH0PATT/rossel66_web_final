@@ -155,7 +155,7 @@ export function CustomCursor() {
   return (
     <div
       ref={cursorRef}
-      className="fixed top-0 left-0 w-full h-full pointer-events-none z-50"
+      className="fixed top-0 left-0 w-full h-full pointer-events-none z-[99999999]"
       style={{ display: isTouch ? 'none' : 'block' }}
     >
       {/* ... existing code ... */}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Radio, Target, Mic, MessageSquare, Video, Briefcase } from "lucide-react"
+import { Radio, Target, Mic, MessageSquare, Video, Briefcase, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 
 interface MobileServicesSliderProps {
@@ -14,7 +14,7 @@ const services = [
   {
     icon: <Radio />,
     title: "Промо",
-    description: "Дадим редакторам увидеть ваш трек",
+    description: "Покажем ваш трек редакторам цифровых платформ",
     colorStyle: "emerald",
     background: "/images/artists/artist6.jpeg", // Изображение, которое мы только что добавили
   },
@@ -23,21 +23,21 @@ const services = [
     title: "Таргетинг/посевы",
     description: "Оставьте на нас продвижение вашей музыки",
     colorStyle: "emerald-cyan",
-    background: "/images/artists/sour_diesel.jpeg",
+    background: "/images/artists/sour_diesel.webp",
   },
   {
     icon: <Mic />,
     title: "Выступления",
-    description: "Организация мероприятий для вас",
+    description: "Организуем концерты, клабшоу и другие события",
     colorStyle: "cyan-teal",
     background: "/images/artists/blue_portrait.jpeg",
   },
   {
     icon: <MessageSquare />,
     title: "SMM",
-    description: "Активное ведение аккаунтов поддерживает активность аудитории",
+    description: "Продвижение через соцсети и рост вовлечённости",
     colorStyle: "teal",
-    background: "/images/artists/bw_portrait.jpeg",
+    background: "/images/artists/bw_portrait.webp",
   },
   {
     icon: <Video />,
@@ -49,7 +49,7 @@ const services = [
   {
     icon: <Briefcase />,
     title: "Менеджмент",
-    description: "Решение любых музыкальных вопросов",
+    description: "Возьмём на себя организацию всех процессов",
     colorStyle: "cyan",
     background: "/images/artists/artist.png",
   },
@@ -327,6 +327,23 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
             ))}
           </div>
         </div>
+
+        {/* Навигационные стрелки скрыты для мобильной версии */}
+        <button
+          onClick={prevSlide}
+          className="hidden"
+          aria-label="Предыдущий слайд"
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
+
+        <button
+          onClick={nextSlide}
+          className="hidden"
+          aria-label="Следующий слайд"
+        >
+          <ChevronRight className="w-6 h-6 text-white" />
+        </button>
       </div>
     </div>
   )

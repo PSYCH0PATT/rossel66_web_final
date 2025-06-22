@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface MobileArtistsSliderProps {
   scale?: number
@@ -28,7 +29,7 @@ const artists = [
     id: 3,
     name: "Sour Diesel",
     description: 'Более 1000000 прослушиваний на треке "Воспоминания"',
-    image: "/images/artists/sour_diesel.jpeg",
+    image: "/images/artists/sour_diesel.webp",
   },
   {
     id: 4,
@@ -314,6 +315,23 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
             ))}
           </div>
         </div>
+
+        {/* Навигационные стрелки скрыты для мобильной версии */}
+        <button
+          onClick={prevSlide}
+          className="hidden"
+          aria-label="Предыдущий слайд"
+        >
+          <ChevronLeft className="w-6 h-6 text-white" />
+        </button>
+
+        <button
+          onClick={nextSlide}
+          className="hidden"
+          aria-label="Следующий слайд"
+        >
+          <ChevronRight className="w-6 h-6 text-white" />
+        </button>
       </div>
     </div>
   )

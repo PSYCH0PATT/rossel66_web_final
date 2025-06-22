@@ -125,6 +125,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
                 <button
                   onClick={() => toggleItem(item.id)}
                   className="w-full flex justify-between items-center p-5 text-left"
+                  style={{ touchAction: 'manipulation' }}
                 >
                   <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                   {openItems.includes(item.id) ? (
@@ -203,6 +204,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
               <button
                 onClick={() => toggleItem(item.id)}
                 className="w-full flex justify-between items-center p-5 text-left"
+                style={{ touchAction: 'manipulation' }}
               >
                 <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                 {openItems.includes(item.id) ? (

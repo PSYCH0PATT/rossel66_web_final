@@ -48,7 +48,8 @@ const PYRUS_FIELD_IDS = { // Этот блок должен быть АКТИВ�
 };
 
 const PYRUS_LOGIN = "rossel66.music@gmail.com";
-const PYRUS_SECURITY_KEY = process.env.PYRUS_API_KEY; // Возвращаем чтение из process.env
+//const PYRUS_SECURITY_KEY = process.env.PYRUS_API_KEY;
+const PYRUS_SECURITY_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Возвращаем чтение из process.env
 // const PYRUS_SECURITY_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Комментируем временный ключ
 const PYRUS_FORM_ID = 1553991;
 
@@ -138,30 +139,19 @@ export async function POST(request: Request) {
 
     if (taskResponse.ok && responseData && responseData.task) {
         return NextResponse.json({
-            message: "Данные успешно отправлены в Pyrus!",
+            message: "Форма успешно отправлена",
             taskId: responseData.task.id,
         });
     } else {
         console.error("Pyrus API error (creating task):", responseData);
-        let errorMessage = "Ошибка при отправке данных в Pyrus.";
-        if (responseData && responseData.error_description) {
-            errorMessage = responseData.error_description;
-        } else if (responseData && responseData.error) {
-            errorMessage = responseData.error;
-        }
         return NextResponse.json(
-            { message: errorMessage, details: responseData },
+            { message: "Ошибка при отправке формы", details: responseData },
             { status: taskResponse.status }
         );
     }
 
   } catch (error: any) {
     console.error("Error processing Pyrus form submission:", error);
-    let message = "Внутренняя ошибка сервера.";
-    if (error instanceof Error) {
-        message = error.message;
-    }
-    // Если ошибка пришла из getPyrusAccessToken, она уже содержит информативное сообщение
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message: "Ошибка при отправке формы", details: error.message ? error.message : "Неизвестная ошибка сервера" }, { status: 500 });
   }
 } 

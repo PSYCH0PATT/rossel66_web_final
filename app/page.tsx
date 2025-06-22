@@ -539,7 +539,8 @@ export default function Home() {
         overscrollBehavior: isMobile ? 'auto' : "none", // Разрешаем overscroll для snap на мобильных
         WebkitOverflowScrolling: "touch",
         display: "flex",
-        flexDirection: "column"
+        flexDirection: "column",
+        fontFamily: "'Mulish', sans-serif"
       }}
     >
       {/* Компонент для плавной прокрутки */}

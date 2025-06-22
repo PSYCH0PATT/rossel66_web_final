@@ -96,7 +96,7 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
           <ServiceCard
             icon={<Radio />}
             title="Промо"
-            description="Дадим редакторам увидеть ваш трек"
+            description="Покажем ваш трек редакторам цифровых платформ"
             colorStyle="emerald"
             delay={1}
             cardPadding={cardPadding}
@@ -107,7 +107,7 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
             icon={<Target />}
             title="Таргетинг/посевы"
             description="Оставьте на нас продвижение вашей музыки"
-            colorStyle="emerald"
+            colorStyle="emerald-cyan"
             delay={2}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -117,8 +117,8 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
           <ServiceCard
             icon={<Mic />}
             title="Выступления"
-            description="Организация мероприятий для вас"
-            colorStyle="mixed"
+            description="Организуем концерты, клабшоу и другие события"
+            colorStyle="cyan-teal"
             delay={3}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -127,8 +127,8 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
           <ServiceCard
             icon={<MessageSquare />}
             title="SMM"
-            description="Активное ведение аккаунтов поддерживает активность аудитории"
-            colorStyle="mixed"
+            description="Продвижение через соцсети и рост вовлечённости"
+            colorStyle="teal"
             delay={4}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -139,7 +139,7 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
             icon={<Video />}
             title="Продакшн"
             description="Съёмки клипов, фотосессии, помощь в оформлении соцсетей и другой визуальный материал"
-            colorStyle="azure"
+            colorStyle="teal-cyan"
             delay={5}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -148,8 +148,8 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
           <ServiceCard
             icon={<Briefcase />}
             title="Менеджмент"
-            description="Решение любых музыкальных вопросов"
-            colorStyle="azure"
+            description="Возьмём на себя организацию всех процессов"
+            colorStyle="cyan"
             delay={6}
             cardPadding={cardPadding}
             windowSize={windowSize}
@@ -164,7 +164,7 @@ interface ServiceCardProps {
   icon: React.ReactNode
   title: string
   description: string
-  colorStyle: "emerald" | "mixed" | "azure"
+  colorStyle: "emerald" | "mixed" | "azure" | "emerald-cyan" | "cyan-teal" | "teal" | "teal-cyan" | "cyan"
   delay: number
   cardPadding: string
   windowSize: {
@@ -186,9 +186,19 @@ const ServiceCard = ({ icon, title, description, colorStyle, delay, cardPadding,
     switch (colorStyle) {
       case "emerald":
         return "bg-emerald-500/20"
+      case "emerald-cyan":
+        return "bg-emerald-500/20" // Or a mix
       case "mixed":
         return "bg-teal-500/20"
+      case "cyan-teal":
+        return "bg-teal-500/20" // Or a mix
+      case "teal":
+        return "bg-teal-500/20"
       case "azure":
+        return "bg-cyan-500/20"
+      case "teal-cyan":
+        return "bg-cyan-500/20" // Or a mix
+      case "cyan":
         return "bg-cyan-500/20"
       default:
         return "bg-emerald-500/20"
@@ -200,9 +210,19 @@ const ServiceCard = ({ icon, title, description, colorStyle, delay, cardPadding,
     switch (colorStyle) {
       case "emerald":
         return "from-emerald-500/40 to-emerald-600/20"
+      case "emerald-cyan":
+        return "from-emerald-500/40 to-cyan-600/20"
       case "mixed":
         return "from-teal-500/40 to-teal-600/20"
+      case "cyan-teal":
+        return "from-cyan-500/40 to-teal-600/20"
+      case "teal":
+        return "from-teal-500/40 to-teal-600/20"
       case "azure":
+        return "from-cyan-500/40 to-cyan-600/20"
+      case "teal-cyan":
+        return "from-teal-500/40 to-cyan-600/20"
+      case "cyan":
         return "from-cyan-500/40 to-cyan-600/20"
       default:
         return "from-emerald-500/40 to-emerald-600/20"
@@ -242,11 +262,15 @@ const ServiceCard = ({ icon, title, description, colorStyle, delay, cardPadding,
         style={{
           background: `radial-gradient(circle 200px at var(--mouse-x) var(--mouse-y), 
             ${
-              colorStyle === "emerald"
-                ? "rgba(16, 185, 129, 0.4)"
-                : colorStyle === "mixed"
-                  ? "rgba(20, 184, 166, 0.4)"
-                  : "rgba(6, 182, 212, 0.4)"
+              colorStyle === "emerald" ? "rgba(16, 185, 129, 0.4)" :
+              colorStyle === "emerald-cyan" ? "rgba(18, 186, 147, 0.4)" : // Mix
+              colorStyle === "mixed" ? "rgba(20, 184, 166, 0.4)" :
+              colorStyle === "cyan-teal" ? "rgba(13, 183, 189, 0.4)" : // Mix
+              colorStyle === "teal" ? "rgba(20, 184, 166, 0.4)" :
+              colorStyle === "azure" ? "rgba(6, 182, 212, 0.4)" :
+              colorStyle === "teal-cyan" ? "rgba(13, 183, 189, 0.4)" : // Mix
+              colorStyle === "cyan" ? "rgba(6, 182, 212, 0.4)" :
+              "rgba(6, 182, 212, 0.4)"
             } 0%, 
             transparent 80%)`,
         }}

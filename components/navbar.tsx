@@ -50,14 +50,14 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
 
     if (isOnMainPage) {
       // If on main page, dispatch event for smooth scrolling
-      const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
-      const sectionIndex = sectionIds.indexOf(targetId)
+    const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
+    const sectionIndex = sectionIds.indexOf(targetId)
 
-      if (sectionIndex !== -1) {
-        const event = new CustomEvent("sectionChange", {
+    if (sectionIndex !== -1) {
+      const event = new CustomEvent("sectionChange", {
           detail: { index: sectionIndex, source: "navbar" },
-        })
-        document.dispatchEvent(event)
+      })
+      document.dispatchEvent(event)
       }
     } else {
       // If not on main page, navigate to main page with hash

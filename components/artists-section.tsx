@@ -34,7 +34,7 @@ const artists = [
     id: 3,
     name: "Sour Diesel",
     description: 'Более 1000000 прослушиваний на треке "Воспоминания"',
-    image: "/images/artists/sour_diesel.jpeg",
+    image: "/images/artists/sour_diesel.webp",
   },
   {
     id: 4,
