@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SparklesCore } from "@/components/sparkles";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -13,12 +14,14 @@ import { PlusCircle, Trash2, UploadCloud } from "lucide-react";
 interface TrackRelease {
   id: string;
   audio: File | null;
-  isrc: string;
+  trackName: string;
+  mainArtists: string;
   previewStart: string;
   musicAuthor: string;
   wordsAuthor: string;
   language: string;
   explicit: string;
+  isFocusTrack: boolean;
   lyrics: File | null;
 }
 
@@ -93,12 +96,14 @@ export default function DistributionPage() {
   const initialTrack = useCallback((): TrackRelease => ({
     id: generateId(),
     audio: null,
-    isrc: '',
+    trackName: "",
+    mainArtists: "",
     previewStart: "00:30",
     musicAuthor: "",
     wordsAuthor: "",
     language: "0",
     explicit: "0",
+    isFocusTrack: false,
     lyrics: null
   }), []);
 
@@ -207,6 +212,15 @@ export default function DistributionPage() {
     }
   };
 
+  const handleTrackCheckboxChange = (trackId: string, name: keyof Pick<TrackRelease, 'isFocusTrack'>) => {
+    setFormData(prev => ({
+      ...prev,
+      tracks: prev.tracks.map(track =>
+        track.id === trackId ? { ...track, [name]: !track[name] } : track
+      ),
+    }));
+  };
+
   const addTrackRow = () => {
     setFormData(prev => ({ ...prev, tracks: [...prev.tracks, initialTrack()] }));
   };
@@ -229,12 +243,7 @@ export default function DistributionPage() {
     try {
       // 1. Remove file objects for JSON payload
       const { cover, tracks, ...rest } = formData;
-      const cleanedTracks = tracks.map(({ audio, lyrics, ...trackRest }) => ({
-        ...trackRest,
-        trackName: `Трек ${tracks.indexOf(tracks.find(t => t.id === trackRest.id)!) + 1}`, // Generate track name
-        mainArtists: formData.artists, // Use main artists
-        isFocusTrack: false // Default to false for distribution
-      }));
+      const cleanedTracks = tracks.map(({ audio, lyrics, ...trackRest }) => trackRest);
       
       const payloadData = { 
         contact: rest.contact,
@@ -533,12 +542,14 @@ export default function DistributionPage() {
                       <tr>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">№</th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Аудио-файл <span className="text-red-500">*</span></th>
-                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ISRC <span className="text-red-500">*</span></th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Название трека <span className="text-red-500">*</span></th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Осн. исполнители <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Начало предпр. <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор музыки <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор слов</th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Мат <span className="text-red-500">*</span></th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Фокус трек</th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Текст трека</th>
                         <th scope="col" className="py-3 px-1 text-center text-xs font-medium text-gray-300 uppercase tracking-wider"></th>
                       </tr>
@@ -570,7 +581,10 @@ export default function DistributionPage() {
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <Input name='isrc' value={track.isrc} onChange={(e) => handleTrackChange(track.id, e)} placeholder="XX-XXX-YY-NNNNN" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                            <Input name='trackName' value={track.trackName} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Название трека" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input name='mainArtists' value={track.mainArtists} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Artist1, Artist2" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
                             <Input name='previewStart' value={track.previewStart} onChange={(e) => handleTrackChange(track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
@@ -610,6 +624,9 @@ export default function DistributionPage() {
                                 {explicitOptions.map(opt => <SelectItem key={opt.choice_id} value={opt.choice_id}>{opt.choice_value}</SelectItem>)}
                               </SelectContent>
                             </Select>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <Checkbox id={`track_isFocusTrack_${track.id}`} name="isFocusTrack" checked={track.isFocusTrack} onCheckedChange={() => handleTrackCheckboxChange(track.id, 'isFocusTrack')} className="border-gray-400 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-600 self-center hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3 whitespace-nowrap">
                             <label 
