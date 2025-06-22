@@ -190,9 +190,16 @@ export default function CatalogUploadPage() {
         release.id === releaseId
           ? {
               ...release,
-              tracks: release.tracks.map(track =>
-                track.id === trackId ? { ...track, [name]: value } : track
-              ),
+              tracks: release.tracks.map(track => {
+                if (track.id === trackId) {
+                  const updatedTrack = { ...track, [name]: value };
+                  if (name === 'language' && (value === '0' || value === '3')) {
+                    updatedTrack.wordsAuthor = '';
+                  }
+                  return updatedTrack;
+                }
+                return track;
+              }),
             }
           : release
       ),
@@ -360,16 +367,38 @@ export default function CatalogUploadPage() {
     type: string = "text",
     required: boolean = true,
     isTextArea: boolean = false,
-    className: string = ""
+    className: string = "",
+    disabled: boolean = false
   ) => (
     <div className={`mb-4 ${className}`}>
-      <label htmlFor={`${idPrefix}_${name}`} className="block text-sm font-medium text-gray-300 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label htmlFor={idPrefix} className="block text-sm font-medium text-gray-300 mb-1.5">
+        {label}
+        {required && <span className="text-red-500">*</span>}
       </label>
       {isTextArea ? (
-        <Textarea id={`${idPrefix}_${name}`} name={name} value={value} onChange={onChange} placeholder={placeholder} required={required} className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full border-opacity-50 hover:border-emerald-500 hover:border-opacity-40" rows={3}/>
+        <Textarea
+          id={idPrefix}
+          name={name}
+          value={value as string}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full"
+          rows={4}
+          disabled={disabled}
+        />
       ) : (
-        <Input id={`${idPrefix}_${name}`} name={name} type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full border-opacity-50 hover:border-emerald-500 hover:border-opacity-40"/>
+        <Input
+          id={idPrefix}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full hover:border-emerald-500/60 disabled:bg-neutral-800 disabled:border-neutral-700 disabled:cursor-not-allowed"
+          disabled={disabled}
+        />
       )}
     </div>
   );
@@ -383,13 +412,14 @@ export default function CatalogUploadPage() {
     options: { choice_id: string; choice_value: string }[],
     placeholder: string = "Не выбрано",
     required: boolean = true,
-    className: string = ""
+    className: string = "",
+    disabled: boolean = false
   ) => (
     <div className={`mb-4 ${className}`}>
       <label htmlFor={`${idPrefix}_${name}`} className="block text-sm font-medium text-gray-300 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <Select value={value} onValueChange={onChange} required={required}>
+      <Select value={value} onValueChange={onChange} required={required} disabled={disabled}>
         <SelectTrigger id={`${idPrefix}_${name}`} className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -624,7 +654,7 @@ export default function CatalogUploadPage() {
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ISRC <span className="text-red-500">*</span></th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Начало предпр. <span className="text-red-500">*</span></th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор музыки <span className="text-red-500">*</span></th>
-                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор слов <span className="text-red-500">*</span></th>
+                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор слов</th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык <span className="text-red-500">*</span></th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Мат</th>
                                     {release.releaseType === '2' && <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Фокус</th>}
@@ -659,9 +689,17 @@ export default function CatalogUploadPage() {
                                             <Input name="musicAuthor" value={track.musicAuthor} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="Иванов И.И." required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                                         </td>
                                         <td className="px-3 py-2 align-top">
-                                           <Input name="wordsAuthor" value={track.wordsAuthor} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="Петров П.П." required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                                           <Input 
+                                              name="wordsAuthor" 
+                                              value={track.wordsAuthor} 
+                                              onChange={(e) => handleTrackChange(release.id, track.id, e)} 
+                                              placeholder="Петров П.П." 
+                                              required={track.language === '1' || track.language === '2'}
+                                              disabled={!(track.language === '1' || track.language === '2')}
+                                              className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40 disabled:bg-neutral-800 disabled:border-neutral-700 disabled:cursor-not-allowed" 
+                                            />
                                         </td>
-                                         <td className="px-3 py-2 align-top">
+                                        <td className="px-3 py-2 align-top">
                                             <Select value={track.language} onValueChange={(value) => handleTrackSelectChange(release.id, track.id, 'language', value)} required>
                                               <SelectTrigger className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40"><SelectValue placeholder="Не выбрано" /></SelectTrigger>
                                               <SelectContent className="bg-neutral-800 border-neutral-700 text-gray-200">
@@ -711,7 +749,18 @@ export default function CatalogUploadPage() {
                                 {renderFileField(`${track.id}_mob_audioFile`, "audioFile", "Аудиофайл (.wav)", (e) => handleTrackFileChange(release.id, track.id, 'audioFile', e.target.files), ".wav", track.audioFile)}
                                 {renderInputField(`${track.id}_mob_isrc`, "isrc", "ISRC", track.isrc, (e) => handleTrackChange(release.id, track.id, e), "XX-XXX-YY-NNNNN")}
                                 {renderInputField(`${track.id}_mob_musicAuthor`, "musicAuthor", "Автор музыки", track.musicAuthor, (e) => handleTrackChange(release.id, track.id, e), "Автор музыки")}
-                                {renderInputField(`${track.id}_mob_wordsAuthor`, "wordsAuthor", "Автор слов", track.wordsAuthor, (e) => handleTrackChange(release.id, track.id, e), "Автор слов")}
+                                {renderInputField(
+                                  `${track.id}_mob_wordsAuthor`, 
+                                  "wordsAuthor", 
+                                  "Автор слов", 
+                                  track.wordsAuthor, 
+                                  (e) => handleTrackChange(release.id, track.id, e), 
+                                  "Автор слов",
+                                  "text",
+                                  track.language === '1' || track.language === '2',
+                                  false,
+                                  `disabled:opacity-50 disabled:cursor-not-allowed`
+                                )}
                                 {renderSelectField(`${track.id}_mob_language`, "language", "Язык", track.language, (value) => handleTrackSelectChange(release.id, track.id, 'language', value), languageOptions, "Язык")}
                                 {renderInputField(`${track.id}_mob_previewStart`, "previewStart", "Начало предпрослушивания", track.previewStart, (e) => handleTrackChange(release.id, track.id, e), "00:30")}
                                 {renderFileField(`${track.id}_mob_lyricsFile`, "lyricsFile", "Текст трека (.txt, .doc)", (e) => handleTrackFileChange(release.id, track.id, 'lyricsFile', e.target.files), ".txt,.doc,.docx", track.lyricsFile, false)}
