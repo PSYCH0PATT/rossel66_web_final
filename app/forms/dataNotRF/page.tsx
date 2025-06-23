@@ -110,7 +110,33 @@ export default function DataNotRFFormPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    
+    let formattedValue = value
+    
+    // Apply basic formatting/limits based on field name
+    switch (name) {
+      case 'passportIdNumber':
+        // Remove extra spaces and limit length for passport/ID documents
+        formattedValue = value.replace(/\s+/g, ' ').trim().slice(0, 50)
+        break
+      case 'passportDepartmentCode':
+        // Limit department code length
+        formattedValue = value.slice(0, 20)
+        break
+      case 'taxId':
+        // Remove non-alphanumeric characters for tax ID and limit length
+        formattedValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20)
+        break
+      case 'bankBik':
+      case 'bankInn':
+        // Allow alphanumeric for international banking codes
+        formattedValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 15)
+        break
+      default:
+        formattedValue = value
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: formattedValue }))
   }
 
   const handleSelectChange = (name: keyof FormDataNotRF, value: string) => {

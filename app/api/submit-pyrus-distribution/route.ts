@@ -272,6 +272,15 @@ export async function POST(request: NextRequest) {
         });
     } else {
         console.error("Pyrus API error (creating distribution task):", responseData);
+        
+        // Handle validation errors
+        if (responseData.error && responseData.error_code === 'invalid_value_format') {
+          return NextResponse.json(
+            { message: "Проверьте корректность заполненных полей в форме." },
+            { status: 400 }
+          );
+        }
+        
         return NextResponse.json(
             { message: "Ошибка при отправке формы", details: responseData },
             { status: pyrusResponse.status || 500 }

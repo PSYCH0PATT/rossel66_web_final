@@ -83,11 +83,79 @@ export default function DataRFFormPage() {
     }
   }, [])
 
+  // Input mask functions
+  const formatPassportSeriesNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '')
+    // Limit to 10 digits (4 for series + 6 for number)
+    const limited = digits.slice(0, 10)
+    // Format as "0000 000000"
+    if (limited.length <= 4) {
+      return limited
+    }
+    return `${limited.slice(0, 4)} ${limited.slice(4)}`
+  }
+
+  const formatDepartmentCode = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '')
+    // Limit to 6 digits
+    const limited = digits.slice(0, 6)
+    // Format as "000-000"
+    if (limited.length <= 3) {
+      return limited
+    }
+    return `${limited.slice(0, 3)}-${limited.slice(3)}`
+  }
+
+  const formatSnils = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '')
+    // Limit to 11 digits
+    const limited = digits.slice(0, 11)
+    // Format as "000-000-000 00"
+    if (limited.length <= 3) {
+      return limited
+    } else if (limited.length <= 6) {
+      return `${limited.slice(0, 3)}-${limited.slice(3)}`
+    } else if (limited.length <= 9) {
+      return `${limited.slice(0, 3)}-${limited.slice(3, 6)}-${limited.slice(6)}`
+    }
+    return `${limited.slice(0, 3)}-${limited.slice(3, 6)}-${limited.slice(6, 9)} ${limited.slice(9)}`
+  }
+
+  const formatInn = (value: string) => {
+    // Remove all non-digits and limit to 12 digits for individuals
+    const digits = value.replace(/\D/g, '').slice(0, 12)
+    return digits
+  }
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    
+    let formattedValue = value
+    
+    // Apply formatting based on field name
+    switch (name) {
+      case 'passportSeriesNumber':
+        formattedValue = formatPassportSeriesNumber(value)
+        break
+      case 'passportDepartmentCode':
+        formattedValue = formatDepartmentCode(value)
+        break
+      case 'snils':
+        formattedValue = formatSnils(value)
+        break
+      case 'inn':
+        formattedValue = formatInn(value)
+        break
+      default:
+        formattedValue = value
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: formattedValue }))
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -97,12 +165,25 @@ export default function DataRFFormPage() {
     setSubmitMessage("")
 
     try {
+      // Clean formatted values before sending
+      const cleanedData = {
+        ...formData,
+        // Keep passport series/number with space format as Pyrus expects "XXXX XXXXXX"
+        passportSeriesNumber: formData.passportSeriesNumber,
+        // Clean department code - Pyrus expects "XXX-XXX" format
+        passportDepartmentCode: formData.passportDepartmentCode,
+        // Clean SNILS - Pyrus expects "XXX-XXX-XXX XX" format  
+        snils: formData.snils,
+        // Clean INN to only digits
+        inn: formData.inn.replace(/\D/g, '')
+      }
+
       const response = await fetch("/api/submit-pyrus-data-rf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanedData),
       })
 
       const result = await response.json()
