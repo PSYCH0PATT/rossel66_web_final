@@ -40,7 +40,7 @@ export default function Home() {
     heightRatio: 0,
   }) */ // Removed unused variable
   const isMobile = useMobileDetector()
-  const initialHashProcessed = useRef(false); // Flag for initial hash scroll
+
 
   // В компоненте Home, добавим новое состояние для хранения коэффициентов уменьшения секций
   // const [sectionScaleFactors, setSectionScaleFactors] = useState<Record<string, number>>({}) // Removed unused variable
@@ -415,18 +415,7 @@ export default function Home() {
           
           const scrollHost = document.querySelector('.sections-scroll-host') as HTMLElement | null;
           if (scrollHost) {
-            // If initialHashProcessed.current is true, it means we've just tried to scroll to a hash.
-            // We should give that scroll a chance to settle and not immediately override it.
-            const anInitialHashWasJustProcessed = initialHashProcessed.current;
-
-            if (initialHashProcessed.current) {
-                // Reset the flag after a short delay so subsequent restorations behave normally.
-                setTimeout(() => { initialHashProcessed.current = false; }, 500); 
-            }
-
-            if (anInitialHashWasJustProcessed) {
-                console.log('Home page: Initial hash scroll detected, handlePageRestoration will not force scroll to top.');
-            } else {
+            {
                 console.log(`Home page: Checking scroll position. Current scrollTop: ${scrollHost.scrollTop}`);
                 const expectedPosition = 0; // По умолчанию возвращаемся к началу
                 const currentPosition = scrollHost.scrollTop;
@@ -507,27 +496,7 @@ export default function Home() {
     }
   }, [isMobile])
 
-  // useEffect to handle scroll to section from URL hash on page load
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash.replace("#", "")
-      if (hash) {
-        const sectionIds = ["hero", "facts", "services", "partners", "artists", "contact", "faq", "footer"]
-        const sectionIndex = sectionIds.indexOf(hash)
-        if (sectionIndex !== -1) {
-          initialHashProcessed.current = true; // Set the flag
-          // Dispatch event to scroll to the section
-          const event = new CustomEvent("sectionChange", {
-            detail: { index: sectionIndex, source: "url_hash" }, // Added source for clarity
-          })
-          document.dispatchEvent(event)
 
-          // Optional: Clear the hash from the URL after scrolling
-          // history.pushState("", document.title, window.location.pathname + window.location.search);
-        }
-      }
-    }
-  }, []) // Empty dependency array ensures this runs only once on mount
 
   return (
     <main

@@ -121,11 +121,29 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
                 transition={{ duration: 0.5, delay: item.id * 0.1 }}
                 viewport={{ once: true }}
                 className="glass-card bg-white/5 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
                 <button
-                  onClick={() => toggleItem(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                    toggleItem(item.id)
+                  }}
                   className="w-full flex justify-between items-center p-5 text-left"
                   style={{ touchAction: 'manipulation' }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
+                  onTouchMove={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
                 >
                   <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                   {openItems.includes(item.id) ? (
@@ -153,6 +171,10 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
             transition={{ duration: 0.5, delay: 0.6 }}
             viewport={{ once: true }}
             className="text-center mt-6 sm:mt-8"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
           >
             <Link href="/faq">
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
@@ -200,11 +222,29 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
               transition={{ duration: 0.5, delay: item.id * 0.1 }}
               viewport={{ once: true }}
               className="glass-card bg-white/5 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => toggleItem(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                  toggleItem(item.id)
+                }}
                 className="w-full flex justify-between items-center p-5 text-left"
                 style={{ touchAction: 'manipulation' }}
+                onTouchStart={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onTouchMove={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
               >
                 <h3 className="text-lg font-semibold text-white">{item.question}</h3>
                 {openItems.includes(item.id) ? (
@@ -232,6 +272,10 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
           transition={{ duration: 0.5, delay: 0.6 }}
           viewport={{ once: true }}
           className="text-center"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <Link href="/faq">
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">

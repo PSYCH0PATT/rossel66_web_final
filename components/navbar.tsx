@@ -16,7 +16,7 @@ interface NavbarProps {
   activeSection?: number
 }
 
-export default function Navbar({ activeSection = 0 }: NavbarProps) {
+export default function Navbar({ activeSection = -1 }: NavbarProps) {
   const isMobile = useMobileDetector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [navbarClass, setNavbarClass] = useState("nav-transparent")
@@ -60,8 +60,8 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
       document.dispatchEvent(event)
       }
     } else {
-      // If not on main page, navigate to main page with hash
-      window.location.href = `/${href}`
+      // If not on main page, navigate to main page
+      window.location.href = "/"
     }
 
     // Закрываем мобильное меню при клике

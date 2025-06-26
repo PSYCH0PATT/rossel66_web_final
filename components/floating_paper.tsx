@@ -6,7 +6,7 @@ import Image from "next/image"
 import { memo } from "react"
 
 interface FloatingPaperProps {
-  count?: number // Делаем count необязательным, так как есть значение по умолчанию
+  count?: number
 }
 
 const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperProps) {
@@ -22,8 +22,26 @@ const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperPr
     }>
   >([])
 
+  const generateSafePositions = (width: number, height: number, logoSize: number) => {
+    // Увеличиваем границы отбивания в два раза (было logoSize, стало logoSize * 2)
+    const margin = logoSize * 2
+    const safeWidth = width - margin * 2
+    const safeHeight = height - margin * 2
+    
+    // Генерируем 4-6 точек для траектории движения внутри безопасной зоны
+    const pointsCount = 4 + Math.floor(Math.random() * 3) // 4-6 точек
+    const xPoints = []
+    const yPoints = []
+    
+    for (let i = 0; i < pointsCount; i++) {
+      xPoints.push(margin + Math.random() * safeWidth)
+      yPoints.push(margin + Math.random() * safeHeight)
+    }
+    
+    return { x: xPoints, y: yPoints }
+  }
+
   useEffect(() => {
-    // Update dimensions only on client side
     const updateDimensions = () => {
       const width = window.innerWidth
       const height = window.innerHeight
@@ -31,23 +49,28 @@ const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperPr
       dimensionsRef.current = { width, height }
 
       // Адаптивный размер логотипа
+      let newPaperSize
       if (width < 640) {
-        setPaperSize(28)
+        newPaperSize = 28
       } else if (width < 1024) {
-        setPaperSize(34)
+        newPaperSize = 34
       } else {
-        setPaperSize(39)
+        newPaperSize = 39
       }
+      setPaperSize(newPaperSize)
 
-      // Генерируем данные для анимации только один раз
+      // Генерируем данные для анимации только один раз при первой загрузке
       if (papers.length === 0) {
-        const newPapers = Array.from({ length: count }).map((_, i) => ({
-          key: i,
-          x: [Math.random() * width, Math.random() * width, Math.random() * width],
-          y: [Math.random() * height, Math.random() * height, Math.random() * height],
-          rotate: [0, 180, 360],
-          duration: 20 + Math.random() * 10,
-        }))
+        const newPapers = Array.from({ length: 6 }).map((_, i) => {
+          const positions = generateSafePositions(width, height, newPaperSize)
+          return {
+            key: i,
+            x: positions.x,
+            y: positions.y,
+            rotate: [0, 180, 360, 540, 720], // Больше точек вращения для плавности
+            duration: 25 + Math.random() * 15, // Увеличиваем длительность для более плавного движения
+          }
+        })
         setPapers(newPapers)
       }
     }
@@ -55,25 +78,48 @@ const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperPr
     updateDimensions()
 
     const handleResize = () => {
-      updateDimensions()
+      // При изменении размера окна пересчитываем позиции
+      const width = window.innerWidth
+      const height = window.innerHeight
+      dimensionsRef.current = { width, height }
+      
+      let newPaperSize
+      if (width < 640) {
+        newPaperSize = 28
+      } else if (width < 1024) {
+        newPaperSize = 34
+      } else {
+        newPaperSize = 39
+      }
+      setPaperSize(newPaperSize)
+      
+      // Обновляем позиции существующих логотипов с учетом новых границ
+      setPapers(prevPapers => 
+        prevPapers.map(paper => {
+          const positions = generateSafePositions(width, height, newPaperSize)
+          return {
+            ...paper,
+            x: positions.x,
+            y: positions.y,
+          }
+        })
+      )
     }
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [count, papers.length])
-
-  // Всегда используем фиксированное количество картинок (6)
-  const fixedCount = 6
+  }, [papers.length])
 
   return (
-    <div className="relative w-full h-full">
-      {papers.slice(0, fixedCount).map((paper) => (
+    <div className="relative w-full h-full overflow-hidden">
+      {papers.map((paper) => (
         <motion.div
           key={paper.key}
           className="absolute"
           initial={{
             x: paper.x[0],
             y: paper.y[0],
+            rotate: 0,
           }}
           animate={{
             x: paper.x,
@@ -84,6 +130,7 @@ const FloatingPaper = memo(function FloatingPaper({ count = 6 }: FloatingPaperPr
             duration: paper.duration,
             repeat: Number.POSITIVE_INFINITY,
             ease: "linear",
+            repeatType: "loop",
           }}
         >
           <div className="opacity-40 filter blur-[0.5px] drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]">

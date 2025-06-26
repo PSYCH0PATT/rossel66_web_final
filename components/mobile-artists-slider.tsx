@@ -165,22 +165,42 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
 
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX)
+    e.stopPropagation() // Предотвращаем всплытие события
+    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
+    
+    const startX = e.targetTouches[0].clientX
+    setTouchStart(startX)
+    setTouchEnd(startX) // Сбрасываем touchEnd на начальную позицию
+    console.log('Touch Start:', startX)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX)
+    e.stopPropagation() // Предотвращаем всплытие события
+    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
+    
+    const moveX = e.targetTouches[0].clientX
+    setTouchEnd(moveX)
   }
 
-  const handleTouchEnd = () => {
-    if (touchStart - touchEnd > 75) {
-      // Свайп влево
-      nextSlide()
-    }
-
-    if (touchStart - touchEnd < -75) {
-      // Свайп вправо
-      prevSlide()
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation() // Предотвращаем всплытие события
+    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
+    
+    const swipeDistance = touchStart - touchEnd
+    console.log('Touch End - Start:', touchStart, 'End:', touchEnd, 'Distance:', swipeDistance)
+    
+    if (Math.abs(swipeDistance) > 75) {
+      if (swipeDistance > 0) {
+        // Свайп влево (палец двигался справа налево) - следующий слайд
+        console.log('Swiping LEFT -> Next slide')
+        nextSlide()
+      } else {
+        // Свайп вправо (палец двигался слева направо) - предыдущий слайд  
+        console.log('Swiping RIGHT -> Previous slide')
+        prevSlide()
+      }
+    } else {
+      console.log('Swipe distance too small:', Math.abs(swipeDistance))
     }
   }
 
@@ -205,6 +225,8 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
     <div
       ref={sliderRef}
       className="mobile-artists-slider w-full flex items-center justify-center"
+      data-slider="artists"
+      data-interactive="true"
       style={{
         transform: 'none', // Принудительно сбрасываем любые трансформации
         width: `${widthMultiplier * 100}vw`,
@@ -224,6 +246,8 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Фоновое изображение */}
       <div className="absolute inset-0 z-0">
@@ -307,7 +331,13 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
             {artists.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentSlide(index)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentSlide(index)
+                }}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
                 className={`w-8 h-1 rounded-full transition-all duration-300 ${
                   index === currentSlide ? "bg-white w-12" : "bg-white/40"
                 }`}
