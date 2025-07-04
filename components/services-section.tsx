@@ -66,9 +66,9 @@ export default function ServicesSection({ windowSize, mobileScale }: ServicesSec
     )
   }
 
-  // Десктопная версия
-  const titleSize = windowSize.width < 640 ? "text-3xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
-  const cardPadding = windowSize.width < 640 ? "p-4" : windowSize.width < 1024 ? "p-5" : "p-6"
+  // Десктопная версия (увеличены размеры для мобильных на 25%)
+  const titleSize = windowSize.width < 640 ? "text-4xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
+  const cardPadding = windowSize.width < 640 ? "p-5" : windowSize.width < 1024 ? "p-5" : "p-6"
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center py-12 sm:py-16">
@@ -177,9 +177,9 @@ const ServiceCard = ({ icon, title, description, colorStyle, delay, cardPadding,
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const cardRef = useRef<HTMLDivElement>(null)
 
-  const titleSize = windowSize.width < 640 ? "text-lg" : windowSize.width < 1024 ? "text-xl" : "text-2xl"
+  const titleSize = windowSize.width < 640 ? "text-xl" : windowSize.width < 1024 ? "text-xl" : "text-2xl"
 
-  const iconSize = windowSize.width < 640 ? "w-6 h-6" : windowSize.width < 1024 ? "w-8 h-8" : "w-10 h-10"
+  const iconSize = windowSize.width < 640 ? "w-8 h-8" : windowSize.width < 1024 ? "w-8 h-8" : "w-10 h-10"
 
   // Определяем базовый цвет фона в зависимости от стиля
   const getBaseColor = () => {
@@ -292,7 +292,7 @@ const ServiceCard = ({ icon, title, description, colorStyle, delay, cardPadding,
       </div>
 
       <h3 className={`${titleSize} font-bold text-white mb-2 sm:mb-4 relative z-10`}>{title}</h3>
-      <p className="text-gray-300 text-sm sm:text-base relative z-10">{description}</p>
+      <p className="text-gray-300 text-base sm:text-base relative z-10">{description}</p>
     </motion.div>
   )
 }

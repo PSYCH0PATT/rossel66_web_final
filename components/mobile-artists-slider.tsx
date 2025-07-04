@@ -4,7 +4,6 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface MobileArtistsSliderProps {
   scale?: number
@@ -29,7 +28,7 @@ const artists = [
     id: 3,
     name: "Sour Diesel",
     description: 'Более 1000000 прослушиваний на треке "Воспоминания"',
-    image: "/images/artists/sour_diesel.webp",
+    image: "/images/artists/sour_diesel.jpeg",
   },
   {
     id: 4,
@@ -165,42 +164,46 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
 
   // Обработчики свайпа
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation() // Предотвращаем всплытие события
-    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
-    
-    const startX = e.targetTouches[0].clientX
-    setTouchStart(startX)
-    setTouchEnd(startX) // Сбрасываем touchEnd на начальную позицию
-    console.log('Touch Start:', startX)
+    setTouchStart(e.targetTouches[0].clientX)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.stopPropagation() // Предотвращаем всплытие события
-    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
-    
-    const moveX = e.targetTouches[0].clientX
-    setTouchEnd(moveX)
+    setTouchEnd(e.targetTouches[0].clientX)
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation() // Предотвращаем всплытие события
-    e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
-    
+  const handleTouchEnd = () => {
     const swipeDistance = touchStart - touchEnd
-    console.log('Touch End - Start:', touchStart, 'End:', touchEnd, 'Distance:', swipeDistance)
+    console.log('Artists Touch End - Start:', touchStart, 'End:', touchEnd, 'Distance:', swipeDistance)
     
     if (Math.abs(swipeDistance) > 75) {
       if (swipeDistance > 0) {
         // Свайп влево (палец двигался справа налево) - следующий слайд
-        console.log('Swiping LEFT -> Next slide')
+        console.log('Artists Swiping LEFT -> Next slide')
         nextSlide()
       } else {
         // Свайп вправо (палец двигался слева направо) - предыдущий слайд  
-        console.log('Swiping RIGHT -> Previous slide')
+        console.log('Artists Swiping RIGHT -> Previous slide')
         prevSlide()
       }
     } else {
-      console.log('Swipe distance too small:', Math.abs(swipeDistance))
+      // Если свайп слишком короткий, проверяем тап по краям
+      console.log('Artists Swipe distance too small, checking for tap:', Math.abs(swipeDistance))
+      if (sliderRef.current && Math.abs(swipeDistance) < 20) {
+        const rect = sliderRef.current.getBoundingClientRect()
+        const tapX = touchStart - rect.left
+        const sliderWidth = rect.width
+        
+        // Если тап в левой четверти - предыдущий слайд
+        if (tapX < sliderWidth * 0.25) {
+          console.log('Artists Tap LEFT -> Previous slide')
+          prevSlide()
+        }
+        // Если тап в правой четверти - следующий слайд
+        else if (tapX > sliderWidth * 0.75) {
+          console.log('Artists Tap RIGHT -> Next slide')
+          nextSlide()
+        }
+      }
     }
   }
 
@@ -225,8 +228,6 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
     <div
       ref={sliderRef}
       className="mobile-artists-slider w-full flex items-center justify-center"
-      data-slider="artists"
-      data-interactive="true"
       style={{
         transform: 'none', // Принудительно сбрасываем любые трансформации
         width: `${widthMultiplier * 100}vw`,
@@ -246,8 +247,6 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Фоновое изображение */}
       <div className="absolute inset-0 z-0">
@@ -281,15 +280,17 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
         </div>
       </div>
 
+
+
       {/* Контент слайдера */}
-      <div className="relative z-10 h-full w-full">
+      <div className="relative z-30 h-full w-full">
         {/* Фиксированный контейнер для текста, привязанный к левому краю */}
-        <div className="absolute left-6 bottom-24 w-full max-w-md">
+        <div className="absolute left-6 bottom-24 w-full max-w-md z-40">
           {/* Заголовок секции */}
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">Наши артисты</h2>
+          <h2 className="text-5xl sm:text-6xl font-bold text-white mb-6">Наши артисты</h2>
 
           {/* Зеленая линия под заголовком */}
-          <div className="w-16 h-1 bg-emerald-500 mb-8"></div>
+          <div className="w-20 h-1.5 bg-emerald-500 mb-8"></div>
 
           {/* Информация о текущем артисте - с фиксированным положением */}
           <AnimatePresence mode="wait">
@@ -301,22 +302,22 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
               transition={{ duration: 0.5 }}
               className="text-white"
             >
-              <h3 className="text-4xl sm:text-5xl font-bold mb-4">{artists[currentSlide].name}</h3>
-              <div className="h-24">
+              <h3 className="text-5xl sm:text-6xl font-bold mb-4">{artists[currentSlide].name}</h3>
+              <div className="h-28">
                 {" "}
-                {/* Фиксированная высота для описания */}
-                <p className="text-lg sm:text-xl text-gray-100">{artists[currentSlide].description}</p>
+                {/* Увеличенная высота для описания */}
+                <p className="text-xl sm:text-2xl text-gray-100">{artists[currentSlide].description}</p>
               </div>
 
               <div className="mt-4">
                 {!artists[currentSlide].isSpecial ? (
-                  <div className="inline-flex items-center text-emerald-400 text-sm">
-                    <span className="mr-2 w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <div className="inline-flex items-center text-emerald-400 text-base">
+                    <span className="mr-2 w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                     Активный артист
                   </div>
                 ) : (
-                  <div className="inline-flex items-center text-cyan-400 text-sm">
-                    <span className="mr-2 w-2 h-2 rounded-full bg-cyan-400"></span>
+                  <div className="inline-flex items-center text-cyan-400 text-base">
+                    <span className="mr-2 w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
                     Присоединяйся к нам
                   </div>
                 )}
@@ -326,42 +327,19 @@ export default function MobileArtistsSlider({ scale = 1 }: MobileArtistsSliderPr
         </div>
 
         {/* Индикаторы слайдов без стрелок */}
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center z-40">
           <div className="flex space-x-2">
             {artists.map((_, index) => (
               <button
                 key={index}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setCurrentSlide(index)
-                }}
-                onTouchStart={(e) => e.stopPropagation()}
-                onTouchEnd={(e) => e.stopPropagation()}
-                onTouchMove={(e) => e.stopPropagation()}
-                className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                  index === currentSlide ? "bg-white w-12" : "bg-white/40"
+                onClick={() => setCurrentSlide(index)}
+                className={`w-10 h-1.5 rounded-full transition-all duration-300 ${
+                  index === currentSlide ? "bg-white w-16" : "bg-white/40"
                 }`}
               />
             ))}
           </div>
         </div>
-
-        {/* Навигационные стрелки скрыты для мобильной версии */}
-        <button
-          onClick={prevSlide}
-          className="hidden"
-          aria-label="Предыдущий слайд"
-        >
-          <ChevronLeft className="w-6 h-6 text-white" />
-        </button>
-
-        <button
-          onClick={nextSlide}
-          className="hidden"
-          aria-label="Следующий слайд"
-        >
-          <ChevronRight className="w-6 h-6 text-white" />
-        </button>
       </div>
     </div>
   )

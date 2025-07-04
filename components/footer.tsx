@@ -87,18 +87,18 @@ export default function Footer({ forceTransparentBackground = false }: FooterPro
                   height={50}
                   className="mr-3"
                 />
-                <span className="text-xl font-bold text-white">ROSSEL 66 MUSIC</span>
+                <span className="text-2xl font-bold text-white">ROSSEL 66 MUSIC</span>
               </div>
-              <p className="text-gray-400">Деловые отношения, дружеская атмосфера</p>
+              <p className="text-gray-400 text-lg">Деловые отношения, дружеская атмосфера</p>
             </div>
 
             <div className="flex flex-col items-center">
-              <h3 className="text-lg font-semibold text-white mb-4">Контакты</h3>
+              <h3 className="text-xl font-semibold text-white mb-4">Контакты</h3>
               <div className="flex items-center mb-2">
                 <Mail className="w-5 h-5 text-emerald-400 mr-2" />
                 <a 
                   href="mailto:label@rossel66.com" 
-                  className="text-gray-300 hover:text-emerald-400 transition-colors"
+                  className="text-gray-300 hover:text-emerald-400 transition-colors text-lg"
                 >
                   label@rossel66.com
                 </a>
@@ -130,31 +130,31 @@ export default function Footer({ forceTransparentBackground = false }: FooterPro
             </div>
 
             <div className="flex flex-col items-center">
-              <h3 className="text-lg font-semibold text-white mb-4">Информация</h3>
+              <h3 className="text-xl font-semibold text-white mb-4">Информация</h3>
               <ul className="space-y-2 text-center">
                 <li>
                   <Link
                     href="#"
-                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center"
+                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center text-lg"
                   >
                     <span>Политика конфиденциальности</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-1.5 text-gray-400" />
+                    <ExternalLink className="w-4 h-4 ml-1.5 text-gray-400" />
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="#"
-                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center"
+                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center text-lg"
                   >
                     <span>Пользовательское соглашение</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-1.5 text-gray-400" />
+                    <ExternalLink className="w-4 h-4 ml-1.5 text-gray-400" />
                   </Link>
                 </li>
               </ul>
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/10 text-center w-full">
-              <p className="text-gray-400 text-sm">© {currentYear} ROSSEL 66 MUSIC. Все права защищены.</p>
+              <p className="text-gray-400 text-base">© {currentYear} ROSSEL 66 MUSIC. Все права защищены.</p>
             </div>
           </div>
         </div>

@@ -264,6 +264,16 @@ export default function CatalogUploadPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Проверка выбора языка для всех треков во всех релизах
+    const allTracks = formData.releases.flatMap(release => release.tracks);
+    const tracksWithoutLanguage = allTracks.filter(track => track.language === "0");
+    if (tracksWithoutLanguage.length > 0) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо выбрать язык вокала для всех треков.');
+      return;
+    }
+    
     setIsSubmitting(true);
     setSubmitStatus(null);
     setSubmitMessage("");
@@ -643,7 +653,7 @@ export default function CatalogUploadPage() {
                       </h3>
                       
                       {/* Desktop Table - EXACT COPY FROM RELEASE UPLOAD */}
-                      <div className="hidden md:block overflow-x-auto">
+                      <div className="hidden md:block overflow-x-auto overflow-y-visible">
                         <table className="min-w-full divide-y divide-neutral-700 border border-neutral-700 rounded-lg text-sm text-left">
                             <thead className="bg-neutral-800/50">
                                 <tr>
@@ -654,9 +664,16 @@ export default function CatalogUploadPage() {
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ISRC <span className="text-red-500">*</span></th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Начало предпр. <span className="text-red-500">*</span></th>
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор музыки <span className="text-red-500">*</span></th>
-                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор слов</th>
-                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык <span className="text-red-500">*</span></th>
-                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Мат</th>
+                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                      Автор слов
+                                      {release.tracks.some(track => track.language === '1' || track.language === '2') && (
+                                        <span className="text-red-500">*</span>
+                                      )}
+                                    </th>
+                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык вокала <span className="text-red-500">*</span></th>
+                                    <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                      Мат
+                                    </th>
                                     {release.releaseType === '2' && <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Фокус</th>}
                                     <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[15%]">Текст трека</th>
                                     <th scope="col" className="py-3 px-1 text-center text-xs font-medium text-gray-300 uppercase tracking-wider w-12"><span className="sr-only">Удалить</span></th>
@@ -686,14 +703,14 @@ export default function CatalogUploadPage() {
                                             <Input name="previewStart" value={track.previewStart} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-24 min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
                                         </td>
                                         <td className="px-3 py-2 align-top">
-                                            <Input name="musicAuthor" value={track.musicAuthor} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="Иванов И.И." required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                                            <Input name="musicAuthor" value={track.musicAuthor} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="Полное ФИО" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                                         </td>
                                         <td className="px-3 py-2 align-top">
                                            <Input 
                                               name="wordsAuthor" 
                                               value={track.wordsAuthor} 
                                               onChange={(e) => handleTrackChange(release.id, track.id, e)} 
-                                              placeholder="Петров П.П." 
+                                              placeholder="Полное ФИО" 
                                               required={track.language === '1' || track.language === '2'}
                                               disabled={!(track.language === '1' || track.language === '2')}
                                               className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40 disabled:bg-neutral-800 disabled:border-neutral-700 disabled:cursor-not-allowed" 
@@ -709,7 +726,13 @@ export default function CatalogUploadPage() {
                                             </Select>
                                         </td>
                                         <td className="py-2 px-3 text-center">
-                                            <Checkbox name="explicit" checked={track.explicit} onCheckedChange={() => handleTrackCheckboxChange(release.id, track.id, 'explicit')} className="border-gray-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-600" />
+                                            <div className="relative group">
+                                              <Checkbox name="explicit" checked={track.explicit} onCheckedChange={() => handleTrackCheckboxChange(release.id, track.id, 'explicit')} className="border-gray-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-600" />
+                                                                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black/40 text-white text-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] whitespace-nowrap border border-emerald-500/50 backdrop-blur-sm pointer-events-none">
+                                Если в треке используются слова "bitch", "fuck", "shit", "nigga", "hoe", "ass", то укажите Explicit. Русский мат аналогично.
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black/40"></div>
+                              </div>
+                                            </div>
                                         </td>
                                         {release.releaseType === '2' && (
                                           <td className="py-2 px-3 text-center">
@@ -748,24 +771,30 @@ export default function CatalogUploadPage() {
                                 {release.releaseType === '2' && renderInputField(`${track.id}_mob_mainArtists`, "mainArtists", "Артисты", track.mainArtists, (e) => handleTrackChange(release.id, track.id, e), "Артисты трека")}
                                 {renderFileField(`${track.id}_mob_audioFile`, "audioFile", "Аудиофайл (.wav)", (e) => handleTrackFileChange(release.id, track.id, 'audioFile', e.target.files), ".wav", track.audioFile)}
                                 {renderInputField(`${track.id}_mob_isrc`, "isrc", "ISRC", track.isrc, (e) => handleTrackChange(release.id, track.id, e), "XX-XXX-YY-NNNNN")}
-                                {renderInputField(`${track.id}_mob_musicAuthor`, "musicAuthor", "Автор музыки", track.musicAuthor, (e) => handleTrackChange(release.id, track.id, e), "Автор музыки")}
+                                {renderInputField(`${track.id}_mob_musicAuthor`, "musicAuthor", "Автор музыки", track.musicAuthor, (e) => handleTrackChange(release.id, track.id, e), "Полное ФИО")}
                                 {renderInputField(
                                   `${track.id}_mob_wordsAuthor`, 
                                   "wordsAuthor", 
-                                  "Автор слов", 
+                                  `Автор слов${(track.language === '1' || track.language === '2') ? ' *' : ''}`, 
                                   track.wordsAuthor, 
                                   (e) => handleTrackChange(release.id, track.id, e), 
-                                  "Автор слов",
+                                  "Полное ФИО",
                                   "text",
                                   track.language === '1' || track.language === '2',
                                   false,
-                                  `disabled:opacity-50 disabled:cursor-not-allowed`
+                                  `${!(track.language === '1' || track.language === '2') ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`
                                 )}
-                                {renderSelectField(`${track.id}_mob_language`, "language", "Язык", track.language, (value) => handleTrackSelectChange(release.id, track.id, 'language', value), languageOptions, "Язык")}
+                                {renderSelectField(`${track.id}_mob_language`, "language", "Язык вокала", track.language, (value) => handleTrackSelectChange(release.id, track.id, 'language', value), languageOptions, "Язык")}
                                 {renderInputField(`${track.id}_mob_previewStart`, "previewStart", "Начало предпрослушивания", track.previewStart, (e) => handleTrackChange(release.id, track.id, e), "00:30")}
                                 {renderFileField(`${track.id}_mob_lyricsFile`, "lyricsFile", "Текст трека (.txt, .doc)", (e) => handleTrackFileChange(release.id, track.id, 'lyricsFile', e.target.files), ".txt,.doc,.docx", track.lyricsFile, false)}
                                 <div className="flex flex-col space-y-3 mt-4">
-                                    {renderCheckboxField(`${track.id}_mob_explicit`, "explicit", "Содержит ненормативную лексику", track.explicit, () => handleTrackCheckboxChange(release.id, track.id, 'explicit'))}
+                                    <div className="relative group">
+                                      {renderCheckboxField(`${track.id}_mob_explicit`, "explicit", "Содержит ненормативную лексику", track.explicit, () => handleTrackCheckboxChange(release.id, track.id, 'explicit'))}
+                                      <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-black/40 text-white text-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] whitespace-nowrap border border-emerald-500/50 backdrop-blur-sm pointer-events-none">
+                                        Если в треке используются слова "bitch", "fuck", "shit", "nigga", "hoe", "ass", то укажите Explicit. Русский мат аналогично.
+                                        <div className="absolute top-full left-6 border-4 border-transparent border-t-black/40"></div>
+                                      </div>
+                                    </div>
                                     {release.releaseType === '2' && renderCheckboxField(`${track.id}_mob_isFocusTrack`, "isFocusTrack", "Это фокус-трек альбома", track.isFocusTrack, () => handleTrackCheckboxChange(release.id, track.id, 'isFocusTrack'))}
                                 </div>
                             </div>

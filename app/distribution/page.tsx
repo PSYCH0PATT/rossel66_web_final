@@ -236,6 +236,15 @@ export default function DistributionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Проверка выбора языка для всех треков
+    const tracksWithoutLanguage = formData.tracks.filter(track => track.language === "0");
+    if (tracksWithoutLanguage.length > 0) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо выбрать язык вокала для всех треков.');
+      return;
+    }
+    
     setIsSubmitting(true);
     setSubmitStatus(null);
     setSubmitMessage('');
@@ -536,7 +545,7 @@ export default function DistributionPage() {
 
               <div className="mt-10">
                 <h3 className="text-lg font-semibold text-white mb-4">Трек-лист <span className="text-red-500">*</span></h3>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-visible">
                   <table className="min-w-full divide-y divide-neutral-700 border border-neutral-700">
                     <thead className="bg-neutral-800/50">
                       <tr>
@@ -546,9 +555,16 @@ export default function DistributionPage() {
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Осн. исполнители <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Начало предпр. <span className="text-red-500">*</span></th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор музыки <span className="text-red-500">*</span></th>
-                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Автор слов</th>
-                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык <span className="text-red-500">*</span></th>
-                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Мат <span className="text-red-500">*</span></th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Автор слов
+                          {formData.tracks.some(track => track.language === '1' || track.language === '2') && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Язык вокала <span className="text-red-500">*</span></th>
+                        <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                          Мат <span className="text-red-500">*</span>
+                        </th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Фокус трек</th>
                         <th scope="col" className="py-3 px-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Текст трека</th>
                         <th scope="col" className="py-3 px-1 text-center text-xs font-medium text-gray-300 uppercase tracking-wider"></th>
@@ -590,14 +606,14 @@ export default function DistributionPage() {
                             <Input name='previewStart' value={track.previewStart} onChange={(e) => handleTrackChange(track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
-                            <Input name='musicAuthor' value={track.musicAuthor} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Иванов И.И." required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                            <Input name='musicAuthor' value={track.musicAuthor} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Полное ФИО" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
                             <Input 
                               name='wordsAuthor' 
                               value={track.wordsAuthor} 
                               onChange={(e) => handleTrackChange(track.id, e)} 
-                              placeholder="Петров П.П." 
+                              placeholder="Полное ФИО" 
                               required={track.language === '1' || track.language === '2'}
                               disabled={!(track.language === '1' || track.language === '2')}
                               className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40 disabled:bg-neutral-800 disabled:border-neutral-700 disabled:cursor-not-allowed" 
@@ -615,15 +631,21 @@ export default function DistributionPage() {
                             </Select>
                           </td>
                           <td className="py-2 px-3 min-w-[120px]">
-                             <Select value={track.explicit} onValueChange={(value) => handleTrackSelectChange(track.id, 'explicit', value)} required>
-                              <SelectTrigger className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40">
-                                <SelectValue placeholder="Да/Нет" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-neutral-800 border-neutral-700 text-gray-200">
-                                <SelectItem value="0" disabled>Да/Нет</SelectItem>
-                                {explicitOptions.map(opt => <SelectItem key={opt.choice_id} value={opt.choice_id}>{opt.choice_value}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+                            <div className="relative group">
+                              <Select value={track.explicit} onValueChange={(value) => handleTrackSelectChange(track.id, 'explicit', value)} required>
+                                <SelectTrigger className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40">
+                                  <SelectValue placeholder="Да/Нет" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-neutral-800 border-neutral-700 text-gray-200">
+                                  <SelectItem value="0" disabled>Да/Нет</SelectItem>
+                                  {explicitOptions.map(opt => <SelectItem key={opt.choice_id} value={opt.choice_id}>{opt.choice_value}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black/40 text-white text-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] whitespace-nowrap border border-emerald-500/50 backdrop-blur-sm pointer-events-none">
+                                Если в треке используются слова "bitch", "fuck", "shit", "nigga", "hoe", "ass", то укажите Explicit. Русский мат аналогично.
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black/40"></div>
+                              </div>
+                            </div>
                           </td>
                           <td className="py-2 px-3 text-center">
                             <Checkbox id={`track_isFocusTrack_${track.id}`} name="isFocusTrack" checked={track.isFocusTrack} onCheckedChange={() => handleTrackCheckboxChange(track.id, 'isFocusTrack')} className="border-gray-400 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-600 self-center hover:border-emerald-500 hover:border-opacity-40" />

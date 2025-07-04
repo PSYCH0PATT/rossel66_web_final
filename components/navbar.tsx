@@ -16,7 +16,7 @@ interface NavbarProps {
   activeSection?: number
 }
 
-export default function Navbar({ activeSection = -1 }: NavbarProps) {
+export default function Navbar({ activeSection = 0 }: NavbarProps) {
   const isMobile = useMobileDetector()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [navbarClass, setNavbarClass] = useState("nav-transparent")
@@ -60,8 +60,8 @@ export default function Navbar({ activeSection = -1 }: NavbarProps) {
       document.dispatchEvent(event)
       }
     } else {
-      // If not on main page, navigate to main page
-      window.location.href = "/"
+      // If not on main page, navigate to main page with hash
+      window.location.href = `/${href}`
     }
 
     // Закрываем мобильное меню при клике
@@ -72,12 +72,16 @@ export default function Navbar({ activeSection = -1 }: NavbarProps) {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed-navbar fixed w-full z-50 transition-all duration-300 ${navbarClass} ${isMobile ? "" : "backdrop-blur-sm"}`}
+      className={`fixed-navbar fixed z-40 transition-all duration-300 ${navbarClass} ${isMobile ? "" : "backdrop-blur-sm"}`}
       style={{
         backgroundColor: mobileMenuOpen ? "rgba(0, 0, 0, 0.9)" : "",
         backdropFilter: mobileMenuOpen ? "blur(12px)" : "",
-        transition: "background-color 0.3s ease, backdrop-filter 0.3s ease", // Синхронизируем время анимации
+        transition: "background-color 0.3s ease, backdrop-filter 0.3s ease",
+        width: "calc(100% - 12px)", // Уменьшаем ширину на ширину scrollbar
+        left: 0,
+        right: "12px"
       }}
+
     >
       <div className="max-w-[1200px] mx-auto flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 w-full">
         <Link href="/" className="flex items-center space-x-2">
@@ -121,10 +125,10 @@ export default function Navbar({ activeSection = -1 }: NavbarProps) {
         <Button
           variant="ghost"
           size="icon"
-          className={`md:hidden text-white ${isMobile ? "w-12 h-12" : ""}`}
+          className={`md:hidden text-white ${isMobile ? "w-14 h-14" : ""}`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <Menu className={`${isMobile ? "w-8 h-8" : "w-6 h-6"}`} />
+          <Menu className={`${isMobile ? "w-10 h-10" : "w-6 h-6"}`} />
         </Button>
 
         {/* Мобильное меню выпадающее с AnimatePresence для правильной анимации */}
@@ -135,7 +139,7 @@ export default function Navbar({ activeSection = -1 }: NavbarProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "easeInOut" }} // Синхронизируем с анимацией фона
-              className="absolute top-full left-0 right-0 bg-black/90 backdrop-blur-md p-4 flex flex-col space-y-4 md:hidden"
+              className={`absolute top-full left-0 right-0 bg-black/90 backdrop-blur-md p-4 flex flex-col space-y-4 md:hidden ${isMobile ? "text-lg space-y-6 p-6" : ""}`}
             >
               <NavLink href="#hero" active={activeSection === 0} onClick={handleNavClick}>
                 Главная

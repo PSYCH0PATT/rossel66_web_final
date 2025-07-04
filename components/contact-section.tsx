@@ -57,8 +57,8 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
-  // Адаптивные размеры в зависимости от размера экрана
-  const titleSize = windowSize.width < 640 ? "text-3xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
+  // Адаптивные размеры в зависимости от размера экрана (увеличены на 25% для мобильных)
+  const titleSize = windowSize.width < 640 ? "text-4xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -182,11 +182,11 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 p-4">
-                  <h3 className="text-xl font-bold text-white">{artist.name}</h3>
+                  <h3 className="text-2xl font-bold text-white">{artist.name}</h3>
                 </div>
               </div>
               <div className="p-4 relative z-10">
-                <p className="text-gray-300 text-sm">{artist.description}</p>
+                <p className="text-gray-300 text-base">{artist.description}</p>
               </div>
             </motion.div>
           ))}
@@ -202,8 +202,8 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
           className="max-w-2xl mx-auto w-full"
         >
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Отправить заявку</h2>
-            <p className="text-gray-300">Заполните форму ниже, и мы свяжемся с вами</p>
+            <h2 className="text-3xl sm:text-3xl font-bold text-white mb-4">Отправить заявку</h2>
+            <p className="text-gray-300 text-lg">Заполните форму ниже, и мы свяжемся с вами</p>
           </div>
 
           {isSubmitted ? (

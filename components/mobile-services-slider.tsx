@@ -190,7 +190,7 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
     return () => clearTimeout(checkAfterScaleChange)
   }, [scale])
 
-  // Обработчики свайпа
+  // Обработчики свайпа и тапов
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation() // Предотвращаем всплытие события
     e.nativeEvent.stopImmediatePropagation() // Останавливаем все другие обработчики
@@ -227,7 +227,24 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
         prevSlide()
       }
     } else {
-      console.log('Services Swipe distance too small:', Math.abs(swipeDistance))
+      // Если свайп слишком короткий, проверяем тап по краям
+      console.log('Services Swipe distance too small, checking for tap:', Math.abs(swipeDistance))
+      if (sliderRef.current && Math.abs(swipeDistance) < 20) {
+        const rect = sliderRef.current.getBoundingClientRect()
+        const tapX = touchStart - rect.left
+        const sliderWidth = rect.width
+        
+        // Если тап в левой четверти - предыдущий слайд
+        if (tapX < sliderWidth * 0.25) {
+          console.log('Services Tap LEFT -> Previous slide')
+          prevSlide()
+        }
+        // Если тап в правой четверти - следующий слайд
+        else if (tapX > sliderWidth * 0.75) {
+          console.log('Services Tap RIGHT -> Next slide')
+          nextSlide()
+        }
+      }
     }
   }
 
@@ -237,6 +254,26 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev === 0 ? services.length - 1 : prev - 1))
+  }
+
+  // Обработчик кликов/тапов по краям
+  const handleSliderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (sliderRef.current) {
+      const rect = sliderRef.current.getBoundingClientRect()
+      const clickX = e.clientX - rect.left
+      const sliderWidth = rect.width
+      
+      // Если клик в левой четверти - предыдущий слайд
+      if (clickX < sliderWidth * 0.25) {
+        console.log('Services Click LEFT -> Previous slide')
+        prevSlide()
+      }
+      // Если клик в правой четверти - следующий слайд
+      else if (clickX > sliderWidth * 0.75) {
+        console.log('Services Click RIGHT -> Next slide')
+        nextSlide()
+      }
+    }
   }
 
   // Автоматическая смена слайдов
@@ -302,10 +339,12 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
         </div>
       </div>
 
+
+
       {/* Контент слайдера */}
-      <div className="relative z-10 h-full w-full">
+      <div className="relative z-30 h-full w-full">
         {/* Фиксированный контейнер для текста, привязанный к левому краю */}
-        <div className="absolute left-6 bottom-24 w-full max-w-md">
+        <div className="absolute left-6 bottom-24 w-full max-w-md z-40">
           {/* Заголовок секции */}
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-8">Мы займёмся вашим продвижением!</h2>
 
@@ -322,23 +361,23 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
               <div className="mb-6 flex items-center">
                 {/* Цветные иконки в зависимости от типа услуги */}
                 <div className={`mr-4 ${getIconColorClasses(currentSlide).text}`}>
-                  {React.cloneElement(services[currentSlide].icon as React.ReactElement, { className: "w-8 h-8" })}
+                  {React.cloneElement(services[currentSlide].icon as React.ReactElement, { className: "w-10 h-10" })}
                 </div>
-                <div className={`w-12 h-0.5 ${getIconColorClasses(currentSlide).bg}`}></div>
+                <div className={`w-16 h-1 ${getIconColorClasses(currentSlide).bg}`}></div>
               </div>
 
-              <h3 className="text-4xl sm:text-5xl font-bold mb-4">{services[currentSlide].title}</h3>
-              <div className="h-24">
+              <h3 className="text-5xl sm:text-6xl font-bold mb-4">{services[currentSlide].title}</h3>
+              <div className="h-28">
                 {" "}
-                {/* Фиксированная высота для описания */}
-                <p className="text-lg sm:text-xl text-gray-100">{services[currentSlide].description}</p>
+                {/* Увеличенная высота для описания */}
+                <p className="text-xl sm:text-2xl text-gray-100">{services[currentSlide].description}</p>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
 
         {/* Индикаторы слайдов без стрелок */}
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center z-40">
           <div className="flex space-x-2">
             {services.map((_, index) => (
               <button
@@ -350,8 +389,8 @@ export default function MobileServicesSlider({ scale = 1 }: MobileServicesSlider
                 onTouchStart={(e) => e.stopPropagation()}
                 onTouchEnd={(e) => e.stopPropagation()}
                 onTouchMove={(e) => e.stopPropagation()}
-                className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                  index === currentSlide ? "bg-white w-12" : "bg-white/40"
+                className={`w-10 h-1.5 rounded-full transition-all duration-300 ${
+                  index === currentSlide ? "bg-white w-16" : "bg-white/40"
                 }`}
               />
             ))}

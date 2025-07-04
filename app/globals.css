@@ -70,6 +70,7 @@ body {
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
+  padding-right: 0; /* Отступ для scrollbar будет добавлен только когда нужно */
 }
 
 main {
@@ -111,7 +112,7 @@ main {
 }
 
   .glass-card {
-    @apply bg-opacity-20 border border-white/10 transition-all duration-300 rounded-none;
+    @apply bg-opacity-20 border border-white/10 transition-[border-color,background-color] duration-300 rounded-none;
   }
 
   .glass-card:hover {
@@ -235,8 +236,6 @@ section {
   z-index: 3;
   pointer-events: auto;
   transform: translateZ(0);
-  will-change: transform, box-shadow;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   backface-visibility: hidden;
 }
 
@@ -244,6 +243,7 @@ section {
 .artist-card:hover {
   transform: translateY(-5px) translateZ(0);
   z-index: 4;
+  transition: transform 0.3s ease;
 }
 
 /* Стили для слайдера партнеров */
@@ -1420,22 +1420,33 @@ html, body {
   /* Пока оставим !important, чтобы CSS имел приоритет. */
 }
 
-/* Custom scrollbar styles */
+/* Custom scrollbar styles - всегда поверх всего */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
+  position: fixed;
+  right: 0;
 }
 
 ::-webkit-scrollbar-track {
   @apply bg-neutral-800;
+  position: fixed;
+  right: 0;
 }
 
 ::-webkit-scrollbar-thumb {
   @apply bg-emerald-600 rounded-md;
+  position: fixed;
+  right: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-emerald-500;
+}
+
+/* Принудительное отображение scrollbar поверх navbar */
+html {
+  scrollbar-gutter: stable;
 }
 
 /* Styling for Date Input Calendar Icon */

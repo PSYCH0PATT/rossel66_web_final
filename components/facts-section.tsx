@@ -55,9 +55,9 @@ interface FactsSectionProps {
 // Теперь нужно использовать этот масштаб в компоненте
 // Найдем в начале функции FactsSection и добавим:
 export default function FactsSection({ windowSize }: FactsSectionProps) {
-  // Адаптивные размеры в зависимости от размера экрана
-  const titleSize = windowSize.width < 640 ? "text-2xl" : windowSize.width < 1024 ? "text-3xl" : "text-4xl"
-  const cardPadding = windowSize.width < 640 ? "p-3" : windowSize.width < 1024 ? "p-4" : "p-6"
+  // Адаптивные размеры в зависимости от размера экрана (увеличены на 25% для мобильных)
+  const titleSize = windowSize.width < 640 ? "text-3xl" : windowSize.width < 1024 ? "text-3xl" : "text-4xl"
+  const cardPadding = windowSize.width < 640 ? "p-4" : windowSize.width < 1024 ? "p-4" : "p-6"
 
   // Применяем масштаб для мобильных устройств
   const isMobile = useMobileDetector()
@@ -128,7 +128,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           style={dynamicGridStyle} 
         >
           <FactCard
-            icon={<TrendingUp className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
+            icon={<TrendingUp className={`w-8 h-8 sm:w-8 sm:h-8 text-emerald-400`} />}
             title={
               <>
                 Свыше <AnimatedCounter end={500000} />
@@ -141,7 +141,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           />
 
           <FactCard
-            icon={<Users className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
+            icon={<Users className={`w-8 h-8 sm:w-8 sm:h-8 text-emerald-400`} />}
             title="Большой опыт"
             description="в продвижении молодых талантов с новым звуком"
             delay={2}
@@ -150,7 +150,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           />
 
           <FactCard
-            icon={<Music className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
+            icon={<Music className={`w-8 h-8 sm:w-8 sm:h-8 text-emerald-400`} />}
             title="Музыкальное сообщество"
             description="Откроем двери в профессиональное творческое окружение"
             delay={3}
@@ -159,7 +159,7 @@ export default function FactsSection({ windowSize }: FactsSectionProps) {
           />
 
           <FactCard
-            icon={<Palette className={`w-6 h-6 sm:w-8 sm:h-8 text-emerald-400`} />}
+            icon={<Palette className={`w-8 h-8 sm:w-8 sm:h-8 text-emerald-400`} />}
             title="Коммерческий образ"
             description="Сформируем сильный и узнаваемый имидж артиста"
             delay={4}
@@ -185,7 +185,7 @@ interface FactCardProps {
 }
 
 const FactCard = ({ icon, title, description, delay, cardPadding, windowSize }: FactCardProps) => {
-  const titleSize = windowSize.width < 640 ? "text-lg" : windowSize.width < 1024 ? "text-xl" : "text-2xl"
+  const titleSize = windowSize.width < 640 ? "text-xl" : windowSize.width < 1024 ? "text-xl" : "text-2xl"
 
   return (
     <motion.div
@@ -201,7 +201,7 @@ const FactCard = ({ icon, title, description, delay, cardPadding, windowSize }: 
       </div>
 
       <h3 className={`${titleSize} font-bold text-white mb-3 sm:mb-3`}>{title}</h3>
-      <p className="text-gray-300 text-xs sm:text-sm md:text-base">{description}</p>
+      <p className="text-gray-300 text-sm sm:text-sm md:text-base">{description}</p>
     </motion.div>
   )
 }

@@ -50,8 +50,8 @@ const faqItems = [
 ]
 
 export default function FAQSection({ windowSize }: FAQSectionProps) {
-  // Адаптивные размеры в зависимости от размера экрана
-  const titleSize = windowSize.width < 640 ? "text-3xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
+  // Адаптивные размеры в зависимости от размера экрана (увеличены на 25% для мобильных)
+  const titleSize = windowSize.width < 640 ? "text-4xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
 
   // Состояние для отслеживания открытых вопросов
   const [openItems, setOpenItems] = useState<number[]>([])
@@ -106,7 +106,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
           >
             <h2 className={`${titleSize} font-bold text-white mb-3 sm:mb-4`}>Часто задаваемые вопросы</h2>
             <div className="w-12 sm:w-16 md:w-24 h-1 bg-emerald-500 mx-auto mb-3 sm:mb-4"></div>
-            <p className="text-gray-300 text-base sm:text-lg max-w-2xl mx-auto">
+            <p className="text-gray-300 text-lg sm:text-lg max-w-2xl mx-auto">
               Ответы на самые популярные вопросы о сотрудничестве с нашим лейблом
             </p>
           </motion.div>
@@ -145,7 +145,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
                     e.nativeEvent.stopImmediatePropagation()
                   }}
                 >
-                  <h3 className="text-lg font-semibold text-white">{item.question}</h3>
+                  <h3 className="text-xl font-semibold text-white">{item.question}</h3>
                   {openItems.includes(item.id) ? (
                     <ChevronUp className="w-5 h-5 text-emerald-400 flex-shrink-0" />
                   ) : (
@@ -154,11 +154,11 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
                 </button>
 
                 <div
-                  className={`px-5 overflow-hidden transition-all duration-300 ${
+                  className={`px-5 overflow-hidden transition-[max-height,padding-bottom] duration-300 ease-in-out ${
                     openItems.includes(item.id) ? "max-h-96 pb-5" : "max-h-0"
                   }`}
                 >
-                  <p className="text-gray-300">{item.answer}</p>
+                  <p className="text-gray-300 text-base">{item.answer}</p>
                 </div>
               </motion.div>
             ))}
@@ -177,7 +177,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
             onTouchEnd={(e) => e.stopPropagation()}
           >
             <Link href="/faq">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,box-shadow] duration-300 hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
                 <span className="flex items-center">
                   Показать все вопросы
                   <ExternalLink className="ml-2 w-4 h-4" />
@@ -255,7 +255,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
               </button>
 
               <div
-                className={`px-5 overflow-hidden transition-all duration-300 ${
+                className={`px-5 overflow-hidden transition-[max-height,padding-bottom] duration-300 ease-in-out ${
                   openItems.includes(item.id) ? "max-h-96 pb-5" : "max-h-0"
                 }`}
               >
@@ -278,7 +278,7 @@ export default function FAQSection({ windowSize }: FAQSectionProps) {
           onTouchEnd={(e) => e.stopPropagation()}
         >
           <Link href="/faq">
-            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,box-shadow] duration-300 hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
               <span className="flex items-center">
                 Показать все вопросы
                 <ExternalLink className="ml-2 w-4 h-4" />

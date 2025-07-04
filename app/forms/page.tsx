@@ -246,7 +246,7 @@ export default function FormsPage() {
           particleColor="#FFFFFF"
         />
       </div>
-      <div className={`flex flex-col ${windowSize.width > 1172 ? 'min-h-screen' : ''} justify-center items-center relative z-10${windowSize.width <= 1172 ? ' pb-12' : ''} ${windowSize.width < 768 ? 'pt-24' : ''}`}>
+      <div className={`flex flex-col ${windowSize.width > 1172 ? 'min-h-screen' : windowSize.width < 768 ? 'pt-24 pb-12' : 'pt-32 pb-12'} justify-center items-center relative z-10`}>
         <div className="container mx-auto px-4 sm:px-6 flex flex-col justify-center items-center ${windowSize.width > 1172 ? 'flex-grow' : ''}">
           <motion.div
             initial={{ opacity: 0, y: -20 }}

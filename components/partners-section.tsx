@@ -100,8 +100,8 @@ interface PartnersSectionProps {
 
 // Основной компонент секции партнеров
 const PartnersSection = function PartnersSection({ windowSize }: PartnersSectionProps) {
-  // Адаптивные размеры в зависимости от размера экрана
-  const titleSize = windowSize.width < 640 ? "text-3xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
+  // Адаптивные размеры в зависимости от размера экрана (увеличены на 25% для мобильных)
+  const titleSize = windowSize.width < 640 ? "text-4xl" : windowSize.width < 1024 ? "text-4xl" : "text-5xl"
   
   // Размеры для слайдеров - УВЕЛИЧИВАЕМ ДЛЯ МОБИЛЬНЫХ
   const sliderHeight1 = windowSize.width < 640 ? "80px" : windowSize.width < 1024 ? "90px" : "100px" // Было 60, 70, 80
@@ -186,7 +186,7 @@ const PartnersSection = function PartnersSection({ windowSize }: PartnersSection
         >
           <h2 className={`${titleSize} font-bold text-white mb-4`}>Наши партнеры</h2>
           <div className="w-16 sm:w-24 h-1 bg-emerald-500 mx-auto mb-4 sm:mb-8"></div>
-          <p className="text-gray-300 text-base sm:text-lg md:text-xl max-w-2xl mx-auto">
+          <p className="text-gray-300 text-lg sm:text-lg md:text-xl max-w-2xl mx-auto">
             Мы сотрудничаем с лучшими музыкальными дистрибьюторами и сервисами
           </p>
         </motion.div>
