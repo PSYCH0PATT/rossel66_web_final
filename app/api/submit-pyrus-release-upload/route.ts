@@ -65,6 +65,119 @@ async function getPyrusAccessToken(apiKey: string): Promise<string | null> {
   }
 }
 
+// Field ID to human-readable name mapping for better error messages
+const fieldIdToName: Record<number, string> = {
+  2: "Никнеймы артистов",
+  5: "Название релиза", 
+  11: "Тип релиза",
+  12: "Дата релиза",
+  13: "Обложка",
+  15: "Жанр",
+  16: "Другой жанр",
+  17: "Трек-лист",
+  19: "Название трека",
+  20: "Основные исполнители",
+  25: "Аудиофайл",
+  67: "Начало предпрослушивания",
+  27: "Автор музыки",
+  28: "Автор слов",
+  29: "Язык вокала",
+  30: "Фокус-трек",
+  38: "Текст трека",
+  41: "Нужен ли видео-сниппет",
+  42: "Подать на промо",
+  44: "Информация об артисте",
+  45: "Информация о релизе",
+  46: "Поддержка релиза",
+  47: "Ссылка на фото артиста",
+  59: "Указать соцсети",
+  60: "ВКонтакте",
+  61: "TikTok",
+  62: "YouTube",
+  63: "Instagram", 
+  64: "SoundCloud",
+  32: "Указать ссылки на стриминги",
+  33: "Spotify",
+  34: "Apple Music",
+  35: "VK Музыка",
+  36: "Яндекс Музыка",
+  40: "Дополнительные комментарии",
+  66: "Explicit контент"
+};
+
+function getPyrusErrorMessage(errorCode: string, originalError: string): string {
+  switch (errorCode) {
+    case 'required_field_missing':
+      // Extract field info from error message if possible
+      const fieldMatch = originalError.match(/field[^\d]*(\d+)/i);
+      const fieldId = fieldMatch ? parseInt(fieldMatch[1]) : null;
+      const fieldName = fieldId && fieldIdToName[fieldId] ? fieldIdToName[fieldId] : "одно из полей";
+      return `Не заполнено обязательное поле: ${fieldName}`;
+      
+    case 'invalid_value_format':
+      // Try to extract field info from error message
+      const formatMatch = originalError.match(/field[^\d]*(\d+)/i);
+      const formatFieldId = formatMatch ? parseInt(formatMatch[1]) : null;
+      const formatFieldName = formatFieldId && fieldIdToName[formatFieldId] ? fieldIdToName[formatFieldId] : "одном из полей";
+      return `Неверный формат данных в поле: ${formatFieldName}. Проверьте правильность заполнения.`;
+      
+    case 'required_table_field_missing':
+      // Extract table field info
+      const tableMatch = originalError.match(/table.*field[^\d]*(\d+)/i) || originalError.match(/line\s+(\d+)/i);
+      const lineNumber = tableMatch ? tableMatch[1] : "одной из строк";
+      return `В трек-листе (строка ${lineNumber}) не заполнено обязательное поле. Проверьте все поля треков.`;
+      
+    case 'invalid_field_id':
+      return `Ошибка конфигурации формы. Обратитесь к администратору.`;
+      
+    case 'deleted_field':
+      return `Поле было удалено из формы. Обновите страницу и попробуйте снова.`;
+      
+    case 'too_large_request_length':
+      return `Размер загружаемых файлов превышает допустимый лимит. Уменьшите размер файлов и попробуйте снова.`;
+      
+    case 'invalid_credentials':
+    case 'revoked_token':
+    case 'expired_token':
+    case 'invalid_token':
+      return `Ошибка авторизации. Обратитесь к администратору.`;
+      
+    case 'access_denied_form':
+      return `Нет доступа к форме. Обратитесь к администратору.`;
+      
+    case 'too_many_requests':
+      return `Превышен лимит запросов. Пожалуйста, подождите несколько минут и попробуйте снова.`;
+      
+    case 'server_error':
+      return `Внутренняя ошибка сервера. Попробуйте позже или обратитесь в поддержку.`;
+      
+    case 'max_text_length_exceeded':
+      const lengthMatch = originalError.match(/field[^\d]*(\d+)/i);
+      const lengthFieldId = lengthMatch ? parseInt(lengthMatch[1]) : null;
+      const lengthFieldName = lengthFieldId && fieldIdToName[lengthFieldId] ? fieldIdToName[lengthFieldId] : "одно из текстовых полей";
+      return `Превышена максимальная длина текста в поле: ${lengthFieldName}`;
+      
+    case 'unsupported_attachment_format':
+      return `Неподдерживаемый формат файла. Проверьте требования к файлам.`;
+      
+    case 'empty_file':
+      return `Один из загружаемых файлов пуст. Проверьте все файлы.`;
+      
+    case 'validation_error':
+      return `Ошибка валидации данных: ${originalError}`;
+      
+    default:
+      // For unknown errors, try to make the original message more user-friendly
+      if (originalError.toLowerCase().includes('required')) {
+        return `Не заполнены обязательные поля. Проверьте форму.`;
+      }
+      if (originalError.toLowerCase().includes('format') || originalError.toLowerCase().includes('invalid')) {
+        return `Неверный формат данных в одном из полей. Проверьте правильность заполнения.`;
+      }
+      return `Ошибка при обработке данных: ${originalError}`;
+  }
+}
+
 async function uploadFileToPyrus(file: File, accessToken: string): Promise<{ guid: string } | null> {
   try {
     const pyrusFileFormData = new FormData();
@@ -159,7 +272,7 @@ export async function POST(request: NextRequest) {
       }
       trackCells.push({ id: 19, value: track.trackName });
       trackCells.push({ id: 20, value: track.mainArtists });
-      trackCells.push({ id: 26, value: track.previewStart });
+      trackCells.push({ id: 67, value: track.previewStart });
       trackCells.push({ id: 27, value: track.musicAuthor });
       trackCells.push({ id: 28, value: track.wordsAuthor });
       if (track.language && track.language !== "0") trackCells.push({ id: 29, value: { choice_id: parseInt(track.language) } });
@@ -241,11 +354,12 @@ export async function POST(request: NextRequest) {
     } else {
         console.error("Pyrus API error (creating release task):", responseData);
         
-        // Handle validation errors
-        if (responseData.error && responseData.error_code === 'invalid_value_format') {
+        // Detailed error handling based on Pyrus error codes
+        if (responseData.error_code) {
+          const errorMessage = getPyrusErrorMessage(responseData.error_code, responseData.error);
           return NextResponse.json(
-            { message: "Проверьте корректность заполненных полей в форме." },
-            { status: 400 }
+            { message: errorMessage },
+            { status: pyrusResponse.status || 400 }
           );
         }
         

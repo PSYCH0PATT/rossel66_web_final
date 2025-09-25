@@ -543,7 +543,7 @@ export default function ReleaseUploadPage() {
                             <Input id={`track_previewStart_${track.id}`} name='previewStart' value={track.previewStart} onChange={(e) => handleTrackChange(track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
-                            <Input id={`track_musicAuthor_${track.id}`} name='musicAuthor' value={track.musicAuthor} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Иванов И.И." required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
+                            <Input id={`track_musicAuthor_${track.id}`} name='musicAuthor' value={track.musicAuthor} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Полное ФИО" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
                             <Input 
@@ -551,7 +551,7 @@ export default function ReleaseUploadPage() {
                               name='wordsAuthor' 
                               value={track.wordsAuthor} 
                               onChange={(e) => handleTrackChange(track.id, e)} 
-                              placeholder="Петров П.П." 
+                              placeholder="Полное ФИО" 
                               required={track.language === '1' || track.language === '2'}
                               disabled={!(track.language === '1' || track.language === '2')}
                               className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40 disabled:bg-neutral-800 disabled:border-neutral-700 disabled:cursor-not-allowed" 
