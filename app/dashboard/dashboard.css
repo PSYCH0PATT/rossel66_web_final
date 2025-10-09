@@ -113,6 +113,19 @@ input[data-admin-input="true"]:active {
   box-shadow: none !important;
 }
 
+/* Force Radix Dialog to respect max width (matches Tailwind max-w-lg = 32rem) */
+[data-radix-dialog-content] {
+  max-width: 32rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 640px) {
+  [data-radix-dialog-content] {
+    max-width: calc(100% - 2rem) !important; /* side paddings on small screens */
+  }
+}
+
 /* Убираем стрелочки у всех input type="number" в dashboard */
 .dashboard-theme input[type="number"]::-webkit-inner-spin-button,
 .dashboard-theme input[type="number"]::-webkit-outer-spin-button {
@@ -137,18 +150,5 @@ button[data-admin-select="true"][data-state="closed"] {
   background-color: #1a1d24 !important;
   outline: none !important;
   box-shadow: none !important;
-}
-
-/* Фикс для Dialog - гарантируем правильную ширину */
-[data-radix-dialog-content] {
-  max-width: 32rem !important;  /* 512px = max-w-lg */
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 640px) {
-  [data-radix-dialog-content] {
-    max-width: calc(100% - 2rem) !important;  /* Отступы по бокам на мобилке */
-  }
 }
 
