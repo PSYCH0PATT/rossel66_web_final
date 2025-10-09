@@ -152,3 +152,16 @@ button[data-admin-select="true"][data-state="closed"] {
   box-shadow: none !important;
 }
 
+/* Фикс для Dialog - гарантируем правильную ширину */
+[data-radix-dialog-content] {
+  max-width: 32rem !important;  /* 512px = max-w-lg */
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 640px) {
+  [data-radix-dialog-content] {
+    max-width: calc(100% - 2rem) !important;  /* Отступы по бокам на мобилке */
+  }
+}
+
