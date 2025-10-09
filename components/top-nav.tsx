@@ -106,7 +106,7 @@ export default function TopNav({ role, username }: TopNavProps) {
           <DropdownMenuContent
             align="end"
             sideOffset={8}
-            className="w-[200px] !bg-card border-gray-700 rounded-xl shadow-lg"
+            className="w-[200px] border-gray-700 rounded-xl shadow-lg"
           >
             <div className="p-3 border-b border-gray-700">
               <p className="text-sm font-medium text-white">{currentUsername}</p>

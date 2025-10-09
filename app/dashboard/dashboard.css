@@ -1,25 +1,24 @@
 /* Dashboard-specific dark theme - EXACT COPY from original project */
 .dashboard-theme {
   --background: 220 10% 10%;
-  --foreground: 0 0% 100%;
+  --foreground: 0 0% 98%;
   --card: 220 10% 12%;
-  --card-foreground: 0 0% 100%;
+  --card-foreground: 0 0% 98%;
   --popover: 220 10% 12%;
-  --popover-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 98%;
   --primary: 160 84% 39%;
   --primary-foreground: 0 0% 0%;
   --secondary: 180 100% 50%;
-  --secondary-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 98%;
   --muted: 220 10% 15%;
-  --muted-foreground: 0 0% 70%;
+  --muted-foreground: 240 5% 64.9%;
   --accent: 220 10% 15%;
-  --accent-foreground: 0 0% 100%;
+  --accent-foreground: 0 0% 98%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive-foreground: 0 0% 98%;
   --border: 220 10% 18%;
   --input: 220 10% 18%;
   --ring: 160 84% 39%;
-  --radius: 1rem;
 
   /* Sidebar specific colors */
   --sidebar-background: 220 10% 12%;
@@ -41,6 +40,8 @@
   /* Azure and Emerald colors */
   --azure: 199 89% 48%;
   --emerald: 160 84% 39%;
+  
+  --radius: 1rem;
 }
 
 .dashboard-theme {

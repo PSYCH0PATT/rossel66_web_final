@@ -264,7 +264,7 @@ export default function AdminReleasesPage() {
                   )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="border-slate-700 text-white max-w-md" style={{ backgroundColor: '#1a1d24' }}>
+              <DialogContent className="border-slate-700 text-white" style={{ backgroundColor: '#1a1d24' }}>
                 <DialogHeader>
                   <DialogTitle className="text-xl text-white">Фильтры релизов</DialogTitle>
                 </DialogHeader>
