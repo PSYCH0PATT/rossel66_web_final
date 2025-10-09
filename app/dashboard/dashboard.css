@@ -1,5 +1,5 @@
-/* Dashboard-specific dark theme - EXACT COPY from original project */
-.dashboard-theme {
+/* Dashboard-specific dark theme - CSS variables in :root for portal components */
+:root {
   --background: 220 10% 10%;
   --foreground: 0 0% 98%;
   --card: 220 10% 12%;
