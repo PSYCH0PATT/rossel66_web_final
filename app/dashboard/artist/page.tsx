@@ -12,15 +12,15 @@ export default function ArtistRedirect() {
       try {
         const user = JSON.parse(userStr)
         if (user.role === "artist") {
-          router.push(`/artist/${user.username}/dashboard`)
+          router.push(`/dashboard/artist/${user.username}/dashboard`)
         } else {
-          router.push("/admin/dashboard")
+          router.push("/dashboard/admin/dashboard")
         }
       } catch (error) {
-        router.push("/login")
+        router.push("/dashboard/login")
       }
     } else {
-      router.push("/login")
+      router.push("/dashboard/login")
     }
   }, [router])
 

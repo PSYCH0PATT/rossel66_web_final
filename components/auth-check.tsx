@@ -20,7 +20,7 @@ export default function AuthCheck({ children, requiredRole, username }: AuthChec
     const userStr = localStorage.getItem("user")
 
     if (!userStr) {
-      router.push("/login")
+      router.push("/dashboard/login")
       return
     }
 
@@ -30,23 +30,23 @@ export default function AuthCheck({ children, requiredRole, username }: AuthChec
       // Проверка роли
       if (requiredRole && user.role !== requiredRole) {
         if (user.role === "admin") {
-          router.push("/admin/dashboard")
+          router.push("/dashboard/admin/dashboard")
         } else {
-          router.push(`/artist/${user.username}/dashboard`)
+          router.push(`/dashboard/artist/${user.username}/dashboard`)
         }
         return
       }
 
       // Проверка username для артистов
       if (requiredRole === "artist" && username && user.username !== username) {
-        router.push(`/artist/${user.username}/dashboard`)
+        router.push(`/dashboard/artist/${user.username}/dashboard`)
         return
       }
 
       setIsLoading(false)
     } catch (error) {
       localStorage.removeItem("user")
-      router.push("/login")
+      router.push("/dashboard/login")
     }
   }, [router, requiredRole, username])
 

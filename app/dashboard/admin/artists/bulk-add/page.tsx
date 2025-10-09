@@ -181,7 +181,7 @@ export default function BulkAddArtistsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <Link
-              href="/admin/artists"
+              href="/dashboard/admin/artists"
               className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -332,7 +332,7 @@ export default function BulkAddArtistsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push("/admin/artists")}
+                  onClick={() => router.push("/dashboard/admin/artists")}
                   className="border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white transition-colors"
                   disabled={isAdding}
                 >

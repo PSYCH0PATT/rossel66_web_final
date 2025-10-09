@@ -1,0 +1,15 @@
+[
+  {
+    "id": "1759853798522",
+    "filename": "backup_2025-10-07_16-16-38.zip",
+    "size": 20457,
+    "createdAt": "2025-10-07T16:16:38.522Z",
+    "type": "manual",
+    "filesIncluded": [
+      "users.json",
+      "releases.json",
+      "reports.json",
+      "activities.json"
+    ]
+  }
+]

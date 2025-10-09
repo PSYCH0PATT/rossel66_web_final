@@ -121,7 +121,7 @@ export default function UnregisteredReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/admin/dashboard">
+        <Link href="/dashboard/admin/dashboard">
           <Button variant="outline" size="sm" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Назад к панели
@@ -143,7 +143,7 @@ export default function UnregisteredReportsPage() {
             <p className="text-gray-600 mb-4">
               Все отчеты успешно назначены зарегистрированным артистам
             </p>
-            <Link href="/admin/dashboard">
+            <Link href="/dashboard/admin/dashboard">
               <Button variant="outline" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Вернуться к панели

@@ -1,0 +1,175 @@
+[
+  {
+    "id": "2",
+    "username": "admin",
+    "password": "admin123",
+    "role": "admin",
+    "name": "Администратор",
+    "email": "admin@rossel66.com",
+    "createdAt": "2025-09-26T23:03:45.281Z",
+    "updatedAt": "2025-09-26T23:03:45.281Z"
+  },
+  {
+    "id": "25",
+    "username": "skaya",
+    "password": "skaya9451",
+    "role": "artist",
+    "name": "СКАЯ",
+    "vkMusicUrl": "https://vk.com/artist/skaya",
+    "createdAt": "2025-09-26T23:03:45.281Z",
+    "updatedAt": "2025-09-26T23:03:45.281Z"
+  },
+  {
+    "id": "user_1759011689584",
+    "username": "plvt",
+    "password": "plvt123",
+    "role": "artist",
+    "name": "PLVT",
+    "createdAt": "2025-09-27T22:21:29.584Z",
+    "updatedAt": "2025-09-27T22:21:29.584Z"
+  },
+  {
+    "username": "MENDXZA",
+    "password": "MENDXZA123",
+    "role": "artist",
+    "name": "MENDXZA",
+    "id": "user_1759013711284",
+    "createdAt": "2025-09-27T22:55:11.284Z",
+    "updatedAt": "2025-09-27T22:55:11.284Z"
+  },
+  {
+    "username": "ns",
+    "password": "ns6029",
+    "role": "artist",
+    "name": "ЭНТЕNДАНS",
+    "id": "user_1759096822770",
+    "createdAt": "2025-09-28T22:00:22.770Z",
+    "updatedAt": "2025-09-28T22:00:22.770Z"
+  },
+  {
+    "username": "enellysayk",
+    "password": "enellysayk9366",
+    "role": "artist",
+    "name": "EnellySayk",
+    "id": "user_1759096823074",
+    "createdAt": "2025-09-28T22:00:23.074Z",
+    "updatedAt": "2025-09-28T22:00:23.074Z"
+  },
+  {
+    "username": "etxrnxtx",
+    "password": "etxrnxtx4267",
+    "role": "artist",
+    "name": "Etxrnxtx",
+    "id": "user_1759096823226",
+    "createdAt": "2025-09-28T22:00:23.226Z",
+    "updatedAt": "2025-09-28T22:00:23.226Z"
+  },
+  {
+    "username": "lxnower",
+    "password": "lxnower7908",
+    "role": "artist",
+    "name": "LXNOWER",
+    "id": "user_1759096823518",
+    "createdAt": "2025-09-28T22:00:23.518Z",
+    "updatedAt": "2025-09-28T22:00:23.518Z"
+  },
+  {
+    "username": "makishima",
+    "password": "makishima2736",
+    "role": "artist",
+    "name": "Makishima",
+    "id": "user_1759096823666",
+    "createdAt": "2025-09-28T22:00:23.666Z",
+    "updatedAt": "2025-09-28T22:00:23.666Z"
+  },
+  {
+    "username": "matcukitokioto",
+    "password": "matcukitokioto6706",
+    "role": "artist",
+    "name": "Matcukito Kioto",
+    "id": "user_1759096823822",
+    "createdAt": "2025-09-28T22:00:23.822Z",
+    "updatedAt": "2025-09-28T22:00:23.822Z"
+  },
+  {
+    "username": "meelbrn",
+    "password": "meelbrn9182",
+    "role": "artist",
+    "name": "MEELBRN",
+    "id": "user_1759096823970",
+    "createdAt": "2025-09-28T22:00:23.970Z",
+    "updatedAt": "2025-09-28T22:00:23.970Z"
+  },
+  {
+    "username": "nightmoral",
+    "password": "nightmoral8197",
+    "role": "artist",
+    "name": "night moral",
+    "id": "user_1759096824221",
+    "createdAt": "2025-09-28T22:00:24.221Z",
+    "updatedAt": "2025-09-28T22:00:24.221Z"
+  },
+  {
+    "username": "nnaia",
+    "password": "nnaia5162",
+    "role": "artist",
+    "name": "Nnaia",
+    "id": "user_1759096824371",
+    "createdAt": "2025-09-28T22:00:24.371Z",
+    "updatedAt": "2025-09-28T22:00:24.371Z"
+  },
+  {
+    "username": "roudiej",
+    "password": "roudiej3403",
+    "role": "artist",
+    "name": "Roudie J.",
+    "id": "user_1759096824619",
+    "createdAt": "2025-09-28T22:00:24.619Z",
+    "updatedAt": "2025-09-28T22:00:24.619Z"
+  },
+  {
+    "username": "sourdiesel",
+    "password": "sourdiesel3528",
+    "role": "artist",
+    "name": "Sour Diesel",
+    "id": "user_1759096824938",
+    "createdAt": "2025-09-28T22:00:24.938Z",
+    "updatedAt": "2025-09-28T22:00:24.938Z"
+  },
+  {
+    "username": "takeda",
+    "password": "takeda3216",
+    "role": "artist",
+    "name": "Takeda",
+    "id": "user_1759096825097",
+    "createdAt": "2025-09-28T22:00:25.097Z",
+    "updatedAt": "2025-09-28T22:00:25.097Z"
+  },
+  {
+    "username": "w1ce3",
+    "password": "w1ce31924",
+    "role": "artist",
+    "name": "W.1ce3",
+    "id": "user_1759096825419",
+    "createdAt": "2025-09-28T22:00:25.419Z",
+    "updatedAt": "2025-09-28T22:00:25.419Z"
+  },
+  {
+    "username": "widepie",
+    "password": "widepie7332",
+    "role": "artist",
+    "name": "WIDE PIE",
+    "id": "user_1759096825583",
+    "createdAt": "2025-09-28T22:00:25.583Z",
+    "updatedAt": "2025-09-28T22:00:25.583Z"
+  },
+  {
+    "username": "wvlaik",
+    "password": "wvlaik6781",
+    "role": "artist",
+    "name": "wvlaik",
+    "id": "user_1759096825749",
+    "createdAt": "2025-09-28T22:00:25.749Z",
+    "updatedAt": "2025-09-28T22:00:25.749Z"
+  }
+]

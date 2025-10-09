@@ -379,7 +379,7 @@ export default function AdminReleasesPage() {
             >
               Сбросить фильтры
             </Button>
-            <Link href="/admin/releases/add">
+            <Link href="/dashboard/admin/releases/add">
               <Button 
               style={{
                 backgroundColor: '#10b981',
@@ -423,7 +423,7 @@ export default function AdminReleasesPage() {
             <p className="text-slate-400 mb-4">
               Релизы будут отображаться здесь после их добавления артистами или администратором.
             </p>
-            <Link href="/admin/releases/add">
+            <Link href="/dashboard/admin/releases/add">
               <Button 
               style={{
                 backgroundColor: '#10b981',

@@ -50,6 +50,24 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom colors for financial dashboard
+        azure: {
+          DEFAULT: "#00FFFF",
+          light: "#7FFFFF",
+          dark: "#00CCCC",
+        },
+        emerald: {
+          DEFAULT: "#00C957",
+          light: "#7FFFD4",
+          dark: "#009645",
+        },
+        category: {
+          green: "#00C957",
+          blue: "#3B82F6",
+          purple: "#8B5CF6",
+          red: "#EF4444",
+          amber: "#F59E0B",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom responsive grid for releases */
+@layer components {
+  .releases-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  
+  @media (max-width: 640px) {
+    .releases-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 768px) {
+    .releases-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1200px) {
+    .releases-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  @media (min-width: 1201px) and (max-width: 1440px) {
+    .releases-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  
+  @media (min-width: 1441px) and (max-width: 1680px) {
+    .releases-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+  
+  @media (min-width: 1681px) {
+    .releases-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 142.4 71.8% 29.2%;
+    --sidebar-background: 240 10% 3.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --radius: 1rem;
+
+    /* Sidebar specific colors */
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 220 10% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-ring: 160 84% 39%;
+  }
+
+  .dark {
+    --background: 220 10% 10%;
+    --foreground: 0 0% 98%;
+    --card: 220 10% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 10% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 10% 15%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 220 10% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 10% 18%;
+    --input: 220 10% 18%;
+    --ring: 160 84% 39%;
+
+    /* Sidebar specific colors */
+    --sidebar-background: 220 10% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 220 10% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 10% 18%;
+    --sidebar-ring: 160 84% 39%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 25% 10%, rgba(0, 201, 87, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(0, 255, 255, 0.03) 0%, transparent 50%);
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Полностью удаляем прокрутку на всех уровнях, кроме main */
+html,
+body,
+#__next,
+#__next > div {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+}
+
+/* Стили для контейнера с прокруткой */
+.scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Убираем лишние отступы */
+.no-scroll-padding {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Специальные стили для админских input через data-атрибут */
+input[data-admin-input="true"],
+input[data-admin-input="true"]:focus,
+input[data-admin-input="true"]:focus-visible,
+input[data-admin-input="true"]:hover,
+input[data-admin-input="true"]:active {
+  background: #1a1d24 !important;
+  background-color: #1a1d24 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Специальные стили для админских select через data-атрибут */
+button[data-admin-select="true"],
+button[data-admin-select="true"]:focus,
+button[data-admin-select="true"]:focus-visible,
+button[data-admin-select="true"]:hover,
+button[data-admin-select="true"]:active,
+button[data-admin-select="true"][data-state="open"],
+button[data-admin-select="true"][data-state="closed"] {
+  background: #1a1d24 !important;
+  background-color: #1a1d24 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}

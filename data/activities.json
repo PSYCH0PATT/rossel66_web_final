@@ -1,0 +1,56 @@
+[
+  {
+    "id": "1738445200000",
+    "type": "playlist_found",
+    "userId": "user_1759011689584",
+    "userRole": "artist",
+    "title": "Найдены новые плейлисты",
+    "description": "Найдено 2 плейлиста на Яндекс Музыка, МТС Музыка: \"Вечеринка под парусом\" (stars), \"Нэйм: Электроника\" (i can't never let u go)",
+    "metadata": {
+      "platforms": ["Яндекс Музыка", "МТС Музыка"],
+      "count": 2,
+      "playlists": [
+        {
+          "name": "Вечеринка под парусом",
+          "platform": "Яндекс Музыка",
+          "tracks": "stars",
+          "url": "https://music.yandex.ru/users/playlist/1"
+        },
+        {
+          "name": "Нэйм: Электроника",
+          "platform": "МТС Музыка",
+          "tracks": "i can't never let u go",
+          "url": "https://music.mts.ru/playlist/2"
+        }
+      ]
+    },
+    "createdAt": "2025-10-07T10:30:00.000Z"
+  },
+  {
+    "id": "1727539200000",
+    "type": "release_added",
+    "userId": "user_1759011689584",
+    "userRole": "artist",
+    "title": "Добавлен новый релиз",
+    "description": "Релиз \"SOMEDAY\" успешно добавлен",
+    "metadata": {
+      "releaseId": "release_123",
+      "releaseTitle": "SOMEDAY"
+    },
+    "createdAt": "2024-05-16T08:00:00.000Z"
+  },
+  {
+    "id": "1727539100000",
+    "type": "report_received",
+    "userId": "user_1759011689584",
+    "userRole": "artist",
+    "title": "Получен новый отчет",
+    "description": "Q3 2025 - 22 378 ₽",
+    "metadata": {
+      "quarter": "Q3",
+      "year": "2025",
+      "amount": 22378
+    },
+    "createdAt": "2025-09-28T12:00:00.000Z"
+  }
+]

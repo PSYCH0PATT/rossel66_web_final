@@ -120,7 +120,7 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
         </div>
 
         <Link href="/dashboard/login" className="hidden md:block">
-          <Button className="bg-transparent hover:bg-emerald-500/10 text-emerald-500 border-2 border-emerald-500 px-6 py-2 rounded-md transition-all hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
             Войти
           </Button>
         </Link>
@@ -167,7 +167,7 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
                 FAQ
               </NavLink>
               <Link href="/dashboard/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full bg-transparent hover:bg-emerald-500/10 text-emerald-500 border-2 border-emerald-500 py-3 rounded-md transition-all hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
                   Войти
                 </Button>
               </Link>

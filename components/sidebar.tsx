@@ -46,7 +46,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
 
   function handleLogout() {
     localStorage.removeItem("user")
-    router.push("/login")
+    router.push("/dashboard/login")
   }
 
   function NavItem({
@@ -85,26 +85,26 @@ export default function Sidebar({ role, username }: SidebarProps) {
   }
 
   // Создаем базовые пути для артиста с учетом username
-  const artistBasePath = `/artist/${currentUsername}`
+  const artistBasePath = `/dashboard/artist/${currentUsername}`
 
   const artistNavItems = [
     { href: `${artistBasePath}/dashboard`, icon: Home, label: "Главная", color: "emerald" },
     { href: `${artistBasePath}/releases`, icon: Music, label: "Релизы", color: "blue" },
     { href: `${artistBasePath}/reports`, icon: FileText, label: "Отчеты", color: "purple" },
     { href: `${artistBasePath}/payments`, icon: DollarSign, label: "Выплаты", color: "amber" },
-    { href: `/artist/playlists`, icon: ListMusic, label: "Плейлисты", color: "red" },
+    { href: `/dashboard/artist/playlists`, icon: ListMusic, label: "Плейлисты", color: "red" },
   ]
 
   const adminNavItems = [
-    { href: "/admin/dashboard", icon: Home, label: "Главная", color: "emerald" },
-    { href: "/admin/artists", icon: Users, label: "Артисты", color: "blue" },
-    { href: "/admin/releases", icon: Music, label: "Релизы", color: "purple" },
-    { href: "/admin/reports", icon: FileText, label: "Отчеты", color: "amber" },
-    { href: "/admin/payments", icon: DollarSign, label: "Выплаты", color: "red" },
+    { href: "/dashboard/admin/dashboard", icon: Home, label: "Главная", color: "emerald" },
+    { href: "/dashboard/admin/artists", icon: Users, label: "Артисты", color: "blue" },
+    { href: "/dashboard/admin/releases", icon: Music, label: "Релизы", color: "purple" },
+    { href: "/dashboard/admin/reports", icon: FileText, label: "Отчеты", color: "amber" },
+    { href: "/dashboard/admin/payments", icon: DollarSign, label: "Выплаты", color: "red" },
     // Добавляем новый пункт меню для генератора отчетов
-    { href: "/admin/reports-generator", icon: BarChart, label: "Генератор отчетов", color: "purple" },
+    { href: "/dashboard/admin/reports-generator", icon: BarChart, label: "Генератор отчетов", color: "purple" },
     // Объединенная страница плейлистов с парсерами
-    { href: "/admin/playlists", icon: Search, label: "Плейлисты", color: "blue" },
+    { href: "/dashboard/admin/playlists", icon: Search, label: "Плейлисты", color: "blue" },
   ]
 
   const navItems = role === "artist" ? artistNavItems : adminNavItems
@@ -179,7 +179,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
       >
         <div className="h-full flex flex-col">
           <Link
-            href={role === "artist" ? `${artistBasePath}/dashboard` : "/admin/dashboard"}
+            href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
             onClick={handleNavigation}
             className="h-16 border-b border-sidebar-border flex items-center"
           >
@@ -216,7 +216,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
             <div className="px-3 mb-2 text-xs font-semibold text-gray-400">{currentUsername}</div>
             <div className="space-y-1">
               <NavItem
-                href={role === "artist" ? `${artistBasePath}/settings` : "/admin/settings"}
+                href={role === "artist" ? `${artistBasePath}/settings` : "/dashboard/admin/settings"}
                 icon={Settings}
                 color="purple"
               >

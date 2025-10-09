@@ -129,7 +129,7 @@ export default function ArtistsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Link href="/admin/artists/bulk-add">
+            <Link href="/dashboard/admin/artists/bulk-add">
               <Button 
                 className="text-white border transition-all duration-200"
                 style={{
@@ -147,7 +147,7 @@ export default function ArtistsPage() {
                 Массовое добавление
               </Button>
             </Link>
-            <Link href="/admin/artists/add">
+            <Link href="/dashboard/admin/artists/add">
               <Button 
                 className="text-white border-2 transition-all duration-200"
                 style={{

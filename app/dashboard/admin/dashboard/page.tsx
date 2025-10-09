@@ -169,7 +169,7 @@ export default function AdminDashboard() {
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Link
-                href="/admin/artists"
+                href="/dashboard/admin/artists"
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors"
               >
                 <Users className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
               </Link>
 
               <Link
-                href="/admin/reports"
+                href="/dashboard/admin/reports"
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors"
               >
                 <TrendingUp className="h-4 w-4" />

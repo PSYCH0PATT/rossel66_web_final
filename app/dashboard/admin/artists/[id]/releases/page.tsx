@@ -84,7 +84,7 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Link
-              href="/admin/artists"
+              href="/dashboard/admin/artists"
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Link
-            href="/admin/artists"
+            href="/dashboard/admin/artists"
             className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />

@@ -49,9 +49,9 @@ export default function LoginForm() {
         )
 
         if (user.role === "admin") {
-          router.push("/admin/dashboard")
+          router.push("/dashboard/admin/dashboard")
         } else {
-          router.push(`/artist/${user.username}/dashboard`)
+          router.push(`/dashboard/artist/${user.username}/dashboard`)
         }
       } else {
         setError("Неверный логин или пароль")

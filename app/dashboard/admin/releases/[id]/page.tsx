@@ -105,7 +105,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Link href="/admin/releases" className="text-slate-400 hover:text-white text-sm flex items-center gap-2">
+          <Link href="/dashboard/admin/releases" className="text-slate-400 hover:text-white text-sm flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" /> Назад к релизам
           </Link>
 

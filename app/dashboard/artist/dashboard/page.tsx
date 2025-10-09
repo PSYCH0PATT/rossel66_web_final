@@ -28,13 +28,13 @@ export default function ArtistDashboard() {
         if (user.role === "artist") {
           // router.push(`/artist/${user.username}/dashboard`)
         } else {
-          router.push("/admin/dashboard")
+          router.push("/dashboard/admin/dashboard")
         }
       } catch (error) {
-        router.push("/login")
+        router.push("/dashboard/login")
       }
     } else {
-      router.push("/login")
+      router.push("/dashboard/login")
     }
   }, [router])
 
@@ -125,7 +125,7 @@ export default function ArtistDashboard() {
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Link
-                href="/artist/releases"
+                href="/dashboard/artist/releases"
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors"
               >
                 <Music className="h-4 w-4 text-category-blue" />
@@ -133,7 +133,7 @@ export default function ArtistDashboard() {
               </Link>
 
               <Link
-                href="/artist/payments"
+                href="/dashboard/artist/payments"
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors"
               >
                 <TrendingUp className="h-4 w-4 text-category-amber" />

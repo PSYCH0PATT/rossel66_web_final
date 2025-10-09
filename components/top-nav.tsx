@@ -34,7 +34,7 @@ export default function TopNav({ role, username }: TopNavProps) {
     const breadcrumbs = [
       {
         label: role === "artist" ? "Артист" : "Админ",
-        href: role === "artist" ? `/artist/${currentUsername}/dashboard` : "/admin/dashboard",
+        href: role === "artist" ? `/dashboard/artist/${currentUsername}/dashboard` : "/dashboard/admin/dashboard",
       },
     ]
 
@@ -66,7 +66,7 @@ export default function TopNav({ role, username }: TopNavProps) {
 
   function handleLogout() {
     localStorage.removeItem("user")
-    router.push("/login")
+    router.push("/dashboard/login")
   }
 
   return (
@@ -114,7 +114,7 @@ export default function TopNav({ role, username }: TopNavProps) {
             </div>
             <div className="p-2">
               <Link
-                href={role === "artist" ? `/artist/${currentUsername}/settings` : "/admin/settings"}
+                href={role === "artist" ? `/dashboard/artist/${currentUsername}/settings` : "/dashboard/admin/settings"}
                 className="flex items-center gap-2 p-2 text-sm text-gray-300 hover:text-white hover:bg-accent/50 rounded-lg transition-colors"
               >
                 Настройки
