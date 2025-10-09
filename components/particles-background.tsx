@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 
 export function ParticlesBackground() {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
+  const [activeSection, setActiveSection] = useState(0)
   const pathname = usePathname()
   
   // Определяем на какой странице показывать particles
@@ -18,10 +19,19 @@ export function ParticlesBackground() {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight })
     }
     
+    const handleSectionChange = (e: Event) => {
+      const customEvent = e as CustomEvent
+      setActiveSection(customEvent.detail.index)
+    }
+    
     handleResize()
     window.addEventListener("resize", handleResize)
+    document.addEventListener("sectionChange", handleSectionChange)
     
-    return () => window.removeEventListener("resize", handleResize)
+    return () => {
+      window.removeEventListener("resize", handleResize)
+      document.removeEventListener("sectionChange", handleSectionChange)
+    }
   }, [])
 
   if (!showParticles) return null
@@ -29,7 +39,7 @@ export function ParticlesBackground() {
   return (
     <div
       className="h-full w-full fixed inset-0"
-      style={{ pointerEvents: "none", zIndex: 0 }}
+      style={{ pointerEvents: "none", zIndex: 1 }}
     >
       <SparklesCore
         id="tsparticlesfullpage"
@@ -39,7 +49,7 @@ export function ParticlesBackground() {
         particleDensity={windowSize.width < 768 ? 120 : 195}
         className="w-full h-full"
         particleColor="#FFFFFF"
-        emeraldParticles={isLandingPage}
+        emeraldParticles={isLandingPage && activeSection === 1}
       />
     </div>
   )

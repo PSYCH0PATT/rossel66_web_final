@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import Hero from "@/components/hero"
 import Navbar from "@/components/navbar"
-import { SparklesCore } from "@/components/sparkles"
 import FactsSection from "@/components/facts-section"
 import ServicesSection from "@/components/services-section"
 import PartnersSection from "@/components/partners-section"
@@ -518,23 +517,7 @@ export default function Home() {
       {/* Custom cursor */}
       <CustomCursor />
 
-      {/* Ambient background with moving particles */}
-      <div
-        className="h-full w-full fixed inset-0 z-0"
-        // ИСПРАВЛЕНИЕ: Добавляем pointer-events: none
-        style={{ pointerEvents: "none" }}
-      >
-        <SparklesCore
-          id="tsparticlesfullpage"
-          background="transparent"
-          minSize={0.9}
-          maxSize={2.1}
-          particleDensity={windowSize.width < 768 ? 120 : 195}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-          emeraldParticles={activeSection === 1}
-        />
-      </div>
+      {/* Particles рендерятся через ParticlesBackground в root layout */}
 
       {/* Навбар вне масштабируемого контейнера */}
       <div
