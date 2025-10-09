@@ -119,7 +119,11 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
           </NavLink>
         </div>
 
-        <div className="w-8 sm:w-10 md:block">{/* Пустой div для баланса */}</div>
+        <Link href="/dashboard/login" className="hidden md:block">
+          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
+            Войти
+          </Button>
+        </Link>
 
         {/* Мобильное меню кнопка - увеличенная для мобильных устройств */}
         <Button
@@ -162,6 +166,11 @@ export default function Navbar({ activeSection = 0 }: NavbarProps) {
               <NavLink href="#faq" active={activeSection === 6} onClick={handleNavClick}>
                 FAQ
               </NavLink>
+              <Link href="/dashboard/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
+                  Войти
+                </Button>
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
