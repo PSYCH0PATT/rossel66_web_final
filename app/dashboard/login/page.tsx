@@ -3,9 +3,9 @@ import Image from "next/image"
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center p-4" style={{ position: 'relative', zIndex: 1 }}>
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-white" style={{ position: 'relative', zIndex: 1 }}>
       {/* Черный overlay с прозрачностью 0.96 - particles будут из layout лендинга */}
-      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.96)', zIndex: 1 }} />
+      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.96)', zIndex: -1 }} />
 
       {/* Контент поверх фона */}
       <div className="relative w-full max-w-md space-y-8" style={{ zIndex: 2 }}>
