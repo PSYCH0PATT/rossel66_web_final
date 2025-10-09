@@ -33,6 +33,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'media.zvonkodigital.ru',
       },
+      {
+        protocol: 'https',
+        hostname: 'avatars.yandex.net',
+      },
     ],
   },
 };
