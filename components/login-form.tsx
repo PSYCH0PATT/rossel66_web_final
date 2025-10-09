@@ -65,9 +65,9 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-700 bg-card p-8 shadow-lg">
+    <div className="rounded-2xl border border-gray-700/50 p-8 sm:p-10 shadow-2xl" style={{ backgroundColor: 'rgba(26, 29, 36, 0.7)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(4px)' }}>
       {error && (
-        <Alert variant="destructive" className="mb-4 rounded-xl">
+        <Alert variant="destructive" className="mb-6 rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -75,7 +75,7 @@ export default function LoginForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-white">
+          <Label htmlFor="username" className="text-white text-sm font-medium">
             Логин
           </Label>
           <Input
@@ -84,13 +84,13 @@ export default function LoginForm() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="bg-accent/50 border-gray-700 text-white rounded-xl"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald focus:ring-emerald/20 focus:ring-2 transition-all"
             placeholder="Введите ваш логин"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-white">
+          <Label htmlFor="password" className="text-white text-sm font-medium">
             Пароль
           </Label>
           <Input
@@ -99,23 +99,22 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="bg-accent/50 border-gray-700 text-white rounded-xl"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald focus:ring-emerald/20 focus:ring-2 transition-all"
             placeholder="Введите ваш пароль"
           />
         </div>
 
         <Button
           type="submit"
-          className="w-full bg-category-green hover:bg-category-green/90 text-black font-bold rounded-xl"
+          className="w-full bg-emerald hover:bg-emerald/90 text-black font-semibold rounded-xl h-12 text-base transition-all hover:shadow-lg hover:shadow-emerald/20"
           disabled={isLoading}
         >
           {isLoading ? "Вход..." : "Войти"}
         </Button>
-
-        <div className="text-center text-xs text-muted-foreground">
-          <p>Тестовый аккаунт артиста: plvt / plvt123</p>
-          <p>Тестовый аккаунт админа: admin / admin123</p>
-        </div>
+        
+        <p className="text-center text-xs sm:text-sm text-gray-400 mt-4">
+          Доступ к личному кабинету есть только у артистов лейбла
+        </p>
       </form>
     </div>
   )
