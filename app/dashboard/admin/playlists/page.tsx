@@ -603,7 +603,7 @@ export default function PlaylistsPage() {
               return (
                 <div key={artistName} className="space-y-4">
                   {/* Заголовок артиста */}
-                  <div className="flex items-center gap-4 bg-gradient-to-r from-primary/10 to-transparent rounded-lg p-4">
+                  <div className="flex items-center gap-4 border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
                     <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center text-2xl font-bold text-primary">
                       {artist?.name?.charAt(0) || artistName.charAt(0)}
                     </div>
