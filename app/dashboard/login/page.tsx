@@ -22,7 +22,7 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-4 overflow-hidden">
       {/* Черный overlay с прозрачностью 0.96 */}
-      <div className="absolute inset-0 bg-black/96 z-0" />
+      <div className="absolute inset-0 z-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.96)' }} />
       
       {/* Particles фон */}
       <div className="absolute inset-0 z-0" style={{ pointerEvents: "none" }}>
