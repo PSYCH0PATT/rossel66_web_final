@@ -28,8 +28,8 @@ export function ParticlesBackground() {
 
   return (
     <div
-      className="h-full w-full fixed inset-0 z-0"
-      style={{ pointerEvents: "none" }}
+      className="h-full w-full fixed inset-0"
+      style={{ pointerEvents: "none", zIndex: 0 }}
     >
       <SparklesCore
         id="tsparticlesfullpage"
