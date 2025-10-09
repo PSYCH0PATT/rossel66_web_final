@@ -1,42 +1,11 @@
-"use client"
-
 import LoginForm from "@/components/login-form"
 import Image from "next/image"
-import { SparklesCore } from "@/components/sparkles"
-import { useState, useEffect } from "react"
 
 export default function LoginPage() {
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight })
-    }
-    
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
-
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-4 overflow-hidden">
-      {/* Черный overlay с прозрачностью 0.96 */}
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+      {/* Черный overlay с прозрачностью 0.96 - particles будут из layout лендинга */}
       <div className="absolute inset-0 z-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.96)' }} />
-      
-      {/* Particles фон */}
-      <div className="absolute inset-0 z-0" style={{ pointerEvents: "none" }}>
-        <SparklesCore
-          id="login-particles"
-          background="transparent"
-          minSize={0.9}
-          maxSize={2.1}
-          particleDensity={windowSize.width < 768 ? 120 : 195}
-          className="w-full h-full"
-          particleColor="#FFFFFF"
-          emeraldParticles={false}
-        />
-      </div>
 
       {/* Контент поверх фона */}
       <div className="relative z-10 w-full max-w-md space-y-8">
