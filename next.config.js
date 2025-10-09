@@ -31,6 +31,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'sun6-21.userapi.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'media.zvonkodigital.ru',
       },
     ],

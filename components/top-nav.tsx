@@ -98,7 +98,7 @@ export default function TopNav({ role, username }: TopNavProps) {
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
             <div className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded-xl transition-colors">
-              <div className="h-10 w-10 rounded-xl bg-emerald flex items-center justify-center text-black">
+              <div className="h-10 w-10 rounded-full bg-emerald flex items-center justify-center text-black">
                 <User className="h-5 w-5" />
               </div>
             </div>

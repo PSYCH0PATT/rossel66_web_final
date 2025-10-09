@@ -121,3 +121,39 @@ button[data-admin-select="true"][data-state="closed"] {
   box-shadow: none !important;
 }
 
+/* Убираем стрелочки в числовых полях */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Убираем зеленый градиент в активном пункте меню */
+.dashboard-theme nav a[class*="bg-accent"] {
+  background: hsl(var(--accent)) !important;
+  background-image: none !important;
+}
+
+/* Фиксим скролл для страниц dashboard */
+.dashboard-theme main {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* Текст чуть светлее и менее жирный */
+.dashboard-theme {
+  font-weight: 400;
+}
+
+.dashboard-theme h1,
+.dashboard-theme h2,
+.dashboard-theme h3 {
+  font-weight: 600;
+}
+
