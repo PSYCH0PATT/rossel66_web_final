@@ -14,9 +14,6 @@ const inter = Inter({
 export default function LoginPage() {
   return (
     <>
-      {/* Черный фон под particles */}
-      <div className="fixed inset-0 bg-black/[0.96]" style={{ zIndex: 1 }} />
-      
       {/* Контент поверх particles */}
       <div className={`${inter.variable} relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 font-sans`} style={{ zIndex: 10, fontFamily: 'var(--font-inter)' }}>
         <div className="relative w-full max-w-md">

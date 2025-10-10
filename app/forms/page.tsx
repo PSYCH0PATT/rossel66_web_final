@@ -230,8 +230,8 @@ export default function FormsPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden bg-black/[0.96] antialiased bg-grid-white/[0.02] relative"
-      style={{ fontFamily: "'Mulish', sans-serif" }}
+      className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden antialiased bg-grid-white/[0.02] relative"
+      style={{ fontFamily: "'Mulish', sans-serif", zIndex: 10 }}
     >
       <CustomCursor />
       <Navbar />
@@ -246,7 +246,7 @@ export default function FormsPage() {
           particleColor="#FFFFFF"
         />
       </div>
-      <div className={`flex flex-col ${windowSize.width > 1172 ? 'min-h-screen' : windowSize.width < 768 ? 'pt-24 pb-12' : 'pt-32 pb-12'} justify-center items-center relative z-10`}>
+      <div className={`flex flex-col ${windowSize.width > 1172 ? 'min-h-screen' : windowSize.width < 768 ? 'pt-24 pb-12' : 'pt-32 pb-12'} justify-center items-center relative z-20`}>
         <div className="container mx-auto px-4 sm:px-6 flex flex-col justify-center items-center ${windowSize.width > 1172 ? 'flex-grow' : ''}">
           <motion.div
             initial={{ opacity: 0, y: -20 }}

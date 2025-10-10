@@ -29,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-white">
-      <body className={`${inter.variable} antialiased bg-white`}>
+    <html lang="en" className="bg-[#0a0a0a]">
+      <body className={`${inter.variable} antialiased bg-[#0a0a0a]`}>
         <ParticlesBackground />
         {children}
       </body>

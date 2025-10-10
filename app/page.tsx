@@ -501,14 +501,15 @@ export default function Home() {
     <main
       ref={mainRef}
       data-page="home"
-      className={`h-screen ${isMobile ? 'overflow-visible' : 'overflow-hidden'} bg-black/[0.96] antialiased bg-grid-white/[0.02] relative ${isMobile ? 'snap-container' : ''}`}
+      className={`h-screen ${isMobile ? 'overflow-visible' : 'overflow-hidden'} antialiased bg-grid-white/[0.02] relative ${isMobile ? 'snap-container' : ''}`}
       style={{
         pointerEvents: "auto",
         overscrollBehavior: isMobile ? 'auto' : "none", // Разрешаем overscroll для snap на мобильных
         WebkitOverflowScrolling: "touch",
         display: "flex",
         flexDirection: "column",
-        fontFamily: "'Mulish', sans-serif"
+        fontFamily: "'Mulish', sans-serif",
+        zIndex: 10
       }}
     >
       {/* Компонент для плавной прокрутки */}

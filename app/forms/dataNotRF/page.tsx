@@ -244,8 +244,8 @@ export default function DataNotRFFormPage() {
 
   return (
     <main 
-      className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden bg-black/[0.96] antialiased bg-grid-white/[0.02] relative"
-      style={{ fontFamily: "'Mulish', sans-serif" }}
+      className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden antialiased bg-grid-white/[0.02] relative"
+      style={{ fontFamily: "'Mulish', sans-serif", zIndex: 10 }}
     >
       <Navbar />
       <div className="flex-grow pt-20 pb-12 md:pt-24 md:pb-16 relative">
@@ -261,7 +261,7 @@ export default function DataNotRFFormPage() {
           />
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 sm:px-6">
+        <div className="relative z-20 container mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
