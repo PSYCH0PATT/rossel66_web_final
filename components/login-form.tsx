@@ -84,7 +84,7 @@ export default function LoginForm() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald focus:ring-emerald/20 focus:ring-2 transition-all"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald-500 focus:ring-emerald-500/20 focus:ring-2 transition-all"
             placeholder="Введите ваш логин"
           />
         </div>
@@ -99,14 +99,14 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald focus:ring-emerald/20 focus:ring-2 transition-all"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald-500 focus:ring-emerald-500/20 focus:ring-2 transition-all"
             placeholder="Введите ваш пароль"
           />
         </div>
 
         <Button
           type="submit"
-          className="w-full bg-emerald hover:bg-emerald/90 text-black font-semibold rounded-xl h-12 text-base transition-all hover:shadow-lg hover:shadow-emerald/20"
+          className="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-xl h-12 text-base transition-all hover:shadow-lg hover:shadow-emerald-500/20"
           disabled={isLoading}
         >
           {isLoading ? "Вход..." : "Войти"}
