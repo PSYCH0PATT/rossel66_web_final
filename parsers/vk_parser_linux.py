@@ -42,7 +42,7 @@ class VKParser:
             except Exception as e:
                 print(f"Ошибка загрузки конфигурации: {e}")
         
-        return {"artists": []}
+        return {"target_artists": []}
     
     def init_database(self):
         """Инициализирует базу данных"""
@@ -333,14 +333,18 @@ class VKParser:
             return False
         
         try:
-            for i, artist in enumerate(self.config.get('artists', []), 1):
-                artist_url = artist.get('url', '')
+            for i, artist in enumerate(self.config.get('target_artists', []), 1):
+                # Поддержка как строк (URL), так и объектов {url: ...}
+                if isinstance(artist, str):
+                    artist_url = artist
+                else:
+                    artist_url = artist.get('url', '')
                 
                 if not artist_url:
                     print(f"Пропущен артист {i}: нет URL")
                     continue
                 
-                print(f"\nАртист {i}/{len(self.config['artists'])}: {artist_url}")
+                print(f"\nАртист {i}/{len(self.config['target_artists'])}: {artist_url}")
                 
                 # Парсим страницу артиста
                 playlists = self.parse_artist_page(artist_url)
@@ -357,7 +361,7 @@ class VKParser:
                     print(f"Плейлисты не найдены")
                 
                 # Задержка между запросами
-                if i < len(self.config['artists']):
+                if i < len(self.config['target_artists']):
                     delay = random.uniform(5, 10)
                     print(f"Ждем {delay:.1f} секунд перед следующим артистом...")
                     time.sleep(delay)
@@ -384,12 +388,12 @@ def main():
     parser = VKParser(config_file)
     
     # Проверяем конфигурацию
-    if not parser.config.get('artists'):
+    if not parser.config.get('target_artists'):
         print("Список артистов не настроен!")
         return False
     
     print("Конфигурация загружена")
-    print(f"Артистов для парсинга: {len(parser.config['artists'])}")
+    print(f"Артистов для парсинга: {len(parser.config['target_artists'])}")
     
     # Запускаем парсинг
     try:
