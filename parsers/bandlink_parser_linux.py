@@ -117,16 +117,10 @@ class BandlinkParser:
             return False
     
     def human_like_behavior(self):
-        """Имитирует человеческое поведение"""
+        """Имитирует человеческое поведение (без движений мыши для headless режима)"""
         try:
-            # Случайные движения мыши
-            actions = ActionChains(self.driver)
-            for _ in range(random.randint(3, 8)):
-                x = random.randint(100, 1800)
-                y = random.randint(100, 1000)
-                actions.move_by_offset(x, y)
-                time.sleep(random.uniform(0.1, 0.3))
-            actions.perform()
+            # Отключены движения мыши для headless режима (вызывают ошибки)
+            # Только скроллинг и задержки
             
             # Случайная прокрутка
             scroll_amount = random.randint(200, 600)
@@ -134,7 +128,7 @@ class BandlinkParser:
             time.sleep(random.uniform(1, 2))
             
             # Случайная задержка
-            time.sleep(random.uniform(2, 4))
+            time.sleep(random.uniform(3, 5))
             
         except Exception as e:
             print(f"Ошибка имитации поведения: {e}")
@@ -186,8 +180,8 @@ class BandlinkParser:
             # Нажимаем Enter
             search_input.send_keys(Keys.RETURN)
             
-            # Ждем загрузки результатов
-            time.sleep(random.uniform(5, 10))
+            # Ждем загрузки результатов (увеличено для headless режима)
+            time.sleep(random.uniform(8, 15))
             
             # Имитируем человеческое поведение
             self.human_like_behavior()
@@ -205,12 +199,19 @@ class BandlinkParser:
             
             print("Ищем первый article элемент...")
             
-            # Ждем появления результатов
-            time.sleep(random.uniform(3, 6))
+            # Ждем появления результатов (увеличено для headless режима)
+            time.sleep(random.uniform(5, 10))
             
-            # Ищем первый article элемент
-            article = self.driver.find_element(By.CSS_SELECTOR, 'article')
-            print("Найден article элемент")
+            # Используем WebDriverWait для более надежного ожидания
+            try:
+                wait = WebDriverWait(self.driver, 30)  # Увеличен таймаут до 30 секунд
+                article = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'article')))
+                print("Найден article элемент")
+            except TimeoutException:
+                print("Таймаут ожидания article элемента. Пробуем найти альтернативные элементы...")
+                # Пытаемся найти контейнер с результатами
+                article = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="search-results"], .search-results, main')
+                print("Найден альтернативный контейнер результатов")
             
             # Ищем кнопку "Показать все" или "Смотреть все" в article
             button_clicked = False

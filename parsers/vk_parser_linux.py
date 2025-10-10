@@ -97,8 +97,8 @@ class VKParser:
             print(f"Ошибка запуска Chrome WebDriver: {e}")
             return False
     
-    def wait_for_content_load(self, timeout=30):
-        """Ждет загрузки контента"""
+    def wait_for_content_load(self, timeout=45):
+        """Ждет загрузки контента (увеличен таймаут для headless режима)"""
         try:
             print("Ждем загрузки контента...")
             
@@ -123,8 +123,8 @@ class VKParser:
             print(f"Переходим на страницу артиста: {artist_url}")
             self.driver.get(artist_url)
             
-            # Ждем загрузки страницы
-            time.sleep(5)
+            # Ждем загрузки страницы (увеличено для headless режима)
+            time.sleep(8)
             
             # Ждем загрузки контента
             if not self.wait_for_content_load():
