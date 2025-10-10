@@ -1,5 +1,31 @@
 [
   {
+    "type": "user_data_updated",
+    "userId": "2",
+    "userRole": "admin",
+    "title": "Данные артиста обновлены",
+    "description": "Профиль артиста \"Администратор\" был обновлен",
+    "metadata": {
+      "artistId": "2",
+      "artistName": "Администратор"
+    },
+    "id": "1760061469237",
+    "createdAt": "2025-10-10T01:57:49.237Z"
+  },
+  {
+    "type": "user_data_updated",
+    "userId": "1760059101057",
+    "userRole": "admin",
+    "title": "Данные артиста обновлены",
+    "description": "Профиль артиста \"test\" был обновлен",
+    "metadata": {
+      "artistId": "1760059101057",
+      "artistName": "test"
+    },
+    "id": "1760061341682",
+    "createdAt": "2025-10-10T01:55:41.682Z"
+  },
+  {
     "id": "1738445200000",
     "type": "playlist_found",
     "userId": "user_1759011689584",
@@ -7,7 +33,10 @@
     "title": "Найдены новые плейлисты",
     "description": "Найдено 2 плейлиста на Яндекс Музыка, МТС Музыка: \"Вечеринка под парусом\" (stars), \"Нэйм: Электроника\" (i can't never let u go)",
     "metadata": {
-      "platforms": ["Яндекс Музыка", "МТС Музыка"],
+      "platforms": [
+        "Яндекс Музыка",
+        "МТС Музыка"
+      ],
       "count": 2,
       "playlists": [
         {

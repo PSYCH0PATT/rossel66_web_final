@@ -57,7 +57,7 @@ export default function ReleasesPage() {
         {releases.length > 0 ? (
           <div className="releases-grid">
             {releases.map((release) => (
-              <Link href={`/artist/releases/${release.id}`} key={release.id}>
+              <Link href={`/dashboard/artist/releases/${release.id}`} key={release.id}>
                 <Card className="bg-card border-border text-card-foreground overflow-hidden rounded-xl hover:border-category-blue/50 transition-colors cursor-pointer">
                   <div className="aspect-square relative">
                     <Image

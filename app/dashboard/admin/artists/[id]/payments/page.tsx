@@ -176,7 +176,7 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                           </div>
 
                           <div className="flex items-center justify-end gap-2 mt-4">
-                            <Link href={`/admin/payments/${payment.id}`}>
+                            <Link href={`/dashboard/admin/payments/${payment.id}`}>
                               <Button
                                 variant="outline"
                                 size="sm"

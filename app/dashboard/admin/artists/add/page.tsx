@@ -222,7 +222,7 @@ export default function AddArtistPage() {
                   {/* Добавляем поля для ссылок на музыкальные сервисы */}
                   <div className="space-y-2">
                     <Label htmlFor="vkMusicUrl" className="text-white flex items-center gap-1">
-                      <img src="/vk-music-logo.svg" alt="VK Music" className="h-4 w-4" />
+                      <img src="https://cdn.simpleicons.org/vk/0077FF" alt="VK Music" className="h-4 w-4" />
                       ВК Музыка
                     </Label>
                     <div className="relative">
@@ -241,7 +241,7 @@ export default function AddArtistPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="yandexMusicUrl" className="text-white flex items-center gap-1">
-                      <img src="/yandex-music-logo.svg" alt="Yandex Music" className="h-4 w-4" />
+                      <img src="https://cdn.simpleicons.org/yandexmusic/FFCC00" alt="Yandex Music" className="h-4 w-4" />
                       Яндекс Музыка
                     </Label>
                     <div className="relative">

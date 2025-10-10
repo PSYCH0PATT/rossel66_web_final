@@ -69,12 +69,20 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                 <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
                   <div className="relative w-32 h-32 rounded-full border-4 border-card overflow-hidden">
                     {artist.avatarUrl ? (
-                      <Image
-                        src={artist.avatarUrl || "/placeholder.svg"}
-                        alt={artist.name}
-                        fill
-                        className="object-cover"
-                      />
+                      artist.avatarUrl.startsWith('data:') ? (
+                        <img
+                          src={artist.avatarUrl}
+                          alt={artist.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Image
+                          src={artist.avatarUrl}
+                          alt={artist.name}
+                          fill
+                          className="object-cover"
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full bg-accent flex items-center justify-center">
                         <span className="text-4xl font-bold text-white">{artist.name.charAt(0).toUpperCase()}</span>
@@ -143,7 +151,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                     {releases.slice(0, 4).map((release) => (
                       <Link
                         key={release.id}
-                        href={`/artist/${params.username}/releases/${release.id}`}
+                        href={`/dashboard/artist/${params.username}/releases/${release.id}`}
                         className="block"
                       >
                         <div className="bg-accent/30 rounded-lg p-3 hover:bg-accent/50 transition-colors">
@@ -174,7 +182,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                 {releases.length > 4 && (
                   <div className="mt-4 text-center">
                     <Link
-                      href={`/artist/${params.username}/releases`}
+                      href={`/dashboard/artist/${params.username}/releases`}
                       className="text-sm text-category-blue hover:text-category-blue/80 transition-colors"
                     >
                       Смотреть все релизы
@@ -194,7 +202,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                     {playlists.slice(0, 4).map((playlist) => (
                       <Link
                         key={playlist.id}
-                        href={`/artist/${params.username}/playlists/${playlist.id}`}
+                        href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`}
                         className="block"
                       >
                         <div className="bg-accent/30 rounded-lg p-3 hover:bg-accent/50 transition-colors">
@@ -223,7 +231,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                 {playlists.length > 4 && (
                   <div className="mt-4 text-center">
                     <Link
-                      href={`/artist/${params.username}/playlists`}
+                      href={`/dashboard/artist/${params.username}/playlists`}
                       className="text-sm text-category-blue hover:text-category-blue/80 transition-colors"
                     >
                       Смотреть все плейлисты

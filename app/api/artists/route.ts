@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         fs.mkdirSync(artistDir, { recursive: true })
         const buffer = Buffer.from(await avatar.arrayBuffer())
         const avatarPath = path.join(artistDir, "avatar.jpg")
-        fs.writeFileSync(avatarPath, buffer)
+        fs.writeFileSync(avatarPath, new Uint8Array(buffer))
         avatarUrl = `/data/artists/${username}/avatar.jpg`
       }
     }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       password,
       role: "artist",
       name,
-      email: email || undefined,
+      email: email || '',
       avatarUrl,
       vkMusicUrl,
       yandexMusicUrl,
@@ -132,33 +132,32 @@ export async function PUT(request: Request) {
     const data = await request.json()
     const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl } = data
 
-    // Validate required fields
-    if (!id || !username || !name) {
-      return NextResponse.json({ error: "ID, username and name are required" }, { status: 400 })
+    // Validate required field (only ID is required)
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 })
     }
 
-    // Check if username already exists (excluding current user)
     const users = loadUsers()
-    const existingUser = users.find(user => user.username === username && user.id !== id)
-    if (existingUser) {
-      return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+    
+    // Check if username already exists (excluding current user) - only if username is being updated
+    if (username) {
+      const existingUser = users.find(user => user.username === username && user.id !== id)
+      if (existingUser) {
+        return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+      }
     }
 
-    // Update user
-    const updateData: any = {
-      username,
-      name,
-      email: email || undefined,
-      vkMusicUrl: vkMusicUrl || undefined,
-      yandexMusicUrl: yandexMusicUrl || undefined,
-      spotifyUrl: spotifyUrl || undefined,
-      avatarUrl: avatarUrl || undefined,
-    }
-
-    // Only update password if provided
-    if (password) {
-      updateData.password = password
-    }
+    // Build update data object with only provided fields
+    const updateData: any = {}
+    
+    if (username !== undefined) updateData.username = username
+    if (name !== undefined) updateData.name = name
+    if (email !== undefined) updateData.email = email || ''
+    if (vkMusicUrl !== undefined) updateData.vkMusicUrl = vkMusicUrl
+    if (yandexMusicUrl !== undefined) updateData.yandexMusicUrl = yandexMusicUrl
+    if (spotifyUrl !== undefined) updateData.spotifyUrl = spotifyUrl
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
+    if (password !== undefined) updateData.password = password
 
     const updatedUser = updateUser(id, updateData)
 

@@ -74,7 +74,7 @@ export default function PlaylistDetailPage({ params }: { params: { username: str
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Link
-            href={`/artist/${params.username}/playlists`}
+            href={`/dashboard/artist/${params.username}/playlists`}
             className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -168,7 +168,7 @@ export default function PlaylistDetailPage({ params }: { params: { username: str
                       </div>
                     </div>
 
-                    <Link href={`/artist/${params.username}/releases/${trackInfo.release.id}`}>
+                    <Link href={`/dashboard/artist/${params.username}/releases/${trackInfo.release.id}`}>
                       <button className="w-full flex items-center justify-center gap-2 p-2 bg-category-blue text-black rounded-xl hover:bg-category-blue/80 transition-colors">
                         <Music className="h-4 w-4" />
                         <span>Перейти к релизу</span>

@@ -171,7 +171,7 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
                   </div>
 
                   <div className="flex items-center justify-end gap-2 mt-4">
-                    <Link href={`/admin/artists/${artistId}/releases/${release.id}`}>
+                    <Link href={`/dashboard/admin/artists/${artistId}/releases/${release.id}`}>
                       <Button
                         variant="outline"
                         size="sm"

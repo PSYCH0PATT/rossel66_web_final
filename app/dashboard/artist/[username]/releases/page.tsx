@@ -186,7 +186,7 @@ export default function ReleasesPage({ params }: { params: { username: string } 
                       </div>
                     </TableCell>
                     <TableCell className="font-medium text-white max-w-[220px]">
-                      <Link href={`/artist/${params.username}/releases/${release.id}`} className="truncate block" title={release.title}>
+                      <Link href={`/dashboard/artist/${params.username}/releases/${release.id}`} className="truncate block" title={release.title}>
                         {release.title}
                       </Link>
                     </TableCell>

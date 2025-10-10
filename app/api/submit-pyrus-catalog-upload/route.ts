@@ -314,7 +314,9 @@ export async function POST(request: NextRequest) {
                 if (track.explicit) {
                     albumTrackCells.push({ id: colIds.explicit, value: "checked" });
                 }
-                albumTrackCells.push({ id: colIds.focusTrack, value: track.isFocusTrack ? true : null });
+                if (track.isFocusTrack) {
+                    albumTrackCells.push({ id: colIds.focusTrack, value: "checked" });
+                }
                 if (trackLyricsPyrusFileId) albumTrackCells.push({ id: colIds.lyrics, value: [trackLyricsPyrusFileId] });
 
                 albumTracksRows.push({ row_id: j + 1, cells: albumTrackCells });

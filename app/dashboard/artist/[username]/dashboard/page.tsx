@@ -271,7 +271,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
 
             <div className="mt-6 grid grid-cols-3 gap-3">
               <Link
-                href={`/artist/${params.username}/releases`}
+                href={`/dashboard/artist/${params.username}/releases`}
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors"
               >
                 <Music className="h-4 w-4 text-category-blue" />
@@ -279,7 +279,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
               </Link>
 
               <Link
-                href={`/artist/${params.username}/reports`}
+                href={`/dashboard/artist/${params.username}/reports`}
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors"
               >
                 <FileText className="h-4 w-4 text-green-400" />
@@ -287,7 +287,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
               </Link>
 
               <Link
-                href={`/artist/${params.username}/payments`}
+                href={`/dashboard/artist/${params.username}/payments`}
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors"
               >
                 <TrendingUp className="h-4 w-4 text-category-amber" />
@@ -305,7 +305,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
             </p>
             <div className="flex justify-center">
               <Link
-                href={`/artist/${params.username}/settings`}
+                href={`/dashboard/artist/${params.username}/settings`}
                 className="flex items-center justify-center gap-2 p-2 text-sm bg-accent/50 hover:bg-accent/70 rounded-xl transition-colors px-4"
               >
                 <Settings className="h-4 w-4" />

@@ -124,7 +124,7 @@ export default function PlaylistDetailPage({ params }: { params: { id: string } 
                       </div>
                     </div>
 
-                    <Link href={`/artist/releases/${trackInfo.release.id}`}>
+                    <Link href={`/dashboard/artist/releases/${trackInfo.release.id}`}>
                       <button className="w-full flex items-center justify-center gap-2 p-2 bg-category-blue text-black rounded-xl hover:bg-category-blue/80 transition-colors">
                         <Music className="h-4 w-4" />
                         <span>Перейти к релизу</span>

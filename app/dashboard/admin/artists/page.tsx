@@ -214,7 +214,7 @@ export default function ArtistsPage() {
                 )}
               </button>
 
-              <Link href={`/admin/artists/${artist.id}`} className="block">
+              <Link href={`/dashboard/admin/artists/${artist.id}`} className="block">
                 <div 
                   className="rounded-xl w-full flex flex-col items-center justify-center transition-all duration-200 cursor-pointer"
                   style={{

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadBackupsMetadata, getBackupFilePath } from '@/lib/backup'
 import fs from 'fs'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

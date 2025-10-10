@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       console.error(`Python error: ${data}`)
     })
 
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       pythonProcess.on('close', (code) => {
         // Удаляем временные файлы
         try {

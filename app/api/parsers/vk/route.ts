@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Запускаем Python скрипт (Linux версия для production)
     const pythonScript = path.join(process.cwd(), 'parsers', 'vk_parser_linux.py');
     
-    return new Promise(async (resolve) => {
+    return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
         cwd: process.cwd()
       });

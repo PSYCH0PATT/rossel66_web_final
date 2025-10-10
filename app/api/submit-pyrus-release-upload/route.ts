@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
       trackCells.push({ id: 28, value: track.wordsAuthor });
       if (track.language && track.language !== "0") trackCells.push({ id: 29, value: { choice_id: parseInt(track.language) } });
       if (track.explicit && track.explicit !== "0") trackCells.push({ id: 66, value: { choice_id: parseInt(track.explicit) } });
-      trackCells.push({ id: 30, value: track.isFocusTrack ? true : null });
+      if (track.isFocusTrack) trackCells.push({ id: 30, value: "checked" });
       
       const lyricsFile = formDataFromRequest.get(`track_${i}_lyricsFile`) as File | null;
       if (lyricsFile) {

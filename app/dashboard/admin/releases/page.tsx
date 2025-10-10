@@ -496,7 +496,7 @@ export default function AdminReleasesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/admin/releases/${release.id}`}>
+                        <Link href={`/dashboard/admin/releases/${release.id}`}>
                           <Button
                             variant="outline"
                             size="sm"

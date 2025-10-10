@@ -18,6 +18,8 @@ export default function TopNav({ role, username }: TopNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [currentUsername, setCurrentUsername] = useState(username || "")
+  const [currentUserName, setCurrentUserName] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -26,6 +28,30 @@ export default function TopNav({ role, username }: TopNavProps) {
       setCurrentUsername(user.username)
     }
   }, [username])
+
+  // Загружаем данные пользователя включая аватарку
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!currentUsername) return
+      
+      try {
+        const response = await fetch('/api/users')
+        const result = await response.json()
+        
+        if (result.success) {
+          const user = result.users.find((u: any) => u.username === currentUsername)
+          if (user) {
+            setCurrentUserName(user.name)
+            setAvatarUrl(user.avatarUrl || null)
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных пользователя:', error)
+      }
+    }
+
+    fetchUserData()
+  }, [currentUsername])
 
   // Генерация хлебных крошек на основе текущего пути
   const generateBreadcrumbs = () => {
@@ -98,8 +124,26 @@ export default function TopNav({ role, username }: TopNavProps) {
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
             <div className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded-xl transition-colors">
-              <div className="h-10 w-10 rounded-full bg-emerald flex items-center justify-center text-black">
-                <User className="h-5 w-5" />
+              <div className="h-10 w-10 rounded-full overflow-hidden bg-emerald flex items-center justify-center text-black">
+                {avatarUrl ? (
+                  avatarUrl.startsWith('data:') ? (
+                    <img
+                      src={avatarUrl}
+                      alt="User avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={avatarUrl}
+                      alt="User avatar"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
               </div>
             </div>
           </DropdownMenuTrigger>
@@ -109,7 +153,7 @@ export default function TopNav({ role, username }: TopNavProps) {
             className="w-[200px] border-gray-700 rounded-xl shadow-lg"
           >
             <div className="p-3 border-b border-gray-700">
-              <p className="text-sm font-medium text-white">{currentUsername}</p>
+              <p className="text-sm font-medium text-white">{currentUserName || currentUsername}</p>
               <p className="text-xs text-gray-400">{role === "artist" ? "Артист" : "Администратор"}</p>
             </div>
             <div className="p-2">

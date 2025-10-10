@@ -9,6 +9,10 @@ export interface User {
   role: 'admin' | 'artist'
   password: string
   createdAt: string
+  avatarUrl?: string
+  vkMusicUrl?: string
+  yandexMusicUrl?: string
+  spotifyUrl?: string
 }
 
 export interface Release {
@@ -44,6 +48,15 @@ export interface Report {
   filePath: string
   uploadedAt: string
   processed: boolean
+  year?: number
+  totalPlays?: number
+  totalAmount?: number
+  isPaid?: boolean
+  isSigned?: boolean
+  isRegistered?: boolean
+  status?: 'processed' | 'pending'
+  uploadDate?: string
+  fileUrl?: string
 }
 
 export interface Activity {
@@ -339,4 +352,161 @@ export function getActivitiesByRole(role: 'artist' | 'admin', limit: number = 10
 export function getAllActivities(limit: number = 50): Activity[] {
   const activities = loadActivities()
   return activities.slice(0, limit)
+}
+
+// ============================================================
+// Дополнительные функции для работы с отчетами и балансами
+// ============================================================
+
+// Интерфейс для баланса артиста
+export interface ArtistBalance {
+  artistId: string
+  totalBalance: number
+  availableForPayout: number
+  lastUpdated: string
+}
+
+// Расширенный интерфейс отчета с дополнительными полями
+export interface ReportData extends Report {
+  year?: number
+  totalPlays?: number
+  totalAmount?: number
+  isPaid?: boolean
+  isSigned?: boolean
+  isRegistered?: boolean
+  status?: string
+  uploadDate?: string
+}
+
+// Функция для получения баланса артиста
+export function getArtistBalance(artistId: string): ArtistBalance {
+  const reports = loadReports().filter(r => r.artistId === artistId)
+  
+  // Считаем общий баланс из всех отчетов
+  const totalBalance = reports.reduce((sum, report) => {
+    const amount = (report as any).totalAmount || 0
+    return sum + amount
+  }, 0)
+  
+  // Считаем уже выплаченную сумму
+  const paidAmount = reports
+    .filter(r => (r as any).isPaid === true)
+    .reduce((sum, report) => {
+      const amount = (report as any).totalAmount || 0
+      return sum + amount
+    }, 0)
+  
+  // Доступно к выплате = общий баланс минус выплаченное
+  // Минимальная сумма для выплаты 3000 рублей
+  const unpaidBalance = totalBalance - paidAmount
+  const availableForPayout = unpaidBalance >= 3000 ? unpaidBalance : 0
+  
+  return {
+    artistId,
+    totalBalance,
+    availableForPayout,
+    lastUpdated: new Date().toISOString()
+  }
+}
+
+// Алиас для getReleasesByArtistId (для совместимости)
+export function getReleasesByArtist(artistId: string): Release[] {
+  return getReleasesByArtistId(artistId)
+}
+
+// Функция для перемещения отчета к артисту
+export function moveReportToArtist(reportId: string, artistId: string): boolean {
+  const reports = loadReports()
+  const reportIndex = reports.findIndex(r => r.id === reportId)
+  
+  if (reportIndex === -1) {
+    return false
+  }
+  
+  // Обновляем artistId отчета
+  reports[reportIndex].artistId = artistId
+  
+  // Находим имя артиста для обновления
+  const artist = getUserById(artistId)
+  if (artist) {
+    reports[reportIndex].artistName = artist.name
+  }
+  
+  saveReports(reports)
+  return true
+}
+
+// Функция для обновления статуса подписи отчета
+export function updateReportSignedStatus(reportId: string, isSigned: boolean): boolean {
+  const reports = loadReports()
+  const reportIndex = reports.findIndex(r => r.id === reportId)
+  
+  if (reportIndex === -1) {
+    return false
+  }
+  
+  // Добавляем или обновляем поле isSigned
+  (reports[reportIndex] as any).isSigned = isSigned
+  
+  saveReports(reports)
+  return true
+}
+
+// Функция для обновления статуса оплаты отчета
+export function updateReportPaidStatus(reportId: string, isPaid: boolean): boolean {
+  const reports = loadReports()
+  const reportIndex = reports.findIndex(r => r.id === reportId)
+  
+  if (reportIndex === -1) {
+    return false
+  }
+  
+  // Добавляем или обновляем поле isPaid
+  (reports[reportIndex] as any).isPaid = isPaid
+  
+  saveReports(reports)
+  return true
+}
+
+// Функция для поиска артиста по имени
+export function findArtistByName(artistName: string): User | null {
+  const users = loadUsers()
+  return users.find(user => 
+    user.role === 'artist' && 
+    user.name.toLowerCase() === artistName.toLowerCase()
+  ) || null
+}
+
+// Функция для назначения отчетов артисту (алиас для совместимости)
+export function assignReportsToArtist(artistId: string, artistName: string): void {
+  // Эта функция автоматически назначает незарегистрированные отчеты артисту
+  const reports = loadReports()
+  let updated = false
+  
+  reports.forEach(report => {
+    // Если отчет был без артиста или с таким же именем
+    if (!report.artistId || report.artistName.toLowerCase() === artistName.toLowerCase()) {
+      report.artistId = artistId
+      report.artistName = artistName
+      updated = true
+    }
+  })
+  
+  if (updated) {
+    saveReports(reports)
+  }
+}
+
+// Функция для добавления отчета (если нужна)
+export function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): ReportData {
+  const reports = loadReports()
+  const newReport: ReportData = {
+    ...report,
+    id: Date.now().toString(),
+    uploadedAt: new Date().toISOString(),
+    processed: report.processed !== undefined ? report.processed : true
+  }
+  reports.push(newReport as Report)
+  saveReports(reports)
+  return newReport
 }

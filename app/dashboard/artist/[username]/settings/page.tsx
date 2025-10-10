@@ -1,38 +1,29 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { User, Lock, Mail, Check, AlertCircle, Music, LinkIcon } from "lucide-react"
-import { users } from "@/lib/data"
+import { User, Lock, Upload, Check, AlertCircle } from "lucide-react"
 import { notFound } from "next/navigation"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Image from "next/image"
 
 export default function SettingsPage({ params }: { params: { username: string } }) {
-  const [artistId, setArtistId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [artist, setArtist] = useState<any>(null)
 
-  // Состояния для формы
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  // Состояния для смены пароля
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [vkMusicUrl, setVkMusicUrl] = useState("")
-  const [yandexMusicUrl, setYandexMusicUrl] = useState("")
-  const [spotifyUrl, setSpotifyUrl] = useState("")
 
-  // Состояния для уведомлений
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [newReleaseNotifications, setNewReleaseNotifications] = useState(true)
-  const [newReportNotifications, setNewReportNotifications] = useState(true)
-  const [newPaymentNotifications, setNewPaymentNotifications] = useState(true)
+  // Состояния для аватарки
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   // Состояния для сообщений
   const [success, setSuccess] = useState("")
@@ -40,112 +31,81 @@ export default function SettingsPage({ params }: { params: { username: string } 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    // Находим артиста по username из URL
-    const staticArtist = users.find((user) => user.username === params.username && user.role === "artist")
-
-    // Проверяем динамически добавленных артистов
-    if (!staticArtist) {
-      const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-      const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-      const dynamicArtist = dynamicUsers.find(
-        (user: any) => user.username === params.username && user.role === "artist",
-      )
-
-      if (dynamicArtist) {
-        setArtistId(dynamicArtist.id)
-        setArtist(dynamicArtist)
-        setName(dynamicArtist.name || "")
-        setEmail(dynamicArtist.email || "")
-        setVkMusicUrl(dynamicArtist.vkMusicUrl || "")
-        setYandexMusicUrl(dynamicArtist.yandexMusicUrl || "")
-        setSpotifyUrl(dynamicArtist.spotifyUrl || "")
+    const fetchArtistData = async () => {
+      try {
+        const usersResponse = await fetch('/api/users')
+        const usersResult = await usersResponse.json()
+        
+        if (usersResult.success) {
+          const foundArtist = usersResult.users.find(
+            (a: any) => a.username === params.username && a.role === "artist"
+          )
+          
+          if (foundArtist) {
+            setArtist(foundArtist)
+            if (foundArtist.avatarUrl) {
+              setAvatarPreview(foundArtist.avatarUrl)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных:', error)
+      } finally {
+        setLoading(false)
       }
-    } else {
-      setArtistId(staticArtist.id)
-      setArtist(staticArtist)
-      setName(staticArtist.name || "")
-      setEmail(staticArtist.email || "")
-      setVkMusicUrl(staticArtist.vkMusicUrl || "")
-      setYandexMusicUrl(staticArtist.yandexMusicUrl || "")
-      setSpotifyUrl(staticArtist.spotifyUrl || "")
     }
 
-    setLoading(false)
+    fetchArtistData()
   }, [params.username])
 
-  // Если артист не найден
-  if (!loading && !artistId) {
-    notFound()
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      const reader = new FileReader()
+      reader.onload = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
-  // Если еще загружается
-  if (loading || !artistId || !artist) {
-    return (
-      <Layout role="artist" requiredRole="artist" username={params.username}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-        </div>
-      </Layout>
-    )
-  }
-
-  const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
+  const handleAvatarSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setSuccess("")
     setError("")
 
-    // Валидация URL-адресов
-    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-
-    if (vkMusicUrl && !urlPattern.test(vkMusicUrl)) {
-      setError("Некорректный URL для ВК Музыки")
-      setIsSubmitting(false)
-      return
-    }
-
-    if (yandexMusicUrl && !urlPattern.test(yandexMusicUrl)) {
-      setError("Некорректный URL для Яндекс Музыки")
-      setIsSubmitting(false)
-      return
-    }
-
-    if (spotifyUrl && !urlPattern.test(spotifyUrl)) {
-      setError("Некорректный URL для Spotify")
-      setIsSubmitting(false)
-      return
-    }
-
     try {
-      // В реальном приложении здесь был бы API-запрос
-      // Имитация задержки API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Обновляем данные в localStorage для динамических пользователей
-      if (artist && !users.some((u) => u.id === artist.id)) {
-        const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-        const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-
-        const updatedUsers = dynamicUsers.map((user: any) => {
-          if (user.id === artist.id) {
-            return {
-              ...user,
-              name,
-              email,
-              vkMusicUrl,
-              yandexMusicUrl,
-              spotifyUrl,
-            }
-          }
-          return user
-        })
-
-        localStorage.setItem("dynamicUsers", JSON.stringify(updatedUsers))
+      if (!avatarPreview) {
+        setError("Пожалуйста, выберите изображение")
+        setIsSubmitting(false)
+        return
       }
 
-      setSuccess("Личная информация успешно обновлена")
+      // Обновляем аватарку через API
+      const response = await fetch(`/api/artists`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: artist.id,
+          avatarUrl: avatarPreview,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setSuccess("Аватарка успешно обновлена")
+        // Обновляем локальные данные
+        setArtist({ ...artist, avatarUrl: avatarPreview })
+      } else {
+        setError("Ошибка при обновлении аватарки")
+      }
     } catch (err) {
-      setError("Произошла ошибка при обновлении информации")
+      setError("Произошла ошибка при обновлении аватарки")
     } finally {
       setIsSubmitting(false)
     }
@@ -172,32 +132,37 @@ export default function SettingsPage({ params }: { params: { username: string } 
         return
       }
 
-      // В реальном приложении здесь был бы API-запрос
-      // Имитация задержки API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Обновляем пароль в localStorage для динамических пользователей
-      if (artist && !users.some((u) => u.id === artist.id)) {
-        const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-        const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-
-        const updatedUsers = dynamicUsers.map((user: any) => {
-          if (user.id === artist.id) {
-            return {
-              ...user,
-              password: newPassword,
-            }
-          }
-          return user
-        })
-
-        localStorage.setItem("dynamicUsers", JSON.stringify(updatedUsers))
+      // Проверка минимальной длины пароля
+      if (newPassword.length < 6) {
+        setError("Пароль должен содержать минимум 6 символов")
+        setIsSubmitting(false)
+        return
       }
 
-      setSuccess("Пароль успешно обновлен")
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+      // Обновляем пароль через API
+      const response = await fetch(`/api/artists`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: artist.id,
+          password: newPassword,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setSuccess("Пароль успешно обновлен")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+        // Обновляем локальные данные
+        setArtist({ ...artist, password: newPassword })
+      } else {
+        setError("Ошибка при обновлении пароля")
+      }
     } catch (err) {
       setError("Произошла ошибка при обновлении пароля")
     } finally {
@@ -205,331 +170,189 @@ export default function SettingsPage({ params }: { params: { username: string } 
     }
   }
 
-  const handleNotificationsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setSuccess("")
-    setError("")
+  if (loading) {
+    return (
+      <Layout role="artist" requiredRole="artist" username={params.username}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </Layout>
+    )
+  }
 
-    try {
-      // В реальном приложении здесь был бы API-запрос
-      // Имитация задержки API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      setSuccess("Настройки уведомлений успешно обновлены")
-    } catch (err) {
-      setError("Произошла ошибка при обновлении настроек")
-    } finally {
-      setIsSubmitting(false)
-    }
+  if (!artist) {
+    notFound()
   }
 
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Настройки</h1>
+        <h1 className="text-2xl font-bold text-white">Настройки профиля</h1>
 
+        {/* Информация профиля (только для чтения) */}
+        <Card className="bg-transparent border-slate-600/30 text-white rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-400" />
+              Информация профиля
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-gray-400">Имя артиста</Label>
+              <p className="text-lg text-white mt-1">{artist.name}</p>
+              <p className="text-xs text-gray-500 mt-1">Имя может изменить только администратор</p>
+            </div>
+            <div>
+              <Label className="text-gray-400">Email</Label>
+              <p className="text-lg text-white mt-1">{artist.email || "Не указан"}</p>
+              <p className="text-xs text-gray-500 mt-1">Email может изменить только администратор</p>
+            </div>
+            <div>
+              <Label className="text-gray-400">Username</Label>
+              <p className="text-lg text-white mt-1">{artist.username}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Смена аватарки */}
+        <Card className="bg-transparent border-slate-600/30 text-white rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-green-400" />
+              Аватарка профиля
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAvatarSubmit} className="space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="relative w-32 h-32 rounded-full border-4 border-slate-600/30 overflow-hidden">
+                  {avatarPreview ? (
+                    avatarPreview.startsWith('data:') ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        fill
+                        className="object-cover"
+                      />
+                    )
+                  ) : (
+                    <div className="w-full h-full bg-accent flex items-center justify-center">
+                      <span className="text-4xl font-bold text-white">
+                        {artist.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="avatar" className="text-white cursor-pointer">
+                    <div className="border-2 border-dashed border-slate-600/30 rounded-xl p-6 hover:border-slate-500/60 transition-colors text-center">
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm text-gray-300">Нажмите чтобы выбрать изображение</p>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG до 5MB</p>
+                    </div>
+                  </Label>
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !avatarFile}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? "Сохранение..." : "Сохранить аватарку"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Смена пароля */}
+        <Card className="bg-transparent border-slate-600/30 text-white rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-amber-400" />
+              Смена пароля
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword" className="text-white">
+                  Текущий пароль
+                </Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="bg-transparent border-slate-600/30 text-white"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword" className="text-white">
+                  Новый пароль
+                </Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-transparent border-slate-600/30 text-white"
+                  required
+                  minLength={6}
+                />
+                <p className="text-xs text-gray-500">Минимум 6 символов</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-white">
+                  Подтвердите новый пароль
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-transparent border-slate-600/30 text-white"
+                  required
+                />
+              </div>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-amber-600 hover:bg-amber-700"
+              >
+                {isSubmitting ? "Обновление..." : "Обновить пароль"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Сообщения об успехе/ошибке */}
         {success && (
-          <Alert className="bg-emerald/20 border-emerald/50 text-white">
-            <Check className="h-4 w-4 text-emerald" />
+          <Alert className="bg-green-900/20 border-green-700 text-white">
+            <Check className="h-4 w-4 text-green-400" />
             <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
-
         {error && (
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
+          <Alert className="bg-red-900/20 border-red-700 text-white">
+            <AlertCircle className="h-4 w-4 text-red-400" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-card border-border text-card-foreground rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-category-blue" />
-                Личная информация
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handlePersonalInfoSubmit}>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Имя</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vkMusicUrl" className="flex items-center gap-1">
-                    <Music className="h-4 w-4 text-blue-400" />
-                    ВК Музыка
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="vkMusicUrl"
-                      type="url"
-                      value={vkMusicUrl}
-                      onChange={(e) => setVkMusicUrl(e.target.value)}
-                      className="bg-accent/50 border-gray-700 text-white pl-9"
-                      placeholder="https://vk.com/music/artist/..."
-                    />
-                    <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="yandexMusicUrl" className="flex items-center gap-1">
-                    <Music className="h-4 w-4 text-yellow-400" />
-                    Яндекс Музыка
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="yandexMusicUrl"
-                      type="url"
-                      value={yandexMusicUrl}
-                      onChange={(e) => setYandexMusicUrl(e.target.value)}
-                      className="bg-accent/50 border-gray-700 text-white pl-9"
-                      placeholder="https://music.yandex.ru/artist/..."
-                    />
-                    <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="spotifyUrl" className="flex items-center gap-1">
-                    <Music className="h-4 w-4 text-green-400" />
-                    Spotify
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="spotifyUrl"
-                      type="url"
-                      value={spotifyUrl}
-                      onChange={(e) => setSpotifyUrl(e.target.value)}
-                      className="bg-accent/50 border-gray-700 text-white pl-9"
-                      placeholder="https://open.spotify.com/artist/..."
-                    />
-                    <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-category-blue hover:bg-category-blue/80 text-black"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Сохранение..." : "Сохранить изменения"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border text-card-foreground rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-category-blue" />
-                Изменить пароль
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handlePasswordSubmit}>
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Текущий пароль</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">Новый пароль</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Подтвердите пароль</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-category-blue hover:bg-category-blue/80 text-black"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Обновление..." : "Обновить пароль"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border text-card-foreground rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-category-blue" />
-                Уведомления
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleNotificationsSubmit}>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="email-notifications" className="flex-1">
-                    Email уведомления
-                  </Label>
-                  <input
-                    type="checkbox"
-                    id="email-notifications"
-                    checked={emailNotifications}
-                    onChange={(e) => setEmailNotifications(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-700 bg-accent/50 text-category-blue focus:ring-category-blue"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="new-release" className="flex-1">
-                    Новые релизы
-                  </Label>
-                  <input
-                    type="checkbox"
-                    id="new-release"
-                    checked={newReleaseNotifications}
-                    onChange={(e) => setNewReleaseNotifications(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-700 bg-accent/50 text-category-blue focus:ring-category-blue"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="new-report" className="flex-1">
-                    Новые отчеты
-                  </Label>
-                  <input
-                    type="checkbox"
-                    id="new-report"
-                    checked={newReportNotifications}
-                    onChange={(e) => setNewReportNotifications(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-700 bg-accent/50 text-category-blue focus:ring-category-blue"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="new-payment" className="flex-1">
-                    Новые выплаты
-                  </Label>
-                  <input
-                    type="checkbox"
-                    id="new-payment"
-                    checked={newPaymentNotifications}
-                    onChange={(e) => setNewPaymentNotifications(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-700 bg-accent/50 text-category-blue focus:ring-category-blue"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-category-blue hover:bg-category-blue/80 text-black"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Сохранение..." : "Сохранить настройки"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border text-card-foreground rounded-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Music className="h-5 w-5 text-category-blue" />
-                Профили в музыкальных сервисах
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-300">
-                  Добавьте ссылки на свои профили в музыкальных сервисах, чтобы ваши слушатели могли легко найти вашу
-                  музыку.
-                </p>
-
-                <div className="space-y-3 p-4 bg-accent/30 rounded-lg">
-                  <h3 className="text-sm font-medium">Ваши профили:</h3>
-
-                  {vkMusicUrl && (
-                    <a
-                      href={vkMusicUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
-                    >
-                      <Music className="h-4 w-4" />
-                      ВК Музыка
-                    </a>
-                  )}
-
-                  {yandexMusicUrl && (
-                    <a
-                      href={yandexMusicUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300"
-                    >
-                      <Music className="h-4 w-4" />
-                      Яндекс Музыка
-                    </a>
-                  )}
-
-                  {spotifyUrl && (
-                    <a
-                      href={spotifyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300"
-                    >
-                      <Music className="h-4 w-4" />
-                      Spotify
-                    </a>
-                  )}
-
-                  {!vkMusicUrl && !yandexMusicUrl && !spotifyUrl && (
-                    <p className="text-xs text-gray-400">Нет добавленных профилей</p>
-                  )}
-                </div>
-
-                <p className="text-xs text-gray-400">
-                  Эти ссылки будут отображаться на вашей странице артиста и помогут слушателям найти вашу музыку на
-                  разных платформах.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </Layout>
   )

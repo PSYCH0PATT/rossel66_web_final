@@ -18,6 +18,8 @@ interface Backup {
 }
 
 export default function AdminSettingsPage() {
+  const [adminId, setAdminId] = useState<string | null>(null)
+  const [adminPassword, setAdminPassword] = useState<string>("")
   const [name, setName] = useState("Администратор")
   const [email, setEmail] = useState("admin@rossel66.com")
   const [currentPassword, setCurrentPassword] = useState("")
@@ -31,7 +33,33 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     loadBackups()
+    loadAdminData()
   }, [])
+
+  const loadAdminData = async () => {
+    try {
+      const userStr = localStorage.getItem("user")
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        
+        // Загружаем полные данные админа из API
+        const response = await fetch('/api/users')
+        const result = await response.json()
+        
+        if (result.success) {
+          const admin = result.users.find((u: any) => u.username === user.username && u.role === 'admin')
+          if (admin) {
+            setAdminId(admin.id)
+            setAdminPassword(admin.password)
+            setName(admin.name)
+            setEmail(admin.email)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке данных администратора:', error)
+    }
+  }
 
   const handleProfileSave = async () => {
     try {
@@ -43,17 +71,61 @@ export default function AdminSettingsPage() {
   }
 
   const handlePasswordChange = async () => {
+    if (!adminId) {
+      alert("Ошибка: ID администратора не найден")
+      return
+    }
+
+    if (!currentPassword) {
+      alert("Введите текущий пароль")
+      return
+    }
+
+    if (currentPassword !== adminPassword) {
+      alert("Неверный текущий пароль")
+      return
+    }
+
+    if (!newPassword) {
+      alert("Введите новый пароль")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      alert("Пароль должен содержать минимум 6 символов")
+      return
+    }
+
     if (newPassword !== confirmPassword) {
       alert("Пароли не совпадают")
       return
     }
+
     try {
-      // TODO: Implement API call
-      alert("Пароль обновлен")
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+      const response = await fetch('/api/artists', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: adminId,
+          password: newPassword,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert("Пароль успешно обновлен")
+        setAdminPassword(newPassword)
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        alert("Ошибка при обновлении пароля: " + (result.error || "Неизвестная ошибка"))
+      }
     } catch (error) {
+      console.error("Error updating password:", error)
       alert("Ошибка при обновлении пароля")
     }
   }
@@ -185,13 +257,18 @@ export default function AdminSettingsPage() {
       if (data.success) {
         // Convert to CSV with proper UTF-8 encoding
         const csvRows = [
-          ['ID', 'Имя', 'Email', 'Роль', 'Дата регистрации'],
+          ['ID', 'Username', 'Имя', 'Email', 'Роль', 'Дата регистрации', 'Avatar URL', 'VK Music URL', 'Yandex Music URL', 'Spotify URL'],
           ...data.users.map((user: any) => [
             user.id,
+            user.username || '',
             user.name,
             user.email,
             user.role === 'admin' ? 'Администратор' : 'Артист',
-            new Date(user.createdAt).toLocaleDateString('ru-RU')
+            new Date(user.createdAt).toLocaleDateString('ru-RU'),
+            user.avatarUrl || '',
+            user.vkMusicUrl || '',
+            user.yandexMusicUrl || '',
+            user.spotifyUrl || ''
           ])
         ]
         

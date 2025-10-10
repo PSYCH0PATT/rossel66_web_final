@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createBackup } from '@/lib/backup'
 
+export const dynamic = 'force-dynamic'
+
 // This endpoint will be called by a cron job every 3 days at 3:00 AM
 export async function GET(request: NextRequest) {
   try {

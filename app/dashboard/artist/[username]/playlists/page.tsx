@@ -74,7 +74,7 @@ export default function PlaylistsPage({ params }: { params: { username: string }
               const trackInfo = getTrackById(playlist.trackId)
 
               return (
-                <Link href={`/artist/${params.username}/playlists/${playlist.id}`} key={playlist.id}>
+                <Link href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`} key={playlist.id}>
                   <Card className="bg-card border-border text-card-foreground overflow-hidden rounded-xl hover:border-category-red/50 transition-colors cursor-pointer">
                     <div className="aspect-square relative">
                       <Image
