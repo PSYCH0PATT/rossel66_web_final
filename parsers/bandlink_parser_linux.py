@@ -140,27 +140,48 @@ class BandlinkParser:
             self.driver.get('https://band.link/scanner')
             time.sleep(random.uniform(3, 6))
             
+            # Логирование текущего URL
+            current_url = self.driver.current_url
+            print(f"📍 Текущий URL после перехода: {current_url}")
+            
+            # Логирование заголовка страницы
+            page_title = self.driver.title
+            print(f"📄 Заголовок страницы: {page_title}")
+            
             # Имитируем человеческое поведение
             self.human_like_behavior()
             
-            print("Страница загружена")
+            print("✅ Страница загружена успешно")
             return True
                 
         except Exception as e:
-            print(f"Ошибка перехода на страницу: {e}")
+            print(f"❌ Ошибка перехода на страницу: {e}")
             return False
     
     def search_artist(self, artist_name: str) -> bool:
         """Ищет артиста на странице"""
         try:
-            print(f"Ищем артиста: {artist_name}")
+            print(f"\n🔍 ===== НАЧАЛО ПОИСКА АРТИСТА: {artist_name} =====")
+            
+            # Логируем текущий URL перед поиском
+            print(f"📍 Текущий URL перед поиском: {self.driver.current_url}")
             
             # Ищем поле поиска
-            search_input = WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, 'input[placeholder*="Имя артиста"], input[placeholder*="название трека"]'))
-            )
+            print("🔎 Ищем поле поиска...")
+            try:
+                search_input = WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'input[placeholder*="Имя артиста"], input[placeholder*="название трека"]'))
+                )
+                print("✅ Поле поиска найдено")
+                print(f"📝 Placeholder поля: {search_input.get_attribute('placeholder')}")
+            except TimeoutException:
+                print("❌ Таймаут: поле поиска не найдено за 15 секунд")
+                print(f"📄 HTML страницы (первые 500 символов):")
+                print(self.driver.page_source[:500])
+                return False
             
             # ОЧИЩАЕМ поле полностью
+            print("🧹 Очищаем поле поиска...")
             search_input.clear()
             time.sleep(random.uniform(0.5, 1))
             
@@ -169,27 +190,53 @@ class BandlinkParser:
             time.sleep(random.uniform(0.2, 0.5))
             search_input.send_keys(Keys.DELETE)
             time.sleep(random.uniform(0.5, 1))
+            print("✅ Поле очищено")
             
             # Вводим новый текст посимвольно
+            print(f"⌨️  Вводим текст: '{artist_name}'...")
             for char in artist_name:
                 search_input.send_keys(char)
                 time.sleep(random.uniform(0.1, 0.3))
             
+            # Проверяем введенное значение
+            entered_value = search_input.get_attribute('value')
+            print(f"✅ Введено: '{entered_value}'")
+            
+            if entered_value != artist_name:
+                print(f"⚠️  ВНИМАНИЕ: Введенное значение не совпадает с именем артиста!")
+            
             time.sleep(random.uniform(1, 2))
             
             # Нажимаем Enter
+            print("⏎ Нажимаем Enter для поиска...")
             search_input.send_keys(Keys.RETURN)
+            print("✅ Enter нажат")
+            
+            # Логируем URL после нажатия
+            time.sleep(2)
+            print(f"📍 URL после нажатия Enter: {self.driver.current_url}")
             
             # Ждем загрузки результатов (увеличено для headless режима)
-            time.sleep(random.uniform(8, 15))
+            wait_time = random.uniform(8, 15)
+            print(f"⏳ Ждем загрузки результатов ({wait_time:.1f} секунд)...")
+            time.sleep(wait_time)
+            
+            # Логируем после ожидания
+            print(f"📍 URL после ожидания: {self.driver.current_url}")
+            print(f"📄 Заголовок страницы: {self.driver.title}")
             
             # Имитируем человеческое поведение
+            print("🤖 Имитируем человеческое поведение...")
             self.human_like_behavior()
             
+            print("✅ Поиск завершен успешно\n")
             return True
             
         except Exception as e:
-            print(f"Ошибка поиска артиста: {e}")
+            print(f"❌ ОШИБКА поиска артиста: {e}")
+            print(f"📍 URL при ошибке: {self.driver.current_url}")
+            import traceback
+            print(f"🔍 Полная трассировка:\n{traceback.format_exc()}")
             return False
     
     def parse_playlists(self, artist_name: str) -> List[Dict]:
@@ -197,21 +244,57 @@ class BandlinkParser:
         try:
             playlists = []
             
-            print("Ищем первый article элемент...")
+            print("\n📋 ===== НАЧАЛО ПАРСИНГА ПЛЕЙЛИСТОВ =====")
+            print(f"🎵 Артист: {artist_name}")
+            print(f"📍 Текущий URL: {self.driver.current_url}")
             
             # Ждем появления результатов (увеличено для headless режима)
-            time.sleep(random.uniform(5, 10))
+            wait_time = random.uniform(5, 10)
+            print(f"⏳ Ждем появления результатов ({wait_time:.1f} секунд)...")
+            time.sleep(wait_time)
+            
+            # Логируем HTML страницы перед поиском (первые 1000 символов)
+            print("📄 HTML страницы (первые 1000 символов):")
+            page_html = self.driver.page_source
+            print(page_html[:1000])
+            print(f"📊 Общая длина HTML: {len(page_html)} символов")
+            
+            # Проверяем наличие различных элементов на странице
+            print("\n🔍 Проверка наличия элементов:")
+            articles_count = len(self.driver.find_elements(By.CSS_SELECTOR, 'article'))
+            print(f"   - article элементов: {articles_count}")
+            
+            divs_count = len(self.driver.find_elements(By.CSS_SELECTOR, 'div'))
+            print(f"   - div элементов: {divs_count}")
+            
+            card_elements = len(self.driver.find_elements(By.CSS_SELECTOR, '[class*="card"]'))
+            print(f"   - элементов с 'card' в классе: {card_elements}")
             
             # Используем WebDriverWait для более надежного ожидания
+            print("\n🔎 Ищем article элемент...")
             try:
                 wait = WebDriverWait(self.driver, 30)  # Увеличен таймаут до 30 секунд
                 article = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'article')))
-                print("Найден article элемент")
+                print("✅ Найден article элемент")
+                print(f"📏 Размер article: {article.size}")
+                print(f"📍 Позиция article: {article.location}")
+                print(f"📝 Первые 500 символов article.text:")
+                print(article.text[:500])
             except TimeoutException:
-                print("Таймаут ожидания article элемента. Пробуем найти альтернативные элементы...")
-                # Пытаемся найти контейнер с результатами
-                article = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="search-results"], .search-results, main')
-                print("Найден альтернативный контейнер результатов")
+                print("❌ Таймаут ожидания article элемента за 30 секунд")
+                print("🔍 Пробуем найти альтернативные элементы...")
+                try:
+                    # Пытаемся найти контейнер с результатами
+                    article = self.driver.find_element(By.CSS_SELECTOR, '[data-testid="search-results"], .search-results, main')
+                    print("✅ Найден альтернативный контейнер результатов")
+                    print(f"📝 Тег контейнера: {article.tag_name}")
+                    print(f"📝 Первые 500 символов text:")
+                    print(article.text[:500])
+                except NoSuchElementException:
+                    print("❌ Не найден ни один контейнер с результатами")
+                    print("📄 Сохраняем полный HTML в лог...")
+                    print(f"FULL HTML:\n{page_html}")
+                    return []
             
             # Ищем кнопку "Показать все" или "Смотреть все" в article
             button_clicked = False
@@ -255,20 +338,40 @@ class BandlinkParser:
                 print("Кнопка не была нажата, прокрутка не нужна")
             
             # Сначала ищем первый элемент с классом card_artistType
+            print("\n🎯 Ищем контейнер с плейлистами (card_artistType)...")
             try:
                 artist_type_container = article.find_element(By.CSS_SELECTOR, 'div[class*="card_artistType"]')
-                print("Найден первый контейнер с классом card_artistType")
+                print("✅ Найден первый контейнер с классом card_artistType")
+                print(f"📝 Класс контейнера: {artist_type_container.get_attribute('class')}")
+                print(f"📏 Размер контейнера: {artist_type_container.size}")
                 
                 # Внутри него ищем все card_horizontalContainer
                 playlist_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_horizontalContainer"]')
-                print(f"Найдено {len(playlist_containers)} контейнеров плейлистов в первом card_artistType")
+                print(f"✅ Найдено {len(playlist_containers)} контейнеров плейлистов в первом card_artistType")
+                
+                if len(playlist_containers) == 0:
+                    print("⚠️  Контейнеры плейлистов не найдены!")
+                    print("📄 HTML контейнера artist_type (первые 1000 символов):")
+                    print(artist_type_container.get_attribute('innerHTML')[:1000])
             except NoSuchElementException:
-                print("Не найден контейнер с классом card_artistType")
+                print("❌ Не найден контейнер с классом card_artistType")
+                print("🔍 Проверяем наличие других контейнеров...")
+                
+                all_card_types = article.find_elements(By.CSS_SELECTOR, '[class*="card"]')
+                print(f"   Найдено элементов с 'card' в классе: {len(all_card_types)}")
+                
+                if len(all_card_types) > 0:
+                    print("   Классы первых 5 элементов:")
+                    for i, elem in enumerate(all_card_types[:5]):
+                        print(f"     {i+1}. {elem.get_attribute('class')}")
+                
                 playlist_containers = []
             
             seen_playlists = set()  # Для отслеживания уникальных плейлистов
             
-            for container in playlist_containers:
+            print(f"\n📦 Обрабатываем {len(playlist_containers)} контейнеров...")
+            for i, container in enumerate(playlist_containers, 1):
+                print(f"\n   Контейнер {i}/{len(playlist_containers)}:")
                 playlist_data = self.extract_playlist_data_from_container(container, artist_name)
                 if playlist_data:
                     # Создаем уникальный ключ на основе названия и ссылки
@@ -276,14 +379,32 @@ class BandlinkParser:
                     if playlist_key not in seen_playlists:
                         playlists.append(playlist_data)
                         seen_playlists.add(playlist_key)
-                        print(f"  Добавлен плейлист: {playlist_data['playlist_name']}")
+                        print(f"   ✅ Добавлен плейлист: {playlist_data['playlist_name']}")
+                        print(f"      Платформа: {playlist_data['platform']}")
+                        print(f"      URL: {playlist_data['playlist_url'][:50]}...")
                     else:
-                        print(f"  Пропущен дубликат: {playlist_data['playlist_name']}")
+                        print(f"   ⚠️  Пропущен дубликат: {playlist_data['playlist_name']}")
+                else:
+                    print(f"   ❌ Не удалось извлечь данные из контейнера")
+            
+            print(f"\n📊 ===== ИТОГ ПАРСИНГА =====")
+            print(f"   Найдено уникальных плейлистов: {len(playlists)}")
+            print(f"   Обработано контейнеров: {len(playlist_containers)}")
+            
+            if len(playlists) == 0:
+                print("   ❌ АРТИСТ НЕ НАЙДЕН: плейлисты не обнаружены")
+            else:
+                print("   ✅ АРТИСТ НАЙДЕН: плейлисты успешно извлечены")
+            
+            print("=" * 50 + "\n")
             
             return playlists
             
         except Exception as e:
-            print(f"Ошибка поиска плейлистов: {e}")
+            print(f"\n❌ КРИТИЧЕСКАЯ ОШИБКА поиска плейлистов: {e}")
+            import traceback
+            print(f"🔍 Полная трассировка:\n{traceback.format_exc()}")
+            print(f"📍 URL при ошибке: {self.driver.current_url}")
             return []
     
     def scroll_to_load_all_playlists(self):
@@ -331,12 +452,16 @@ class BandlinkParser:
                 'playlist_url': ''
             }
             
+            print(f"      🔍 Извлечение данных из контейнера...")
+            print(f"      📝 Класс контейнера: {container.get_attribute('class')}")
+            
             # Ищем название плейлиста по частичному совпадению класса
             try:
                 title_element = container.find_element(By.CSS_SELECTOR, '[class*="playlist_musicCollectionInfoTitle"], [data-testid="playlist-title"]')
                 playlist_data['playlist_name'] = title_element.text.strip()
+                print(f"      ✅ Название: {playlist_data['playlist_name']}")
             except NoSuchElementException:
-                pass
+                print(f"      ❌ Название плейлиста не найдено")
             
             # Ищем название трека по частичному совпадению класса
             try:
@@ -391,12 +516,19 @@ class BandlinkParser:
             
             # Проверяем, что нашли хотя бы название плейлиста
             if playlist_data['playlist_name']:
+                print(f"      ✅ Данные извлечены успешно")
                 return playlist_data
+            else:
+                print(f"      ⚠️  Название плейлиста не найдено, данные не будут использованы")
+                print(f"      📄 HTML контейнера (первые 300 символов):")
+                print(f"      {container.get_attribute('innerHTML')[:300]}")
             
             return None
             
         except Exception as e:
-            print(f"Ошибка извлечения данных плейлиста: {e}")
+            print(f"      ❌ Ошибка извлечения данных плейлиста: {e}")
+            import traceback
+            print(f"      🔍 Трассировка: {traceback.format_exc()}")
             return None
     
     def save_playlists_to_db(self, playlists: List[Dict], artist_name: str):
