@@ -72,6 +72,11 @@ class BandlinkParser:
         """Настраивает чистый WebDriver для Linux (headless режим)"""
         chrome_options = Options()
         
+        # Путь к Chromium в Docker контейнере (Alpine Linux)
+        chrome_binary = os.environ.get('CHROME_BIN', '/usr/bin/chromium-browser')
+        if os.path.exists(chrome_binary):
+            chrome_options.binary_location = chrome_binary
+        
         # HEADLESS режим для Linux
         chrome_options.add_argument('--headless=new')
         
@@ -88,6 +93,7 @@ class BandlinkParser:
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-web-security')
         chrome_options.add_argument('--allow-running-insecure-content')
+        chrome_options.add_argument('--disable-software-rasterizer')
         
         # Настройки окна
         chrome_options.add_argument('--window-size=1920,1080')
