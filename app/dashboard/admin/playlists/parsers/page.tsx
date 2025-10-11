@@ -229,13 +229,20 @@ export default function ParsersPage() {
         return artistId;
       });
 
-      if (!captchaApiKey) {
+      console.log('🔍 Отладка Bandlink парсера:');
+      console.log('  - captchaApiKey:', captchaApiKey);
+      console.log('  - captchaApiKey length:', captchaApiKey?.length);
+      console.log('  - captchaApiKey type:', typeof captchaApiKey);
+      
+      if (!captchaApiKey || captchaApiKey.trim() === '') {
         setParsingOutput(prev => prev + '❌ 2captcha API ключ не задан! Парсинг невозможен.\n');
+        setParsingOutput(prev => prev + '💡 Введите API ключ в поле выше и попробуйте снова.\n');
         setIsParsingBandlink(false);
         return;
       }
       
       setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения Yandex SmartCaptcha\n`);
+      setParsingOutput(prev => prev + `🔑 API ключ: ${captchaApiKey.substring(0, 8)}...\n`);
 
       const response = await fetch('/api/parsers/bandlink', {
         method: 'POST',
@@ -428,33 +435,49 @@ export default function ParsersPage() {
                 <label className="text-sm font-medium">
                   🔑 2captcha API ключ (для автоматического решения капч)
                 </label>
-                <input
-                  type="text"
-                  value={captchaApiKey}
-                  onChange={(e) => setCaptchaApiKey(e.target.value)}
-                  placeholder="1dadad5f5bfe4dbb89a806b52118ad45"
-                  className="w-full p-2 text-sm font-mono border rounded bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  API ключ от 2captcha.com для автоматического решения Yandex SmartCaptcha (Bandlink) и VK капчи. 
-                  <a 
-                    href="https://2captcha.com/enterpage" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary underline ml-1"
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={captchaApiKey}
+                    onChange={(e) => setCaptchaApiKey(e.target.value)}
+                    placeholder="1dadad5f5bfe4dbb89a806b52118ad45"
+                    className="flex-1 p-2 text-sm font-mono border rounded bg-muted"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCaptchaApiKey('1dadad5f5bfe4dbb89a806b52118ad45')}
+                    className="px-3 py-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
-                    Зарегистрироваться
-                  </a>
-                  {' | '}
-                  <a 
-                    href="https://2captcha.com/setting/api" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary underline"
-                  >
-                    Получить ключ
-                  </a>
-                </p>
+                    Вставить мой ключ
+                  </button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <p>API ключ от 2captcha.com для автоматического решения Yandex SmartCaptcha (Bandlink) и VK капчи.</p>
+                  {captchaApiKey ? (
+                    <p className="text-green-600 mt-1">✅ API ключ задан: {captchaApiKey.substring(0, 8)}...</p>
+                  ) : (
+                    <p className="text-red-600 mt-1">❌ API ключ не задан</p>
+                  )}
+                  <p className="mt-1">
+                    <a 
+                      href="https://2captcha.com/enterpage" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Зарегистрироваться
+                    </a>
+                    {' | '}
+                    <a 
+                      href="https://2captcha.com/setting/api" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Получить ключ
+                    </a>
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-4">

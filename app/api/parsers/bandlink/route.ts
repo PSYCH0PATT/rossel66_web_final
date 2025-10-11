@@ -13,13 +13,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
+    console.log('🔍 Отладка API endpoint:');
+    console.log('  - captchaApiKey:', captchaApiKey);
+    console.log('  - captchaApiKey length:', captchaApiKey?.length);
+    console.log('  - captchaApiKey type:', typeof captchaApiKey);
     
     // Проверяем наличие API ключа 2captcha
-    if (!captchaApiKey) {
+    if (!captchaApiKey || captchaApiKey.trim() === '') {
       console.error('❌ 2captcha API ключ не предоставлен! Парсинг невозможен.');
       return NextResponse.json({ error: '2captcha API ключ обязателен для Bandlink парсера' }, { status: 400 });
     } else {
-      console.log('🔑 2captcha API ключ предоставлен');
+      console.log('🔑 2captcha API ключ предоставлен:', captchaApiKey.substring(0, 8) + '...');
     }
 
     // Создаем временный конфиг файл
