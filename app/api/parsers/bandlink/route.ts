@@ -6,7 +6,10 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
-    const { artists, captchaApiKey } = await request.json();
+    const requestBody = await request.json();
+    console.log('📥 Получен запрос:', JSON.stringify(requestBody, null, 2));
+    
+    const { artists, captchaApiKey } = requestBody;
     
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       return NextResponse.json({ error: 'Список артистов не предоставлен' }, { status: 400 });
@@ -17,6 +20,7 @@ export async function POST(request: NextRequest) {
     console.log('  - captchaApiKey:', captchaApiKey);
     console.log('  - captchaApiKey length:', captchaApiKey?.length);
     console.log('  - captchaApiKey type:', typeof captchaApiKey);
+    console.log('  - Полный requestBody:', requestBody);
     
     // Проверяем наличие API ключа 2captcha
     if (!captchaApiKey || captchaApiKey.trim() === '') {

@@ -233,10 +233,13 @@ export default function ParsersPage() {
       console.log('  - captchaApiKey:', captchaApiKey);
       console.log('  - captchaApiKey length:', captchaApiKey?.length);
       console.log('  - captchaApiKey type:', typeof captchaApiKey);
+      console.log('  - localStorage captcha_api_key:', localStorage.getItem('captcha_api_key'));
       
       if (!captchaApiKey || captchaApiKey.trim() === '') {
         setParsingOutput(prev => prev + '❌ 2captcha API ключ не задан! Парсинг невозможен.\n');
         setParsingOutput(prev => prev + '💡 Введите API ключ в поле выше и попробуйте снова.\n');
+        setParsingOutput(prev => prev + `🔍 Debug: captchaApiKey = "${captchaApiKey}"\n`);
+        setParsingOutput(prev => prev + `🔍 Debug: localStorage = "${localStorage.getItem('captcha_api_key')}"\n`);
         setIsParsingBandlink(false);
         return;
       }
@@ -244,15 +247,20 @@ export default function ParsersPage() {
       setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения Yandex SmartCaptcha\n`);
       setParsingOutput(prev => prev + `🔑 API ключ: ${captchaApiKey.substring(0, 8)}...\n`);
 
+      const requestBody = {
+        artists: artistNames,
+        captchaApiKey: captchaApiKey
+      };
+      
+      console.log('📤 Отправляем запрос с телом:', requestBody);
+      setParsingOutput(prev => prev + `📤 Отправляем запрос: artists=${artistNames.join(', ')}, captchaApiKey=${captchaApiKey.substring(0, 8)}...\n`);
+
       const response = await fetch('/api/parsers/bandlink', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          artists: artistNames,
-          captchaApiKey: captchaApiKey
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
