@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Bandlink Parser для Linux - версия с headless режимом
+Bandlink Parser для Linux - версия с headless режимом + 2captcha
 """
 
 import json
@@ -26,13 +26,22 @@ except ImportError:
     print("Selenium не установлен. Установите: pip install selenium")
     sys.exit(1)
 
+try:
+    from twocaptcha import TwoCaptcha
+    TWOCAPTCHA_AVAILABLE = True
+except ImportError:
+    print("⚠️ 2captcha-python не установлен. Капчи не будут решаться автоматически.")
+    TWOCAPTCHA_AVAILABLE = False
+
 class BandlinkParser:
     def __init__(self, config_file: str = None):
         self.config_file = config_file
         self.config = self.load_config()
         self.db_path = 'bandlink_playlists.db'
         self.driver = None
+        self.captcha_solver = None
         self.init_database()
+        self.init_captcha_solver()
     
     def load_config(self) -> Dict:
         """Загружает конфигурацию из файла"""
@@ -43,7 +52,7 @@ class BandlinkParser:
             except Exception as e:
                 print(f"Ошибка загрузки конфигурации: {e}")
         
-        return {"target_artists": []}
+        return {"target_artists": [], "captcha_api_key": None}
     
     def init_database(self):
         """Инициализирует базу данных"""
@@ -67,6 +76,226 @@ class BandlinkParser:
         
         conn.commit()
         conn.close()
+    
+    def init_captcha_solver(self):
+        """Инициализирует 2captcha solver если API ключ предоставлен"""
+        api_key = self.config.get('captcha_api_key')
+        
+        if api_key and TWOCAPTCHA_AVAILABLE:
+            try:
+                self.captcha_solver = TwoCaptcha(api_key)
+                print(f"✅ 2captcha инициализирован (API ключ: {api_key[:8]}...)")
+            except Exception as e:
+                print(f"❌ Ошибка инициализации 2captcha: {e}")
+                self.captcha_solver = None
+        elif api_key and not TWOCAPTCHA_AVAILABLE:
+            print("⚠️ API ключ 2captcha предоставлен, но библиотека не установлена!")
+        else:
+            print("ℹ️  2captcha не настроен. Используются только куки для обхода капчи.")
+    
+    def detect_captcha(self) -> bool:
+        """Определяет наличие Yandex SmartCaptcha на странице"""
+        try:
+            # Ищем iframe с Yandex SmartCaptcha
+            captcha_iframes = self.driver.find_elements(By.CSS_SELECTOR, 'iframe[src*="smartcaptcha"], iframe[src*="captcha-api.yandex"]')
+            if len(captcha_iframes) > 0:
+                print("🔍 Обнаружена Yandex SmartCaptcha!")
+                return True
+            
+            # Ищем div контейнер капчи
+            captcha_divs = self.driver.find_elements(By.CSS_SELECTOR, 'div[class*="SmartCaptcha"], div[id*="captcha"]')
+            if len(captcha_divs) > 0:
+                print("🔍 Обнаружен контейнер Yandex SmartCaptcha!")
+                return True
+            
+            # Проверяем текст страницы на наличие текста капчи
+            page_text = self.driver.page_source.lower()
+            if 'smartcaptcha' in page_text or 'please confirm that you are not a robot' in page_text or 'подтвердите, что вы не робот' in page_text:
+                print("🔍 Обнаружены признаки капчи в HTML!")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"⚠️ Ошибка детекта капчи: {e}")
+            return False
+    
+    def solve_yandex_captcha(self) -> bool:
+        """Решает Yandex SmartCaptcha через 2captcha (метод Coordinates)"""
+        if not self.captcha_solver:
+            print("❌ 2captcha не настроен! Невозможно решить капчу автоматически.")
+            return False
+        
+        try:
+            print("🔄 Отправляем Yandex SmartCaptcha в 2captcha (метод Coordinates)...")
+            
+            current_url = self.driver.current_url
+            print(f"📍 URL: {current_url}")
+            
+            # Ищем iframe с капчей
+            print("🔍 Ищем iframe с Yandex SmartCaptcha...")
+            iframes = self.driver.find_elements(By.CSS_SELECTOR, 'iframe[src*="smartcaptcha"], iframe[src*="captcha-api.yandex"]')
+            
+            if not iframes:
+                print("❌ Iframe с капчей не найден!")
+                return False
+            
+            captcha_iframe = iframes[0]
+            print(f"✅ Найден iframe: {captcha_iframe.get_attribute('src')[:100]}...")
+            
+            # Переключаемся на iframe
+            self.driver.switch_to.frame(captcha_iframe)
+            time.sleep(2)
+            
+            # Ищем изображение капчи
+            print("🔍 Ищем изображение капчи...")
+            try:
+                # Пробуем разные селекторы для изображения
+                captcha_img = None
+                selectors = [
+                    'img[class*="captcha"]',
+                    'img[class*="Captcha"]',
+                    'canvas',
+                    'img',
+                    '[class*="image"]'
+                ]
+                
+                for selector in selectors:
+                    imgs = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    if imgs:
+                        captcha_img = imgs[0]
+                        print(f"✅ Найдено изображение по селектору: {selector}")
+                        break
+                
+                if not captcha_img:
+                    print("❌ Изображение капчи не найдено!")
+                    self.driver.switch_to.default_content()
+                    return False
+                
+                # Получаем скриншот изображения капчи
+                import base64
+                img_base64 = captcha_img.screenshot_as_base64
+                print(f"✅ Получен скриншот капчи (размер: {len(img_base64)} символов)")
+                
+                # Ищем текст задания
+                print("🔍 Ищем текст задания...")
+                task_text = "Нажмите на все подходящие изображения"  # Дефолтный текст
+                
+                task_selectors = [
+                    '[class*="task"]',
+                    '[class*="instruction"]',
+                    '[class*="text"]',
+                    'div',
+                    'span'
+                ]
+                
+                for selector in task_selectors:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for elem in elements:
+                        text = elem.text.strip()
+                        if text and ('нажмите' in text.lower() or 'выберите' in text.lower() or 'click' in text.lower()):
+                            task_text = text
+                            print(f"✅ Найден текст задания: {task_text}")
+                            break
+                    if task_text != "Нажмите на все подходящие изображения":
+                        break
+                
+                # Возвращаемся из iframe
+                self.driver.switch_to.default_content()
+                
+                # Отправляем в 2captcha через метод coordinates
+                print(f"📤 Отправляем капчу в 2captcha...")
+                print(f"   Задание: {task_text}")
+                print(f"⏳ Ожидаем решения (обычно 20-60 секунд для Coordinates)...")
+                
+                result = self.captcha_solver.coordinates(
+                    file=img_base64,
+                    textinstructions=task_text,
+                    lang='ru'
+                )
+                
+                coordinates_str = result.get('code')
+                print(f"✅ Капча решена! Координаты: {coordinates_str}")
+                
+                # Парсим координаты (формат: "x1:y1;x2:y2;x3:y3")
+                if not coordinates_str:
+                    print("❌ Не получены координаты от 2captcha!")
+                    return False
+                
+                coordinates = []
+                for coord_pair in coordinates_str.split(';'):
+                    if ':' in coord_pair:
+                        x, y = map(int, coord_pair.split(':'))
+                        coordinates.append((x, y))
+                
+                print(f"📍 Распарсено {len(coordinates)} точек для клика")
+                
+                # Переключаемся обратно на iframe для кликов
+                self.driver.switch_to.frame(captcha_iframe)
+                
+                # Кликаем по координатам
+                from selenium.webdriver.common.action_chains import ActionChains
+                
+                for i, (x, y) in enumerate(coordinates, 1):
+                    print(f"🖱️  Клик {i}/{len(coordinates)} по координатам ({x}, {y})")
+                    try:
+                        # Кликаем относительно изображения капчи
+                        action = ActionChains(self.driver)
+                        action.move_to_element_with_offset(captcha_img, x, y).click().perform()
+                        time.sleep(random.uniform(0.3, 0.7))  # Небольшая задержка между кликами
+                    except Exception as e:
+                        print(f"⚠️  Ошибка клика {i}: {e}")
+                
+                print("✅ Все клики выполнены")
+                
+                # Ищем и нажимаем кнопку подтверждения
+                print("🔍 Ищем кнопку подтверждения...")
+                submit_selectors = [
+                    'button[type="submit"]',
+                    'button[class*="submit"]',
+                    'button[class*="button"]',
+                    '[class*="CheckButton"]',
+                    'button',
+                    'input[type="submit"]'
+                ]
+                
+                submit_btn = None
+                for selector in submit_selectors:
+                    buttons = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    if buttons:
+                        submit_btn = buttons[0]
+                        print(f"✅ Найдена кнопка по селектору: {selector}")
+                        break
+                
+                if submit_btn:
+                    submit_btn.click()
+                    print("✅ Кнопка подтверждения нажата")
+                else:
+                    print("⚠️  Кнопка подтверждения не найдена, пытаемся просто выйти из iframe")
+                
+                # Возвращаемся из iframe
+                self.driver.switch_to.default_content()
+                time.sleep(3)  # Даем время на обработку
+                
+                print("✅ Yandex SmartCaptcha решена успешно!")
+                return True
+                
+            except Exception as e:
+                print(f"❌ Ошибка обработки капчи: {e}")
+                import traceback
+                print(f"🔍 Трассировка: {traceback.format_exc()}")
+                self.driver.switch_to.default_content()
+                return False
+            
+        except Exception as e:
+            print(f"❌ Критическая ошибка решения капчи через 2captcha: {e}")
+            import traceback
+            print(f"🔍 Трассировка: {traceback.format_exc()}")
+            try:
+                self.driver.switch_to.default_content()
+            except:
+                pass
+            return False
     
     def setup_clean_driver(self):
         """Настраивает чистый WebDriver для Linux (headless режим)"""
@@ -116,6 +345,7 @@ class BandlinkParser:
             print(f"Ошибка запуска Chrome WebDriver: {e}")
             return False
     
+    
     def human_like_behavior(self):
         """Имитирует человеческое поведение (без движений мыши для headless режима)"""
         try:
@@ -147,6 +377,19 @@ class BandlinkParser:
             # Логирование заголовка страницы
             page_title = self.driver.title
             print(f"📄 Заголовок страницы: {page_title}")
+            
+            # Проверяем наличие капчи
+            if self.detect_captcha():
+                print("🔒 Капча обнаружена! Пытаемся решить...")
+                if self.captcha_solver:
+                    if self.solve_yandex_captcha():
+                        print("✅ Капча решена успешно!")
+                        time.sleep(3)  # Даем время на обработку
+                    else:
+                        print("❌ Не удалось решить капчу автоматически!")
+                        print("⚠️  Парсинг может не работать. Проверьте куки или API ключ 2captcha.")
+                else:
+                    print("⚠️  2captcha не настроен. Попробуйте использовать куки или настроить 2captcha API.")
             
             # Имитируем человеческое поведение
             self.human_like_behavior()

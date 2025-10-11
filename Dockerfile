@@ -38,7 +38,8 @@ RUN pip3 install --break-system-packages \
     selenium \
     beautifulsoup4 \
     requests \
-    webdriver-manager
+    webdriver-manager \
+    2captcha-python
 
 # Указываем Node.js, где искать модули (для поддержки baseUrl из tsconfig.json)
 ENV NODE_PATH=./

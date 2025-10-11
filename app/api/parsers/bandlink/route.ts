@@ -6,18 +6,27 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
-    const { artists } = await request.json();
+    const { artists, captchaApiKey } = await request.json();
     
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       return NextResponse.json({ error: 'Список артистов не предоставлен' }, { status: 400 });
     }
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
+    
+    // Проверяем наличие API ключа 2captcha
+    if (!captchaApiKey) {
+      console.error('❌ 2captcha API ключ не предоставлен! Парсинг невозможен.');
+      return NextResponse.json({ error: '2captcha API ключ обязателен для Bandlink парсера' }, { status: 400 });
+    } else {
+      console.log('🔑 2captcha API ключ предоставлен');
+    }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
-      target_artists: artists // Для bandlink передаем только никнеймы
+      target_artists: artists, // Для bandlink передаем только никнеймы
+      captcha_api_key: captchaApiKey // Добавляем API ключ 2captcha
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));

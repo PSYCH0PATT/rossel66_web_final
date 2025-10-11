@@ -6,18 +6,26 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
-    const { artists } = await request.json();
+    const { artists, captchaApiKey } = await request.json();
     
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       return NextResponse.json({ error: 'Список артистов не предоставлен' }, { status: 400 });
     }
 
     console.log('Запуск VK парсера для артистов:', artists);
+    
+    // Проверяем наличие API ключа 2captcha
+    if (!captchaApiKey) {
+      console.warn('⚠️  2captcha API ключ не предоставлен! VK капчи не будут решаться автоматически');
+    } else {
+      console.log('🔑 2captcha API ключ предоставлен для VK');
+    }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_vk_config.json');
     const config = {
-      target_artists: artists.map(artist => `https://vk.com/artist/${artist}`)
+      target_artists: artists.map(artist => `https://vk.com/artist/${artist}`),
+      captcha_api_key: captchaApiKey || null // Добавляем API ключ 2captcha
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));

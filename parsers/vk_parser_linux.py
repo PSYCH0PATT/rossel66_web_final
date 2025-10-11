@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-VK Parser для Linux - версия с headless режимом
+VK Parser для Linux - версия с headless режимом + 2captcha
 """
 
 import json
@@ -25,13 +25,22 @@ except ImportError:
     print("Selenium не установлен. Установите: pip install selenium")
     sys.exit(1)
 
+try:
+    from twocaptcha import TwoCaptcha
+    TWOCAPTCHA_AVAILABLE = True
+except ImportError:
+    print("⚠️ 2captcha-python не установлен. Капчи не будут решаться автоматически.")
+    TWOCAPTCHA_AVAILABLE = False
+
 class VKParser:
     def __init__(self, config_file: str = None):
         self.config_file = config_file
         self.config = self.load_config()
         self.db_path = 'artist_playlists.db'
         self.driver = None
+        self.captcha_solver = None
         self.init_database()
+        self.init_captcha_solver()
     
     def load_config(self) -> Dict:
         """Загружает конфигурацию из файла"""
@@ -42,7 +51,7 @@ class VKParser:
             except Exception as e:
                 print(f"Ошибка загрузки конфигурации: {e}")
         
-        return {"target_artists": []}
+        return {"target_artists": [], "captcha_api_key": None}
     
     def init_database(self):
         """Инициализирует базу данных"""
@@ -65,6 +74,131 @@ class VKParser:
         
         conn.commit()
         conn.close()
+    
+    def init_captcha_solver(self):
+        """Инициализирует 2captcha solver если API ключ предоставлен"""
+        api_key = self.config.get('captcha_api_key')
+        
+        if api_key and TWOCAPTCHA_AVAILABLE:
+            try:
+                self.captcha_solver = TwoCaptcha(api_key)
+                print(f"✅ 2captcha инициализирован (API ключ: {api_key[:8]}...)")
+            except Exception as e:
+                print(f"❌ Ошибка инициализации 2captcha: {e}")
+                self.captcha_solver = None
+        elif api_key and not TWOCAPTCHA_AVAILABLE:
+            print("⚠️ API ключ 2captcha предоставлен, но библиотека не установлена!")
+        else:
+            print("ℹ️  2captcha не настроен. Парсинг может не работать при появлении капчи.")
+    
+    def detect_vk_captcha(self) -> Optional[Dict]:
+        """Определяет наличие VK капчи на странице и извлекает параметры"""
+        try:
+            # Проверяем URL на наличие капчи
+            current_url = self.driver.current_url
+            if 'captcha.php' in current_url or '/captcha' in current_url:
+                print("🔍 Обнаружена VK капча в URL!")
+                
+                # Извлекаем параметры из URL
+                import urllib.parse
+                parsed_url = urllib.parse.urlparse(current_url)
+                params = urllib.parse.parse_qs(parsed_url.query)
+                
+                captcha_data = {
+                    'sid': params.get('sid', [None])[0],
+                    's': params.get('s', [None])[0],
+                    'url': current_url
+                }
+                
+                print(f"📋 Параметры капчи: SID={captcha_data['sid']}, S={captcha_data['s']}")
+                return captcha_data
+            
+            # Проверяем наличие iframe с капчей
+            captcha_iframes = self.driver.find_elements(By.CSS_SELECTOR, 'iframe[src*="captcha"]')
+            if len(captcha_iframes) > 0:
+                print("🔍 Обнаружен iframe с VK капчей!")
+                iframe_src = captcha_iframes[0].get_attribute('src')
+                return {'url': iframe_src}
+            
+            # Проверяем изображение капчи
+            captcha_imgs = self.driver.find_elements(By.CSS_SELECTOR, 'img[src*="captcha"]')
+            if len(captcha_imgs) > 0:
+                print("🔍 Обнаружено изображение VK капчи!")
+                img_src = captcha_imgs[0].get_attribute('src')
+                return {'image_url': img_src}
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Ошибка детекта VK капчи: {e}")
+            return None
+    
+    def solve_vk_captcha(self, captcha_data: Dict) -> bool:
+        """Решает VK капчу через 2captcha"""
+        if not self.captcha_solver:
+            print("❌ 2captcha не настроен! Невозможно решить капчу автоматически.")
+            return False
+        
+        try:
+            print("🔄 Отправляем VK капчу в 2captcha для решения...")
+            
+            # Получаем текущий URL
+            current_url = self.driver.current_url
+            print(f"📍 URL: {current_url}")
+            
+            # Для VK капчи нужны параметры sid и s
+            sid = captcha_data.get('sid')
+            s = captcha_data.get('s')
+            
+            if not sid:
+                print("❌ SID не найден в параметрах капчи!")
+                return False
+            
+            print(f"⏳ Ожидаем решения от 2captcha (обычно 10-30 секунд)...")
+            
+            # Отправляем капчу в 2captcha
+            if s:
+                result = self.captcha_solver.vk(sid=sid, s=s)
+            else:
+                result = self.captcha_solver.vk(sid=sid)
+            
+            captcha_key = result.get('code')
+            print(f"✅ Капча решена! Ключ: {captcha_key}")
+            
+            # Вставляем решение на страницу
+            try:
+                # Ищем поле для ввода капчи
+                captcha_input = self.driver.find_element(By.CSS_SELECTOR, 'input[name="captcha_key"], input[id="captcha_input"]')
+                captcha_input.clear()
+                captcha_input.send_keys(captcha_key)
+                print("✅ Ключ капчи введен в поле")
+                
+                # Ищем и нажимаем кнопку отправки
+                submit_button = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"], input[type="submit"]')
+                submit_button.click()
+                print("✅ Форма капчи отправлена")
+                
+                time.sleep(3)  # Даем время на обработку
+                return True
+                
+            except NoSuchElementException:
+                # Если поле не найдено, пробуем построить URL с ключом
+                print("⚠️ Поле капчи не найдено, пробуем прямой переход...")
+                # VK обычно принимает капчу через GET параметр
+                if '?' in current_url:
+                    redirect_url = f"{current_url}&captcha_key={captcha_key}"
+                else:
+                    redirect_url = f"{current_url}?captcha_key={captcha_key}"
+                
+                self.driver.get(redirect_url)
+                time.sleep(2)
+                return True
+            
+        except Exception as e:
+            print(f"❌ Ошибка решения VK капчи через 2captcha: {e}")
+            import traceback
+            print(f"🔍 Трассировка: {traceback.format_exc()}")
+            return False
     
     def setup_driver(self):
         """Настраивает WebDriver для Linux (headless режим)"""
@@ -125,6 +259,25 @@ class VKParser:
             
             # Ждем загрузки страницы (увеличено для headless режима)
             time.sleep(8)
+            
+            # Проверяем наличие капчи
+            captcha_data = self.detect_vk_captcha()
+            if captcha_data:
+                print("🔒 VK капча обнаружена! Пытаемся решить...")
+                if self.captcha_solver:
+                    if self.solve_vk_captcha(captcha_data):
+                        print("✅ Капча решена успешно!")
+                        time.sleep(3)  # Даем время на обработку
+                        # Перезагружаем страницу
+                        self.driver.get(artist_url)
+                        time.sleep(5)
+                    else:
+                        print("❌ Не удалось решить капчу автоматически!")
+                        print("⚠️  Парсинг может не работать. Проверьте API ключ 2captcha.")
+                        return []
+                else:
+                    print("⚠️  2captcha не настроен. Невозможно продолжить парсинг с капчей.")
+                    return []
             
             # Ждем загрузки контента
             if not self.wait_for_content_load():

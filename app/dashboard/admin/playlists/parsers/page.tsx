@@ -44,12 +44,26 @@ export default function ParsersPage() {
   const [vkResults, setVkResults] = useState<ParseResult[]>([]);
   const [bandlinkResults, setBandlinkResults] = useState<ParseResult[]>([]);
   const [parsingOutput, setParsingOutput] = useState<string>('');
+  const [captchaApiKey, setCaptchaApiKey] = useState<string>('');
 
   useEffect(() => {
     loadArtists();
     loadRecentArtists();
     loadParsingResults();
+    
+    // Загружаем 2captcha API ключ из localStorage
+    const savedApiKey = localStorage.getItem('captcha_api_key');
+    if (savedApiKey) {
+      setCaptchaApiKey(savedApiKey);
+    }
   }, []);
+  
+  // Сохраняем API ключ в localStorage при изменении
+  useEffect(() => {
+    if (captchaApiKey) {
+      localStorage.setItem('captcha_api_key', captchaApiKey);
+    }
+  }, [captchaApiKey]);
 
   const loadArtists = async () => {
     setIsLoadingArtists(true);
@@ -152,6 +166,12 @@ export default function ParsersPage() {
 
     setIsParsingVK(true);
     setParsingOutput('Запуск VK парсера...\n');
+    
+    if (captchaApiKey) {
+      setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения VK капчи\n`);
+    } else {
+      setParsingOutput(prev => prev + `⚠️  2captcha API ключ не задан. VK капчи не будут решаться автоматически\n`);
+    }
 
     try {
       // Для VK используем username/id как есть
@@ -161,7 +181,8 @@ export default function ParsersPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          artists: selectedArtists
+          artists: selectedArtists,
+          captchaApiKey: captchaApiKey || null
         }),
       });
 
@@ -208,13 +229,22 @@ export default function ParsersPage() {
         return artistId;
       });
 
+      if (!captchaApiKey) {
+        setParsingOutput(prev => prev + '❌ 2captcha API ключ не задан! Парсинг невозможен.\n');
+        setIsParsingBandlink(false);
+        return;
+      }
+      
+      setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения Yandex SmartCaptcha\n`);
+
       const response = await fetch('/api/parsers/bandlink', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          artists: artistNames
+          artists: artistNames,
+          captchaApiKey: captchaApiKey
         }),
       });
 
@@ -393,6 +423,40 @@ export default function ParsersPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Поле для ввода 2captcha API ключа */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  🔑 2captcha API ключ (для автоматического решения капч)
+                </label>
+                <input
+                  type="text"
+                  value={captchaApiKey}
+                  onChange={(e) => setCaptchaApiKey(e.target.value)}
+                  placeholder="1dadad5f5bfe4dbb89a806b52118ad45"
+                  className="w-full p-2 text-sm font-mono border rounded bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  API ключ от 2captcha.com для автоматического решения Yandex SmartCaptcha (Bandlink) и VK капчи. 
+                  <a 
+                    href="https://2captcha.com/enterpage" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary underline ml-1"
+                  >
+                    Зарегистрироваться
+                  </a>
+                  {' | '}
+                  <a 
+                    href="https://2captcha.com/setting/api" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Получить ключ
+                  </a>
+                </p>
+              </div>
+
               <div className="flex gap-4">
                 <Button 
                   onClick={runVKParser}
