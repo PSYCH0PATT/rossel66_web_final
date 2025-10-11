@@ -91,7 +91,7 @@ class BandlinkParser:
         elif api_key and not TWOCAPTCHA_AVAILABLE:
             print("⚠️ API ключ 2captcha предоставлен, но библиотека не установлена!")
         else:
-            print("ℹ️  2captcha не настроен. Используются только куки для обхода капчи.")
+            print("ℹ️  2captcha не настроен. Капчи не будут решаться автоматически.")
     
     def detect_captcha(self) -> bool:
         """Определяет наличие Yandex SmartCaptcha на странице"""
@@ -588,9 +588,22 @@ class BandlinkParser:
                 print(f"📝 Класс контейнера: {artist_type_container.get_attribute('class')}")
                 print(f"📏 Размер контейнера: {artist_type_container.size}")
                 
-                # Внутри него ищем все card_horizontalContainer
-                playlist_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_horizontalContainer"]')
-                print(f"✅ Найдено {len(playlist_containers)} контейнеров плейлистов в первом card_artistType")
+                # Внутри него ищем ВСЕ контейнеры плейлистов (horizontal и vertical - они динамические!)
+                playlist_containers = []
+                
+                # Ищем card_horizontalContainer
+                horizontal_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_horizontalContainer"]')
+                if horizontal_containers:
+                    print(f"✅ Найдено {len(horizontal_containers)} контейнеров (card_horizontalContainer)")
+                    playlist_containers.extend(horizontal_containers)
+                
+                # Ищем card_verticalContainer (они динамические, меняются каждые пару дней)
+                vertical_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_verticalContainer"]')
+                if vertical_containers:
+                    print(f"✅ Найдено {len(vertical_containers)} контейнеров (card_verticalContainer)")
+                    playlist_containers.extend(vertical_containers)
+                
+                print(f"✅ Всего найдено {len(playlist_containers)} контейнеров плейлистов")
                 
                 if len(playlist_containers) == 0:
                     print("⚠️  Контейнеры плейлистов не найдены!")
@@ -614,7 +627,6 @@ class BandlinkParser:
             
             print(f"\n📦 Обрабатываем {len(playlist_containers)} контейнеров...")
             for i, container in enumerate(playlist_containers, 1):
-                print(f"\n   Контейнер {i}/{len(playlist_containers)}:")
                 playlist_data = self.extract_playlist_data_from_container(container, artist_name)
                 if playlist_data:
                     # Создаем уникальный ключ на основе названия и ссылки
@@ -622,13 +634,12 @@ class BandlinkParser:
                     if playlist_key not in seen_playlists:
                         playlists.append(playlist_data)
                         seen_playlists.add(playlist_key)
-                        print(f"   ✅ Добавлен плейлист: {playlist_data['playlist_name']}")
-                        print(f"      Платформа: {playlist_data['platform']}")
-                        print(f"      URL: {playlist_data['playlist_url'][:50]}...")
+                        print(f"  📝 {playlist_data['playlist_name']}")
+                        print(f"     🔗 {playlist_data['playlist_url'][:80]}...")
+                        print(f"     🖼️  {playlist_data['playlist_cover_url'][:80]}...")
+                        print(f"     🎵 {playlist_data['platform']}")
                     else:
                         print(f"   ⚠️  Пропущен дубликат: {playlist_data['playlist_name']}")
-                else:
-                    print(f"   ❌ Не удалось извлечь данные из контейнера")
             
             print(f"\n📊 ===== ИТОГ ПАРСИНГА =====")
             print(f"   Найдено уникальных плейлистов: {len(playlists)}")
@@ -682,7 +693,7 @@ class BandlinkParser:
             print(f"Ошибка при прокрутке страницы: {e}")
 
     def extract_playlist_data_from_container(self, container, artist_name: str) -> Optional[Dict]:
-        """Извлекает данные плейлиста из контейнера с правильными селекторами"""
+        """Извлекает данные плейлиста из контейнера (как в оригинальном Windows парсере)"""
         try:
             playlist_data = {
                 'artist_name': artist_name,
@@ -695,16 +706,12 @@ class BandlinkParser:
                 'playlist_url': ''
             }
             
-            print(f"      🔍 Извлечение данных из контейнера...")
-            print(f"      📝 Класс контейнера: {container.get_attribute('class')}")
-            
             # Ищем название плейлиста по частичному совпадению класса
             try:
                 title_element = container.find_element(By.CSS_SELECTOR, '[class*="playlist_musicCollectionInfoTitle"], [data-testid="playlist-title"]')
                 playlist_data['playlist_name'] = title_element.text.strip()
-                print(f"      ✅ Название: {playlist_data['playlist_name']}")
             except NoSuchElementException:
-                print(f"      ❌ Название плейлиста не найдено")
+                pass
             
             # Ищем название трека по частичному совпадению класса
             try:
@@ -759,19 +766,12 @@ class BandlinkParser:
             
             # Проверяем, что нашли хотя бы название плейлиста
             if playlist_data['playlist_name']:
-                print(f"      ✅ Данные извлечены успешно")
                 return playlist_data
             else:
-                print(f"      ⚠️  Название плейлиста не найдено, данные не будут использованы")
-                print(f"      📄 HTML контейнера (первые 300 символов):")
-                print(f"      {container.get_attribute('innerHTML')[:300]}")
-            
-            return None
+                return None
             
         except Exception as e:
-            print(f"      ❌ Ошибка извлечения данных плейлиста: {e}")
-            import traceback
-            print(f"      🔍 Трассировка: {traceback.format_exc()}")
+            # Тихо игнорируем ошибки отдельных контейнеров (stale element и т.д.)
             return None
     
     def save_playlists_to_db(self, playlists: List[Dict], artist_name: str):
@@ -779,6 +779,9 @@ class BandlinkParser:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
+            
+            added_count = 0
+            updated_count = 0
             
             for playlist in playlists:
                 # Проверяем, существует ли уже плейлист с таким названием и артистом
@@ -807,7 +810,8 @@ class BandlinkParser:
                         playlist['playlist_name'],
                         playlist['artist_name']
                     ))
-                    print(f"  Обновлен существующий плейлист: {playlist['playlist_name']}")
+                    print(f"  ✅ Обновлен: {playlist['playlist_name']}")
+                    updated_count += 1
                 else:
                     # Создаем новый плейлист
                     cursor.execute('''
@@ -825,15 +829,16 @@ class BandlinkParser:
                         playlist.get('playlist_url', ''),
                         datetime.now()
                     ))
-                    print(f"  Добавлен новый плейлист: {playlist['playlist_name']}")
+                    print(f"  ✅ Добавлен: {playlist['playlist_name']}")
+                    added_count += 1
             
             conn.commit()
             conn.close()
             
-            print(f"Сохранено {len(playlists)} плейлистов в базу данных")
+            print(f"✅ Добавлено {added_count} новых плейлистов, обновлено {updated_count}")
             
         except Exception as e:
-            print(f"Ошибка сохранения в БД: {e}")
+            print(f"❌ Ошибка сохранения в БД: {e}")
 
     def run_parsing_cycle(self):
         """Запускает цикл парсинга"""
