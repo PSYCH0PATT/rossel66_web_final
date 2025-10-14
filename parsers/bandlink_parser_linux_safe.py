@@ -253,26 +253,72 @@ class SafeBandlinkParserLinux:
             current_url = self.driver.current_url
             logger.info(f"📍 URL: {current_url}")
             
-            # Получаем sitekey (как в GitHub проекте)
+            # Получаем sitekey (ищем в разных местах)
             logger.info("🔍 Получаем sitekey с страницы...")
             try:
+                # Способ 1: Ищем в атрибутах элементов
                 sitekey = self.driver.execute_script("""
-                    var container = document.querySelector('[data-sitekey]');
-                    if (container) {
-                        return container.getAttribute('data-sitekey');
+                    // Ищем все возможные варианты
+                    var selectors = [
+                        '[data-sitekey]',
+                        '#captcha-container',
+                        '.smart-captcha',
+                        '.SmartCaptcha',
+                        'div[id*="captcha"]',
+                        'div[class*="captcha"]',
+                        'iframe[src*="captcha"]'
+                    ];
+                    
+                    for (var i = 0; i < selectors.length; i++) {
+                        var elem = document.querySelector(selectors[i]);
+                        if (elem) {
+                            var key = elem.getAttribute('data-sitekey');
+                            if (key) return key;
+                        }
                     }
-                    // Пробуем альтернативные селекторы
-                    var smartcaptcha = document.querySelector('.smart-captcha');
-                    if (smartcaptcha) {
-                        return smartcaptcha.getAttribute('data-sitekey');
+                    
+                    // Ищем в iframe
+                    var iframes = document.querySelectorAll('iframe');
+                    for (var i = 0; i < iframes.length; i++) {
+                        var src = iframes[i].src;
+                        if (src && src.includes('sitekey=')) {
+                            var match = src.match(/sitekey=([^&]+)/);
+                            if (match) return match[1];
+                        }
                     }
+                    
                     return null;
                 """)
                 
+                # Способ 2: Ищем в HTML коде страницы
+                if not sitekey:
+                    logger.info("🔍 Ищем sitekey в HTML коде страницы...")
+                    page_source = self.driver.page_source
+                    
+                    # Паттерны для поиска
+                    import re
+                    patterns = [
+                        r'data-sitekey="([^"]+)"',
+                        r'sitekey:\s*"([^"]+)"',
+                        r'sitekey=([^&\s]+)',
+                        r'"sitekey"\s*:\s*"([^"]+)"'
+                    ]
+                    
+                    for pattern in patterns:
+                        match = re.search(pattern, page_source)
+                        if match:
+                            sitekey = match.group(1)
+                            logger.info(f"✅ Sitekey найден через regex: {pattern}")
+                            break
+                
                 if not sitekey:
                     logger.error("❌ Sitekey не найден на странице!")
-                    logger.info("🔍 HTML страницы (первые 500 символов):")
-                    logger.info(self.driver.page_source[:500])
+                    logger.info("🔍 HTML страницы (первые 1000 символов):")
+                    logger.info(self.driver.page_source[:1000])
+                    logger.info("🔍 Ищем iframe элементы:")
+                    iframes = self.driver.find_elements(By.CSS_SELECTOR, 'iframe')
+                    for i, iframe in enumerate(iframes):
+                        logger.info(f"   iframe {i}: {iframe.get_attribute('src')[:100] if iframe.get_attribute('src') else 'no src'}...")
                     return False
                 
                 logger.info(f"✅ Sitekey найден: {sitekey[:20]}...")
