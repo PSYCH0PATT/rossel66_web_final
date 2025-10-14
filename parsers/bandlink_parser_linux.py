@@ -45,12 +45,26 @@ class BandlinkParser:
     
     def load_config(self) -> Dict:
         """Загружает конфигурацию из файла"""
+        print(f"🔍 ЗАГРУЗКА КОНФИГА: {self.config_file}")
+        
         if self.config_file and os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    config = json.load(f)
+                    print(f"🔍 КОНФИГ ЗАГРУЖЕН:")
+                    print(f"  - config type: {type(config)}")
+                    print(f"  - config keys: {list(config.keys()) if isinstance(config, dict) else 'Not a dict'}")
+                    print(f"  - target_artists: {config.get('target_artists', 'NOT_FOUND')}")
+                    print(f"  - captcha_api_key: {config.get('captcha_api_key', 'NOT_FOUND')}")
+                    print(f"  - captcha_api_key type: {type(config.get('captcha_api_key', 'NOT_FOUND'))}")
+                    print(f"  - captcha_api_key length: {len(config.get('captcha_api_key', '')) if config.get('captcha_api_key') else 'N/A'}")
+                    return config
             except Exception as e:
-                print(f"Ошибка загрузки конфигурации: {e}")
+                print(f"❌ Ошибка загрузки конфигурации: {e}")
+                import traceback
+                print(f"🔍 Трассировка: {traceback.format_exc()}")
+        else:
+            print(f"❌ Конфиг файл не найден: {self.config_file}")
         
         return {"target_artists": [], "captcha_api_key": None}
     
@@ -79,7 +93,17 @@ class BandlinkParser:
     
     def init_captcha_solver(self):
         """Инициализирует 2captcha solver если API ключ предоставлен"""
+        print(f"🔍 ИНИЦИАЛИЗАЦИЯ 2CAPTCHA SOLVER:")
+        print(f"  - TWOCAPTCHA_AVAILABLE: {TWOCAPTCHA_AVAILABLE}")
+        print(f"  - self.config: {self.config}")
+        
         api_key = self.config.get('captcha_api_key')
+        print(f"  - api_key: {api_key}")
+        print(f"  - api_key type: {type(api_key)}")
+        print(f"  - api_key length: {len(api_key) if api_key else 'N/A'}")
+        print(f"  - api_key is None: {api_key is None}")
+        print(f"  - api_key == '': {api_key == ''}")
+        print(f"  - bool(api_key): {bool(api_key)}")
         
         if api_key and TWOCAPTCHA_AVAILABLE:
             try:
@@ -87,11 +111,17 @@ class BandlinkParser:
                 print(f"✅ 2captcha инициализирован (API ключ: {api_key[:8]}...)")
             except Exception as e:
                 print(f"❌ Ошибка инициализации 2captcha: {e}")
+                import traceback
+                print(f"🔍 Трассировка: {traceback.format_exc()}")
                 self.captcha_solver = None
         elif api_key and not TWOCAPTCHA_AVAILABLE:
             print("⚠️ API ключ 2captcha предоставлен, но библиотека не установлена!")
         else:
             print("ℹ️  2captcha не настроен. Капчи не будут решаться автоматически.")
+            if not api_key:
+                print("  - Причина: API ключ не предоставлен")
+            if not TWOCAPTCHA_AVAILABLE:
+                print("  - Причина: Библиотека 2captcha не установлена")
     
     def detect_captcha(self) -> bool:
         """Определяет наличие Yandex SmartCaptcha на странице"""
@@ -903,7 +933,12 @@ class BandlinkParser:
 
 def main():
     """Главная функция"""
+    print("🔍 ДИАГНОСТИКА ARGV:")
+    print(f"  - sys.argv: {sys.argv}")
+    print(f"  - len(sys.argv): {len(sys.argv)}")
+    
     config_file = sys.argv[1] if len(sys.argv) > 1 else None
+    print(f"  - config_file: {config_file}")
     
     print("Bandlink Parser для Linux (Headless)")
     print("=" * 50)
@@ -917,6 +952,11 @@ def main():
     
     print("Конфигурация загружена")
     print(f"Целевых артистов: {len(parser.config['target_artists'])}")
+    print(f"🔍 ФИНАЛЬНАЯ ПРОВЕРКА КОНФИГА:")
+    print(f"  - parser.config: {parser.config}")
+    print(f"  - captcha_api_key: {parser.config.get('captcha_api_key')}")
+    print(f"  - captcha_api_key type: {type(parser.config.get('captcha_api_key'))}")
+    print(f"  - captcha_api_key length: {len(parser.config.get('captcha_api_key', '')) if parser.config.get('captcha_api_key') else 'N/A'}")
     
     # Запускаем парсинг
     try:

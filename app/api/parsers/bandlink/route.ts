@@ -6,10 +6,37 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
+    // Дополнительная отладка для диагностики проблемы на Linux
+    console.log('🔍 ДИАГНОСТИКА LINUX ПРОБЛЕМЫ:');
+    console.log('  - Request method:', request.method);
+    console.log('  - Request headers:', Object.fromEntries(request.headers.entries()));
+    console.log('  - Request URL:', request.url);
+    
     const requestBody = await request.json();
     console.log('📥 Получен запрос:', JSON.stringify(requestBody, null, 2));
     
+    // Дополнительная проверка requestBody
+    console.log('🔍 АНАЛИЗ REQUEST BODY:');
+    console.log('  - requestBody type:', typeof requestBody);
+    console.log('  - requestBody keys:', Object.keys(requestBody || {}));
+    console.log('  - requestBody.artists:', requestBody?.artists);
+    console.log('  - requestBody.captchaApiKey:', requestBody?.captchaApiKey);
+    console.log('  - requestBody.captchaApiKey type:', typeof requestBody?.captchaApiKey);
+    console.log('  - requestBody.captchaApiKey length:', requestBody?.captchaApiKey?.length);
+    
     const { artists, captchaApiKey } = requestBody;
+    
+    // Дополнительная проверка после деструктуризации
+    console.log('🔍 ПОСЛЕ ДЕСТРУКТУРИЗАЦИИ:');
+    console.log('  - artists:', artists);
+    console.log('  - artists type:', typeof artists);
+    console.log('  - artists isArray:', Array.isArray(artists));
+    console.log('  - captchaApiKey:', captchaApiKey);
+    console.log('  - captchaApiKey type:', typeof captchaApiKey);
+    console.log('  - captchaApiKey length:', captchaApiKey?.length);
+    console.log('  - captchaApiKey === undefined:', captchaApiKey === undefined);
+    console.log('  - captchaApiKey === null:', captchaApiKey === null);
+    console.log('  - captchaApiKey === "":', captchaApiKey === "");
     
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       return NextResponse.json({ error: 'Список артистов не предоставлен' }, { status: 400 });
@@ -37,7 +64,27 @@ export async function POST(request: NextRequest) {
       captcha_api_key: captchaApiKey // Добавляем API ключ 2captcha
     };
     
+    // Дополнительная отладка конфига
+    console.log('🔍 СОЗДАНИЕ КОНФИГ ФАЙЛА:');
+    console.log('  - configPath:', configPath);
+    console.log('  - config:', JSON.stringify(config, null, 2));
+    console.log('  - config.captcha_api_key:', config.captcha_api_key);
+    console.log('  - config.captcha_api_key type:', typeof config.captcha_api_key);
+    console.log('  - config.captcha_api_key length:', config.captcha_api_key?.length);
+    
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    
+    // Проверяем, что файл создался правильно
+    try {
+      const writtenConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      console.log('🔍 ПРОВЕРКА ЗАПИСАННОГО КОНФИГА:');
+      console.log('  - writtenConfig:', JSON.stringify(writtenConfig, null, 2));
+      console.log('  - writtenConfig.captcha_api_key:', writtenConfig.captcha_api_key);
+      console.log('  - writtenConfig.captcha_api_key type:', typeof writtenConfig.captcha_api_key);
+      console.log('  - writtenConfig.captcha_api_key length:', writtenConfig.captcha_api_key?.length);
+    } catch (e) {
+      console.error('❌ Ошибка чтения записанного конфига:', e);
+    }
 
     // Запускаем Python скрипт (Linux версия для production)
     const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_linux.py');
@@ -77,7 +124,7 @@ export async function POST(request: NextRequest) {
             for (const artist of artists) {
               const artistData = getUserByUsername(artist);
               if (artistData) {
-                const artistPlaylists = results.filter((r: any) => r.artist_name === artistData.name);
+                const artistPlaylists = (results as any[]).filter((r: any) => r.artist_name === artistData.name);
                 if (artistPlaylists.length > 0) {
                   const platforms = [...new Set(artistPlaylists.map((p: any) => p.platform))];
                   
