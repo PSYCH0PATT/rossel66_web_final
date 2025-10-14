@@ -487,25 +487,86 @@ class SafeBandlinkParserLinux:
     def search_artist(self, artist_name: str) -> bool:
         """Ищет артиста на странице band.link/scanner"""
         try:
-            logger.info(f"🔍 Поиск артиста: {artist_name}")
+            logger.info(f"🔍 Ищем артиста: {artist_name}")
             
-            # Ищем поле поиска
-            search_input = self.driver.find_element(By.CSS_SELECTOR, 'input[type="text"], input[placeholder*="artist"], input[name*="search"]')
+            # Ищем поле поиска (как в Mac версии)
+            search_selectors = [
+                'input[type="search"]', 
+                'input[placeholder*="search"]', 
+                'input[placeholder*="Search"]',
+                'input[placeholder*="поиск"]', 
+                'input[placeholder*="Поиск"]', 
+                'input[name*="search"]',
+                'input[id*="search"]', 
+                'input[class*="search"]'
+            ]
+            
+            search_input = None
+            for selector in search_selectors:
+                try:
+                    search_input = self.driver.find_element(By.CSS_SELECTOR, selector)
+                    logger.info(f"✅ Найдено поле поиска по селектору: {selector}")
+                    break
+                except NoSuchElementException:
+                    continue
+            
+            if not search_input:
+                logger.error("❌ Поле поиска не найдено!")
+                logger.info("🔍 Доступные input элементы:")
+                all_inputs = self.driver.find_elements(By.CSS_SELECTOR, 'input')
+                for inp in all_inputs[:5]:
+                    logger.info(f"   - type={inp.get_attribute('type')}, placeholder={inp.get_attribute('placeholder')}")
+                return False
+            
+            # Очищаем поле и вводим имя артиста
             search_input.clear()
+            time.sleep(0.5)
+            search_input.send_keys(artist_name)
+            time.sleep(0.5)
             
-            # Вводим имя артиста
-            for char in artist_name:
-                search_input.send_keys(char)
-                time.sleep(random.uniform(0.1, 0.3))
+            # Нажимаем Enter или ищем кнопку поиска
+            try:
+                search_input.send_keys(Keys.RETURN)
+                logger.info("✅ Поиск выполнен (Enter)")
+            except:
+                # Ищем кнопку поиска
+                search_buttons = self.driver.find_elements(
+                    By.CSS_SELECTOR, 
+                    'button[type="submit"], button[class*="search"], button[class*="Search"]'
+                )
+                if search_buttons:
+                    search_buttons[0].click()
+                    logger.info("✅ Поиск выполнен (кнопка)")
+                else:
+                    logger.warning("⚠️ Кнопка поиска не найдена, полагаемся на Enter")
             
-            logger.info("⏳ Ожидание результатов...")
-            time.sleep(3)
+            # Ждем результатов поиска
+            time.sleep(2)
             
-            logger.info(f"✅ Артист '{artist_name}' введен в поиск")
+            # Проверяем, появились ли результаты
+            results_selectors = [
+                '[class*="result"]', '[class*="artist"]', '[class*="card"]', 
+                'article', 'div[class*="item"]', 'li[class*="item"]'
+            ]
+            
+            results_found = False
+            for selector in results_selectors:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                if len(elements) > 0:
+                    logger.info(f"✅ Найдено {len(elements)} результатов по селектору: {selector}")
+                    results_found = True
+                    break
+            
+            if not results_found:
+                logger.warning("⚠️ Результаты поиска не найдены, но продолжаем...")
+            
+            logger.info(f"✅ Поиск артиста '{artist_name}' завершен")
             return True
             
         except Exception as e:
             logger.error(f"❌ Ошибка поиска артиста: {e}")
+            import traceback
+            logger.error(f"🔍 Трассировка:\n{traceback.format_exc()}")
             return False
     
     def parse_playlists(self, artist_name: str) -> List[Dict]:
