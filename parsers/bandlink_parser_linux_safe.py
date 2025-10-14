@@ -176,10 +176,25 @@ class SafeBandlinkParserLinux:
         try:
             logger.info("🔍 Проверка наличия капчи...")
             
-            # Ищем iframe с капчей
+            current_url = self.driver.current_url
+            page_title = self.driver.title.lower()
+            
+            # Проверка 1: URL содержит "showcaptcha" или "captcha"
+            if 'showcaptcha' in current_url.lower() or 'captcha' in current_url.lower():
+                logger.warning("🔒 Обнаружена капча в URL!")
+                logger.info(f"📍 URL: {current_url[:100]}...")
+                return True
+            
+            # Проверка 2: Заголовок содержит "robot" или "captcha"
+            if 'robot' in page_title or 'captcha' in page_title:
+                logger.warning("🔒 Обнаружена капча в заголовке!")
+                logger.info(f"📄 Заголовок: {page_title}")
+                return True
+            
+            # Проверка 3: Ищем iframe с капчей
             captcha_iframes = self.driver.find_elements(
                 By.CSS_SELECTOR, 
-                'iframe[src*="smartcaptcha"], iframe[src*="captcha-api.yandex"]'
+                'iframe[src*="smartcaptcha"], iframe[src*="captcha-api.yandex"], iframe[src*="yandex"]'
             )
             
             if len(captcha_iframes) > 0:
@@ -187,10 +202,10 @@ class SafeBandlinkParserLinux:
                 logger.info(f"📊 Найдено iframe: {len(captcha_iframes)}")
                 return True
             
-            # Проверяем контейнер капчи
+            # Проверка 4: Проверяем контейнер капчи
             captcha_divs = self.driver.find_elements(
                 By.CSS_SELECTOR, 
-                'div[class*="SmartCaptcha"], div[id*="captcha"]'
+                'div[class*="SmartCaptcha"], div[id*="captcha"], div[class*="captcha"]'
             )
             
             if len(captcha_divs) > 0:
@@ -468,6 +483,150 @@ class SafeBandlinkParserLinux:
             import traceback
             logger.error(f"🔍 Трассировка:\n{traceback.format_exc()}")
             return False
+    
+    def search_artist(self, artist_name: str) -> bool:
+        """Ищет артиста на странице band.link/scanner"""
+        try:
+            logger.info(f"🔍 Поиск артиста: {artist_name}")
+            
+            # Ищем поле поиска
+            search_input = self.driver.find_element(By.CSS_SELECTOR, 'input[type="text"], input[placeholder*="artist"], input[name*="search"]')
+            search_input.clear()
+            
+            # Вводим имя артиста
+            for char in artist_name:
+                search_input.send_keys(char)
+                time.sleep(random.uniform(0.1, 0.3))
+            
+            logger.info("⏳ Ожидание результатов...")
+            time.sleep(3)
+            
+            logger.info(f"✅ Артист '{artist_name}' введен в поиск")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка поиска артиста: {e}")
+            return False
+    
+    def parse_playlists(self, artist_name: str) -> List[Dict]:
+        """Парсит плейлисты для артиста"""
+        try:
+            logger.info(f"🎵 Парсинг плейлистов для: {artist_name}")
+            
+            # Ждем загрузки плейлистов
+            time.sleep(5)
+            
+            # Ищем контейнеры с плейлистами
+            playlist_containers = self.driver.find_elements(
+                By.CSS_SELECTOR,
+                'article, div[class*="playlist"], div[class*="card"]'
+            )
+            
+            logger.info(f"📊 Найдено контейнеров: {len(playlist_containers)}")
+            
+            playlists = []
+            
+            for container in playlist_containers[:10]:  # Берем первые 10
+                try:
+                    playlist_data = {
+                        'playlist_name': '',
+                        'playlist_url': '',
+                        'playlist_artist': artist_name,
+                        'track_names': '',
+                        'likes_count': '',
+                        'platform': '',
+                        'playlist_cover_url': ''
+                    }
+                    
+                    # Парсим название
+                    try:
+                        name_elem = container.find_element(By.CSS_SELECTOR, 'h3, h4, [class*="title"]')
+                        playlist_data['playlist_name'] = name_elem.text.strip()
+                    except:
+                        pass
+                    
+                    # Парсим URL
+                    try:
+                        link_elem = container.find_element(By.CSS_SELECTOR, 'a')
+                        playlist_data['playlist_url'] = link_elem.get_attribute('href')
+                    except:
+                        pass
+                    
+                    if playlist_data['playlist_name']:
+                        playlists.append(playlist_data)
+                        logger.info(f"  ✅ Плейлист: {playlist_data['playlist_name']}")
+                        
+                except Exception as e:
+                    logger.debug(f"  ⚠️ Ошибка парсинга контейнера: {e}")
+                    continue
+            
+            logger.info(f"✅ Найдено плейлистов: {len(playlists)}")
+            return playlists
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка парсинга плейлистов: {e}")
+            return []
+    
+    def save_playlists_to_db(self, playlists: List[Dict], artist_name: str):
+        """Сохраняет плейлисты в базу данных"""
+        try:
+            logger.info(f"💾 Сохранение {len(playlists)} плейлистов в БД...")
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            added_count = 0
+            updated_count = 0
+            
+            for playlist in playlists:
+                # Проверяем существование
+                cursor.execute('''
+                    SELECT id FROM bandlink_playlists 
+                    WHERE playlist_name = ? AND artist_name = ?
+                ''', (playlist['playlist_name'], artist_name))
+                
+                exists = cursor.fetchone()
+                
+                if exists:
+                    # Обновляем
+                    cursor.execute('''
+                        UPDATE bandlink_playlists 
+                        SET playlist_url = ?, parsed_at = ?
+                        WHERE playlist_name = ? AND artist_name = ?
+                    ''', (
+                        playlist['playlist_url'],
+                        datetime.now(),
+                        playlist['playlist_name'],
+                        artist_name
+                    ))
+                    updated_count += 1
+                else:
+                    # Добавляем
+                    cursor.execute('''
+                        INSERT INTO bandlink_playlists 
+                        (artist_name, playlist_name, playlist_artist, track_names, 
+                         likes_count, platform, playlist_cover_url, playlist_url, parsed_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        artist_name,
+                        playlist['playlist_name'],
+                        playlist['playlist_artist'],
+                        playlist.get('track_names', ''),
+                        playlist.get('likes_count', ''),
+                        playlist.get('platform', ''),
+                        playlist.get('playlist_cover_url', ''),
+                        playlist['playlist_url'],
+                        datetime.now()
+                    ))
+                    added_count += 1
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"✅ Добавлено: {added_count}, Обновлено: {updated_count}")
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения в БД: {e}")
     
     def run_parsing_cycle(self):
         """Запускает цикл парсинга"""
