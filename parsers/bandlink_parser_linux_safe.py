@@ -45,6 +45,14 @@ except ImportError:
     logger.warning("2captcha-python не установлен")
     TWOCAPTCHA_AVAILABLE = False
 
+# Импортируем прямой HTTP клиент для 2captcha
+try:
+    from captcha_solver_direct import DirectCaptchaSolver
+    DIRECT_SOLVER_AVAILABLE = True
+except ImportError:
+    logger.warning("Прямой HTTP клиент не найден")
+    DIRECT_SOLVER_AVAILABLE = False
+
 class SafeBandlinkParserLinux:
     def __init__(self, config_file: str = None):
         self.config_file = config_file
@@ -52,6 +60,7 @@ class SafeBandlinkParserLinux:
         self.db_path = 'bandlink_playlists.db'
         self.driver = None
         self.captcha_solver = None
+        self.direct_solver = None  # Прямой HTTP клиент
         
         # ЗАЩИТА: Счетчики для предотвращения множественных запросов
         self.captcha_attempts = 0
@@ -121,28 +130,45 @@ class SafeBandlinkParserLinux:
         
         logger.info("🔍 Инициализация 2captcha solver...")
         logger.info(f"  - TWOCAPTCHA_AVAILABLE: {TWOCAPTCHA_AVAILABLE}")
+        logger.info(f"  - DIRECT_SOLVER_AVAILABLE: {DIRECT_SOLVER_AVAILABLE}")
         logger.info(f"  - API ключ предоставлен: {bool(api_key)}")
         
+        if not api_key:
+            logger.error("❌ API ключ не предоставлен!")
+            logger.error("⚠️ Парсер не сможет решать капчи автоматически")
+            return
+        
+        # Приоритет: Прямой HTTP клиент (всегда работает)
+        if DIRECT_SOLVER_AVAILABLE:
+            try:
+                self.direct_solver = DirectCaptchaSolver(api_key)
+                logger.info(f"✅ Прямой HTTP клиент инициализирован (ключ: {api_key[:8]}...)")
+                logger.info("✅ Метод yandexSmart доступен через прямой API")
+                return
+            except Exception as e:
+                logger.error(f"❌ Ошибка инициализации прямого клиента: {e}")
+        
+        # Резервный вариант: библиотека 2captcha-python
         if api_key and TWOCAPTCHA_AVAILABLE:
             try:
                 self.captcha_solver = TwoCaptcha(api_key)
-                logger.info(f"✅ 2captcha инициализирован (ключ: {api_key[:8]}...)")
+                logger.info(f"✅ 2captcha библиотека инициализирована (ключ: {api_key[:8]}...)")
                 
-                # Проверяем наличие метода yandexSmart
-                if hasattr(self.captcha_solver, 'yandexSmart'):
-                    logger.info("✅ Метод yandexSmart доступен")
+                # Проверяем наличие методов для Yandex SmartCaptcha
+                if hasattr(self.captcha_solver, 'yandex'):
+                    logger.info("✅ Метод 'yandex' доступен (официальный для Yandex SmartCaptcha)")
+                elif hasattr(self.captcha_solver, 'yandexSmart'):
+                    logger.info("✅ Метод 'yandexSmart' доступен")
                 else:
-                    logger.warning("⚠️ Метод yandexSmart НЕ доступен!")
-                    logger.warning("💡 Парсер может не работать корректно")
+                    logger.warning("⚠️ Ни метод 'yandex', ни 'yandexSmart' НЕ доступны в библиотеке!")
+                    logger.warning("💡 Будет использован прямой HTTP клиент")
                     
             except Exception as e:
                 logger.error(f"❌ Ошибка инициализации 2captcha: {e}")
                 self.captcha_solver = None
-        else:
-            if not api_key:
-                logger.error("❌ API ключ не предоставлен!")
-            if not TWOCAPTCHA_AVAILABLE:
-                logger.error("❌ Библиотека 2captcha не установлена!")
+        
+        if not self.direct_solver and not self.captcha_solver:
+            logger.error("❌ Ни один метод решения капч не доступен!")
             logger.error("⚠️ Парсер не сможет решать капчи автоматически")
     
     def detect_captcha(self) -> bool:
@@ -201,7 +227,7 @@ class SafeBandlinkParserLinux:
             logger.error(f"💰 Оценка потраченных средств: ${self.captcha_cost_estimate:.4f}")
             return False
         
-        if not self.captcha_solver:
+        if not self.direct_solver and not self.captcha_solver:
             logger.error("❌ 2captcha не настроен!")
             return False
         
@@ -259,37 +285,62 @@ class SafeBandlinkParserLinux:
             start_time = time.time()
             
             try:
-                # Проверяем наличие метода yandexSmart
-                if not hasattr(self.captcha_solver, 'yandexSmart'):
-                    logger.error("❌ Метод yandexSmart НЕ доступен в библиотеке!")
-                    logger.error("💡 Решения:")
-                    logger.error("   1. Обновите 2captcha-python: pip install --upgrade 2captcha-python")
-                    logger.error("   2. Используйте библиотеку 2captcha-ts")
-                    logger.error("   3. Переключитесь на Anti-Captcha")
+                # Приоритет: Прямой HTTP клиент
+                if self.direct_solver:
+                    logger.info("🌐 Используем прямой HTTP API 2captcha")
+                    result = self.direct_solver.solve_yandex_smart(
+                        sitekey=sitekey,
+                        pageurl=current_url
+                    )
+                    
+                    elapsed_time = time.time() - start_time
+                    logger.info(f"⏱️ Общее время: {elapsed_time:.2f} секунд")
+                    
+                    if not result['success']:
+                        logger.error(f"❌ Не удалось решить капчу!")
+                        logger.error(f"🔍 Ошибка: {result['error']}")
+                        return False
+                    
+                    token = result['token']
+                    logger.info(f"✅ Капча решена через прямой API!")
+                    logger.info(f"🔑 Токен (первые 50 символов): {token[:50]}...")
+                    
+                # Резервный вариант: библиотека 2captcha-python
+                elif self.captcha_solver:
+                    logger.info("📚 Используем библиотеку 2captcha-python")
+                    
+                    # Проверяем доступные методы
+                    if hasattr(self.captcha_solver, 'yandex'):
+                        logger.info("✅ Используем метод 'yandex' (официальный для Yandex SmartCaptcha)")
+                        result = self.captcha_solver.yandex(
+                            sitekey=sitekey,
+                            url=current_url
+                        )
+                    elif hasattr(self.captcha_solver, 'yandexSmart'):
+                        logger.info("✅ Используем метод 'yandexSmart'")
+                        result = self.captcha_solver.yandexSmart(
+                            pageurl=current_url,
+                            sitekey=sitekey
+                        )
+                    else:
+                        logger.error("❌ Ни метод 'yandex', ни 'yandexSmart' не доступны!")
+                        return False
+                    
+                    elapsed_time = time.time() - start_time
+                    logger.info(f"⏱️ Время решения: {elapsed_time:.2f} секунд")
+                    
+                    token = result.get('code')
+                    
+                    if not token:
+                        logger.error(f"❌ Не получен токен от 2captcha!")
+                        logger.error(f"🔍 Полный ответ: {result}")
+                        return False
+                    
+                    logger.info(f"✅ Капча решена через библиотеку!")
+                    logger.info(f"🔑 Токен (первые 50 символов): {token[:50]}...")
+                else:
+                    logger.error("❌ Ни один метод решения капчи не доступен!")
                     return False
-                
-                # Отправляем запрос
-                result = self.captcha_solver.yandexSmart(
-                    pageurl=current_url,
-                    sitekey=sitekey
-                )
-                
-                elapsed_time = time.time() - start_time
-                logger.info(f"⏱️ Время решения: {elapsed_time:.2f} секунд")
-                
-                logger.info(f"📥 Получен ответ от 2captcha:")
-                logger.info(f"   Тип ответа: {type(result)}")
-                logger.info(f"   Содержимое: {result}")
-                
-                token = result.get('code')
-                
-                if not token:
-                    logger.error(f"❌ Не получен токен от 2captcha!")
-                    logger.error(f"🔍 Полный ответ: {result}")
-                    return False
-                
-                logger.info(f"✅ Капча решена! Токен получен")
-                logger.info(f"🔑 Токен (первые 20 символов): {token[:20]}...")
                 
                 # Вставляем токен в поле (как в GitHub проекте)
                 logger.info("🔧 Вставляем токен в поле на странице...")
@@ -448,9 +499,19 @@ class SafeBandlinkParserLinux:
                 logger.info(f"🎵 Артист {i}/{len(artists)}: {artist}")
                 logger.info("="*50)
                 
-                # TODO: Здесь будет логика парсинга артиста
-                # Пока просто логируем
-                logger.info(f"⏭️ Парсинг артиста '{artist}' (функционал в разработке)")
+                # Парсим артиста
+                if not self.search_artist(artist):
+                    logger.error(f"❌ Не удалось найти артиста: {artist}")
+                    continue
+                
+                # Парсим плейлисты
+                playlists = self.parse_playlists(artist)
+                
+                if playlists:
+                    logger.info(f"✅ Найдено {len(playlists)} плейлистов")
+                    self.save_playlists_to_db(playlists, artist)
+                else:
+                    logger.warning(f"⚠️ Плейлисты не найдены для артиста: {artist}")
                 
                 if i < len(artists):
                     delay = random.uniform(10, 20)
