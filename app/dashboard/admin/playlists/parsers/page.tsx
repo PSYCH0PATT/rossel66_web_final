@@ -44,26 +44,11 @@ export default function ParsersPage() {
   const [vkResults, setVkResults] = useState<ParseResult[]>([]);
   const [bandlinkResults, setBandlinkResults] = useState<ParseResult[]>([]);
   const [parsingOutput, setParsingOutput] = useState<string>('');
-  const [captchaApiKey, setCaptchaApiKey] = useState<string>('');
-
   useEffect(() => {
     loadArtists();
     loadRecentArtists();
     loadParsingResults();
-    
-    // Загружаем 2captcha API ключ из localStorage
-    const savedApiKey = localStorage.getItem('captcha_api_key');
-    if (savedApiKey) {
-      setCaptchaApiKey(savedApiKey);
-    }
   }, []);
-  
-  // Сохраняем API ключ в localStorage при изменении
-  useEffect(() => {
-    if (captchaApiKey) {
-      localStorage.setItem('captcha_api_key', captchaApiKey);
-    }
-  }, [captchaApiKey]);
 
   const loadArtists = async () => {
     setIsLoadingArtists(true);
@@ -167,11 +152,7 @@ export default function ParsersPage() {
     setIsParsingVK(true);
     setParsingOutput('Запуск VK парсера...\n');
     
-    if (captchaApiKey) {
-      setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения VK капчи\n`);
-    } else {
-      setParsingOutput(prev => prev + `⚠️  2captcha API ключ не задан. VK капчи не будут решаться автоматически\n`);
-    }
+    setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения VK капчи (настроено на сервере)\n`);
 
     try {
       // Для VK используем username/id как есть
@@ -181,8 +162,7 @@ export default function ParsersPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          artists: selectedArtists,
-          captchaApiKey: captchaApiKey || null
+          artists: selectedArtists
         }),
       });
 
@@ -229,31 +209,15 @@ export default function ParsersPage() {
         return artistId;
       });
 
-      console.log('🔍 Отладка Bandlink парсера:');
-      console.log('  - captchaApiKey:', captchaApiKey);
-      console.log('  - captchaApiKey length:', captchaApiKey?.length);
-      console.log('  - captchaApiKey type:', typeof captchaApiKey);
-      console.log('  - localStorage captcha_api_key:', localStorage.getItem('captcha_api_key'));
-      
-      if (!captchaApiKey || captchaApiKey.trim() === '') {
-        setParsingOutput(prev => prev + '❌ 2captcha API ключ не задан! Парсинг невозможен.\n');
-        setParsingOutput(prev => prev + '💡 Введите API ключ в поле выше и попробуйте снова.\n');
-        setParsingOutput(prev => prev + `🔍 Debug: captchaApiKey = "${captchaApiKey}"\n`);
-        setParsingOutput(prev => prev + `🔍 Debug: localStorage = "${localStorage.getItem('captcha_api_key')}"\n`);
-        setIsParsingBandlink(false);
-        return;
-      }
-      
       setParsingOutput(prev => prev + `🔑 Используем 2captcha для автоматического решения Yandex SmartCaptcha\n`);
-      setParsingOutput(prev => prev + `🔑 API ключ: ${captchaApiKey.substring(0, 8)}...\n`);
+      setParsingOutput(prev => prev + `🔑 API ключ настроен на сервере\n`);
 
       const requestBody = {
-        artists: artistNames,
-        captchaApiKey: captchaApiKey
+        artists: artistNames
       };
       
       console.log('📤 Отправляем запрос с телом:', requestBody);
-      setParsingOutput(prev => prev + `📤 Отправляем запрос: artists=${artistNames.join(', ')}, captchaApiKey=${captchaApiKey.substring(0, 8)}...\n`);
+      setParsingOutput(prev => prev + `📤 Отправляем запрос: artists=${artistNames.join(', ')}\n`);
 
       const response = await fetch('/api/parsers/bandlink', {
         method: 'POST',
@@ -438,52 +402,17 @@ export default function ParsersPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Поле для ввода 2captcha API ключа */}
+              {/* Информация о 2captcha API ключе */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  🔑 2captcha API ключ (для автоматического решения капч)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={captchaApiKey}
-                    onChange={(e) => setCaptchaApiKey(e.target.value)}
-                    placeholder="1dadad5f5bfe4dbb89a806b52118ad45"
-                    className="flex-1 p-2 text-sm font-mono border rounded bg-muted"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setCaptchaApiKey('1dadad5f5bfe4dbb89a806b52118ad45')}
-                    className="px-3 py-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    Вставить мой ключ
-                  </button>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <p>API ключ от 2captcha.com для автоматического решения Yandex SmartCaptcha (Bandlink) и VK капчи.</p>
-                  {captchaApiKey ? (
-                    <p className="text-green-600 mt-1">✅ API ключ задан: {captchaApiKey.substring(0, 8)}...</p>
-                  ) : (
-                    <p className="text-red-600 mt-1">❌ API ключ не задан</p>
-                  )}
-                  <p className="mt-1">
-                    <a 
-                      href="https://2captcha.com/enterpage" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      Зарегистрироваться
-                    </a>
-                    {' | '}
-                    <a 
-                      href="https://2captcha.com/setting/api" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      Получить ключ
-                    </a>
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">🔑</span>
+                    <span className="text-sm font-medium text-green-800">
+                      2captcha API ключ настроен на сервере
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1">
+                    API ключ от 2captcha.com настроен в переменных окружения сервера для автоматического решения Yandex SmartCaptcha (Bandlink) и VK капчи.
                   </p>
                 </div>
               </div>

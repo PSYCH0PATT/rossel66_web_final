@@ -6,7 +6,7 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
-    const { artists, captchaApiKey } = await request.json();
+    const { artists } = await request.json();
     
     if (!artists || !Array.isArray(artists) || artists.length === 0) {
       return NextResponse.json({ error: 'Список артистов не предоставлен' }, { status: 400 });
@@ -14,18 +14,21 @@ export async function POST(request: NextRequest) {
 
     console.log('Запуск VK парсера для артистов:', artists);
     
+    // Получаем API ключ 2captcha из переменных окружения
+    const captchaApiKey = process.env.TWOCAPTCHA_API_KEY;
+    
     // Проверяем наличие API ключа 2captcha
     if (!captchaApiKey) {
-      console.warn('⚠️  2captcha API ключ не предоставлен! VK капчи не будут решаться автоматически');
+      console.warn('⚠️  2captcha API ключ не настроен в переменных окружения! VK капчи не будут решаться автоматически');
     } else {
-      console.log('🔑 2captcha API ключ предоставлен для VK');
+      console.log('🔑 2captcha API ключ найден в переменных окружения для VK');
     }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_vk_config.json');
     const config = {
       target_artists: artists.map(artist => `https://vk.com/artist/${artist}`),
-      captcha_api_key: captchaApiKey || null // Добавляем API ключ 2captcha
+      captcha_api_key: captchaApiKey || null // Добавляем API ключ 2captcha из переменных окружения
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
