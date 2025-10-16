@@ -17,31 +17,39 @@ export async function POST(request: NextRequest) {
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
     
-    // Получаем API ключ Bright Data из переменных окружения
-    const brightDataApiKey = process.env.BRIGHT_DATA_API_KEY;
-    console.log('🔍 Проверка API ключа Bright Data:');
-    console.log('  - BRIGHT_DATA_API_KEY exists:', !!brightDataApiKey);
-    console.log('  - BRIGHT_DATA_API_KEY length:', brightDataApiKey?.length);
-    console.log('  - BRIGHT_DATA_API_KEY type:', typeof brightDataApiKey);
+    // Получаем proxy credentials Bright Data из переменных окружения
+    const brightDataProxyUsername = process.env.BRIGHT_DATA_PROXY_USERNAME;
+    const brightDataProxyPassword = process.env.BRIGHT_DATA_PROXY_PASSWORD;
     
-    // Проверяем наличие API ключа Bright Data
-    if (!brightDataApiKey || brightDataApiKey.trim() === '') {
-      console.error('❌ Bright Data API ключ не настроен в переменных окружения!');
-      console.error('💡 Добавьте BRIGHT_DATA_API_KEY в .env.local файл');
-      return NextResponse.json({ error: 'Bright Data API ключ не настроен на сервере. Обратитесь к администратору.' }, { status: 500 });
+    console.log('🔍 Проверка Bright Data proxy credentials:');
+    console.log('  - BRIGHT_DATA_PROXY_USERNAME exists:', !!brightDataProxyUsername);
+    console.log('  - BRIGHT_DATA_PROXY_PASSWORD exists:', !!brightDataProxyPassword);
+    
+    // Проверяем наличие proxy credentials
+    if (!brightDataProxyUsername || !brightDataProxyPassword) {
+      console.error('❌ Bright Data proxy credentials не настроены в переменных окружения!');
+      console.error('💡 Добавьте BRIGHT_DATA_PROXY_USERNAME и BRIGHT_DATA_PROXY_PASSWORD в .env.local файл');
+      console.log('🔄 Используем fallback credentials из кода...');
     } else {
-      console.log('🔑 Bright Data API ключ найден:', brightDataApiKey.substring(0, 20) + '...');
+      console.log('🔑 Bright Data proxy credentials найдены');
+      console.log('  - Username:', brightDataProxyUsername.substring(0, 30) + '...');
+      console.log('  - Password:', '*'.repeat(brightDataProxyPassword.length));
     }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
-      target_artists: artists, // Для bandlink передаем только никнеймы
-      bright_data_api_key: brightDataApiKey // Добавляем API ключ Bright Data из переменных окружения
+      target_artists: artists, // Список имен артистов (например: ["Sour Diesel", "Wide Pie"])
+      bright_data_proxy_username: process.env.BRIGHT_DATA_PROXY_USERNAME || "brd-customer-hl_94d02fd9-zone-web_unlocker1",
+      bright_data_proxy_password: process.env.BRIGHT_DATA_PROXY_PASSWORD || "bp8k2m4ji1za"
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('✅ Конфиг файл создан с API ключом из переменных окружения');
+    console.log('✅ Конфиг файл создан с proxy credentials');
+    console.log('📋 Конфиг содержит:');
+    console.log('  - target_artists:', artists);
+    console.log('  - bright_data_proxy_username:', config.bright_data_proxy_username.substring(0, 30) + '...');
+    console.log('  - bright_data_proxy_password:', '*'.repeat(config.bright_data_proxy_password.length));
 
     // Запускаем Python скрипт (Web Unlocker API версия для production)
     const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_unlocker_linux.py');

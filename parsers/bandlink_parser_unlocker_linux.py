@@ -251,11 +251,13 @@ class BandlinkParserUnlockerLinux:
             logger.info(f"🔍 Поиск артиста: {artist_name}")
             logger.info("="*60)
             
-            # Формируем URL для поиска
+            # Формируем URL для поиска (заменяем пробелы на +)
             search_query = artist_name.replace(' ', '+')
             search_url = f"https://band.link/scanner?search={search_query}"
             
             logger.info(f"🌐 URL поиска: {search_url}")
+            logger.info(f"📝 Логика: band.link/scanner?search={search_query}")
+            logger.info(f"🔄 Замена пробелов: '{artist_name}' → '{search_query}'")
             
             # Получаем HTML через Web Unlocker PROXY
             # Капча решается автоматически!
@@ -268,6 +270,14 @@ class BandlinkParserUnlockerLinux:
             html = result['html']
             logger.info(f"✅ Страница получена: {len(html)} символов")
             
+            # Анализируем содержимое HTML
+            logger.info("🔍 Анализ полученного HTML:")
+            logger.info(f"  - Размер HTML: {len(html)} символов")
+            logger.info(f"  - Содержит 'playlist': {'playlist' in html.lower()}")
+            logger.info(f"  - Содержит 'track': {'track' in html.lower()}")
+            logger.info(f"  - Содержит 'artist': {'artist' in html.lower()}")
+            logger.info(f"  - Содержит 'captcha': {'captcha' in html.lower()}")
+            
             # Кодируем HTML в base64 для передачи через API
             import base64
             html_b64 = base64.b64encode(html.encode('utf-8')).decode('utf-8')
@@ -278,7 +288,15 @@ class BandlinkParserUnlockerLinux:
             if captcha_detected:
                 logger.warning("⚠️ В HTML все еще присутствует капча!")
                 logger.warning("Это может означать, что Web Unlocker API не смог решить капчу")
+                logger.warning("Проверьте логи Bright Data на наличие ошибок")
                 return None
+            
+            # Проверяем, есть ли данные о плейлистах
+            if 'playlist' in html.lower() or 'track' in html.lower():
+                logger.info("✅ HTML содержит данные о плейлистах/треках")
+            else:
+                logger.warning("⚠️ HTML не содержит данных о плейлистах/треках")
+                logger.warning("Возможно, артист не найден или нет плейлистов")
             
             return html
         
@@ -390,29 +408,50 @@ class BandlinkParserUnlockerLinux:
                 logger.info("="*60)
                 logger.info(f"📍 Артист {i}/{len(self.target_artists)}: {artist_name}")
                 logger.info("="*60)
+                logger.info(f"🎯 Цель: Найти плейлисты для артиста '{artist_name}'")
+                logger.info(f"🌐 URL: https://band.link/scanner?search={artist_name.replace(' ', '+')}")
                 
                 # Поиск артиста (капча решается автоматически!)
+                logger.info("🚀 Начинаем поиск артиста...")
                 html = self.search_artist(artist_name)
                 
                 if not html:
                     logger.error(f"❌ Не удалось получить данные для {artist_name}")
+                    logger.error("💡 Возможные причины:")
+                    logger.error("  - Артист не найден на BandLink")
+                    logger.error("  - Проблемы с Web Unlocker proxy")
+                    logger.error("  - Капча не решена")
                     failed_count += 1
                     continue
                 
                 # Парсинг плейлистов
+                logger.info("📊 Начинаем парсинг плейлистов...")
                 playlists = self.parse_playlists(html, artist_name)
                 
+                if playlists:
+                    logger.info(f"🎵 Найдено плейлистов: {len(playlists)}")
+                    for j, playlist in enumerate(playlists, 1):
+                        logger.info(f"  {j}. {playlist.get('playlist_name', 'Unknown')} - {playlist.get('playlist_url', 'No URL')}")
+                else:
+                    logger.warning("⚠️ Плейлисты не найдены")
+                    logger.warning("💡 Возможные причины:")
+                    logger.warning("  - У артиста нет плейлистов в BandLink")
+                    logger.warning("  - Неправильные селекторы для парсинга")
+                    logger.warning("  - HTML структура изменилась")
+                
                 # Сохранение в БД
+                logger.info("💾 Сохраняем результаты в базу данных...")
                 if self.save_playlists_to_db(playlists):
                     success_count += 1
                     logger.info(f"✅ Артист {artist_name} обработан успешно")
+                    logger.info(f"📈 Статистика: {success_count} успешно, {failed_count} ошибок")
                 else:
                     failed_count += 1
                     logger.error(f"❌ Ошибка сохранения данных для {artist_name}")
                 
                 # Пауза между артистами (уважаем сервис)
                 if i < len(self.target_artists):
-                    logger.info("⏳ Пауза 3 секунды...")
+                    logger.info("⏳ Пауза 3 секунды перед следующим артистом...")
                     time.sleep(3)
             
             # Итоги
