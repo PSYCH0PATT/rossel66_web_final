@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     console.log('✅ Конфиг файл создан с API ключом из переменных окружения');
 
-    // Запускаем Python скрипт (Bright Data Linux версия для production)
-    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_brightdata_linux.py');
+    // Запускаем Python скрипт (Web Unlocker API версия для production)
+    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_unlocker_linux.py');
     
     return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 async function readBandlinkResults() {
   try {
     const sqlite3 = require('sqlite3').verbose();
-    const dbPath = path.join(process.cwd(), 'bandlink_playlists_brightdata.db');
+    const dbPath = path.join(process.cwd(), 'bandlink_playlists_unlocker.db');
     
     if (!fs.existsSync(dbPath)) {
       return [];

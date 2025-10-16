@@ -1,0 +1,7 @@
+{
+  "target_artists": ["Test Artist"],
+  "bright_data_api_key": "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70",
+  "max_captcha_attempts": 3,
+  "test_mode": true,
+  "demo_url": "https://captcha-api.yandex.ru/demo"
+}

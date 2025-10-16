@@ -1,0 +1,445 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Bandlink Parser для Linux с Bright Data Web Unlocker API
+Использует Web Unlocker API для автоматического решения Yandex SmartCaptcha
+"""
+
+import json
+import logging
+import os
+import sqlite3
+import sys
+import time
+from datetime import datetime
+from typing import List, Dict, Optional
+import requests
+from bs4 import BeautifulSoup
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
+class BrightDataUnlockerAPI:
+    """Класс для работы с Bright Data Web Unlocker API"""
+    
+    def __init__(self, api_key: str, zone: str = "web_unlocker1"):
+        self.api_key = api_key
+        self.zone = zone
+        self.base_url = "https://api.brightdata.com/request"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        self.request_count = 0
+        self.max_requests = 50  # Защита от бесконечных запросов
+        
+        logger.info("🔧 Инициализация Bright Data Web Unlocker API...")
+        logger.info(f"🔑 API Key: {self.api_key[:20]}...")
+        logger.info(f"🌐 Zone: {self.zone}")
+    
+    def unlock_url(self, url: str, country: str = "us") -> Dict:
+        """
+        Получает HTML страницы через Web Unlocker API
+        Автоматически решает капчи (включая Yandex SmartCaptcha)
+        
+        Args:
+            url: URL для разблокировки
+            country: Код страны для геотаргетинга (по умолчанию "us")
+        
+        Returns:
+            dict: {'success': bool, 'html': str, 'error': str}
+        """
+        if self.request_count >= self.max_requests:
+            logger.error(f"🛡️ Достигнут лимит запросов: {self.max_requests}")
+            return {
+                'success': False,
+                'error': f'Превышен лимит запросов ({self.max_requests})'
+            }
+        
+        self.request_count += 1
+        
+        payload = {
+            "url": url,
+            "zone": self.zone,
+            "format": "raw",  # Получаем HTML
+            "country": country  # США для обхода блокировки .ru
+        }
+        
+        try:
+            logger.info(f"📤 Запрос #{self.request_count} к Web Unlocker API")
+            logger.info(f"   URL: {url}")
+            logger.info(f"   Country: {country}")
+            
+            response = requests.post(
+                self.base_url,
+                headers=self.headers,
+                json=payload,
+                timeout=120  # 2 минуты на решение капчи
+            )
+            
+            logger.info(f"📊 Статус ответа: {response.status_code}")
+            
+            if response.status_code == 200:
+                html = response.text
+                logger.info(f"✅ Успешно! Получено HTML: {len(html)} символов")
+                return {
+                    'success': True,
+                    'html': html
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Ошибка {response.status_code}: {error_text}")
+                return {
+                    'success': False,
+                    'error': f'HTTP {response.status_code}: {error_text}'
+                }
+        
+        except requests.exceptions.Timeout:
+            logger.error("❌ Таймаут запроса (120 секунд)")
+            return {'success': False, 'error': 'Timeout'}
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Ошибка HTTP: {e}")
+            return {'success': False, 'error': str(e)}
+        
+        except Exception as e:
+            logger.error(f"❌ Неизвестная ошибка: {e}")
+            return {'success': False, 'error': str(e)}
+
+
+class BandlinkParserUnlockerLinux:
+    """Парсер Bandlink с Bright Data Web Unlocker API для Linux"""
+    
+    def __init__(self, config_path: str):
+        self.config_path = config_path
+        self.config = {}
+        self.unlocker = None
+        self.db_path = "bandlink_playlists_unlocker.db"
+        self.target_artists = []
+        
+        logger.info("="*60)
+        logger.info("🚀 BANDLINK PARSER С WEB UNLOCKER API (LINUX)")
+        logger.info("="*60)
+    
+    def load_config(self) -> bool:
+        """Загружает конфигурацию из JSON файла"""
+        try:
+            logger.info(f"📁 Загрузка конфига: {self.config_path}")
+            
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                self.config = json.load(f)
+            
+            logger.info("✅ Конфиг загружен")
+            logger.info(f"📋 Ключи конфига: {list(self.config.keys())}")
+            
+            self.target_artists = self.config.get('target_artists', [])
+            logger.info(f"🎵 Артистов для парсинга: {len(self.target_artists)}")
+            
+            return True
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки конфига: {e}")
+            return False
+    
+    def init_database(self) -> bool:
+        """Инициализирует SQLite базу данных"""
+        try:
+            logger.info(f"💾 Инициализация базы данных: {self.db_path}")
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Создаем таблицу для плейлистов
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS playlists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    artist_name TEXT NOT NULL,
+                    playlist_url TEXT NOT NULL,
+                    playlist_name TEXT,
+                    track_count INTEGER,
+                    parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(artist_name, playlist_url)
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info("✅ База данных инициализирована")
+            return True
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка инициализации БД: {e}")
+            return False
+    
+    def init_unlocker(self) -> bool:
+        """Инициализирует Web Unlocker API"""
+        try:
+            api_key = self.config.get('bright_data_api_key')
+            
+            if not api_key:
+                logger.error("❌ Bright Data API ключ не найден в конфиге!")
+                return False
+            
+            self.unlocker = BrightDataUnlockerAPI(api_key)
+            logger.info("✅ Web Unlocker API инициализирован")
+            return True
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка инициализации Unlocker API: {e}")
+            return False
+    
+    def search_artist(self, artist_name: str) -> Optional[str]:
+        """
+        Ищет артиста через Web Unlocker API
+        
+        Args:
+            artist_name: Имя артиста для поиска
+        
+        Returns:
+            str: HTML страницы с результатами поиска или None
+        """
+        try:
+            logger.info("="*60)
+            logger.info(f"🔍 Поиск артиста: {artist_name}")
+            logger.info("="*60)
+            
+            # Формируем URL для поиска
+            search_query = artist_name.replace(' ', '+')
+            search_url = f"https://band.link/scanner?search={search_query}"
+            
+            logger.info(f"🌐 URL поиска: {search_url}")
+            
+            # Получаем HTML через Web Unlocker API
+            # Капча решается автоматически!
+            result = self.unlocker.unlock_url(search_url, country="us")
+            
+            if not result['success']:
+                logger.error(f"❌ Не удалось получить страницу: {result.get('error')}")
+                return None
+            
+            html = result['html']
+            logger.info(f"✅ Страница получена: {len(html)} символов")
+            
+            # Проверяем, нет ли капчи в HTML
+            if 'captcha' in html.lower() or 'showcaptcha' in html.lower():
+                logger.warning("⚠️ В HTML все еще присутствует капча!")
+                logger.warning("Это может означать, что Web Unlocker API не смог решить капчу")
+                return None
+            
+            return html
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка поиска артиста: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+    
+    def parse_playlists(self, html: str, artist_name: str) -> List[Dict]:
+        """
+        Парсит плейлисты из HTML
+        
+        Args:
+            html: HTML страницы с результатами
+            artist_name: Имя артиста
+        
+        Returns:
+            list: Список словарей с информацией о плейлистах
+        """
+        try:
+            logger.info(f"📊 Парсинг плейлистов для: {artist_name}")
+            
+            soup = BeautifulSoup(html, 'html.parser')
+            playlists = []
+            
+            # Ищем ссылки на плейлисты (примерные селекторы, нужно уточнить)
+            playlist_links = soup.find_all('a', href=True)
+            
+            for link in playlist_links:
+                href = link.get('href', '')
+                
+                # Фильтруем только ссылки на плейлисты
+                if any(platform in href for platform in ['spotify.com', 'music.apple.com', 'youtube.com/playlist', 'music.yandex.ru']):
+                    playlist_name = link.get_text(strip=True) or "Unknown"
+                    
+                    playlist_data = {
+                        'artist_name': artist_name,
+                        'playlist_url': href,
+                        'playlist_name': playlist_name,
+                        'track_count': 0  # Можно попытаться извлечь из HTML
+                    }
+                    
+                    playlists.append(playlist_data)
+                    logger.info(f"   ✓ {playlist_name}: {href[:80]}")
+            
+            logger.info(f"✅ Найдено плейлистов: {len(playlists)}")
+            return playlists
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка парсинга плейлистов: {e}")
+            return []
+    
+    def save_playlists_to_db(self, playlists: List[Dict]) -> bool:
+        """Сохраняет плейлисты в базу данных"""
+        try:
+            if not playlists:
+                logger.warning("⚠️ Нет плейлистов для сохранения")
+                return True
+            
+            logger.info(f"💾 Сохранение {len(playlists)} плейлистов в БД...")
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            saved_count = 0
+            for playlist in playlists:
+                try:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO playlists 
+                        (artist_name, playlist_url, playlist_name, track_count)
+                        VALUES (?, ?, ?, ?)
+                    ''', (
+                        playlist['artist_name'],
+                        playlist['playlist_url'],
+                        playlist['playlist_name'],
+                        playlist['track_count']
+                    ))
+                    
+                    if cursor.rowcount > 0:
+                        saved_count += 1
+                
+                except Exception as e:
+                    logger.error(f"❌ Ошибка сохранения плейлиста: {e}")
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"✅ Сохранено новых плейлистов: {saved_count}")
+            return True
+        
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения в БД: {e}")
+            return False
+    
+    def run_parsing_cycle(self) -> bool:
+        """Запускает цикл парсинга для всех артистов"""
+        try:
+            logger.info("="*60)
+            logger.info("🚀 ЗАПУСК ЦИКЛА ПАРСИНГА")
+            logger.info("="*60)
+            logger.info(f"⏰ Время начала: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info(f"🎵 Артистов для обработки: {len(self.target_artists)}")
+            
+            success_count = 0
+            failed_count = 0
+            
+            for i, artist_name in enumerate(self.target_artists, 1):
+                logger.info("="*60)
+                logger.info(f"📍 Артист {i}/{len(self.target_artists)}: {artist_name}")
+                logger.info("="*60)
+                
+                # Поиск артиста (капча решается автоматически!)
+                html = self.search_artist(artist_name)
+                
+                if not html:
+                    logger.error(f"❌ Не удалось получить данные для {artist_name}")
+                    failed_count += 1
+                    continue
+                
+                # Парсинг плейлистов
+                playlists = self.parse_playlists(html, artist_name)
+                
+                # Сохранение в БД
+                if self.save_playlists_to_db(playlists):
+                    success_count += 1
+                    logger.info(f"✅ Артист {artist_name} обработан успешно")
+                else:
+                    failed_count += 1
+                    logger.error(f"❌ Ошибка сохранения данных для {artist_name}")
+                
+                # Пауза между артистами (уважаем сервис)
+                if i < len(self.target_artists):
+                    logger.info("⏳ Пауза 3 секунды...")
+                    time.sleep(3)
+            
+            # Итоги
+            logger.info("="*60)
+            logger.info("📊 ИТОГИ ПАРСИНГА")
+            logger.info("="*60)
+            logger.info(f"✅ Успешно обработано: {success_count}")
+            logger.info(f"❌ Ошибок: {failed_count}")
+            logger.info(f"📊 Всего запросов к API: {self.unlocker.request_count}")
+            logger.info(f"⏰ Время окончания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info("="*60)
+            
+            return failed_count == 0
+        
+        except Exception as e:
+            logger.error(f"❌ Критическая ошибка в цикле парсинга: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+
+
+def main():
+    """Главная функция"""
+    try:
+        # Проверяем аргументы
+        if len(sys.argv) < 2:
+            logger.error("❌ Не указан путь к конфиг файлу!")
+            logger.error("Использование: python3 bandlink_parser_unlocker_linux.py <config.json>")
+            sys.exit(1)
+        
+        config_path = sys.argv[1]
+        logger.info(f"📁 Конфиг файл: {config_path}")
+        
+        # Создаем парсер
+        parser = BandlinkParserUnlockerLinux(config_path)
+        
+        # Загружаем конфиг
+        if not parser.load_config():
+            logger.error("❌ Не удалось загрузить конфиг!")
+            sys.exit(1)
+        
+        # Инициализируем БД
+        if not parser.init_database():
+            logger.error("❌ Не удалось инициализировать БД!")
+            sys.exit(1)
+        
+        # Инициализируем Web Unlocker API
+        if not parser.init_unlocker():
+            logger.error("❌ Не удалось инициализировать Web Unlocker API!")
+            sys.exit(1)
+        
+        # Запускаем парсинг
+        success = parser.run_parsing_cycle()
+        
+        if success:
+            logger.info("✅ Парсинг завершен успешно!")
+            sys.exit(0)
+        else:
+            logger.error("❌ Парсинг завершен с ошибками!")
+            sys.exit(1)
+    
+    except KeyboardInterrupt:
+        logger.warning("\n⚠️ Прервано пользователем")
+        sys.exit(1)
+    
+    except Exception as e:
+        logger.error(f"❌ Критическая ошибка: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+

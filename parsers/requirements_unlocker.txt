@@ -1,0 +1,17 @@
+# Зависимости для Bandlink Parser с Web Unlocker API
+
+# HTTP клиент
+requests>=2.31.0
+
+# Парсинг HTML
+beautifulsoup4>=4.12.0
+
+# Логирование (встроено в Python)
+# logging (built-in)
+
+# SQLite (встроено в Python)
+# sqlite3 (built-in)
+
+# JSON (встроено в Python)
+# json (built-in)
+
