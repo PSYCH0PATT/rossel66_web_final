@@ -15,6 +15,10 @@ from datetime import datetime
 from typing import List, Dict, Optional
 import requests
 from bs4 import BeautifulSoup
+import urllib3
+
+# Отключаем предупреждения о непроверенных SSL сертификатах
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Настройка логирования
 logging.basicConfig(
@@ -28,26 +32,36 @@ logger = logging.getLogger(__name__)
 
 
 class BrightDataUnlockerAPI:
-    """Класс для работы с Bright Data Web Unlocker API"""
+    """Класс для работы с Bright Data Web Unlocker через PROXY"""
     
-    def __init__(self, api_key: str, zone: str = "web_unlocker1"):
-        self.api_key = api_key
+    def __init__(self, username: str, password: str, zone: str = "web_unlocker1"):
+        """
+        Инициализация Web Unlocker API
+        
+        Args:
+            username: Proxy username (формат: brd-customer-{customer_id}-zone-{zone_name})
+            password: Proxy password
+            zone: Зона (по умолчанию web_unlocker1)
+        """
         self.zone = zone
-        self.base_url = "https://api.brightdata.com/request"
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        self.proxy_host = "brd.superproxy.io"
+        self.proxy_port = 33335
+        
+        # Учетные данные для proxy
+        self.proxy_username = username
+        self.proxy_password = password
+        
         self.request_count = 0
         self.max_requests = 50  # Защита от бесконечных запросов
         
-        logger.info("🔧 Инициализация Bright Data Web Unlocker API...")
-        logger.info(f"🔑 API Key: {self.api_key[:20]}...")
-        logger.info(f"🌐 Zone: {self.zone}")
+        logger.info("🔧 Инициализация Bright Data Web Unlocker (PROXY режим)...")
+        logger.info(f"🌐 Proxy: {self.proxy_host}:{self.proxy_port}")
+        logger.info(f"👤 Username: {self.proxy_username[:50]}...")
+        logger.info(f"🔐 Password: {'*' * len(self.proxy_password)}")
     
     def unlock_url(self, url: str, country: str = "us") -> Dict:
         """
-        Получает HTML страницы через Web Unlocker API
+        Получает HTML страницы через Web Unlocker PROXY
         Автоматически решает капчи (включая Yandex SmartCaptcha)
         
         Args:
@@ -66,23 +80,32 @@ class BrightDataUnlockerAPI:
         
         self.request_count += 1
         
-        payload = {
-            "url": url,
-            "zone": self.zone,
-            "format": "raw",  # Получаем HTML
-            "country": country  # США для обхода блокировки .ru
-        }
-        
         try:
-            logger.info(f"📤 Запрос #{self.request_count} к Web Unlocker API")
+            # Добавляем параметр country в username для геотаргетинга
+            # Формат: brd-customer-{id}-zone-{zone}-country-{country}
+            proxy_username_with_country = f"{self.proxy_username}-country-{country}"
+            
+            # Настраиваем proxy для requests
+            proxies = {
+                'http': f'http://{proxy_username_with_country}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}',
+                'https': f'http://{proxy_username_with_country}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}'
+            }
+            
+            logger.info(f"📤 Запрос #{self.request_count} через Web Unlocker PROXY")
             logger.info(f"   URL: {url}")
+            logger.info(f"   Proxy: {self.proxy_host}:{self.proxy_port}")
             logger.info(f"   Country: {country}")
             
-            response = requests.post(
-                self.base_url,
-                headers=self.headers,
-                json=payload,
-                timeout=120  # 2 минуты на решение капчи
+            # Отправляем обычный GET запрос через proxy
+            # Proxy автоматически обходит капчу и блокировки
+            response = requests.get(
+                url,
+                proxies=proxies,
+                verify=False,  # Отключаем проверку SSL сертификата (-k в curl)
+                timeout=120,   # 2 минуты на решение капчи
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
             )
             
             logger.info(f"📊 Статус ответа: {response.status_code}")
@@ -90,12 +113,17 @@ class BrightDataUnlockerAPI:
             if response.status_code == 200:
                 html = response.text
                 logger.info(f"✅ Успешно! Получено HTML: {len(html)} символов")
+                
+                # Проверяем заголовки ответа для отладки
+                if 'x-brightdata-zone' in response.headers:
+                    logger.info(f"🔍 Bright Data Zone: {response.headers.get('x-brightdata-zone')}")
+                
                 return {
                     'success': True,
                     'html': html
                 }
             else:
-                error_text = response.text
+                error_text = response.text[:500]  # Первые 500 символов
                 logger.error(f"❌ Ошибка {response.status_code}: {error_text}")
                 return {
                     'success': False,
@@ -106,12 +134,19 @@ class BrightDataUnlockerAPI:
             logger.error("❌ Таймаут запроса (120 секунд)")
             return {'success': False, 'error': 'Timeout'}
         
+        except requests.exceptions.ProxyError as e:
+            logger.error(f"❌ Ошибка подключения к proxy: {e}")
+            logger.error("Проверьте правильность username и password для Bright Data")
+            return {'success': False, 'error': f'Proxy error: {str(e)}'}
+        
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ Ошибка HTTP: {e}")
             return {'success': False, 'error': str(e)}
         
         except Exception as e:
             logger.error(f"❌ Неизвестная ошибка: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {'success': False, 'error': str(e)}
 
 
@@ -183,13 +218,17 @@ class BandlinkParserUnlockerLinux:
     def init_unlocker(self) -> bool:
         """Инициализирует Web Unlocker API"""
         try:
-            api_key = self.config.get('bright_data_api_key')
+            # Получаем учетные данные для proxy из конфига
+            username = self.config.get('bright_data_proxy_username')
+            password = self.config.get('bright_data_proxy_password')
             
-            if not api_key:
-                logger.error("❌ Bright Data API ключ не найден в конфиге!")
+            if not username or not password:
+                logger.error("❌ Bright Data proxy credentials не найдены в конфиге!")
+                logger.error("Необходимо указать 'bright_data_proxy_username' и 'bright_data_proxy_password'")
+                logger.error("Формат username: brd-customer-{customer_id}-zone-{zone_name}")
                 return False
             
-            self.unlocker = BrightDataUnlockerAPI(api_key)
+            self.unlocker = BrightDataUnlockerAPI(username, password)
             logger.info("✅ Web Unlocker API инициализирован")
             return True
         
@@ -218,7 +257,7 @@ class BandlinkParserUnlockerLinux:
             
             logger.info(f"🌐 URL поиска: {search_url}")
             
-            # Получаем HTML через Web Unlocker API
+            # Получаем HTML через Web Unlocker PROXY
             # Капча решается автоматически!
             result = self.unlocker.unlock_url(search_url, country="us")
             
