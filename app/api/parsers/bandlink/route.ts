@@ -77,6 +77,9 @@ export async function POST(request: NextRequest) {
           try {
             const results = await readBandlinkResults();
             
+            // Извлекаем HTML из логов
+            const htmlData = extractHtmlFromOutput(output);
+            
             // Создаем активность для каждого найденного артиста
             for (const artist of artists) {
               const artistData = getUserByUsername(artist);
@@ -125,6 +128,7 @@ export async function POST(request: NextRequest) {
               success: true, 
               message: 'Bandlink парсинг завершен успешно',
               results,
+              html_data: htmlData, // Добавляем HTML в ответ
               output 
             }));
           } catch (e) {
@@ -152,6 +156,24 @@ export async function POST(request: NextRequest) {
       success: false, 
       error: 'Внутренняя ошибка сервера' 
     }, { status: 500 });
+  }
+}
+
+function extractHtmlFromOutput(output: string): string | null {
+  try {
+    // Ищем HTML в base64 формате в логах
+    const match = output.match(/HTML_BASE64_START:(.+?):HTML_BASE64_END/);
+    if (match) {
+      const htmlBase64 = match[1];
+      const html = Buffer.from(htmlBase64, 'base64').toString('utf-8');
+      console.log(`📄 HTML извлечен из логов: ${html.length} символов`);
+      return html;
+    }
+    console.log('⚠️ HTML не найден в логах');
+    return null;
+  } catch (error) {
+    console.error('❌ Ошибка извлечения HTML из логов:', error);
+    return null;
   }
 }
 
