@@ -109,7 +109,7 @@ def create_parser_config(artists):
 
 def run_parser(config_path):
     """Запуск парсера"""
-    parser_script = PROJECT_ROOT / 'parsers' / 'bandlink_parser_residential_linux.py'
+    parser_script = PROJECT_ROOT / 'parsers' / 'bandlink_parser_residential_selenium.py'
     
     logger.info(f"🚀 Запуск парсера: {parser_script}")
     logger.info(f"📄 Конфиг: {config_path}")
