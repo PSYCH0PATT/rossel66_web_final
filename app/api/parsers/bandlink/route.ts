@@ -17,34 +17,34 @@ export async function POST(request: NextRequest) {
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
     
-    // Получаем API ключ 2captcha из переменных окружения
-    const captchaApiKey = process.env.TWOCAPTCHA_API_KEY;
-    console.log('🔍 Проверка API ключа из переменных окружения:');
-    console.log('  - TWOCAPTCHA_API_KEY exists:', !!captchaApiKey);
-    console.log('  - TWOCAPTCHA_API_KEY length:', captchaApiKey?.length);
-    console.log('  - TWOCAPTCHA_API_KEY type:', typeof captchaApiKey);
+    // Получаем API ключ Bright Data из переменных окружения
+    const brightDataApiKey = process.env.BRIGHT_DATA_API_KEY;
+    console.log('🔍 Проверка API ключа Bright Data:');
+    console.log('  - BRIGHT_DATA_API_KEY exists:', !!brightDataApiKey);
+    console.log('  - BRIGHT_DATA_API_KEY length:', brightDataApiKey?.length);
+    console.log('  - BRIGHT_DATA_API_KEY type:', typeof brightDataApiKey);
     
-    // Проверяем наличие API ключа 2captcha
-    if (!captchaApiKey || captchaApiKey.trim() === '') {
-      console.error('❌ 2captcha API ключ не настроен в переменных окружения!');
-      console.error('💡 Добавьте TWOCAPTCHA_API_KEY в .env.local файл');
-      return NextResponse.json({ error: '2captcha API ключ не настроен на сервере. Обратитесь к администратору.' }, { status: 500 });
+    // Проверяем наличие API ключа Bright Data
+    if (!brightDataApiKey || brightDataApiKey.trim() === '') {
+      console.error('❌ Bright Data API ключ не настроен в переменных окружения!');
+      console.error('💡 Добавьте BRIGHT_DATA_API_KEY в .env.local файл');
+      return NextResponse.json({ error: 'Bright Data API ключ не настроен на сервере. Обратитесь к администратору.' }, { status: 500 });
     } else {
-      console.log('🔑 2captcha API ключ найден в переменных окружения:', captchaApiKey.substring(0, 8) + '...');
+      console.log('🔑 Bright Data API ключ найден:', brightDataApiKey.substring(0, 20) + '...');
     }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
       target_artists: artists, // Для bandlink передаем только никнеймы
-      captcha_api_key: captchaApiKey // Добавляем API ключ 2captcha из переменных окружения
+      bright_data_api_key: brightDataApiKey // Добавляем API ключ Bright Data из переменных окружения
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     console.log('✅ Конфиг файл создан с API ключом из переменных окружения');
 
-    // Запускаем Python скрипт (БЕЗОПАСНАЯ Linux версия для production)
-    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_linux_safe.py');
+    // Запускаем Python скрипт (Bright Data Linux версия для production)
+    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_brightdata_linux.py');
     
     return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 async function readBandlinkResults() {
   try {
     const sqlite3 = require('sqlite3').verbose();
-    const dbPath = path.join(process.cwd(), 'bandlink_playlists.db');
+    const dbPath = path.join(process.cwd(), 'bandlink_playlists_brightdata.db');
     
     if (!fs.existsSync(dbPath)) {
       return [];
@@ -168,7 +168,7 @@ async function readBandlinkResults() {
       const db = new sqlite3.Database(dbPath);
       
       db.all(`
-        SELECT * FROM bandlink_playlists 
+        SELECT * FROM playlists 
         ORDER BY parsed_at DESC 
         LIMIT 100
       `, (err: any, rows: any) => {
