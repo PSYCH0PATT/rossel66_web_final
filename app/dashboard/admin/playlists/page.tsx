@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings } from 'lucide-react'
+import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save } from 'lucide-react'
 import Image from 'next/image'
+import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Artist {
   id: string
@@ -55,11 +57,19 @@ export default function PlaylistsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
   const [windowWidth, setWindowWidth] = useState(0)
+  
+  // Состояния для управления cookies
+  const [cookiesInput, setCookiesInput] = useState('')
+  const [isUpdatingCookies, setIsUpdatingCookies] = useState(false)
+  const [cookiesStatus, setCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
+  const [lastCookiesUpdate, setLastCookiesUpdate] = useState<string | null>(null)
 
   useEffect(() => {
     loadArtists()
     loadRecentArtists()
     loadResults()
+    loadCookiesStatus()
+    checkCookiesNotification()
   }, [])
 
   // Отслеживание ширины окна
@@ -143,6 +153,70 @@ export default function PlaylistsPage() {
         console.error('Ошибка очистки результатов:', error)
         alert('Ошибка очистки результатов')
       }
+    }
+  }
+
+  // Загрузка статуса cookies
+  const loadCookiesStatus = async () => {
+    try {
+      const response = await fetch('/api/bandlink/cookies')
+      const data = await response.json()
+      if (data.success && data.lastUpdated) {
+        setLastCookiesUpdate(new Date(data.lastUpdated).toLocaleString('ru-RU'))
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки статуса cookies:', error)
+    }
+  }
+
+  // Проверка уведомлений о необходимости новых cookies
+  const checkCookiesNotification = async () => {
+    try {
+      const response = await fetch('/api/notifications')
+      const data = await response.json()
+      if (data.hasNotification) {
+        setCookiesStatus({ 
+          type: 'destructive', 
+          message: data.message || '⚠️ Требуются новые cookies! Парсинг не работает.' 
+        })
+      }
+    } catch (error) {
+      console.error('Ошибка проверки уведомлений:', error)
+    }
+  }
+
+  // Обновление cookies
+  const updateCookies = async () => {
+    if (!cookiesInput.trim()) {
+      setCookiesStatus({ type: 'destructive', message: 'Введите curl команду с cookies' })
+      return
+    }
+
+    setIsUpdatingCookies(true)
+    setCookiesStatus(null)
+
+    try {
+      const response = await fetch('/api/bandlink/cookies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curlCommand: cookiesInput })
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setCookiesStatus({ type: 'default', message: `✅ ${data.message}` })
+        setLastCookiesUpdate(new Date().toLocaleString('ru-RU'))
+        setCookiesInput('')
+        
+        // Перезагружаем статус cookies
+        await loadCookiesStatus()
+      } else {
+        setCookiesStatus({ type: 'destructive', message: `❌ ${data.error || 'Ошибка обновления'}` })
+      }
+    } catch (error) {
+      setCookiesStatus({ type: 'destructive', message: '❌ Ошибка соединения' })
+    } finally {
+      setIsUpdatingCookies(false)
     }
   }
 
@@ -679,7 +753,7 @@ export default function PlaylistsPage() {
             {/* Панель управления парсингом */}
             <Card>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Поиск и выбор артистов */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -833,6 +907,45 @@ export default function PlaylistsPage() {
                     </div>
                 </div>
               )}
+              </div>
+            </div>
+
+            {/* Управление Cookies */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Cookie className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold">Cookies Bandlink</h3>
+              </div>
+              
+              <Textarea
+                placeholder="Вставьте curl команду с cookies..."
+                value={cookiesInput}
+                onChange={(e) => setCookiesInput(e.target.value)}
+                className="min-h-[120px] font-mono text-xs"
+              />
+              
+              <Button
+                onClick={updateCookies}
+                disabled={isUpdatingCookies}
+                size="sm"
+                className="w-full"
+              >
+                {isUpdatingCookies ? (
+                  <><RefreshCw className="w-3 h-3 mr-2 animate-spin" />Обновление...</>
+                ) : (
+                  <><Save className="w-3 h-3 mr-2" />Обновить Cookies</>
+                )}
+              </Button>
+              
+              {cookiesStatus && (
+                <Alert variant={cookiesStatus.type}>
+                  <AlertDescription>{cookiesStatus.message}</AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
+                <p>Последнее обновление:</p>
+                <p className="font-mono">{lastCookiesUpdate || 'Не обновлялись'}</p>
               </div>
             </div>
           </div>

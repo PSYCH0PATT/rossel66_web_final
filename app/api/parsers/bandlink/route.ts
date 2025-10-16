@@ -17,42 +17,34 @@ export async function POST(request: NextRequest) {
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
     
-    // Получаем proxy credentials Bright Data из переменных окружения
-    const brightDataProxyUsername = process.env.BRIGHT_DATA_PROXY_USERNAME;
-    const brightDataProxyPassword = process.env.BRIGHT_DATA_PROXY_PASSWORD;
+    // Получаем Residential proxy credentials из переменных окружения
+    const brightDataProxyUsername = process.env.BRIGHT_DATA_RESIDENTIAL_USERNAME || "brd-customer-hl_94d02fd9-zone-residential_proxy1";
+    const brightDataProxyPassword = process.env.BRIGHT_DATA_RESIDENTIAL_PASSWORD || "juze73q9d91q";
     
-    console.log('🔍 Проверка Bright Data proxy credentials:');
-    console.log('  - BRIGHT_DATA_PROXY_USERNAME exists:', !!brightDataProxyUsername);
-    console.log('  - BRIGHT_DATA_PROXY_PASSWORD exists:', !!brightDataProxyPassword);
-    
-    // Проверяем наличие proxy credentials
-    if (!brightDataProxyUsername || !brightDataProxyPassword) {
-      console.error('❌ Bright Data proxy credentials не настроены в переменных окружения!');
-      console.error('💡 Добавьте BRIGHT_DATA_PROXY_USERNAME и BRIGHT_DATA_PROXY_PASSWORD в .env.local файл');
-      console.log('🔄 Используем fallback credentials из кода...');
-    } else {
-      console.log('🔑 Bright Data proxy credentials найдены');
-      console.log('  - Username:', brightDataProxyUsername.substring(0, 30) + '...');
-      console.log('  - Password:', '*'.repeat(brightDataProxyPassword.length));
-    }
+    console.log('🔍 Проверка Bright Data Residential proxy credentials:');
+    console.log('  - Username:', brightDataProxyUsername.substring(0, 30) + '...');
+    console.log('  - Password:', '*'.repeat(brightDataProxyPassword.length));
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
       target_artists: artists, // Список имен артистов (например: ["Sour Diesel", "Wide Pie"])
-      bright_data_proxy_username: process.env.BRIGHT_DATA_PROXY_USERNAME || "brd-customer-hl_94d02fd9-zone-web_unlocker1",
-      bright_data_proxy_password: process.env.BRIGHT_DATA_PROXY_PASSWORD || "bp8k2m4ji1za"
+      bright_data_proxy_username: brightDataProxyUsername,
+      bright_data_proxy_password: brightDataProxyPassword,
+      proxy_host: "brd.superproxy.io",
+      proxy_port: 33335
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('✅ Конфиг файл создан с proxy credentials');
+    console.log('✅ Конфиг файл создан с Residential proxy credentials');
     console.log('📋 Конфиг содержит:');
     console.log('  - target_artists:', artists);
     console.log('  - bright_data_proxy_username:', config.bright_data_proxy_username.substring(0, 30) + '...');
-    console.log('  - bright_data_proxy_password:', '*'.repeat(config.bright_data_proxy_password.length));
+    console.log('  - proxy_host:', config.proxy_host);
+    console.log('  - proxy_port:', config.proxy_port);
 
-    // Запускаем Python скрипт (Web Unlocker API версия для production)
-    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_unlocker_linux.py');
+    // Запускаем Python скрипт (Residential Proxy версия для production)
+    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_residential_linux.py');
     
     return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
