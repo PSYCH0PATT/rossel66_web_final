@@ -229,10 +229,20 @@ class BandlinkParserUnlockerLinux:
             html = result['html']
             logger.info(f"✅ Страница получена: {len(html)} символов")
             
+            # Сохраняем HTML для анализа
+            html_filename = f"/tmp/bandlink_html_{artist_name.replace(' ', '_')}_{int(time.time())}.html"
+            try:
+                with open(html_filename, 'w', encoding='utf-8') as f:
+                    f.write(html)
+                logger.info(f"💾 HTML сохранен для анализа: {html_filename}")
+            except Exception as e:
+                logger.error(f"❌ Не удалось сохранить HTML: {e}")
+            
             # Проверяем, нет ли капчи в HTML
             if 'captcha' in html.lower() or 'showcaptcha' in html.lower():
                 logger.warning("⚠️ В HTML все еще присутствует капча!")
                 logger.warning("Это может означать, что Web Unlocker API не смог решить капчу")
+                logger.warning("📄 HTML сохранен для анализа: " + html_filename)
                 return None
             
             return html
