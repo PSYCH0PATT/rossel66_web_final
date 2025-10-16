@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     console.log('  - proxy_host:', config.proxy_host);
     console.log('  - proxy_port:', config.proxy_port);
 
-    // Запускаем Python скрипт (Residential Proxy версия для production)
-    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_residential_linux.py');
+    // Запускаем Python скрипт (Residential Proxy + Selenium версия для production)
+    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_residential_selenium.py');
     
     return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
