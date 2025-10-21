@@ -23,14 +23,15 @@ try:
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    from webdriver_manager.chrome import ChromeDriverManager
 except ImportError:
-    print("❌ Selenium не установлен. Установите: pip3 install selenium")
+    print("❌ Selenium не установлен. Установите: pip install selenium webdriver-manager")
     sys.exit(1)
 
 # User-Agent ротация
 USER_AGENTS = [
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 ]
 
@@ -41,26 +42,22 @@ class BandlinkParserProductionLinux:
         self.db_path = 'bandlink_playlists.db'
         self.driver = None
         
-        # Прокси настройки
-        self.proxy_username = self.config.get('bright_data_proxy_username') or self.config.get('bright_data_residential_username')
-        self.proxy_password = self.config.get('bright_data_proxy_password') or self.config.get('bright_data_residential_password')
+        # Прокси настройки (не используются на Mac, но сохраняем для совместимости)
+        self.proxy_username = self.config.get('bright_data_proxy_username')
+        self.proxy_password = self.config.get('bright_data_proxy_password')
         self.proxy_host = self.config.get('proxy_host', 'brd.superproxy.io')
         self.proxy_port = self.config.get('proxy_port', 33335)
         self.max_proxy_attempts = 3
         self.proxy_attempts = 0
-        self.current_session_id = None
         
         # Куки
         self.cookies = self.config.get('cookies', {})
         
-        # Капча
+        # Капча (на Mac без прокси просто логируем)
         self.captcha_detected_count = 0
-        self.max_captcha_before_proxy_change = 1  # Меняем прокси после 1 капчи
         
         self.init_database()
-        print(f"✅ Парсер инициализирован (Linux)")
-        if self.proxy_username:
-            print(f"🌐 Прокси: {self.proxy_host}:{self.proxy_port}")
+        print(f"✅ Парсер инициализирован (Linux - без прокси)")
         if self.cookies:
             print(f"🍪 Куки загружены: {len(self.cookies)} шт.")
     
@@ -93,7 +90,7 @@ class BandlinkParserProductionLinux:
                     playlist_cover_url TEXT,
                     playlist_url TEXT,
                     parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(artist_name, playlist_name, playlist_url)
+                    UNIQUE(artist_name, playlist_name)
                 )
             ''')
             
@@ -111,29 +108,33 @@ class BandlinkParserProductionLinux:
         delay = random.uniform(min_sec, max_sec)
         time.sleep(delay)
     
-    def setup_driver(self, use_proxy: bool = True, force_new_session: bool = False) -> bool:
+    def setup_driver(self, use_proxy: bool = True) -> bool:
         """Настраивает Chrome драйвер с прокси и куками"""
         try:
-            if not force_new_session:
-                self.proxy_attempts += 1
+            self.proxy_attempts += 1
             print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
             
             options = Options()
             
-            # Прокси для Linux (работает через командную строку)
+            # Прокси (через SOCKS5 вместо HTTP - больше совместимости с Mac Chrome)
             if use_proxy and self.proxy_username and self.proxy_password:
                 # Генерируем уникальный session ID для ротации IP
-                if force_new_session or not self.current_session_id:
-                    self.current_session_id = str(uuid.uuid4())[:8]
-                    if force_new_session:
-                        print(f"🔄 Генерируем НОВЫЙ session ID для смены прокси")
+                session_id = str(uuid.uuid4())[:8]
+                proxy_username_with_session = f"{self.proxy_username}-session-{session_id}"
                 
-                proxy_username_with_session = f"{self.proxy_username}-session-{self.current_session_id}"
+                # Формат для Chrome: username:password@host:port
+                # Используем простой формат без протокола
+                options.add_argument(f'--proxy-server={self.proxy_host}:{self.proxy_port}')
                 
-                # Linux Chrome поддерживает прокси с авторизацией
-                proxy_url = f"http://{proxy_username_with_session}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
-                options.add_argument(f'--proxy-server={proxy_url}')
-                print(f"🌐 Прокси активирован: {self.proxy_host}:{self.proxy_port} (session: {self.current_session_id})")
+                # Добавляем авторизацию через аргументы
+                options.add_argument(f'--proxy-bypass-list=<-loopback>')
+                
+                print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port} (session: {session_id})")
+                print(f"⚠️  ВНИМАНИЕ: Прокси может не работать без расширения на Mac")
+                print(f"💡 Работаем БЕЗ прокси для стабильности")
+                
+                # ОТКЛЮЧАЕМ прокси для Mac - он вызывает проблемы
+                options = Options()  # Пересоздаем options без прокси
             else:
                 print("⚠️  Прокси отключен")
             
@@ -141,24 +142,24 @@ class BandlinkParserProductionLinux:
             user_agent = self.get_random_user_agent()
             options.add_argument(f'user-agent={user_agent}')
             
-            # Основные настройки для Linux
+            # Основные настройки
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
-            # Headless для production на Linux
-            options.add_argument('--headless=new')
+            # НЕ headless для Mac
             options.add_argument('--window-size=1920,1080')
+            options.add_argument('--start-maximized')
             
-            # Отключаем логи
-            options.add_argument('--log-level=3')
-            options.add_argument('--silent')
-            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            # НЕ используем user-data-dir - он вызывает проблемы на Mac
+            # Куки добавим через driver.add_cookie()
             
             print("🚀 Запуск Chrome...")
-            self.driver = webdriver.Chrome(options=options)
+            # Linux использует системный chromedriver
+            service = Service('/usr/bin/chromedriver')
+            self.driver = webdriver.Chrome(service=service, options=options)
             
             # Убираем флаг webdriver
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -173,12 +174,12 @@ class BandlinkParserProductionLinux:
         except Exception as e:
             print(f"❌ Ошибка настройки драйвера: {e}")
             
-            # Если достигнут лимит попыток
+            # Если достигнут лимит попыток с прокси
             if self.proxy_attempts >= self.max_proxy_attempts:
-                print(f"❌ Достигнут лимит попыток ({self.max_proxy_attempts}). Парсер остановлен.")
+                print(f"❌ Достигнут лимит попыток с прокси ({self.max_proxy_attempts}). Парсер остановлен.")
                 return False
             
-            # Повторная попытка без прокси
+            # Повторная попытка
             print(f"🔄 Повторная попытка без прокси...")
             self.human_delay(2, 3)
             return self.setup_driver(use_proxy=False)
@@ -186,10 +187,13 @@ class BandlinkParserProductionLinux:
     def add_cookies(self):
         """Добавляет куки в браузер"""
         if not self.cookies:
+            print("🍪 Куки не найдены в конфиге")
             return
         
+        print(f"🍪 Добавление {len(self.cookies)} кук...")
         try:
-            # Сначала переходим на band.link
+            # Сначала переходим на band.link чтобы установить домен
+            print("🔗 Переход на https://band.link для добавления кук...")
             self.driver.get("https://band.link")
             self.human_delay(1, 2)
             
@@ -233,7 +237,7 @@ class BandlinkParserProductionLinux:
             
             print(f"✅ Добавлено {added} кук (не удалось: {failed})")
         except Exception as e:
-            print(f"⚠️  Ошибка добавления кук: {e}")
+            print(f"❌ Ошибка добавления кук: {e}")
     
     def detect_captcha(self) -> bool:
         """Определяет наличие капчи на странице"""
@@ -286,47 +290,10 @@ class BandlinkParserProductionLinux:
             print(f"⚠️  Ошибка детекции капчи: {e}")
             return False
     
-    def handle_captcha_with_proxy_change(self, artist_name: str) -> bool:
-        """Обрабатывает капчу сменой прокси"""
-        self.captcha_detected_count += 1
-        print(f"\n{'='*60}")
-        print(f"🚨 КАПЧА ОБНАРУЖЕНА (попытка {self.captcha_detected_count})")
-        print(f"{'='*60}")
-        
-        if self.captcha_detected_count >= self.max_captcha_before_proxy_change:
-            if self.proxy_username and self.proxy_password:
-                print(f"🔄 Меняем прокси и перезапускаем браузер...")
-                
-                # Закрываем текущий браузер
-                if self.driver:
-                    self.driver.quit()
-                    self.human_delay(2, 3)
-                
-                # Запускаем с новым session ID (новый IP)
-                if self.setup_driver(use_proxy=True, force_new_session=True):
-                    print("✅ Браузер перезапущен с новым прокси")
-                    
-                    # Добавляем куки
-                    self.add_cookies()
-                    
-                    # Пробуем снова перейти к артисту
-                    self.human_delay(3, 5)
-                    return self.navigate_to_artist(artist_name)
-                else:
-                    print("❌ Не удалось перезапустить браузер")
-                    return False
-            else:
-                print("❌ Прокси не настроены, не можем поменять IP")
-                return False
-        else:
-            print(f"⏳ Ждем {5} секунд перед повторной попыткой...")
-            self.human_delay(5, 8)
-            return True
-    
     def navigate_to_artist(self, artist_name: str) -> bool:
         """Переходит напрямую по ссылке на артиста"""
         try:
-            # Формируем URL: https://band.link/scanner?search=artist+name
+            # Формируем URL как в примере: https://band.link/scanner?search=sour+diesel
             search_query = artist_name.replace(' ', '+')
             url = f"https://band.link/scanner?search={search_query}"
             
@@ -336,9 +303,15 @@ class BandlinkParserProductionLinux:
             # Человеческая задержка
             self.human_delay(3, 5)
             
-            # Проверяем капчу
+            # Проверяем капчу (на Mac просто логируем, т.к. нет прокси для смены)
             if self.detect_captcha():
-                return self.handle_captcha_with_proxy_change(artist_name)
+                self.captcha_detected_count += 1
+                print(f"\n{'='*60}")
+                print(f"🚨 КАПЧА ОБНАРУЖЕНА (Mac - #{self.captcha_detected_count})")
+                print(f"⚠️  На Mac нет прокси для смены IP")
+                print(f"💡 Попробуйте позже или используйте Linux парсер")
+                print(f"{'='*60}\n")
+                return False  # На Mac останавливаемся при капче
             
             # Проверяем, что страница загрузилась
             current_url = self.driver.current_url
@@ -364,27 +337,12 @@ class BandlinkParserProductionLinux:
             # Ждем загрузки
             self.human_delay(2, 4)
             
-            # Проверяем капчу еще раз перед парсингом
-            if self.detect_captcha():
-                print("🔒 Капча обнаружена перед парсингом!")
-                if self.handle_captcha_with_proxy_change(artist_name):
-                    # Повторяем попытку после смены прокси
-                    self.human_delay(2, 4)
-                else:
-                    print("❌ Не удалось обойти капчу")
-                    return []
-            
             # Ищем article элемент
             try:
                 article = self.driver.find_element(By.CSS_SELECTOR, 'article')
                 print("✅ Найден article элемент")
             except NoSuchElementException:
                 print("❌ Article элемент не найден!")
-                # Проверяем еще раз - может это капча
-                if self.detect_captcha():
-                    print("🔒 Обнаружена капча вместо контента!")
-                    if self.handle_captcha_with_proxy_change(artist_name):
-                        return self.parse_artist_playlists(artist_name)  # Рекурсивно пробуем снова
                 return []
             
             # Ищем кнопку "Показать все"
@@ -408,7 +366,7 @@ class BandlinkParserProductionLinux:
                             self.scroll_to_load_all()
                             break
             except Exception as e:
-                print(f"ℹ️  Кнопка 'Показать все' не найдена")
+                print(f"ℹ️  Кнопка 'Показать все' не найдена: {e}")
             
             # Ищем контейнер плейлистов
             try:
@@ -574,7 +532,7 @@ class BandlinkParserProductionLinux:
     
     def run_parsing_cycle(self):
         """Запускает цикл парсинга"""
-        print("🚀 Запуск Bandlink Parser Production для Linux")
+        print("🚀 Запуск Bandlink Parser Production для Mac")
         
         if not self.setup_driver():
             return False
@@ -638,7 +596,7 @@ def main():
     """Главная функция"""
     if len(sys.argv) < 2:
         print("❌ Не указан файл конфигурации")
-        print("💡 Использование: python3 bandlink_parser_production_linux.py <config.json>")
+        print("💡 Использование: python3 bandlink_parser_production_mac.py <config.json>")
         sys.exit(1)
     
     config_file = sys.argv[1]

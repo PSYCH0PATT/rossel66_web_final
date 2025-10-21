@@ -38,6 +38,31 @@ export async function POST(request: NextRequest) {
       console.log('🔑 Residential Proxy credentials найдены');
     }
 
+    // Загружаем cookies из БД
+    let cookies = {};
+    try {
+      const sqlite3 = require('sqlite3').verbose();
+      const dbPath = path.join(process.cwd(), 'bandlink_playlists.db');
+      const db = new sqlite3.Database(dbPath);
+      
+      const cookiesData = await new Promise<any[]>((resolve, reject) => {
+        db.all('SELECT cookie_name, cookie_value FROM bandlink_cookies', (err: any, rows: any) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        });
+        db.close();
+      });
+      
+      // Преобразуем в объект
+      for (const cookie of cookiesData) {
+        cookies[cookie.cookie_name] = cookie.cookie_value;
+      }
+      
+      console.log(`🍪 Загружено ${Object.keys(cookies).length} кук из БД`);
+    } catch (error) {
+      console.warn('⚠️  Не удалось загрузить cookies из БД:', error);
+    }
+    
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
@@ -45,11 +70,12 @@ export async function POST(request: NextRequest) {
       bright_data_proxy_username: proxyUsername, // Residential Proxy username
       bright_data_proxy_password: proxyPassword, // Residential Proxy password
       proxy_host: proxyHost, // Proxy host
-      proxy_port: parseInt(proxyPort) // Proxy port
+      proxy_port: parseInt(proxyPort), // Proxy port
+      cookies: cookies // Добавляем куки в конфиг
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('✅ Конфиг файл создан с Residential Proxy credentials');
+    console.log('✅ Конфиг файл создан с Residential Proxy credentials и cookies');
 
     // Определяем ОС и выбираем соответствующий парсер
     const isLinux = process.platform === 'linux';

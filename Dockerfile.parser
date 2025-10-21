@@ -7,13 +7,12 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     sqlite3 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+# Установка Chromium (ARM64 совместимый)
+RUN apt-get update \
+    && apt-get install -y chromium chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка Python зависимостей
@@ -31,6 +30,9 @@ COPY temp_bandlink_config.json /app/
 # Создание директории для БД
 RUN mkdir -p /app/data
 
-# Запуск парсера
-CMD ["python3", "parsers/bandlink_parser_production_linux.py", "temp_bandlink_config.json"]
+# Создаем скрипт запуска с Xvfb
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1920x1080x24 &\nexport DISPLAY=:99\npython3 parsers/bandlink_parser_production_linux.py temp_bandlink_config.json' > /app/start.sh && chmod +x /app/start.sh
+
+# Запуск парсера через Xvfb
+CMD ["/bin/bash", "/app/start.sh"]
 
