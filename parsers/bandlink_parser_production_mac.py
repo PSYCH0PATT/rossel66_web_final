@@ -42,21 +42,22 @@ class BandlinkParserProductionMac:
         self.db_path = 'bandlink_playlists_mac.db'
         self.driver = None
         
-        # Прокси настройки
+        # Прокси настройки (не используются на Mac, но сохраняем для совместимости)
         self.proxy_username = self.config.get('bright_data_proxy_username')
         self.proxy_password = self.config.get('bright_data_proxy_password')
         self.proxy_host = self.config.get('proxy_host', 'brd.superproxy.io')
         self.proxy_port = self.config.get('proxy_port', 33335)
-        self.max_proxy_attempts = 3  # Максимум 3 попытки с прокси
+        self.max_proxy_attempts = 3
         self.proxy_attempts = 0
         
         # Куки
         self.cookies = self.config.get('cookies', {})
         
+        # Капча (на Mac без прокси просто логируем)
+        self.captcha_detected_count = 0
+        
         self.init_database()
-        print(f"✅ Парсер инициализирован")
-        if self.proxy_username:
-            print(f"🌐 Прокси: {self.proxy_host}:{self.proxy_port}")
+        print(f"✅ Парсер инициализирован (Mac - без прокси)")
         if self.cookies:
             print(f"🍪 Куки загружены: {len(self.cookies)} шт.")
     
@@ -192,19 +193,98 @@ class BandlinkParserProductionMac:
             self.driver.get("https://band.link")
             self.human_delay(1, 2)
             
+            added = 0
+            failed = 0
             for name, value in self.cookies.items():
                 try:
-                    self.driver.add_cookie({
+                    # Пробуем разные варианты domain
+                    cookie_data = {
                         'name': name,
-                        'value': value,
-                        'domain': '.band.link'
-                    })
+                        'value': str(value)
+                    }
+                    
+                    # Пробуем без domain (автоопределение)
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                        continue
+                    except:
+                        pass
+                    
+                    # Пробуем с .band.link
+                    cookie_data['domain'] = '.band.link'
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                        continue
+                    except:
+                        pass
+                    
+                    # Пробуем с band.link
+                    cookie_data['domain'] = 'band.link'
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                    except:
+                        failed += 1
+                        
                 except Exception as e:
-                    print(f"⚠️  Не удалось добавить cookie {name}: {e}")
+                    failed += 1
             
-            print(f"✅ Добавлено {len(self.cookies)} кук")
+            print(f"✅ Добавлено {added} кук (не удалось: {failed})")
         except Exception as e:
             print(f"❌ Ошибка добавления кук: {e}")
+    
+    def detect_captcha(self) -> bool:
+        """Определяет наличие капчи на странице"""
+        try:
+            current_url = self.driver.current_url
+            
+            # Проверяем URL на наличие капчи
+            if 'captcha' in current_url.lower() or 'robot' in current_url.lower():
+                print("🔒 КАПЧА обнаружена в URL!")
+                return True
+            
+            # Ищем iframe с капчей
+            iframe_selectors = [
+                'iframe[src*="captcha"]',
+                'iframe[src*="smartcaptcha"]', 
+                'iframe[src*="yandex"]',
+                'iframe[src*="recaptcha"]',
+                'iframe[id*="captcha"]',
+            ]
+            
+            for selector in iframe_selectors:
+                iframes = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                if iframes:
+                    for iframe in iframes:
+                        src = iframe.get_attribute('src') or ''
+                        if any(keyword in src.lower() for keyword in ['captcha', 'yandex', 'smartcaptcha', 'recaptcha']):
+                            print(f"🔒 КАПЧА обнаружена: iframe {src[:100]}...")
+                            return True
+            
+            # Ищем div-контейнеры капчи
+            captcha_divs = self.driver.find_elements(By.CSS_SELECTOR, 'div[class*="captcha"], div[id*="captcha"]')
+            if captcha_divs:
+                print(f"🔒 КАПЧА обнаружена: {len(captcha_divs)} контейнеров")
+                return True
+            
+            # Проверяем, что есть контент (article)
+            try:
+                self.driver.find_element(By.CSS_SELECTOR, 'article')
+                return False  # Контент есть, капчи нет
+            except:
+                # Нет контента - возможно капча
+                page_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
+                if any(keyword in page_text for keyword in ['captcha', 'robot', 'проверка', 'verification']):
+                    print("🔒 КАПЧА обнаружена в тексте страницы")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"⚠️  Ошибка детекции капчи: {e}")
+            return False
     
     def navigate_to_artist(self, artist_name: str) -> bool:
         """Переходит напрямую по ссылке на артиста"""
@@ -219,10 +299,20 @@ class BandlinkParserProductionMac:
             # Человеческая задержка
             self.human_delay(3, 5)
             
+            # Проверяем капчу (на Mac просто логируем, т.к. нет прокси для смены)
+            if self.detect_captcha():
+                self.captcha_detected_count += 1
+                print(f"\n{'='*60}")
+                print(f"🚨 КАПЧА ОБНАРУЖЕНА (Mac - #{self.captcha_detected_count})")
+                print(f"⚠️  На Mac нет прокси для смены IP")
+                print(f"💡 Попробуйте позже или используйте Linux парсер")
+                print(f"{'='*60}\n")
+                return False  # На Mac останавливаемся при капче
+            
             # Проверяем, что страница загрузилась
             current_url = self.driver.current_url
             if "band.link" in current_url:
-                print(f"✅ Успешно перешли на страницу артиста")
+                print(f"✅ Успешно перешли на страницу артиста (без капчи)")
                 return True
             else:
                 print(f"❌ Не удалось перейти. URL: {current_url}")

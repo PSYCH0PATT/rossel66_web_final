@@ -48,9 +48,14 @@ class BandlinkParserProductionLinux:
         self.proxy_port = self.config.get('proxy_port', 33335)
         self.max_proxy_attempts = 3
         self.proxy_attempts = 0
+        self.current_session_id = None
         
         # Куки
         self.cookies = self.config.get('cookies', {})
+        
+        # Капча
+        self.captcha_detected_count = 0
+        self.max_captcha_before_proxy_change = 1  # Меняем прокси после 1 капчи
         
         self.init_database()
         print(f"✅ Парсер инициализирован (Linux)")
@@ -106,10 +111,11 @@ class BandlinkParserProductionLinux:
         delay = random.uniform(min_sec, max_sec)
         time.sleep(delay)
     
-    def setup_driver(self, use_proxy: bool = True) -> bool:
+    def setup_driver(self, use_proxy: bool = True, force_new_session: bool = False) -> bool:
         """Настраивает Chrome драйвер с прокси и куками"""
         try:
-            self.proxy_attempts += 1
+            if not force_new_session:
+                self.proxy_attempts += 1
             print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
             
             options = Options()
@@ -117,13 +123,17 @@ class BandlinkParserProductionLinux:
             # Прокси для Linux (работает через командную строку)
             if use_proxy and self.proxy_username and self.proxy_password:
                 # Генерируем уникальный session ID для ротации IP
-                session_id = str(uuid.uuid4())[:8]
-                proxy_username_with_session = f"{self.proxy_username}-session-{session_id}"
+                if force_new_session or not self.current_session_id:
+                    self.current_session_id = str(uuid.uuid4())[:8]
+                    if force_new_session:
+                        print(f"🔄 Генерируем НОВЫЙ session ID для смены прокси")
+                
+                proxy_username_with_session = f"{self.proxy_username}-session-{self.current_session_id}"
                 
                 # Linux Chrome поддерживает прокси с авторизацией
                 proxy_url = f"http://{proxy_username_with_session}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
                 options.add_argument(f'--proxy-server={proxy_url}')
-                print(f"🌐 Прокси активирован: {self.proxy_host}:{self.proxy_port} (session: {session_id})")
+                print(f"🌐 Прокси активирован: {self.proxy_host}:{self.proxy_port} (session: {self.current_session_id})")
             else:
                 print("⚠️  Прокси отключен")
             
@@ -184,20 +194,134 @@ class BandlinkParserProductionLinux:
             self.human_delay(1, 2)
             
             added = 0
+            failed = 0
             for name, value in self.cookies.items():
                 try:
-                    self.driver.add_cookie({
+                    # Пробуем разные варианты domain
+                    cookie_data = {
                         'name': name,
-                        'value': value,
-                        'domain': '.band.link'
-                    })
-                    added += 1
+                        'value': str(value)
+                    }
+                    
+                    # Пробуем без domain (автоопределение)
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                        continue
+                    except:
+                        pass
+                    
+                    # Пробуем с .band.link
+                    cookie_data['domain'] = '.band.link'
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                        continue
+                    except:
+                        pass
+                    
+                    # Пробуем с band.link
+                    cookie_data['domain'] = 'band.link'
+                    try:
+                        self.driver.add_cookie(cookie_data)
+                        added += 1
+                    except:
+                        failed += 1
+                        
                 except Exception as e:
-                    pass  # Игнорируем ошибки кук
+                    failed += 1
             
-            print(f"✅ Добавлено {added} кук")
+            print(f"✅ Добавлено {added} кук (не удалось: {failed})")
         except Exception as e:
             print(f"⚠️  Ошибка добавления кук: {e}")
+    
+    def detect_captcha(self) -> bool:
+        """Определяет наличие капчи на странице"""
+        try:
+            current_url = self.driver.current_url
+            
+            # Проверяем URL на наличие капчи
+            if 'captcha' in current_url.lower() or 'robot' in current_url.lower():
+                print("🔒 КАПЧА обнаружена в URL!")
+                return True
+            
+            # Ищем iframe с капчей
+            iframe_selectors = [
+                'iframe[src*="captcha"]',
+                'iframe[src*="smartcaptcha"]', 
+                'iframe[src*="yandex"]',
+                'iframe[src*="recaptcha"]',
+                'iframe[id*="captcha"]',
+            ]
+            
+            for selector in iframe_selectors:
+                iframes = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                if iframes:
+                    for iframe in iframes:
+                        src = iframe.get_attribute('src') or ''
+                        if any(keyword in src.lower() for keyword in ['captcha', 'yandex', 'smartcaptcha', 'recaptcha']):
+                            print(f"🔒 КАПЧА обнаружена: iframe {src[:100]}...")
+                            return True
+            
+            # Ищем div-контейнеры капчи
+            captcha_divs = self.driver.find_elements(By.CSS_SELECTOR, 'div[class*="captcha"], div[id*="captcha"]')
+            if captcha_divs:
+                print(f"🔒 КАПЧА обнаружена: {len(captcha_divs)} контейнеров")
+                return True
+            
+            # Проверяем, что есть контент (article)
+            try:
+                self.driver.find_element(By.CSS_SELECTOR, 'article')
+                return False  # Контент есть, капчи нет
+            except:
+                # Нет контента - возможно капча
+                page_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
+                if any(keyword in page_text for keyword in ['captcha', 'robot', 'проверка', 'verification']):
+                    print("🔒 КАПЧА обнаружена в тексте страницы")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"⚠️  Ошибка детекции капчи: {e}")
+            return False
+    
+    def handle_captcha_with_proxy_change(self, artist_name: str) -> bool:
+        """Обрабатывает капчу сменой прокси"""
+        self.captcha_detected_count += 1
+        print(f"\n{'='*60}")
+        print(f"🚨 КАПЧА ОБНАРУЖЕНА (попытка {self.captcha_detected_count})")
+        print(f"{'='*60}")
+        
+        if self.captcha_detected_count >= self.max_captcha_before_proxy_change:
+            if self.proxy_username and self.proxy_password:
+                print(f"🔄 Меняем прокси и перезапускаем браузер...")
+                
+                # Закрываем текущий браузер
+                if self.driver:
+                    self.driver.quit()
+                    self.human_delay(2, 3)
+                
+                # Запускаем с новым session ID (новый IP)
+                if self.setup_driver(use_proxy=True, force_new_session=True):
+                    print("✅ Браузер перезапущен с новым прокси")
+                    
+                    # Добавляем куки
+                    self.add_cookies()
+                    
+                    # Пробуем снова перейти к артисту
+                    self.human_delay(3, 5)
+                    return self.navigate_to_artist(artist_name)
+                else:
+                    print("❌ Не удалось перезапустить браузер")
+                    return False
+            else:
+                print("❌ Прокси не настроены, не можем поменять IP")
+                return False
+        else:
+            print(f"⏳ Ждем {5} секунд перед повторной попыткой...")
+            self.human_delay(5, 8)
+            return True
     
     def navigate_to_artist(self, artist_name: str) -> bool:
         """Переходит напрямую по ссылке на артиста"""
@@ -212,10 +336,14 @@ class BandlinkParserProductionLinux:
             # Человеческая задержка
             self.human_delay(3, 5)
             
+            # Проверяем капчу
+            if self.detect_captcha():
+                return self.handle_captcha_with_proxy_change(artist_name)
+            
             # Проверяем, что страница загрузилась
             current_url = self.driver.current_url
             if "band.link" in current_url:
-                print(f"✅ Успешно перешли на страницу артиста")
+                print(f"✅ Успешно перешли на страницу артиста (без капчи)")
                 return True
             else:
                 print(f"❌ Не удалось перейти. URL: {current_url}")
@@ -236,12 +364,27 @@ class BandlinkParserProductionLinux:
             # Ждем загрузки
             self.human_delay(2, 4)
             
+            # Проверяем капчу еще раз перед парсингом
+            if self.detect_captcha():
+                print("🔒 Капча обнаружена перед парсингом!")
+                if self.handle_captcha_with_proxy_change(artist_name):
+                    # Повторяем попытку после смены прокси
+                    self.human_delay(2, 4)
+                else:
+                    print("❌ Не удалось обойти капчу")
+                    return []
+            
             # Ищем article элемент
             try:
                 article = self.driver.find_element(By.CSS_SELECTOR, 'article')
                 print("✅ Найден article элемент")
             except NoSuchElementException:
                 print("❌ Article элемент не найден!")
+                # Проверяем еще раз - может это капча
+                if self.detect_captcha():
+                    print("🔒 Обнаружена капча вместо контента!")
+                    if self.handle_captcha_with_proxy_change(artist_name):
+                        return self.parse_artist_playlists(artist_name)  # Рекурсивно пробуем снова
                 return []
             
             # Ищем кнопку "Показать все"
