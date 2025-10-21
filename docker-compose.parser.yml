@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  bandlink-parser:
+    build:
+      context: .
+      dockerfile: Dockerfile.parser
+    volumes:
+      - ./parsers:/app/parsers
+      - ./temp_bandlink_config.json:/app/temp_bandlink_config.json
+      - ./bandlink_playlists.db:/app/bandlink_playlists.db
+    environment:
+      - BRIGHT_DATA_RESIDENTIAL_USERNAME=${BRIGHT_DATA_RESIDENTIAL_USERNAME:-brd-customer-hl_94d02fd9-zone-residential_proxy1}
+      - BRIGHT_DATA_RESIDENTIAL_PASSWORD=${BRIGHT_DATA_RESIDENTIAL_PASSWORD:-juze73q9d91q}
+      - PROXY_HOST=${PROXY_HOST:-brd.superproxy.io}
+      - PROXY_PORT=${PROXY_PORT:-33335}
+    # Для headless Chrome
+    shm_size: '2gb'
+    # Опционально: для доступа к UI (если нужно отлаживать)
+    # ports:
+    #   - "4444:4444"
+    #   - "7900:7900"
+

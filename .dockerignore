@@ -1,0 +1,42 @@
+# Node modules
+node_modules/
+.next/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+venv_selenium/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databases (except the one we want)
+*.db-journal
+
+# Chrome profiles
+chrome_profiles/
+
+# Temp files
+test_*.json
+test_*.py
+*.html
+parser_output.log
+
