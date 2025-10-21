@@ -17,34 +17,48 @@ export async function POST(request: NextRequest) {
 
     console.log('Запуск Bandlink парсера для артистов:', artists);
     
-    // Получаем Residential proxy credentials из переменных окружения
-    const brightDataProxyUsername = process.env.BRIGHT_DATA_RESIDENTIAL_USERNAME || "brd-customer-hl_94d02fd9-zone-residential_proxy1";
-    const brightDataProxyPassword = process.env.BRIGHT_DATA_RESIDENTIAL_PASSWORD || "juze73q9d91q";
+    // Получаем Residential Proxy credentials из переменных окружения
+    const proxyUsername = process.env.BRIGHT_DATA_RESIDENTIAL_USERNAME;
+    const proxyPassword = process.env.BRIGHT_DATA_RESIDENTIAL_PASSWORD;
+    const proxyHost = process.env.PROXY_HOST || 'brd.superproxy.io';
+    const proxyPort = process.env.PROXY_PORT || '33335';
     
-    console.log('🔍 Проверка Bright Data Residential proxy credentials:');
-    console.log('  - Username:', brightDataProxyUsername.substring(0, 30) + '...');
-    console.log('  - Password:', '*'.repeat(brightDataProxyPassword.length));
+    console.log('🔍 Проверка Residential Proxy credentials:');
+    console.log('  - BRIGHT_DATA_RESIDENTIAL_USERNAME exists:', !!proxyUsername);
+    console.log('  - BRIGHT_DATA_RESIDENTIAL_PASSWORD exists:', !!proxyPassword);
+    console.log('  - PROXY_HOST:', proxyHost);
+    console.log('  - PROXY_PORT:', proxyPort);
+    
+    // Проверяем наличие Residential Proxy credentials
+    if (!proxyUsername || !proxyPassword) {
+      console.error('❌ Residential Proxy credentials не настроены в переменных окружения!');
+      console.error('💡 Добавьте BRIGHT_DATA_RESIDENTIAL_USERNAME и BRIGHT_DATA_RESIDENTIAL_PASSWORD в .env.local файл');
+      return NextResponse.json({ error: 'Residential Proxy credentials не настроены на сервере. Обратитесь к администратору.' }, { status: 500 });
+    } else {
+      console.log('🔑 Residential Proxy credentials найдены');
+    }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {
-      target_artists: artists, // Список имен артистов (например: ["Sour Diesel", "Wide Pie"])
-      bright_data_proxy_username: brightDataProxyUsername,
-      bright_data_proxy_password: brightDataProxyPassword,
-      proxy_host: "brd.superproxy.io",
-      proxy_port: 33335
+      target_artists: artists, // Для bandlink передаем только никнеймы
+      bright_data_proxy_username: proxyUsername, // Residential Proxy username
+      bright_data_proxy_password: proxyPassword, // Residential Proxy password
+      proxy_host: proxyHost, // Proxy host
+      proxy_port: parseInt(proxyPort) // Proxy port
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('✅ Конфиг файл создан с Residential proxy credentials');
-    console.log('📋 Конфиг содержит:');
-    console.log('  - target_artists:', artists);
-    console.log('  - bright_data_proxy_username:', config.bright_data_proxy_username.substring(0, 30) + '...');
-    console.log('  - proxy_host:', config.proxy_host);
-    console.log('  - proxy_port:', config.proxy_port);
+    console.log('✅ Конфиг файл создан с Residential Proxy credentials');
 
-    // Запускаем Python скрипт (Residential Proxy + Selenium версия для production)
-    const pythonScript = path.join(process.cwd(), 'parsers', 'bandlink_parser_residential_selenium.py');
+    // Определяем ОС и выбираем соответствующий парсер
+    const isLinux = process.platform === 'linux';
+    const parserScript = isLinux 
+      ? 'bandlink_parser_production_linux.py'  // Linux: с прокси
+      : 'bandlink_parser_production_mac.py';   // Mac: без прокси
+    
+    const pythonScript = path.join(process.cwd(), 'parsers', parserScript);
+    console.log(`🖥️  Платформа: ${process.platform}, парсер: ${parserScript}`);
     
     return new Promise<Response>(async (resolve) => {
       const pythonProcess = spawn('python3', [pythonScript, configPath], {
@@ -180,7 +194,10 @@ function extractHtmlFromOutput(output: string): string | null {
 async function readBandlinkResults() {
   try {
     const sqlite3 = require('sqlite3').verbose();
-    const dbPath = path.join(process.cwd(), 'bandlink_playlists_unlocker.db');
+    // Определяем путь к БД в зависимости от ОС
+    const isLinux = process.platform === 'linux';
+    const dbName = isLinux ? 'bandlink_playlists.db' : 'bandlink_playlists_mac.db';
+    const dbPath = path.join(process.cwd(), dbName);
     
     if (!fs.existsSync(dbPath)) {
       return [];

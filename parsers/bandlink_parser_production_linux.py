@@ -1,0 +1,522 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Bandlink Parser Production для Linux - с прокси, куками и человечностью
+"""
+
+import json
+import time
+import random
+import os
+import sqlite3
+import sys
+import uuid
+from datetime import datetime
+from typing import Dict, List, Optional
+
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.common.exceptions import TimeoutException, NoSuchElementException
+except ImportError:
+    print("❌ Selenium не установлен. Установите: pip3 install selenium")
+    sys.exit(1)
+
+# User-Agent ротация
+USER_AGENTS = [
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+]
+
+class BandlinkParserProductionLinux:
+    def __init__(self, config_file: str = None):
+        self.config_file = config_file
+        self.config = self.load_config()
+        self.db_path = 'bandlink_playlists.db'
+        self.driver = None
+        
+        # Прокси настройки
+        self.proxy_username = self.config.get('bright_data_proxy_username') or self.config.get('bright_data_residential_username')
+        self.proxy_password = self.config.get('bright_data_proxy_password') or self.config.get('bright_data_residential_password')
+        self.proxy_host = self.config.get('proxy_host', 'brd.superproxy.io')
+        self.proxy_port = self.config.get('proxy_port', 33335)
+        self.max_proxy_attempts = 3
+        self.proxy_attempts = 0
+        
+        # Куки
+        self.cookies = self.config.get('cookies', {})
+        
+        self.init_database()
+        print(f"✅ Парсер инициализирован (Linux)")
+        if self.proxy_username:
+            print(f"🌐 Прокси: {self.proxy_host}:{self.proxy_port}")
+        if self.cookies:
+            print(f"🍪 Куки загружены: {len(self.cookies)} шт.")
+    
+    def load_config(self) -> Dict:
+        """Загружает конфигурацию"""
+        if self.config_file and os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"❌ Ошибка загрузки конфигурации: {e}")
+                return {}
+        return {}
+    
+    def init_database(self):
+        """Инициализирует базу данных"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS playlists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    artist_name TEXT NOT NULL,
+                    playlist_name TEXT NOT NULL,
+                    playlist_artist TEXT,
+                    track_names TEXT,
+                    likes_count TEXT,
+                    platform TEXT,
+                    playlist_cover_url TEXT,
+                    playlist_url TEXT,
+                    parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(artist_name, playlist_name, playlist_url)
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"❌ Ошибка инициализации БД: {e}")
+    
+    def get_random_user_agent(self) -> str:
+        """Возвращает случайный User-Agent"""
+        return random.choice(USER_AGENTS)
+    
+    def human_delay(self, min_sec: float = 2, max_sec: float = 5):
+        """Человеческая задержка"""
+        delay = random.uniform(min_sec, max_sec)
+        time.sleep(delay)
+    
+    def setup_driver(self, use_proxy: bool = True) -> bool:
+        """Настраивает Chrome драйвер с прокси и куками"""
+        try:
+            self.proxy_attempts += 1
+            print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
+            
+            options = Options()
+            
+            # Прокси для Linux (работает через командную строку)
+            if use_proxy and self.proxy_username and self.proxy_password:
+                # Генерируем уникальный session ID для ротации IP
+                session_id = str(uuid.uuid4())[:8]
+                proxy_username_with_session = f"{self.proxy_username}-session-{session_id}"
+                
+                # Linux Chrome поддерживает прокси с авторизацией
+                proxy_url = f"http://{proxy_username_with_session}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
+                options.add_argument(f'--proxy-server={proxy_url}')
+                print(f"🌐 Прокси активирован: {self.proxy_host}:{self.proxy_port} (session: {session_id})")
+            else:
+                print("⚠️  Прокси отключен")
+            
+            # User-Agent
+            user_agent = self.get_random_user_agent()
+            options.add_argument(f'user-agent={user_agent}')
+            
+            # Основные настройки для Linux
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            
+            # Headless для production на Linux
+            options.add_argument('--headless=new')
+            options.add_argument('--window-size=1920,1080')
+            
+            # Отключаем логи
+            options.add_argument('--log-level=3')
+            options.add_argument('--silent')
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            
+            print("🚀 Запуск Chrome...")
+            self.driver = webdriver.Chrome(options=options)
+            
+            # Убираем флаг webdriver
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            # Настройка таймаутов
+            self.driver.set_page_load_timeout(60)
+            self.driver.implicitly_wait(10)
+            
+            print("✅ Chrome драйвер настроен")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Ошибка настройки драйвера: {e}")
+            
+            # Если достигнут лимит попыток
+            if self.proxy_attempts >= self.max_proxy_attempts:
+                print(f"❌ Достигнут лимит попыток ({self.max_proxy_attempts}). Парсер остановлен.")
+                return False
+            
+            # Повторная попытка без прокси
+            print(f"🔄 Повторная попытка без прокси...")
+            self.human_delay(2, 3)
+            return self.setup_driver(use_proxy=False)
+    
+    def add_cookies(self):
+        """Добавляет куки в браузер"""
+        if not self.cookies:
+            return
+        
+        try:
+            # Сначала переходим на band.link
+            self.driver.get("https://band.link")
+            self.human_delay(1, 2)
+            
+            added = 0
+            for name, value in self.cookies.items():
+                try:
+                    self.driver.add_cookie({
+                        'name': name,
+                        'value': value,
+                        'domain': '.band.link'
+                    })
+                    added += 1
+                except Exception as e:
+                    pass  # Игнорируем ошибки кук
+            
+            print(f"✅ Добавлено {added} кук")
+        except Exception as e:
+            print(f"⚠️  Ошибка добавления кук: {e}")
+    
+    def navigate_to_artist(self, artist_name: str) -> bool:
+        """Переходит напрямую по ссылке на артиста"""
+        try:
+            # Формируем URL: https://band.link/scanner?search=artist+name
+            search_query = artist_name.replace(' ', '+')
+            url = f"https://band.link/scanner?search={search_query}"
+            
+            print(f"🔗 Переход на: {url}")
+            self.driver.get(url)
+            
+            # Человеческая задержка
+            self.human_delay(3, 5)
+            
+            # Проверяем, что страница загрузилась
+            current_url = self.driver.current_url
+            if "band.link" in current_url:
+                print(f"✅ Успешно перешли на страницу артиста")
+                return True
+            else:
+                print(f"❌ Не удалось перейти. URL: {current_url}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Ошибка навигации: {e}")
+            return False
+    
+    def parse_artist_playlists(self, artist_name: str) -> List[Dict]:
+        """Парсит плейлисты артиста"""
+        try:
+            print(f"📋 Парсинг плейлистов для: {artist_name}")
+            
+            playlists = []
+            seen_playlists = set()
+            
+            # Ждем загрузки
+            self.human_delay(2, 4)
+            
+            # Ищем article элемент
+            try:
+                article = self.driver.find_element(By.CSS_SELECTOR, 'article')
+                print("✅ Найден article элемент")
+            except NoSuchElementException:
+                print("❌ Article элемент не найден!")
+                return []
+            
+            # Ищем кнопку "Показать все"
+            try:
+                show_all_buttons = article.find_elements(By.CSS_SELECTOR, '[data-testid="load-more-button"], button')
+                for button in show_all_buttons:
+                    button_text = button.text.lower().strip()
+                    if ("показать" in button_text or "смотреть" in button_text) and "все" in button_text:
+                        if button.is_displayed():
+                            print(f"✅ Нажимаем кнопку: {button.text}")
+                            self.driver.execute_script("arguments[0].scrollIntoView(true);", button)
+                            self.human_delay(1, 2)
+                            
+                            try:
+                                button.click()
+                            except:
+                                self.driver.execute_script("arguments[0].click();", button)
+                            
+                            print("✅ Кнопка нажата, загружаем контент...")
+                            self.human_delay(3, 5)
+                            self.scroll_to_load_all()
+                            break
+            except Exception as e:
+                print(f"ℹ️  Кнопка 'Показать все' не найдена")
+            
+            # Ищем контейнер плейлистов
+            try:
+                artist_type_container = article.find_element(By.CSS_SELECTOR, 'div[class*="card_artistType"]')
+                print("✅ Найден контейнер card_artistType")
+                
+                # Ищем контейнеры плейлистов
+                horizontal_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_horizontalContainer"]')
+                vertical_containers = artist_type_container.find_elements(By.CSS_SELECTOR, 'div[class*="card_verticalContainer"]')
+                
+                all_containers = horizontal_containers + vertical_containers
+                print(f"✅ Найдено {len(all_containers)} контейнеров плейлистов")
+                
+                for container in all_containers:
+                    playlist_data = self.extract_playlist_data(container, artist_name)
+                    if playlist_data and playlist_data['playlist_name']:
+                        playlist_key = f"{playlist_data['playlist_name']}_{playlist_data.get('playlist_url', '')}"
+                        if playlist_key not in seen_playlists:
+                            playlists.append(playlist_data)
+                            seen_playlists.add(playlist_key)
+                            print(f"  ✅ {playlist_data['platform']}: {playlist_data['playlist_name']}")
+                
+            except NoSuchElementException:
+                print("❌ Контейнер card_artistType не найден!")
+            
+            print(f"🎉 Найдено {len(playlists)} плейлистов")
+            return playlists
+            
+        except Exception as e:
+            print(f"❌ Ошибка парсинга: {e}")
+            return []
+    
+    def scroll_to_load_all(self):
+        """Прокручивает страницу для загрузки контента"""
+        try:
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+            attempts = 0
+            max_attempts = 5
+            
+            while attempts < max_attempts:
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                self.human_delay(2, 4)
+                
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                last_height = new_height
+                attempts += 1
+            
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            self.human_delay(1, 2)
+        except Exception as e:
+            print(f"⚠️  Ошибка прокрутки: {e}")
+    
+    def extract_playlist_data(self, container, artist_name: str) -> Optional[Dict]:
+        """Извлекает данные плейлиста из контейнера"""
+        try:
+            playlist_data = {
+                'artist_name': artist_name,
+                'playlist_name': '',
+                'playlist_artist': '',
+                'track_names': '',
+                'likes_count': '',
+                'platform': '',
+                'playlist_cover_url': '',
+                'playlist_url': ''
+            }
+            
+            # Название плейлиста
+            try:
+                title_element = container.find_element(By.CSS_SELECTOR, '[class*="playlist_musicCollectionInfoTitle"]')
+                playlist_data['playlist_name'] = title_element.text.strip()
+            except:
+                pass
+            
+            # Название трека
+            try:
+                track_element = container.find_element(By.CSS_SELECTOR, '[class*="playlist_musicCollectionInfoTrackTitle"]')
+                playlist_data['track_names'] = track_element.text.strip()
+            except:
+                pass
+            
+            # Исполнители
+            try:
+                artists_element = container.find_element(By.CSS_SELECTOR, '[class*="playlist_musicCollectionInfoTrackArtists"]')
+                playlist_data['playlist_artist'] = artists_element.text.strip()
+            except:
+                pass
+            
+            # Ссылка на плейлист
+            try:
+                link_element = container.find_element(By.CSS_SELECTOR, 'a[href]')
+                playlist_url = link_element.get_attribute('href')
+                playlist_data['playlist_url'] = playlist_url
+                
+                # Определяем платформу
+                if 'music.mts.ru' in playlist_url:
+                    playlist_data['platform'] = 'МТС Музыка'
+                elif 'music.yandex.ru' in playlist_url:
+                    playlist_data['platform'] = 'Яндекс Музыка'
+                elif 'spotify.com' in playlist_url:
+                    playlist_data['platform'] = 'Spotify'
+                elif 'music.apple.com' in playlist_url:
+                    playlist_data['platform'] = 'Apple Music'
+                elif 'music.youtube.com' in playlist_url:
+                    playlist_data['platform'] = 'YouTube Music'
+                elif 'vk.com' in playlist_url:
+                    playlist_data['platform'] = 'VK'
+                else:
+                    playlist_data['platform'] = 'Другая'
+            except:
+                pass
+            
+            # Обложка
+            try:
+                cover_element = container.find_element(By.CSS_SELECTOR, 'img')
+                playlist_data['playlist_cover_url'] = cover_element.get_attribute('src')
+            except:
+                pass
+            
+            return playlist_data
+            
+        except Exception as e:
+            return None
+    
+    def save_playlists_to_db(self, playlists: List[Dict]):
+        """Сохраняет плейлисты в БД"""
+        if not playlists:
+            return
+        
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            saved_count = 0
+            for playlist in playlists:
+                try:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO playlists 
+                        (artist_name, playlist_name, playlist_artist, track_names, 
+                         likes_count, platform, playlist_cover_url, playlist_url, parsed_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ''', (
+                        playlist['artist_name'],
+                        playlist['playlist_name'],
+                        playlist.get('playlist_artist', ''),
+                        playlist.get('track_names', ''),
+                        playlist.get('likes_count', ''),
+                        playlist.get('platform', ''),
+                        playlist.get('playlist_cover_url', ''),
+                        playlist.get('playlist_url', '')
+                    ))
+                    saved_count += 1
+                except Exception as e:
+                    print(f"⚠️  Ошибка сохранения: {e}")
+            
+            conn.commit()
+            conn.close()
+            print(f"💾 Сохранено {saved_count} плейлистов в БД")
+            
+        except Exception as e:
+            print(f"❌ Ошибка сохранения в БД: {e}")
+    
+    def run_parsing_cycle(self):
+        """Запускает цикл парсинга"""
+        print("🚀 Запуск Bandlink Parser Production для Linux")
+        
+        if not self.setup_driver():
+            return False
+        
+        try:
+            # Добавляем куки
+            self.add_cookies()
+            
+            # Парсим артистов
+            artists = self.config.get('target_artists', [])
+            if not artists:
+                print("❌ Список артистов пуст!")
+                return False
+            
+            print(f"📋 Парсинг {len(artists)} артистов...")
+            
+            total_playlists = 0
+            for i, artist in enumerate(artists, 1):
+                try:
+                    print(f"\n{'='*60}")
+                    print(f"📍 Артист {i}/{len(artists)}: {artist}")
+                    print(f"{'='*60}")
+                    
+                    # Переходим по прямой ссылке
+                    if not self.navigate_to_artist(artist):
+                        print(f"❌ Не удалось перейти к артисту: {artist}")
+                        continue
+                    
+                    # Парсим плейлисты
+                    playlists = self.parse_artist_playlists(artist)
+                    
+                    if playlists:
+                        self.save_playlists_to_db(playlists)
+                        total_playlists += len(playlists)
+                        print(f"✅ Обработан артист: {artist}")
+                    else:
+                        print(f"⚠️  Плейлисты не найдены для: {artist}")
+                    
+                    # Человеческая задержка между артистами
+                    if i < len(artists):
+                        self.human_delay(5, 10)
+                    
+                except Exception as e:
+                    print(f"❌ Ошибка обработки артиста {artist}: {e}")
+                    continue
+            
+            print(f"\n{'='*60}")
+            print(f"🎉 Парсинг завершен!")
+            print(f"📊 Всего найдено: {total_playlists} плейлистов")
+            print(f"💾 База данных: {self.db_path}")
+            print(f"{'='*60}")
+            
+            return True
+            
+        finally:
+            if self.driver:
+                self.driver.quit()
+                print("🔒 Браузер закрыт")
+
+def main():
+    """Главная функция"""
+    if len(sys.argv) < 2:
+        print("❌ Не указан файл конфигурации")
+        print("💡 Использование: python3 bandlink_parser_production_linux.py <config.json>")
+        sys.exit(1)
+    
+    config_file = sys.argv[1]
+    
+    if not os.path.exists(config_file):
+        print(f"❌ Конфиг файл не найден: {config_file}")
+        sys.exit(1)
+    
+    print("="*60)
+    print("🎵 Bandlink Parser Production для Linux")
+    print("="*60)
+    print(f"📁 Конфиг: {config_file}\n")
+    
+    parser = BandlinkParserProductionLinux(config_file)
+    success = parser.run_parsing_cycle()
+    
+    if success:
+        print("\n✅ Парсинг завершен успешно!")
+    else:
+        print("\n❌ Парсинг завершен с ошибками")
+
+if __name__ == "__main__":
+    main()
+
