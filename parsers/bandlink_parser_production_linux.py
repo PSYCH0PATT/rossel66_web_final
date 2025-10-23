@@ -56,6 +56,9 @@ class BandlinkParserProductionLinux:
         # Капча (на Mac без прокси просто логируем)
         self.captcha_detected_count = 0
         
+        # Временный профиль Chrome для очистки
+        self.temp_profile = None
+        
         self.init_database()
         print(f"✅ Парсер инициализирован (Linux - без прокси)")
         if self.cookies:
@@ -111,6 +114,9 @@ class BandlinkParserProductionLinux:
     def setup_driver(self, use_proxy: bool = True) -> bool:
         """Настраивает Chrome драйвер с прокси и куками"""
         try:
+            print("=" * 60)
+            print("🐧 LINUX PARSER PRODUCTION VERSION - NO USER-DATA-DIR")
+            print("=" * 60)
             self.proxy_attempts += 1
             print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
             
@@ -153,8 +159,12 @@ class BandlinkParserProductionLinux:
             options.add_argument('--window-size=1920,1080')
             options.add_argument('--start-maximized')
             
-            # НЕ используем user-data-dir - он вызывает проблемы на Mac
-            # Куки добавим через driver.add_cookie()
+            # ЯВНО отключаем user-data-dir - используем временную директорию
+            # Это решает проблему "user data directory is already in use"
+            import tempfile
+            self.temp_profile = tempfile.mkdtemp(prefix='chrome_temp_')
+            options.add_argument(f'--user-data-dir={self.temp_profile}')
+            print(f"📁 Временный профиль Chrome: {self.temp_profile}")
             
             print("🚀 Запуск Chrome...")
             # Linux использует системный chromedriver
@@ -591,6 +601,15 @@ class BandlinkParserProductionLinux:
             if self.driver:
                 self.driver.quit()
                 print("🔒 Браузер закрыт")
+            
+            # Очистка временного профиля
+            if self.temp_profile and os.path.exists(self.temp_profile):
+                try:
+                    import shutil
+                    shutil.rmtree(self.temp_profile)
+                    print(f"🧹 Временный профиль удален: {self.temp_profile}")
+                except Exception as e:
+                    print(f"⚠️  Не удалось удалить временный профиль: {e}")
 
 def main():
     """Главная функция"""
