@@ -1,0 +1,18 @@
+# Requirements для Residential Proxy Parser с Selenium
+# Установка: pip3 install -r requirements_selenium.txt
+
+# Основные зависимости
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+urllib3>=2.0.0
+
+# Selenium для работы с динамическим контентом
+selenium>=4.15.0
+
+# Для работы с базой данных
+# sqlite3 входит в стандартную библиотеку Python
+
+# Для работы с JSON и датами
+# json, datetime входят в стандартную библиотеку Python
+
+

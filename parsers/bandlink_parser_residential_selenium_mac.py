@@ -22,9 +22,11 @@ try:
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
     from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    from webdriver_manager.chrome import ChromeDriverManager
 except ImportError:
-    print("❌ Selenium не установлен. Установите: pip install selenium")
+    print("❌ Selenium не установлен. Установите: pip install selenium webdriver-manager")
     sys.exit(1)
 
 # Настройка логирования
@@ -153,48 +155,66 @@ class ResidentialSeleniumParser:
             if session_id:
                 proxy_username = f"{self.proxy_username}-session-{session_id}"
             
-            # Настройка прокси
-            proxy_url = f"{self.proxy_host}:{self.proxy_port}"
-            
-            chrome_options.add_argument(f'--proxy-server=http://{proxy_url}')
+            # Настройка прокси (временно отключено для теста)
+            # proxy_url = f"{self.proxy_host}:{self.proxy_port}"
+            # chrome_options.add_argument(f'--proxy-server=http://{proxy_url}')
             
             # User-Agent
             user_agent = self.get_random_user_agent()
             chrome_options.add_argument(f'user-agent={user_agent}')
             
-            # Headless режим
-            chrome_options.add_argument('--headless=new')
+            # Mac: простые настройки как в старом парсере
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
             
-            # Отключаем уведомления
-            chrome_options.add_experimental_option("prefs", {
-                "profile.default_content_setting_values.notifications": 2
-            })
+            # Уникальный user-data-dir в workspace для Mac
+            import uuid
+            unique_id = str(uuid.uuid4())[:8]
+            user_data_dir = os.path.join(os.path.dirname(__file__), '..', 'chrome_profiles', f'profile_{unique_id}')
+            os.makedirs(user_data_dir, exist_ok=True)
+            chrome_options.add_argument(f'--user-data-dir={user_data_dir}')
+            logger.info(f"📁 User data dir: {user_data_dir}")
             
-            # Отключаем логи
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            # Отключаем headless режим для Mac (может вызывать проблемы)
+            # chrome_options.add_argument('--headless=new')
+            
+            # Размер окна
+            chrome_options.add_argument('--window-size=1920,1080')
             
             logger.info(f"🚀 Запуск Chrome с Residential Proxy...")
             logger.info(f"   Session ID: {session_id or 'default'}")
             logger.info(f"   User-Agent: {user_agent[:60]}...")
             
-            self.driver = webdriver.Chrome(options=chrome_options)
+            # Используем webdriver-manager для автоматического управления ChromeDriver
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            
+            # Убираем флаг webdriver (как в старом парсере)
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             # Настройка таймаутов
             self.driver.set_page_load_timeout(60)
             self.driver.implicitly_wait(10)
             
-            # Авторизация прокси через Chrome DevTools Protocol
-            self.driver.execute_cdp_cmd('Network.enable', {})
-            self.driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', {
-                'headers': {
-                    'Proxy-Authorization': f'Basic {self._encode_proxy_auth(proxy_username, self.proxy_password)}'
-                }
-            })
+            # Авторизация прокси через Chrome DevTools Protocol (временно отключено)
+            # self.driver.execute_cdp_cmd('Network.enable', {})
+            # self.driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', {
+            #     'headers': {
+            #         'Proxy-Authorization': f'Basic {self._encode_proxy_auth(proxy_username, self.proxy_password)}'
+            #     }
+            # })
             
             logger.info("✅ Chrome WebDriver инициализирован")
+            
+            # Проверяем, что драйвер работает
+            try:
+                current_url = self.driver.current_url
+                logger.info(f"📍 Текущий URL: {current_url}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения URL: {e}")
             
             return True
             
@@ -414,9 +434,9 @@ class ResidentialSeleniumParser:
         playlists = []
         
         try:
-            # Формируем URL
+            # Формируем URL (правильный формат как в других парсерах)
             search_query = artist_name.replace(' ', '+')
-            url = f"https://band.link/scanner?search={search_query}"
+            url = f"https://band.link/scanner?q={search_query}"
             
             # Загружаем страницу
             if not self.load_page_with_cookies(url):

@@ -141,3 +141,5 @@ echo "  3. Запустите инициализацию БД: python3 $PROJECT_
 echo ""
 echo -e "${GREEN}🎉 Готово!${NC}"
 
+
+

@@ -1,0 +1,22 @@
+{
+  "target_artists": [
+    "Sour Diesel"
+  ],
+  "bright_data_proxy_username": "brd-customer-hl_94d02fd9-zone-residential_proxy1",
+  "bright_data_proxy_password": "juze73q9d91q",
+  "proxy_host": "brd.superproxy.io",
+  "proxy_port": 33335,
+  "cookies": {
+    "_yasc": "BhIeAt8hy0Pc0qN/yBRItjSpWqH50KRq1AVFTVwClBjgKSExiK3a+aM2ckOYILHf7g==",
+    "_ym_d": "1752716606",
+    "_ym_isad": "1",
+    "_ym_uid": "1752716606826845971",
+    "_ymab_param": "JSMpgTBCUC9Cm7BzMzU7Qhc66r5NoUuZ_9pdnkkwn_49NEnkgPpN42hJbyVIRmR8RwqgIUlTC0NirYyQC_6SB5NDXwY",
+    "bandlink-is-desktop-device": "1",
+    "csrf_token": "3e4752bae32f4c5427474fa039eb9e6f877058a3815e83da2e7af6fe7bb76d3a",
+    "loggedIn": "NRd6R1vOOzE1l8riIJ4Em8GzmtpfWrD2Vxz6JCqtddsM1l8TXNanN9SQSSD7Hl8Y",
+    "tmr_lvid": "b568099c1cacf02fab6e300b77bd1d8e",
+    "tmr_lvidTS": "1753574085637",
+    "token": "NRd6R1vOOzE1l8riIJ4Em8GzmtpfWrD2Vxz6JCqtddsM1l8TXNanN9SQSSD7Hl8Y"
+  }
+}

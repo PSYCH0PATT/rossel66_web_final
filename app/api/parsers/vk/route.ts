@@ -138,14 +138,48 @@ export async function POST(request: NextRequest) {
   }
 }
 
+async function ensureVKDatabase(dbPath: string) {
+  const sqlite3 = require('sqlite3').verbose();
+  
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath);
+    
+    db.serialize(() => {
+      // Создаем таблицу artist_playlists
+      db.run(`
+        CREATE TABLE IF NOT EXISTS artist_playlists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          artist_url TEXT NOT NULL,
+          artist_name TEXT NOT NULL,
+          playlist_name TEXT NOT NULL,
+          playlist_url TEXT NOT NULL,
+          playlist_cover_url TEXT,
+          playlist_id TEXT,
+          owner_id TEXT,
+          parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(artist_name, playlist_url)
+        )
+      `, (err: any) => {
+        if (err) console.error('❌ Ошибка создания таблицы artist_playlists:', err);
+        else console.log('✅ Таблица artist_playlists инициализирована');
+      });
+    });
+    
+    db.close((err: any) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
 async function readVKResults() {
   try {
     const sqlite3 = require('sqlite3').verbose();
     const dbPath = path.join(process.cwd(), 'vk_playlists.db');
     
-    if (!fs.existsSync(dbPath)) {
-      return [];
-    }
+    // ✅ Всегда инициализируем БД (как в lib/storage.ts с JSON файлами)
+    console.log(`📦 Инициализация VK БД: vk_playlists.db`);
+    await ensureVKDatabase(dbPath);
     
     return new Promise((resolve, reject) => {
       const db = new sqlite3.Database(dbPath);

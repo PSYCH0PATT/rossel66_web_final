@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Загружаем cookies из БД
-    let cookies = {};
+    let cookies: Record<string, string> = {};
     try {
       const sqlite3 = require('sqlite3').verbose();
       const dbPath = path.join(process.cwd(), 'bandlink_playlists.db');
@@ -217,6 +217,69 @@ function extractHtmlFromOutput(output: string): string | null {
   }
 }
 
+async function ensureBandlinkDatabase(dbPath: string) {
+  const sqlite3 = require('sqlite3').verbose();
+  
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath);
+    
+    db.serialize(() => {
+      // Создаем таблицу playlists
+      db.run(`
+        CREATE TABLE IF NOT EXISTS playlists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          artist_name TEXT NOT NULL,
+          playlist_name TEXT NOT NULL,
+          playlist_artist TEXT,
+          track_names TEXT,
+          likes_count TEXT,
+          platform TEXT,
+          playlist_cover_url TEXT,
+          playlist_url TEXT,
+          parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(artist_name, playlist_name, playlist_url)
+        )
+      `, (err: any) => {
+        if (err) console.error('❌ Ошибка создания таблицы playlists:', err);
+        else console.log('✅ Таблица playlists инициализирована');
+      });
+      
+      // Создаем таблицу bandlink_cookies
+      db.run(`
+        CREATE TABLE IF NOT EXISTS bandlink_cookies (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          cookie_name TEXT NOT NULL UNIQUE,
+          cookie_value TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err: any) => {
+        if (err) console.error('❌ Ошибка создания таблицы bandlink_cookies:', err);
+        else console.log('✅ Таблица bandlink_cookies инициализирована');
+      });
+      
+      // Создаем таблицу parser_status
+      db.run(`
+        CREATE TABLE IF NOT EXISTS parser_status (
+          id INTEGER PRIMARY KEY,
+          needs_new_cookies INTEGER DEFAULT 0,
+          failed_attempts INTEGER DEFAULT 0,
+          last_error TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err: any) => {
+        if (err) console.error('❌ Ошибка создания таблицы parser_status:', err);
+        else console.log('✅ Таблица parser_status инициализирована');
+      });
+    });
+    
+    db.close((err: any) => {
+      if (err) reject(err);
+      else resolve(true);
+    });
+  });
+}
+
 async function readBandlinkResults() {
   try {
     const sqlite3 = require('sqlite3').verbose();
@@ -225,9 +288,9 @@ async function readBandlinkResults() {
     const dbName = isLinux ? 'bandlink_playlists.db' : 'bandlink_playlists_mac.db';
     const dbPath = path.join(process.cwd(), dbName);
     
-    if (!fs.existsSync(dbPath)) {
-      return [];
-    }
+    // ✅ Всегда инициализируем БД (как в lib/storage.ts с JSON файлами)
+    console.log(`📦 Инициализация БД: ${dbName}`);
+    await ensureBandlinkDatabase(dbPath);
     
     return new Promise((resolve, reject) => {
       const db = new sqlite3.Database(dbPath);

@@ -19,11 +19,13 @@ try:
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.keys import Keys
     from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    from webdriver_manager.chrome import ChromeDriverManager
 except ImportError:
-    print("Selenium не установлен. Установите: pip install selenium")
+    print("Selenium не установлен. Установите: pip install selenium webdriver-manager")
     sys.exit(1)
 
 try:
@@ -148,7 +150,8 @@ class BandlinkParserMac:
             # options.add_experimental_option("prefs", prefs)
             
             print("🚀 Запуск Chrome браузера...")
-            self.driver = webdriver.Chrome(options=options)
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=options)
             
             # Убираем флаг webdriver
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
