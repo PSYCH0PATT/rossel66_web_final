@@ -130,29 +130,6 @@ export default function Footer({ forceTransparentBackground = false }: FooterPro
               </div>
             </div>
 
-            <div className="flex flex-col items-center">
-              <h3 className="text-xl font-semibold text-white mb-4">Информация</h3>
-              <ul className="space-y-2 text-center">
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center text-lg"
-                  >
-                    <span>Политика конфиденциальности</span>
-                    <ExternalLink className="w-4 h-4 ml-1.5 text-gray-400" />
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="#"
-                    className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center text-lg"
-                  >
-                    <span>Пользовательское соглашение</span>
-                    <ExternalLink className="w-4 h-4 ml-1.5 text-gray-400" />
-                  </Link>
-                </li>
-              </ul>
-            </div>
 
             <div className="mt-6 pt-4 border-t border-white/10 text-center w-full">
               <p className="text-gray-400 text-base">© {currentYear} ROSSEL 66 MUSIC. Все права защищены.</p>
@@ -217,29 +194,6 @@ export default function Footer({ forceTransparentBackground = false }: FooterPro
             </div>
           </div>
 
-          <div className="flex flex-col items-center md:items-start">
-            <h3 className="text-lg font-semibold text-white mb-4">Информация</h3>
-            <ul className="space-y-2 text-center md:text-left">
-              <li>
-                <Link
-                  href="#"
-                  className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center md:justify-start"
-                >
-                  <span>Политика конфиденциальности</span>
-                  <ExternalLink className="w-3.5 h-3.5 ml-1.5 text-gray-400" />
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="text-gray-300 hover:text-emerald-400 transition-colors flex items-center justify-center md:justify-start"
-                >
-                  <span>Пользовательское соглашение</span>
-                  <ExternalLink className="w-3.5 h-3.5 ml-1.5 text-gray-400" />
-                </Link>
-              </li>
-            </ul>
-          </div>
         </div>
 
           <div className="mt-8 pt-6 border-t border-white/10 text-center px-4 sm:px-14">

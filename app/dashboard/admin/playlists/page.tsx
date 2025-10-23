@@ -42,6 +42,7 @@ interface BandlinkPlaylist {
   platform: string
   playlist_cover_url: string
   playlist_url: string
+  added_at: string
   parsed_at: string
 }
 
@@ -56,6 +57,8 @@ export default function PlaylistsPage() {
   const [parsingOutput, setParsingOutput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'added_at' | 'parsed_at'>('added_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [windowWidth, setWindowWidth] = useState(0)
   
   // Состояния для управления cookies
@@ -327,21 +330,31 @@ export default function PlaylistsPage() {
     artist.username.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Фильтрация плейлистов по артисту
-  const filterPlaylistsByArtist = (playlists: any[], artistFilter: string) => {
-    if (artistFilter === 'all') return playlists
-    return playlists.filter(playlist => 
-      playlist.artist_name === artistFilter || playlist.artist_name?.includes(artistFilter)
-    )
+  // Фильтрация и сортировка плейлистов
+  const filterAndSortPlaylists = (playlists: any[], artistFilter: string) => {
+    // Фильтрация по артисту
+    let filtered = playlists
+    if (artistFilter !== 'all') {
+      filtered = playlists.filter(playlist => 
+        playlist.artist_name === artistFilter || playlist.artist_name?.includes(artistFilter)
+      )
+    }
+    
+    // Сортировка
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a[sortBy] || a.parsed_at).getTime()
+      const dateB = new Date(b[sortBy] || b.parsed_at).getTime()
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+    })
   }
 
-  // Группировка плейлистов по платформам
-  const vkPlaylists = filterPlaylistsByArtist(vkResults, selectedArtistFilter)
-  const yandexPlaylists = filterPlaylistsByArtist(
+  // Группировка плейлистов по платформам с фильтрацией и сортировкой
+  const vkPlaylists = filterAndSortPlaylists(vkResults, selectedArtistFilter)
+  const yandexPlaylists = filterAndSortPlaylists(
     bandlinkResults.filter(p => p.platform === 'Яндекс Музыка'), 
     selectedArtistFilter
   )
-  const mtsPlaylists = filterPlaylistsByArtist(
+  const mtsPlaylists = filterAndSortPlaylists(
     bandlinkResults.filter(p => p.platform === 'МТС Музыка'), 
     selectedArtistFilter
   )
@@ -515,13 +528,13 @@ export default function PlaylistsPage() {
           </TabsList>
 
           <TabsContent value="playlists" className="space-y-6">
-            {/* Фильтр по артистам */}
+            {/* Фильтр и сортировка */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
-                    <span className="font-medium">Фильтр по артисту:</span>
+                    <span className="font-medium">Фильтр:</span>
                   </div>
                   <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
                     <SelectTrigger className="w-64">
@@ -534,7 +547,32 @@ export default function PlaylistsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">
+                  
+                  <div className="flex items-center gap-2 ml-4">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="font-medium">Сортировка:</span>
+                  </div>
+                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'added_at' | 'parsed_at')}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="added_at">По дате добавления</SelectItem>
+                      <SelectItem value="parsed_at">По дате парсинга</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">Сначала новые</SelectItem>
+                      <SelectItem value="asc">Сначала старые</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="text-sm text-muted-foreground ml-auto">
                     Показано: {vkPlaylists.length + yandexPlaylists.length + mtsPlaylists.length} плейлистов
                   </div>
                 </div>

@@ -89,8 +89,9 @@ class BandlinkParserProductionLinux:
                     platform TEXT,
                     playlist_cover_url TEXT,
                     playlist_url TEXT,
+                    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(artist_name, playlist_name)
+                    UNIQUE(artist_name, playlist_name, playlist_url)
                 )
             ''')
             
@@ -586,30 +587,63 @@ class BandlinkParserProductionLinux:
             cursor = conn.cursor()
             
             saved_count = 0
+            updated_count = 0
+            
             for playlist in playlists:
                 try:
+                    # Проверяем существует ли плейлист
                     cursor.execute('''
-                        INSERT OR REPLACE INTO playlists 
-                        (artist_name, playlist_name, playlist_artist, track_names, 
-                         likes_count, platform, playlist_cover_url, playlist_url, parsed_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        SELECT id, added_at FROM playlists 
+                        WHERE artist_name = ? AND playlist_name = ? AND playlist_url = ?
                     ''', (
                         playlist['artist_name'],
                         playlist['playlist_name'],
-                        playlist.get('playlist_artist', ''),
-                        playlist.get('track_names', ''),
-                        playlist.get('likes_count', ''),
-                        playlist.get('platform', ''),
-                        playlist.get('playlist_cover_url', ''),
                         playlist.get('playlist_url', '')
                     ))
-                    saved_count += 1
+                    
+                    existing = cursor.fetchone()
+                    
+                    if existing:
+                        # Обновляем существующий плейлист, сохраняя added_at
+                        cursor.execute('''
+                            UPDATE playlists 
+                            SET playlist_artist = ?, track_names = ?, likes_count = ?, 
+                                platform = ?, playlist_cover_url = ?, parsed_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        ''', (
+                            playlist.get('playlist_artist', ''),
+                            playlist.get('track_names', ''),
+                            playlist.get('likes_count', ''),
+                            playlist.get('platform', ''),
+                            playlist.get('playlist_cover_url', ''),
+                            existing[0]
+                        ))
+                        updated_count += 1
+                    else:
+                        # Добавляем новый плейлист (added_at установится автоматически)
+                        cursor.execute('''
+                            INSERT INTO playlists 
+                            (artist_name, playlist_name, playlist_artist, track_names, 
+                             likes_count, platform, playlist_cover_url, playlist_url)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            playlist['artist_name'],
+                            playlist['playlist_name'],
+                            playlist.get('playlist_artist', ''),
+                            playlist.get('track_names', ''),
+                            playlist.get('likes_count', ''),
+                            playlist.get('platform', ''),
+                            playlist.get('playlist_cover_url', ''),
+                            playlist.get('playlist_url', '')
+                        ))
+                        saved_count += 1
+                        
                 except Exception as e:
                     print(f"⚠️  Ошибка сохранения: {e}")
             
             conn.commit()
             conn.close()
-            print(f"💾 Сохранено {saved_count} плейлистов в БД")
+            print(f"💾 Добавлено {saved_count} новых, обновлено {updated_count} плейлистов")
             
         except Exception as e:
             print(f"❌ Ошибка сохранения в БД: {e}")

@@ -59,27 +59,87 @@ def check_cookies_status():
         return False, 0
 
 
-def get_all_artists():
-    """Получение списка всех артистов из базы данных"""
+def get_recent_artists():
+    """Получение артистов с релизами за последние 2 недели"""
     try:
-        # Путь к файлу с пользователями
+        from datetime import timedelta
+        
+        # Путь к файлам
         users_file = DATA_DIR / 'users.json'
+        releases_file = DATA_DIR / 'releases.json'
         
         if not users_file.exists():
             logger.error(f"❌ Файл пользователей не найден: {users_file}")
             return []
         
+        if not releases_file.exists():
+            logger.error(f"❌ Файл релизов не найден: {releases_file}")
+            return []
+        
+        # Загружаем данные
         with open(users_file, 'r', encoding='utf-8') as f:
             users = json.load(f)
         
-        # Фильтруем только артистов
-        artists = [user['name'] for user in users if user.get('role') == 'artist']
+        with open(releases_file, 'r', encoding='utf-8') as f:
+            releases = json.load(f)
         
-        logger.info(f"📋 Найдено {len(artists)} артистов для парсинга")
-        return artists
+        # Получаем дату 2 недели назад
+        two_weeks_ago = datetime.now() - timedelta(days=14)
+        logger.info(f"📅 Ищем релизы после: {two_weeks_ago.strftime('%Y-%m-%d')}")
+        
+        # Фильтруем релизы за последние 2 недели
+        recent_releases = []
+        for release in releases:
+            try:
+                release_date = datetime.fromisoformat(release['releaseDate'].replace('Z', '+00:00'))
+                if release_date >= two_weeks_ago:
+                    recent_releases.append(release)
+            except (ValueError, KeyError) as e:
+                logger.warning(f"⚠️ Не удалось распарсить дату релиза: {e}")
+                continue
+        
+        logger.info(f"📀 Найдено {len(recent_releases)} релизов за последние 2 недели")
+        
+        # Получаем уникальных артистов из недавних релизов
+        artist_ids = set(release['artistId'] for release in recent_releases)
+        
+        # Находим имена артистов
+        recent_artists = []
+        for artist_id in artist_ids:
+            # Пробуем разные форматы ID
+            user = None
+            for u in users:
+                if (u['id'] == artist_id or 
+                    u['id'] == artist_id.replace('user_', '') or
+                    f"user_{u['id']}" == artist_id or
+                    u['id'].replace('artist', 'user_') == artist_id or
+                    u['id'].replace('user_', 'artist') == artist_id):
+                    user = u
+                    break
+            
+            if user and user.get('role') == 'artist':
+                artist_releases = [r for r in recent_releases if r['artistId'] == artist_id]
+                recent_artists.append({
+                    'name': user['name'],
+                    'id': user['id'],
+                    'releases_count': len(artist_releases)
+                })
+        
+        # Сортируем по количеству релизов (больше релизов = выше приоритет)
+        recent_artists.sort(key=lambda x: x['releases_count'], reverse=True)
+        
+        artist_names = [artist['name'] for artist in recent_artists]
+        
+        logger.info(f"🎤 Найдено {len(artist_names)} артистов с недавними релизами:")
+        for artist in recent_artists:
+            logger.info(f"   - {artist['name']}: {artist['releases_count']} релиз(ов)")
+        
+        return artist_names
         
     except Exception as e:
-        logger.error(f"❌ Ошибка получения списка артистов: {e}")
+        logger.error(f"❌ Ошибка получения списка артистов с недавними релизами: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return []
 
 
@@ -196,9 +256,9 @@ def main():
     
     logger.info("✅ Cookies актуальны")
     
-    # Получаем список артистов
-    logger.info("📋 Получение списка артистов...")
-    artists = get_all_artists()
+    # Получаем список артистов с недавними релизами
+    logger.info("📋 Получение артистов с релизами за последние 2 недели...")
+    artists = get_recent_artists()
     
     if not artists:
         logger.error("❌ Список артистов пуст. Парсинг отменен.")

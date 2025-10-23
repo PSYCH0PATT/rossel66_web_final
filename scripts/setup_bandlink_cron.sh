@@ -1,10 +1,10 @@
 #!/bin/bash
 # Настройка автоматического расписания для Bandlink парсера
 # Расписание:
-# - Понедельник: 14:00 МСК
 # - Пятница: 00:15 МСК, 18:00 МСК
 # - Суббота: 00:15 МСК, 18:00 МСК
 # - Воскресенье: 00:15 МСК, 18:00 МСК
+# - Понедельник: 00:15 МСК, 18:00 МСК
 
 # Цвета для вывода
 GREEN='\033[0;32m'
@@ -47,9 +47,6 @@ CRON_ENTRIES=$(cat <<EOF
 # Bandlink Parser - Автоматический парсинг
 # МСК -> UTC конвертация (МСК = UTC+3)
 
-# Понедельник 14:00 МСК = 11:00 UTC
-0 11 * * 1 cd $PROJECT_ROOT && /usr/bin/python3 $PARSER_SCRIPT >> $LOGS_DIR/cron_bandlink.log 2>&1
-
 # Пятница 00:15 МСК = Четверг 21:15 UTC
 15 21 * * 4 cd $PROJECT_ROOT && /usr/bin/python3 $PARSER_SCRIPT >> $LOGS_DIR/cron_bandlink.log 2>&1
 
@@ -67,6 +64,12 @@ CRON_ENTRIES=$(cat <<EOF
 
 # Воскресенье 18:00 МСК = 15:00 UTC
 0 15 * * 0 cd $PROJECT_ROOT && /usr/bin/python3 $PARSER_SCRIPT >> $LOGS_DIR/cron_bandlink.log 2>&1
+
+# Понедельник 00:15 МСК = Воскресенье 21:15 UTC
+15 21 * * 0 cd $PROJECT_ROOT && /usr/bin/python3 $PARSER_SCRIPT >> $LOGS_DIR/cron_bandlink.log 2>&1
+
+# Понедельник 18:00 МСК = 15:00 UTC
+0 15 * * 1 cd $PROJECT_ROOT && /usr/bin/python3 $PARSER_SCRIPT >> $LOGS_DIR/cron_bandlink.log 2>&1
 
 EOF
 )
@@ -120,10 +123,10 @@ echo -e "${GREEN}✅ Cron успешно настроен!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${YELLOW}📅 Расписание парсинга:${NC}"
-echo "  🕐 Понедельник: 14:00 МСК"
 echo "  🕐 Пятница:     00:15 МСК, 18:00 МСК"
 echo "  🕐 Суббота:     00:15 МСК, 18:00 МСК"
 echo "  🕐 Воскресенье: 00:15 МСК, 18:00 МСК"
+echo "  🕐 Понедельник: 00:15 МСК, 18:00 МСК"
 echo ""
 echo -e "${YELLOW}📝 Логи:${NC}"
 echo "  Cron логи:      $LOGS_DIR/cron_bandlink.log"

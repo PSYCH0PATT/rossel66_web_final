@@ -236,6 +236,7 @@ async function ensureBandlinkDatabase(dbPath: string) {
           platform TEXT,
           playlist_cover_url TEXT,
           playlist_url TEXT,
+          added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           UNIQUE(artist_name, playlist_name, playlist_url)
         )
