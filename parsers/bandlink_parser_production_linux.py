@@ -757,12 +757,17 @@ class BandlinkParserProductionLinux:
             self.add_cookies()
             
             # Проверяем что куки добавились
-            cookies_count = len(self.driver.get_cookies())
+            selenium_cookies = self.driver.get_cookies()
+            cookies_count = len(selenium_cookies)
             print(f"✅ Добавлено кук в браузер: {cookies_count}")
             
             # Если куки добавились и есть прокси credentials - перезапускаем С прокси
             if cookies_count > 0 and self.proxy_username and self.proxy_password:
                 print("\n🔧 Этап 2: Перезапуск С прокси для парсинга")
+                
+                # ВАЖНО: Сохраняем куки перед закрытием браузера
+                saved_cookies = selenium_cookies.copy()
+                print(f"💾 Сохранено {len(saved_cookies)} кук для переноса")
                 
                 # Закрываем браузер
                 self.driver.quit()
@@ -774,8 +779,29 @@ class BandlinkParserProductionLinux:
                 if not self.setup_driver(use_proxy=True):
                     return False
                 
-                # Добавляем куки снова (теперь с прокси)
-                self.add_cookies()
+                # Восстанавливаем куки в новом браузере
+                print(f"🍪 Восстановление {len(saved_cookies)} кук...")
+                try:
+                    # Сначала переходим на band.link
+                    self.driver.get("https://band.link")
+                    self.human_delay(1, 2)
+                    
+                    # Добавляем сохраненные куки
+                    restored = 0
+                    for cookie in saved_cookies:
+                        try:
+                            # Удаляем поля которые могут вызвать проблемы
+                            cookie.pop('expiry', None)
+                            cookie.pop('httpOnly', None)
+                            cookie.pop('sameSite', None)
+                            self.driver.add_cookie(cookie)
+                            restored += 1
+                        except Exception as e:
+                            print(f"⚠️  Не удалось восстановить куку {cookie.get('name')}: {e}")
+                    
+                    print(f"✅ Восстановлено {restored} кук в браузере с прокси")
+                except Exception as e:
+                    print(f"❌ Ошибка восстановления кук: {e}")
             
             # Парсим артистов
             artists = self.config.get('target_artists', [])
