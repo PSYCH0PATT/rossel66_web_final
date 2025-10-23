@@ -111,12 +111,63 @@ class BandlinkParserProductionLinux:
         delay = random.uniform(min_sec, max_sec)
         time.sleep(delay)
     
+    def cleanup_chrome_processes(self):
+        """Убивает все зависшие процессы Chrome и chromedriver"""
+        try:
+            import subprocess
+            print("🧹 Очистка зависших процессов Chrome...")
+            
+            # Убиваем все процессы chrome
+            try:
+                subprocess.run(['pkill', '-9', 'chrome'], 
+                             stderr=subprocess.DEVNULL, 
+                             stdout=subprocess.DEVNULL)
+                print("  ✓ Chrome процессы остановлены")
+            except:
+                pass
+            
+            # Убиваем все процессы chromedriver
+            try:
+                subprocess.run(['pkill', '-9', 'chromedriver'], 
+                             stderr=subprocess.DEVNULL, 
+                             stdout=subprocess.DEVNULL)
+                print("  ✓ ChromeDriver процессы остановлены")
+            except:
+                pass
+            
+            # Очищаем временные директории Chrome
+            try:
+                import glob
+                temp_dirs = glob.glob('/tmp/chrome_temp_*')
+                for temp_dir in temp_dirs:
+                    try:
+                        import shutil
+                        shutil.rmtree(temp_dir)
+                    except:
+                        pass
+                if temp_dirs:
+                    print(f"  ✓ Удалено {len(temp_dirs)} временных директорий")
+            except:
+                pass
+            
+            # Небольшая задержка чтобы процессы точно завершились
+            time.sleep(2)
+            print("✅ Очистка завершена")
+            
+        except Exception as e:
+            print(f"⚠️  Ошибка очистки процессов: {e}")
+    
     def setup_driver(self, use_proxy: bool = True) -> bool:
         """Настраивает Chrome драйвер с прокси и куками"""
         try:
             print("=" * 60)
             print("🐧 LINUX PARSER PRODUCTION VERSION - NO USER-DATA-DIR")
             print("=" * 60)
+            
+            # Очищаем зависшие процессы только при первой попытке
+            if self.proxy_attempts == 0:
+                self.cleanup_chrome_processes()
+            
             self.proxy_attempts += 1
             print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
             
