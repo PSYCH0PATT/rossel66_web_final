@@ -794,6 +794,13 @@ class BandlinkParserProductionLinux:
                             cookie.pop('expiry', None)
                             cookie.pop('httpOnly', None)
                             cookie.pop('sameSite', None)
+                            
+                            # ВАЖНО: Устанавливаем правильный домен для band.link
+                            if 'domain' not in cookie or not cookie['domain']:
+                                cookie['domain'] = '.band.link'
+                            elif cookie['domain'] == 'band.link':
+                                cookie['domain'] = '.band.link'
+                            
                             self.driver.add_cookie(cookie)
                             restored += 1
                         except Exception as e:
