@@ -56,9 +56,6 @@ class BandlinkParserProductionLinux:
         # Капча (на Mac без прокси просто логируем)
         self.captcha_detected_count = 0
         
-        # Временный профиль Chrome для очистки
-        self.temp_profile = None
-        
         self.init_database()
         print(f"✅ Парсер инициализирован (Linux - без прокси)")
         if self.cookies:
@@ -193,10 +190,10 @@ class BandlinkParserProductionLinux:
             print(f"⚠️  Ошибка очистки процессов: {e}")
     
     def setup_driver(self, use_proxy: bool = True) -> bool:
-        """Настраивает Chrome драйвер с прокси и куками"""
+        """Настраивает Chrome драйвер БЕЗ user-data-dir (как в рабочем bandlink_parser_linux.py)"""
         try:
             print("=" * 60)
-            print("🐧 LINUX PARSER PRODUCTION VERSION - NO USER-DATA-DIR")
+            print("🐧 LINUX PARSER - ЧИСТАЯ ВЕРСИЯ БЕЗ USER-DATA-DIR")
             print("=" * 60)
             
             # Очищаем зависшие процессы только при первой попытке
@@ -208,72 +205,66 @@ class BandlinkParserProductionLinux:
             
             options = Options()
             
-            # Прокси (через SOCKS5 вместо HTTP - больше совместимости с Mac Chrome)
-            if use_proxy and self.proxy_username and self.proxy_password:
-                # Генерируем уникальный session ID для ротации IP
-                session_id = str(uuid.uuid4())[:8]
-                proxy_username_with_session = f"{self.proxy_username}-session-{session_id}"
-                
-                # Формат для Chrome: username:password@host:port
-                # Используем простой формат без протокола
-                options.add_argument(f'--proxy-server={self.proxy_host}:{self.proxy_port}')
-                
-                # Добавляем авторизацию через аргументы
-                options.add_argument(f'--proxy-bypass-list=<-loopback>')
-                
-                print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port} (session: {session_id})")
-                print(f"⚠️  ВНИМАНИЕ: Прокси может не работать без расширения на Mac")
-                print(f"💡 Работаем БЕЗ прокси для стабильности")
-                
-                # ОТКЛЮЧАЕМ прокси для Mac - он вызывает проблемы
-                options = Options()  # Пересоздаем options без прокси
-            else:
-                print("⚠️  Прокси отключен")
+            # Путь к Chromium в Docker контейнере (Alpine Linux)
+            chrome_binary = os.environ.get('CHROME_BIN', '/usr/bin/chromium-browser')
+            if os.path.exists(chrome_binary):
+                options.binary_location = chrome_binary
+                print(f"🌐 Chrome binary: {chrome_binary}")
             
-            # User-Agent
-            user_agent = self.get_random_user_agent()
-            options.add_argument(f'user-agent={user_agent}')
+            # HEADLESS режим для Linux
+            options.add_argument('--headless=new')
             
-            # Основные настройки
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
+            # Базовые настройки стелса (как в bandlink_parser_linux.py)
             options.add_argument('--disable-blink-features=AutomationControlled')
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
-            # НЕ headless для Mac
+            # Настройки для обхода защиты
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-plugins')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--disable-software-rasterizer')
+            
+            # Настройки окна
             options.add_argument('--window-size=1920,1080')
             options.add_argument('--start-maximized')
             
-            # НЕ ИСПОЛЬЗУЕМ user-data-dir вообще!
-            # Пусть Selenium сам управляет временными профилями
-            print("📁 Используется дефолтный временный профиль Chrome")
+            # User-Agent для Linux
+            options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            # НЕ ИСПОЛЬЗУЕМ --user-data-dir ВООБЩЕ!
+            # Selenium сам создаст временную директорию и сам её удалит
+            print("📁 Selenium использует дефолтное управление профилями")
             
             print("🚀 Запуск Chrome...")
-            # Linux использует системный chromedriver
-            service = Service('/usr/bin/chromedriver')
-            self.driver = webdriver.Chrome(service=service, options=options)
+            self.driver = webdriver.Chrome(options=options)
             
-            # Убираем флаг webdriver
+            # Удаляем признаки автоматизации
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            self.driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})")
+            self.driver.execute_script("Object.defineProperty(navigator, 'languages', {get: () => ['ru-RU', 'ru', 'en']})")
             
             # Настройка таймаутов
             self.driver.set_page_load_timeout(60)
             self.driver.implicitly_wait(10)
             
-            print("✅ Chrome драйвер настроен")
+            print("✅ Chrome драйвер настроен (headless режим)")
             return True
             
         except Exception as e:
             print(f"❌ Ошибка настройки драйвера: {e}")
             
-            # Если достигнут лимит попыток с прокси
+            # Если достигнут лимит попыток
             if self.proxy_attempts >= self.max_proxy_attempts:
-                print(f"❌ Достигнут лимит попыток с прокси ({self.max_proxy_attempts}). Парсер остановлен.")
+                print(f"❌ Достигнут лимит попыток ({self.max_proxy_attempts}). Парсер остановлен.")
                 return False
             
             # Повторная попытка
-            print(f"🔄 Повторная попытка без прокси...")
+            print(f"🔄 Повторная попытка...")
             self.human_delay(2, 3)
             return self.setup_driver(use_proxy=False)
     
