@@ -117,32 +117,56 @@ class BandlinkParserProductionLinux:
             import subprocess
             print("🧹 Очистка зависших процессов Chrome...")
             
-            # Убиваем все процессы chrome
+            # Проверяем сколько процессов chrome запущено
             try:
-                subprocess.run(['pkill', '-9', 'chrome'], 
-                             stderr=subprocess.DEVNULL, 
-                             stdout=subprocess.DEVNULL)
-                print("  ✓ Chrome процессы остановлены")
+                result = subprocess.run(['ps', 'aux'], 
+                                      capture_output=True, 
+                                      text=True)
+                chrome_count = result.stdout.count('chrome')
+                print(f"  📊 Найдено процессов chrome: {chrome_count}")
             except:
                 pass
             
+            # Убиваем все процессы chrome НЕСКОЛЬКО РАЗ
+            for i in range(3):
+                try:
+                    subprocess.run(['pkill', '-9', 'chrome'], 
+                                 stderr=subprocess.DEVNULL, 
+                                 stdout=subprocess.DEVNULL,
+                                 timeout=5)
+                    subprocess.run(['killall', '-9', 'chrome'], 
+                                 stderr=subprocess.DEVNULL, 
+                                 stdout=subprocess.DEVNULL,
+                                 timeout=5)
+                except:
+                    pass
+                time.sleep(1)
+            
             # Убиваем все процессы chromedriver
-            try:
-                subprocess.run(['pkill', '-9', 'chromedriver'], 
-                             stderr=subprocess.DEVNULL, 
-                             stdout=subprocess.DEVNULL)
-                print("  ✓ ChromeDriver процессы остановлены")
-            except:
-                pass
+            for i in range(3):
+                try:
+                    subprocess.run(['pkill', '-9', 'chromedriver'], 
+                                 stderr=subprocess.DEVNULL, 
+                                 stdout=subprocess.DEVNULL,
+                                 timeout=5)
+                    subprocess.run(['killall', '-9', 'chromedriver'], 
+                                 stderr=subprocess.DEVNULL, 
+                                 stdout=subprocess.DEVNULL,
+                                 timeout=5)
+                except:
+                    pass
+                time.sleep(1)
+            
+            print("  ✓ Команды остановки отправлены")
             
             # Очищаем временные директории Chrome
             try:
                 import glob
+                import shutil
                 temp_dirs = glob.glob('/tmp/chrome_temp_*')
                 for temp_dir in temp_dirs:
                     try:
-                        import shutil
-                        shutil.rmtree(temp_dir)
+                        shutil.rmtree(temp_dir, ignore_errors=True)
                     except:
                         pass
                 if temp_dirs:
@@ -150,8 +174,19 @@ class BandlinkParserProductionLinux:
             except:
                 pass
             
-            # Небольшая задержка чтобы процессы точно завершились
-            time.sleep(2)
+            # Ждем чтобы процессы точно завершились
+            time.sleep(3)
+            
+            # Проверяем снова
+            try:
+                result = subprocess.run(['ps', 'aux'], 
+                                      capture_output=True, 
+                                      text=True)
+                chrome_count_after = result.stdout.count('chrome')
+                print(f"  📊 Осталось процессов chrome: {chrome_count_after}")
+            except:
+                pass
+            
             print("✅ Очистка завершена")
             
         except Exception as e:
@@ -210,12 +245,9 @@ class BandlinkParserProductionLinux:
             options.add_argument('--window-size=1920,1080')
             options.add_argument('--start-maximized')
             
-            # ЯВНО отключаем user-data-dir - используем временную директорию
-            # Это решает проблему "user data directory is already in use"
-            import tempfile
-            self.temp_profile = tempfile.mkdtemp(prefix='chrome_temp_')
-            options.add_argument(f'--user-data-dir={self.temp_profile}')
-            print(f"📁 Временный профиль Chrome: {self.temp_profile}")
+            # НЕ ИСПОЛЬЗУЕМ user-data-dir вообще!
+            # Пусть Selenium сам управляет временными профилями
+            print("📁 Используется дефолтный временный профиль Chrome")
             
             print("🚀 Запуск Chrome...")
             # Linux использует системный chromedriver
@@ -652,15 +684,6 @@ class BandlinkParserProductionLinux:
             if self.driver:
                 self.driver.quit()
                 print("🔒 Браузер закрыт")
-            
-            # Очистка временного профиля
-            if self.temp_profile and os.path.exists(self.temp_profile):
-                try:
-                    import shutil
-                    shutil.rmtree(self.temp_profile)
-                    print(f"🧹 Временный профиль удален: {self.temp_profile}")
-                except Exception as e:
-                    print(f"⚠️  Не удалось удалить временный профиль: {e}")
 
 def main():
     """Главная функция"""
