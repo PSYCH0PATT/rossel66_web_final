@@ -795,11 +795,8 @@ class BandlinkParserProductionLinux:
                             cookie.pop('httpOnly', None)
                             cookie.pop('sameSite', None)
                             
-                            # ВАЖНО: Устанавливаем правильный домен для band.link
-                            if 'domain' not in cookie or not cookie['domain']:
-                                cookie['domain'] = '.band.link'
-                            elif cookie['domain'] == 'band.link':
-                                cookie['domain'] = '.band.link'
+                            # ВАЖНО: Убираем домен полностью - Selenium сам определит
+                            cookie.pop('domain', None)
                             
                             self.driver.add_cookie(cookie)
                             restored += 1
