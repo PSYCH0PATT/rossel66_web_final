@@ -386,13 +386,21 @@ class BandlinkParserProductionLinux:
             # Проверяем, что есть контент (article)
             try:
                 self.driver.find_element(By.CSS_SELECTOR, 'article')
+                # Контент есть, но проверим текст на всякий случай
+                page_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
+                if any(keyword in page_text for keyword in ['captcha', 'robot', 'проверка', 'verification', 'checking your browser']):
+                    print("🔒 КАПЧА обнаружена в тексте (несмотря на article)")
+                    return True
                 return False  # Контент есть, капчи нет
             except:
                 # Нет контента - возможно капча
-                page_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
-                if any(keyword in page_text for keyword in ['captcha', 'robot', 'проверка', 'verification']):
-                    print("🔒 КАПЧА обнаружена в тексте страницы")
-                    return True
+                try:
+                    page_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
+                    if any(keyword in page_text for keyword in ['captcha', 'robot', 'проверка', 'verification', 'checking your browser', 'please wait']):
+                        print("🔒 КАПЧА обнаружена в тексте страницы")
+                        return True
+                except:
+                    pass
             
             return False
             
@@ -493,6 +501,28 @@ class BandlinkParserProductionLinux:
                 print("✅ Найден article элемент")
             except NoSuchElementException:
                 print("❌ Article элемент не найден!")
+                
+                # Диагностика - проверяем что на странице
+                current_url = self.driver.current_url
+                page_title = self.driver.title
+                print(f"📍 URL: {current_url}")
+                print(f"📄 Title: {page_title}")
+                
+                # Проверяем наличие капчи более тщательно
+                page_source = self.driver.page_source
+                if 'captcha' in page_source.lower() or 'robot' in page_source.lower():
+                    print("🔒 СКРЫТАЯ КАПЧА обнаружена в HTML!")
+                    print("💡 Возможно прокси заблокирован или куки не работают")
+                
+                # Сохраняем HTML для анализа
+                try:
+                    html_file = f"debug_{artist_name.replace(' ', '_')}.html"
+                    with open(html_file, 'w', encoding='utf-8') as f:
+                        f.write(page_source)
+                    print(f"💾 HTML сохранен в: {html_file}")
+                except:
+                    pass
+                
                 return []
             
             # Ищем кнопку "Показать все"
