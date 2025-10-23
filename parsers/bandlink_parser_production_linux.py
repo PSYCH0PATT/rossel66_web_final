@@ -747,12 +747,35 @@ class BandlinkParserProductionLinux:
         """Запускает цикл парсинга"""
         print("🚀 Запуск Bandlink Parser Production для Linux")
         
-        if not self.setup_driver():
+        # ВАЖНО: Сначала запускаем БЕЗ прокси для добавления кук
+        print("🔧 Этап 1: Добавление кук (без прокси)")
+        if not self.setup_driver(use_proxy=False):
             return False
         
         try:
-            # Добавляем куки
+            # Добавляем куки БЕЗ прокси
             self.add_cookies()
+            
+            # Проверяем что куки добавились
+            cookies_count = len(self.driver.get_cookies())
+            print(f"✅ Добавлено кук в браузер: {cookies_count}")
+            
+            # Если куки добавились и есть прокси credentials - перезапускаем С прокси
+            if cookies_count > 0 and self.proxy_username and self.proxy_password:
+                print("\n🔧 Этап 2: Перезапуск С прокси для парсинга")
+                
+                # Закрываем браузер
+                self.driver.quit()
+                
+                # Сбрасываем счетчик попыток
+                self.proxy_attempts = 0
+                
+                # Запускаем С прокси
+                if not self.setup_driver(use_proxy=True):
+                    return False
+                
+                # Добавляем куки снова (теперь с прокси)
+                self.add_cookies()
             
             # Парсим артистов
             artists = self.config.get('target_artists', [])
