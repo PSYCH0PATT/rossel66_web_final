@@ -237,12 +237,145 @@ export default function DistributionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Проверка выбора языка для всех треков
-    const tracksWithoutLanguage = formData.tracks.filter(track => track.language === "0");
-    if (tracksWithoutLanguage.length > 0) {
+    // Валидация основных полей релиза
+    if (!formData.artists.trim()) {
       setSubmitStatus('error');
-      setSubmitMessage('Ошибка: Необходимо выбрать язык вокала для всех треков.');
+      setSubmitMessage('Ошибка: Необходимо указать никнеймы артистов.');
       return;
+    }
+    
+    if (!formData.title.trim()) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать название релиза.');
+      return;
+    }
+    
+    if (formData.releaseType === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо выбрать тип релиза.');
+      return;
+    }
+    
+    if (!formData.releaseDate) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать дату релиза.');
+      return;
+    }
+    
+    if (formData.genre === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо выбрать жанр.');
+      return;
+    }
+    
+    if (formData.genre === "7" && !formData.otherGenre.trim()) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать жанр, так как выбран "Другой".');
+      return;
+    }
+    
+    if (!formData.cover) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо загрузить обложку.');
+      return;
+    }
+    
+    if (!formData.contact.trim()) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать контакт для связи (Телеграм или ВК).');
+      return;
+    }
+    
+    if (formData.videoSnippetNeeded === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать, нужен ли видео-сниппет.');
+      return;
+    }
+    
+    if (formData.submitToPromo === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать, нужно ли подавать релиз на промо.');
+      return;
+    }
+    
+    // Валидация треков
+    if (formData.tracks.length === 0) {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо добавить хотя бы один трек.');
+      return;
+    }
+    
+    for (let i = 0; i < formData.tracks.length; i++) {
+      const track = formData.tracks[i];
+      
+      if (!track.audio) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо загрузить аудио-файл для трека ${i + 1}.`);
+        return;
+      }
+      
+      if (!track.trackName.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать название трека ${i + 1}.`);
+        return;
+      }
+      
+      if (!track.mainArtists.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать основных исполнителей для трека ${i + 1}.`);
+        return;
+      }
+      
+      if (!track.previewStart.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать начало предпрослушивания для трека ${i + 1}.`);
+        return;
+      }
+      
+      if (!track.musicAuthor.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать автора музыки для трека ${i + 1}.`);
+        return;
+      }
+      
+      if (track.language === "0") {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо выбрать язык вокала для трека ${i + 1}.`);
+        return;
+      }
+      
+      if ((track.language === '1' || track.language === '2') && !track.wordsAuthor.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать автора слов для трека ${i + 1}, так как выбран язык с вокалом.`);
+        return;
+      }
+      
+      if (track.explicit === "0") {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать, содержит ли трек ${i + 1} ненормативную лексику.`);
+        return;
+      }
+    }
+    
+    // Условная валидация для промо
+    if (formData.submitToPromo === "1") {
+      if (!formData.artistInfo.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage('Ошибка: Необходимо указать информацию об артисте для подачи на промо.');
+        return;
+      }
+      
+      if (!formData.releaseInfo.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage('Ошибка: Необходимо указать информацию о релизе для подачи на промо.');
+        return;
+      }
+      
+      if (!formData.artistPhotosLink.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage('Ошибка: Необходимо указать ссылку на фото артиста для подачи на промо.');
+        return;
+      }
     }
     
     setIsSubmitting(true);

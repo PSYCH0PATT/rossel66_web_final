@@ -265,13 +265,112 @@ export default function CatalogUploadPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Проверка выбора языка для всех треков во всех релизах
-    const allTracks = formData.releases.flatMap(release => release.tracks);
-    const tracksWithoutLanguage = allTracks.filter(track => track.language === "0");
-    if (tracksWithoutLanguage.length > 0) {
-      setSubmitStatus('error');
-      setSubmitMessage('Ошибка: Необходимо выбрать язык вокала для всех треков.');
-      return;
+    // Валидация всех релизов
+    for (let rIdx = 0; rIdx < formData.releases.length; rIdx++) {
+      const release = formData.releases[rIdx];
+      
+      // Проверка типа релиза
+      if (release.releaseType === "0") {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо выбрать тип релиза для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка названия релиза
+      if (!release.releaseTitle.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать название релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка артистов
+      if (!release.artists.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать никнеймы артистов для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка обложки
+      if (!release.coverArt) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо загрузить обложку для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка жанра
+      if (!release.genre || release.genre.trim() === "") {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать жанр для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка треков
+      if (release.tracks.length === 0) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо добавить хотя бы один трек для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      for (let tIdx = 0; tIdx < release.tracks.length; tIdx++) {
+        const track = release.tracks[tIdx];
+        
+        // Проверка аудио-файла
+        if (!track.audioFile) {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо загрузить аудио-файл для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+          return;
+        }
+        
+        // Для альбомов проверяем название трека и артистов
+        if (release.releaseType === "2") {
+          if (!track.trackName.trim()) {
+            setSubmitStatus('error');
+            setSubmitMessage(`Ошибка: Необходимо указать название трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+            return;
+          }
+          
+          if (!track.mainArtists.trim()) {
+            setSubmitStatus('error');
+            setSubmitMessage(`Ошибка: Необходимо указать основных исполнителей для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+            return;
+          }
+        }
+        
+        // Проверка ISRC
+        if (!track.isrc.trim()) {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо указать ISRC для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+          return;
+        }
+        
+        // Проверка начала предпрослушивания
+        if (!track.previewStart.trim()) {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо указать начало предпрослушивания для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+          return;
+        }
+        
+        // Проверка автора музыки
+        if (!track.musicAuthor.trim()) {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо указать автора музыки для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+          return;
+        }
+        
+        // Проверка языка
+        if (track.language === "0") {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо выбрать язык вокала для трека ${tIdx + 1} релиза ${rIdx + 1}.`);
+          return;
+        }
+        
+        // Проверка автора слов (если язык с вокалом)
+        if ((track.language === '1' || track.language === '2') && !track.wordsAuthor.trim()) {
+          setSubmitStatus('error');
+          setSubmitMessage(`Ошибка: Необходимо указать автора слов для трека ${tIdx + 1} релиза ${rIdx + 1}, так как выбран язык с вокалом.`);
+          return;
+        }
+      }
     }
     
     setIsSubmitting(true);

@@ -39,12 +39,12 @@ const releaseFieldIds = [
     single: {
       title: 57, artists: 58, cover: 59, upc: 60, isrc: 61, releaseDate: 62, genre: 63,
       tracklistTable: 64,
-      tracklistCols: { audio: 65, preview: 66, musicAuthor: 67, wordsAuthor: 68, language: 69, explicit: 122, lyrics: 70 }
+      tracklistCols: { audio: 65, preview: 235, musicAuthor: 67, wordsAuthor: 68, language: 69, explicit: 122, lyrics: 70 }
     },
     album: {
       title: 55, artists: 71, cover: 72, upc: 73, releaseDate: 74, genre: 75,
       tracklistTable: 76,
-      tracklistCols: { audio: 77, trackName: 78, mainArtists: 80, isrc: 79, preview: 81, musicAuthor: 82, wordsAuthor: 83, language: 84, explicit: 126, focusTrack: 86, lyrics: 87 }
+      tracklistCols: { audio: 77, trackName: 78, mainArtists: 80, isrc: 79, preview: 236, musicAuthor: 82, wordsAuthor: 83, language: 84, explicit: 126, focusTrack: 86, lyrics: 87 }
     }
   },
   { // Second release
@@ -52,12 +52,12 @@ const releaseFieldIds = [
     single: {
       title: 90, artists: 91, cover: 92, upc: 93, isrc: 94, releaseDate: 95, genre: 96,
       tracklistTable: 97,
-      tracklistCols: { audio: 98, preview: 99, musicAuthor: 100, wordsAuthor: 101, language: 102, explicit: 123, lyrics: 103 }
+      tracklistCols: { audio: 98, preview: 237, musicAuthor: 100, wordsAuthor: 101, language: 102, explicit: 123, lyrics: 103 }
     },
     album: {
         title: 127, artists: 128, cover: 129, upc: 130, releaseDate: 131, genre: 132,
         tracklistTable: 133,
-        tracklistCols: { audio: 134, trackName: 135, mainArtists: 136, isrc: 137, preview: 138, musicAuthor: 139, wordsAuthor: 140, language: 141, explicit: 142, focusTrack: 143, lyrics: 144 }
+        tracklistCols: { audio: 134, trackName: 135, mainArtists: 136, isrc: 137, preview: 238, musicAuthor: 139, wordsAuthor: 140, language: 141, explicit: 142, focusTrack: 143, lyrics: 144 }
     }
   },
   { // Third release
@@ -65,12 +65,12 @@ const releaseFieldIds = [
     single: {
         title: 107, artists: 108, cover: 109, upc: 110, isrc: 111, releaseDate: 112, genre: 113,
         tracklistTable: 114,
-        tracklistCols: { audio: 115, preview: 116, musicAuthor: 117, wordsAuthor: 118, language: 124, explicit: 125, lyrics: 120 }
+        tracklistCols: { audio: 115, preview: 239, musicAuthor: 117, wordsAuthor: 118, language: 124, explicit: 125, lyrics: 120 }
     },
     album: {
         title: 145, artists: 146, cover: 147, upc: 148, releaseDate: 149, genre: 150,
         tracklistTable: 151,
-        tracklistCols: { audio: 152, trackName: 153, mainArtists: 154, isrc: 155, preview: 156, musicAuthor: 157, wordsAuthor: 158, language: 159, explicit: 160, focusTrack: 161, lyrics: 162 }
+        tracklistCols: { audio: 152, trackName: 153, mainArtists: 154, isrc: 155, preview: 240, musicAuthor: 157, wordsAuthor: 158, language: 159, explicit: 160, focusTrack: 161, lyrics: 162 }
     }
   },
   { // Fourth release
@@ -78,12 +78,12 @@ const releaseFieldIds = [
     single: {
       title: 170, artists: 171, cover: 172, upc: 173, isrc: 174, releaseDate: 175, genre: 175, // genre may share field; adjust if form updated
       tracklistTable: 176,
-      tracklistCols: { audio: 177, preview: 178, musicAuthor: 180, wordsAuthor: 181, language: 179, explicit: 182, lyrics: 183 }
+      tracklistCols: { audio: 177, preview: 241, musicAuthor: 180, wordsAuthor: 181, language: 179, explicit: 182, lyrics: 183 }
     },
     album: {
       title: 184, artists: 185, cover: 186, upc: 187, releaseDate: 188, genre: 189,
       tracklistTable: 190,
-      tracklistCols: { audio: 191, trackName: 192, mainArtists: 193, isrc: 194, preview: 195, musicAuthor: 196, wordsAuthor: 197, language: 198, explicit: 199, focusTrack: 200, lyrics: 201 }
+      tracklistCols: { audio: 191, trackName: 192, mainArtists: 193, isrc: 194, preview: 242, musicAuthor: 196, wordsAuthor: 197, language: 198, explicit: 199, focusTrack: 200, lyrics: 201 }
     }
   },
   { // Fifth release
@@ -91,12 +91,12 @@ const releaseFieldIds = [
     single: {
       title: 220, artists: 221, cover: 222, upc: 223, isrc: 224, releaseDate: 225, genre: 226,
       tracklistTable: 227,
-      tracklistCols: { audio: 228, preview: 229, musicAuthor: 230, wordsAuthor: 231, language: 232, explicit: 233, lyrics: 234 }
+      tracklistCols: { audio: 228, preview: 243, musicAuthor: 230, wordsAuthor: 231, language: 232, explicit: 233, lyrics: 234 }
     },
     album: {
       title: 202, artists: 203, cover: 204, upc: 205, releaseDate: 206, genre: 207,
       tracklistTable: 208,
-      tracklistCols: { audio: 209, trackName: 210, mainArtists: 211, isrc: 212, preview: 213, musicAuthor: 214, wordsAuthor: 215, language: 216, explicit: 217, focusTrack: 218, lyrics: 219 }
+      tracklistCols: { audio: 209, trackName: 210, mainArtists: 211, isrc: 212, preview: 244, musicAuthor: 214, wordsAuthor: 215, language: 216, explicit: 217, focusTrack: 218, lyrics: 219 }
     }
   }
 ];
