@@ -652,6 +652,7 @@ export default function DistributionPage() {
           <div className="max-w-6xl mx-auto shadow-2xl relative z-10">
             <form
               onSubmit={handleSubmit}
+              noValidate
               className="w-full h-full bg-neutral-990/60 backdrop-blur-sm p-6 sm:p-8 relative z-[1]"
               style={{
                 borderWidth: '1px',

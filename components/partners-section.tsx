@@ -89,6 +89,7 @@ const distributors = [
   { id: 3, name: "Soyuz", image: "/images/partners/soyuz.png", alt: "Soyuz Music" },
   { id: 4, name: "MA", image: "/images/partners/ma.png", alt: "MA Music" },
   { id: 5, name: "MH", image: "/images/partners/mh.png", alt: "MH Music" },
+  { id: 6, name: "Koala Music", image: "/images/partners/koala_music.png", alt: "Koala Music" },
 ]
 
 // Обновляем интерфейс, добавляя параметр mobileScale
