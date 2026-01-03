@@ -169,7 +169,7 @@ export default function GuidePage() {
                   Перед подписанием мы всегда отправляем договор для ознакомления и подробно объясняем каждый пункт, если у артистов возникают вопросы.
                 </p>
                 <Link href="/forms/dataRF" className="mt-6 inline-block">
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]">
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full transition-all">
                     Заполнить форму
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
@@ -197,7 +197,7 @@ export default function GuidePage() {
                   Пожалуйста, отнеситесь ответственно к заполнению промо-информации. Старайтесь указывать всё максимально подробно — даже если ради этого придётся чуть-чуть приукрасить факты:)
                 </p>
                 <Link href="/forms/releaseUPLOAD" className="mt-6 inline-block">
-                  <Button className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.31)] transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.44)]">
+                  <Button className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-full transition-all">
                     Заполнить форму
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
@@ -230,7 +230,10 @@ export default function GuidePage() {
               </p>
               <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-none">
                 <p className="text-emerald-300 text-sm">
-                  <strong className="text-emerald-400">Важно:</strong> Для работы с документами вам необходимо получить Простую Электронную Подпись (ПЭП). Мы предоставим подробную инструкцию после заполнения первой формы.
+                  <strong className="text-emerald-400">Важно:</strong> Для работы с документами вам необходимо получить Простую Электронную Подпись (ПЭП).
+                </p>
+                <p className="text-emerald-300 text-sm mt-2">
+                  Вот подробная инструкция, <a href="https://support.kontur.ru/sign/53303-pep" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 underline">как получить ПЭП</a>
                 </p>
               </div>
             </motion.div>
@@ -252,11 +255,11 @@ export default function GuidePage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href="mailto:info@rossel66.music"
+                  href="mailto:label@rossel66.com"
                   className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
                 >
                   <Mail className="w-5 h-5" />
-                  <span className="text-lg">info@rossel66.music</span>
+                  <span className="text-lg">label@rossel66.com</span>
                 </a>
               </div>
             </motion.div>
