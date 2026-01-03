@@ -803,24 +803,58 @@ class BandlinkParserProductionLinux:
                     self.driver.get("https://band.link")
                     self.human_delay(1, 2)
                     
-                    # Добавляем сохраненные куки
+                    # Добавляем сохраненные куки с той же логикой что в add_cookies()
                     restored = 0
-                    for cookie in saved_cookies:
-                        try:
-                            # Удаляем поля которые могут вызвать проблемы
-                            cookie.pop('expiry', None)
-                            cookie.pop('httpOnly', None)
-                            cookie.pop('sameSite', None)
-                            
-                            # ВАЖНО: Убираем домен полностью - Selenium сам определит
-                            cookie.pop('domain', None)
-                            
-                            self.driver.add_cookie(cookie)
-                            restored += 1
-                        except Exception as e:
-                            print(f"⚠️  Не удалось восстановить куку {cookie.get('name')}: {e}")
+                    failed = 0
                     
-                    print(f"✅ Восстановлено {restored} кук в браузере с прокси")
+                    for cookie in saved_cookies:
+                        cookie_name = cookie.get('name')
+                        cookie_value = cookie.get('value')
+                        
+                        if not cookie_name or not cookie_value:
+                            continue
+                        
+                        # Создаем новый объект куки (только name и value)
+                        cookie_data = {
+                            'name': cookie_name,
+                            'value': str(cookie_value)
+                        }
+                        
+                        # Пробуем разные варианты domain (как в add_cookies)
+                        success = False
+                        
+                        # 1. Пробуем без domain (автоопределение)
+                        try:
+                            self.driver.add_cookie(cookie_data)
+                            restored += 1
+                            success = True
+                        except:
+                            pass
+                        
+                        if not success:
+                            # 2. Пробуем с .band.link
+                            try:
+                                cookie_data_with_domain = cookie_data.copy()
+                                cookie_data_with_domain['domain'] = '.band.link'
+                                self.driver.add_cookie(cookie_data_with_domain)
+                                restored += 1
+                                success = True
+                            except:
+                                pass
+                        
+                        if not success:
+                            # 3. Пробуем с band.link
+                            try:
+                                cookie_data_with_domain = cookie_data.copy()
+                                cookie_data_with_domain['domain'] = 'band.link'
+                                self.driver.add_cookie(cookie_data_with_domain)
+                                restored += 1
+                                success = True
+                            except Exception as e:
+                                failed += 1
+                                print(f"⚠️  Не удалось восстановить куку {cookie_name}: {e}")
+                    
+                    print(f"✅ Восстановлено {restored} кук в браузере с прокси (не удалось: {failed})")
                 except Exception as e:
                     print(f"❌ Ошибка восстановления кук: {e}")
             
