@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { ArrowLeft, FileText, Upload, FileSignature, ExternalLink, Mail } from "lucide-react"
+import { ArrowLeft, FileText, Upload, FileSignature, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Footer from "@/components/footer"
@@ -251,17 +251,8 @@ export default function GuidePage() {
                 Остались вопросы?
               </h3>
               <p className="text-gray-300 mb-8 text-lg">
-                Свяжитесь с нами, и мы с радостью ответим на все ваши вопросы
+                Мы с радостью ответим вам в рабочей группе в Telegram
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                  href="mailto:label@rossel66.com"
-                  className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  <Mail className="w-5 h-5" />
-                  <span className="text-lg">label@rossel66.com</span>
-                </a>
-              </div>
             </motion.div>
           </motion.div>
 
