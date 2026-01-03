@@ -109,32 +109,22 @@ class BandlinkParserProductionMac:
         time.sleep(delay)
     
     def setup_driver(self, use_proxy: bool = True) -> bool:
-        """Настраивает Chrome драйвер с прокси и куками"""
+        """Настраивает Chrome драйвер с прокси от Proxyline"""
         try:
-            self.proxy_attempts += 1
-            print(f"🔧 Настройка Chrome драйвера (попытка {self.proxy_attempts}/{self.max_proxy_attempts})...")
+            print(f"🔧 Настройка Chrome драйвера...")
             
             options = Options()
             
-            # Прокси (через SOCKS5 вместо HTTP - больше совместимости с Mac Chrome)
+            # Прокси от Proxyline
             if use_proxy and self.proxy_username and self.proxy_password:
-                # Генерируем уникальный session ID для ротации IP
-                session_id = str(uuid.uuid4())[:8]
-                proxy_username_with_session = f"{self.proxy_username}-session-{session_id}"
+                import urllib.parse
+                encoded_username = urllib.parse.quote(self.proxy_username)
+                encoded_password = urllib.parse.quote(self.proxy_password)
+                proxy_url = f"{encoded_username}:{encoded_password}@{self.proxy_host}:{self.proxy_port}"
                 
-                # Формат для Chrome: username:password@host:port
-                # Используем простой формат без протокола
-                options.add_argument(f'--proxy-server={self.proxy_host}:{self.proxy_port}')
-                
-                # Добавляем авторизацию через аргументы
-                options.add_argument(f'--proxy-bypass-list=<-loopback>')
-                
-                print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port} (session: {session_id})")
-                print(f"⚠️  ВНИМАНИЕ: Прокси может не работать без расширения на Mac")
-                print(f"💡 Работаем БЕЗ прокси для стабильности")
-                
-                # ОТКЛЮЧАЕМ прокси для Mac - он вызывает проблемы
-                options = Options()  # Пересоздаем options без прокси
+                options.add_argument(f'--proxy-server=http://{proxy_url}')
+                print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port}")
+                print(f"👤 Username: {self.proxy_username}")
             else:
                 print("⚠️  Прокси отключен")
             

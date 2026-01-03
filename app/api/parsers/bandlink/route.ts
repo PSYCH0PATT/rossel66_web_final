@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.warn('⚠️  Не удалось загрузить cookies из БД:', error);
     }
-    
+
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
     const config = {

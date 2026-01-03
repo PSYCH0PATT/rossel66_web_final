@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { loadReports, saveReports } from "@/lib/storage"
 import * as fs from "fs"
+import * as path from "path"
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -14,9 +15,12 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const report = reports[reportIndex]
     
     // Удаляем файл если он существует
-    if (report.filePath && fs.existsSync(report.filePath)) {
-      fs.unlinkSync(report.filePath)
-      console.log(`Удален файл: ${report.filePath}`)
+    if (report.filePath) {
+      const filePath = path.join(process.cwd(), report.filePath)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+        console.log(`Удален файл: ${filePath}`)
+      }
     }
 
     // Удаляем запись из массива

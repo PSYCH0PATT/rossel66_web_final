@@ -217,14 +217,12 @@ class BandlinkParserProductionLinux:
             # HEADLESS режим для Linux
             options.add_argument('--headless=new')
             
-            # Настройка прокси с ротацией IP
+            # Настройка прокси (Proxyline - статический IP, без session ID)
             if use_proxy and self.proxy_username and self.proxy_password:
-                # Генерируем уникальный session ID для каждой попытки (ротация IP)
                 import urllib.parse
-                session_id = str(uuid.uuid4())[:8]
                 
                 # URL-кодируем username и password для безопасности
-                encoded_username = urllib.parse.quote(f"{self.proxy_username}-session-{session_id}")
+                encoded_username = urllib.parse.quote(self.proxy_username)
                 encoded_password = urllib.parse.quote(self.proxy_password)
                 
                 # Формат прокси для Chrome: username:password@host:port
@@ -234,10 +232,7 @@ class BandlinkParserProductionLinux:
                 options.add_argument(f'--proxy-server=http://{proxy_url}')
                 
                 print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port}")
-                print(f"🔄 Session ID: {session_id} (новый IP)")
-                
-                # Сохраняем текущий session_id для возможной смены
-                self.current_session_id = session_id
+                print(f"👤 Username: {self.proxy_username}")
             else:
                 print("⚠️  Прокси отключен")
             
@@ -267,7 +262,29 @@ class BandlinkParserProductionLinux:
             print("📁 Selenium использует дефолтное управление профилями")
             
             print("🚀 Запуск Chrome...")
-            self.driver = webdriver.Chrome(options=options)
+            # В Docker используем chromium-browser напрямую
+            try:
+                from selenium.webdriver.chrome.service import Service
+                
+                # Проверяем наличие chromium-browser в Docker
+                chromium_path = '/usr/bin/chromium-browser'
+                chromedriver_path = '/usr/bin/chromedriver'
+                
+                if os.path.exists(chromium_path):
+                    options.binary_location = chromium_path
+                    print(f"🌐 Chrome binary: {chromium_path}")
+                
+                if os.path.exists(chromedriver_path):
+                    service = Service(chromedriver_path)
+                    self.driver = webdriver.Chrome(service=service, options=options)
+                else:
+                    # Fallback на webdriver-manager если chromedriver не найден
+                    from webdriver_manager.chrome import ChromeDriverManager
+                    service = Service(ChromeDriverManager().install())
+                    self.driver = webdriver.Chrome(service=service, options=options)
+            except Exception as e:
+                print(f"⚠️  Ошибка настройки Service: {e}, используем дефолтный Chrome")
+                self.driver = webdriver.Chrome(options=options)
             
             # Удаляем признаки автоматизации
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")

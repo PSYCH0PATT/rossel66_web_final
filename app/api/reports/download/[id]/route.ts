@@ -13,11 +13,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })
     }
 
-    if (!fs.existsSync(report.filePath)) {
+    if (!report.filePath) {
+      return NextResponse.json({ error: "Путь к файлу отчета не указан" }, { status: 404 })
+    }
+
+    const filePath = path.join(process.cwd(), report.filePath)
+    
+    if (!fs.existsSync(filePath)) {
       return NextResponse.json({ error: "Файл отчета не найден" }, { status: 404 })
     }
 
-    const fileBuffer = fs.readFileSync(report.filePath)
+    const fileBuffer = fs.readFileSync(filePath)
     
     return new NextResponse(fileBuffer, {
       headers: {

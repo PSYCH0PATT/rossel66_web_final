@@ -336,10 +336,10 @@ export default function PlaylistsPage() {
     let filtered = playlists
     if (artistFilter !== 'all') {
       filtered = playlists.filter(playlist => 
-        playlist.artist_name === artistFilter || playlist.artist_name?.includes(artistFilter)
-      )
-    }
-    
+      playlist.artist_name === artistFilter || playlist.artist_name?.includes(artistFilter)
+    )
+  }
+
     // Сортировка
     return filtered.sort((a, b) => {
       const dateA = new Date(a[sortBy] || a.parsed_at).getTime()

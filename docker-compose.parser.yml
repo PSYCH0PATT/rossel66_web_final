@@ -10,10 +10,10 @@ services:
       - ./temp_bandlink_config.json:/app/temp_bandlink_config.json
       - ./bandlink_playlists.db:/app/bandlink_playlists.db
     environment:
-      - BRIGHT_DATA_RESIDENTIAL_USERNAME=${BRIGHT_DATA_RESIDENTIAL_USERNAME:-brd-customer-hl_94d02fd9-zone-residential_proxy1}
-      - BRIGHT_DATA_RESIDENTIAL_PASSWORD=${BRIGHT_DATA_RESIDENTIAL_PASSWORD:-juze73q9d91q}
-      - PROXY_HOST=${PROXY_HOST:-brd.superproxy.io}
-      - PROXY_PORT=${PROXY_PORT:-33335}
+      - BRIGHT_DATA_RESIDENTIAL_USERNAME=${BRIGHT_DATA_RESIDENTIAL_USERNAME:-HYRrWAXb}
+      - BRIGHT_DATA_RESIDENTIAL_PASSWORD=${BRIGHT_DATA_RESIDENTIAL_PASSWORD:-Dfi5FeEC}
+      - PROXY_HOST=${PROXY_HOST:-94.154.188.161}
+      - PROXY_PORT=${PROXY_PORT:-63194}
     # Для headless Chrome
     shm_size: '2gb'
     # Опционально: для доступа к UI (если нужно отлаживать)

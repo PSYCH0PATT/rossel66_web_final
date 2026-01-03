@@ -20,6 +20,7 @@ export default function TopNav({ role, username }: TopNavProps) {
   const [currentUsername, setCurrentUsername] = useState(username || "")
   const [currentUserName, setCurrentUserName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -28,6 +29,15 @@ export default function TopNav({ role, username }: TopNavProps) {
       setCurrentUsername(user.username)
     }
   }, [username])
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Загружаем данные пользователя включая аватарку
   useEffect(() => {
@@ -113,12 +123,11 @@ export default function TopNav({ role, username }: TopNavProps) {
       </div>
 
       {/* Логотип по центру (только на мобилке) */}
-      <div 
-        className="absolute left-1/2 -translate-x-1/2 pointer-events-none lg:hidden"
-        style={{ display: window.innerWidth < 640 ? 'block' : 'none' }}
-      >
-        <Image src="/images/logo.png" alt="ROSSEL 66" width={42} height={42} className="flex-shrink-0" />
-      </div>
+      {isMobile && (
+        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none lg:hidden">
+          <Image src="/images/logo.png" alt="ROSSEL 66" width={42} height={42} className="flex-shrink-0" />
+        </div>
+      )}
 
       <div className="flex items-center gap-2 sm:gap-4 ml-auto sm:ml-0">
         <DropdownMenu>

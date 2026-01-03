@@ -368,12 +368,6 @@ export default function ReleaseUploadPage() {
         setSubmitMessage('Ошибка: Необходимо указать информацию о релизе для подачи на промо.');
         return;
       }
-      
-      if (!formData.artistPhotosLink.trim()) {
-        setSubmitStatus('error');
-        setSubmitMessage('Ошибка: Необходимо указать ссылку на фото артиста для подачи на промо.');
-        return;
-      }
     }
     
     setIsSubmitting(true);
@@ -779,7 +773,7 @@ export default function ReleaseUploadPage() {
                   {renderTextareaField("artistInfo", "Информация об артисте", formData.artistInfo, handleChange, "Краткая биография, достижения...", true, 4, "md:col-span-2")}
                   {renderTextareaField("releaseInfo", "Информация о релизе", formData.releaseInfo, handleChange, "Концепция, история создания...", true, 4, "md:col-span-2")}
                   {renderTextareaField("releaseSupport", "Планируется ли поддержка релиза?", formData.releaseSupport, handleChange, "Клип, концерты, реклама...", false, 3, "md:col-span-2")}
-                  {renderInputField("artistPhotosLink", "Ссылка на фото артиста (Яндекс.Диск, Google Drive)", formData.artistPhotosLink, handleChange, "https://disk.yandex.ru/...", "url", true, "md:col-span-2")}
+                  {renderInputField("artistPhotosLink", "Ссылка на фото артиста (Яндекс.Диск, Google Drive)", formData.artistPhotosLink, handleChange, "https://disk.yandex.ru/...", "url", false, "md:col-span-2")}
                   
                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 md:gap-x-6">
                      {renderSelectField("specifySocialMedia", "Указать ссылки на соц. сети?", formData.specifySocialMedia, (value) => handleSelectChange("specifySocialMedia", value), yesNoOptions, "Да/Нет", true, "md:col-span-2 mb-1")}

@@ -67,6 +67,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "^0.17.2",
     "@types/node": "20.10.5",
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.3",

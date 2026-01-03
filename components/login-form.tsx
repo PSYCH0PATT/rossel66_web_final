@@ -23,6 +23,19 @@ export default function LoginForm() {
     setIsLoading(true)
     setError("")
 
+    // Валидация полей
+    if (!username.trim()) {
+      setError("Введите логин")
+      setIsLoading(false)
+      return
+    }
+
+    if (!password.trim()) {
+      setError("Введите пароль")
+      setIsLoading(false)
+      return
+    }
+
     try {
       // Получаем всех пользователей через API (включая админов и артистов)
       const response = await fetch('/api/users')

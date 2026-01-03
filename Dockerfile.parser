@@ -30,6 +30,12 @@ COPY temp_bandlink_config.json /app/
 # Создание директории для БД
 RUN mkdir -p /app/data
 
+# Копируем тестовый скрипт прокси
+COPY test_proxy_docker.py /app/
+
+# Установка requests для теста
+RUN pip install --no-cache-dir requests
+
 # Создаем скрипт запуска с Xvfb
 RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1920x1080x24 &\nexport DISPLAY=:99\npython3 parsers/bandlink_parser_production_linux.py temp_bandlink_config.json' > /app/start.sh && chmod +x /app/start.sh
 

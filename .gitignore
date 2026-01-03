@@ -42,3 +42,5 @@ next-env.d.ts
 chrome_profiles/
 __pycache__/
 *.pyc
+*.db
+temp_*_config.json

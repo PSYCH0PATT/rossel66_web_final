@@ -35,6 +35,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Get current user
@@ -77,6 +78,7 @@ export default function AdminDashboard() {
         }
       } catch (e) {
         console.error('Ошибка загрузки данных для дашборда админа:', e)
+        setError('Не удалось загрузить данные. Пожалуйста, обновите страницу.')
       } finally {
         setIsLoading(false)
       }
@@ -111,6 +113,12 @@ export default function AdminDashboard() {
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Главная</h1>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-xl p-4">
+            {error}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

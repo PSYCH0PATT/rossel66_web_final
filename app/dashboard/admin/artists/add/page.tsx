@@ -54,6 +54,13 @@ export default function AddArtistPage() {
       return
     }
 
+    // Валидация email
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Некорректный email адрес")
+      setIsSubmitting(false)
+      return
+    }
+
     // Валидация URL-адресов
     const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
 

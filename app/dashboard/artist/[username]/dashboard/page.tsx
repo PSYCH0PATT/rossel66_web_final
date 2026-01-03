@@ -15,6 +15,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
   const [releases, setReleases] = useState<any[]>([])
   const [playlists, setPlaylists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchArtistData = async () => {
     try {
@@ -144,10 +145,15 @@ export default function ArtistDashboard({ params }: { params: { username: string
             console.error('Ошибка загрузки плейлистов:', error)
             setPlaylists([])
           }
+        } else {
+          setError('Артист не найден')
         }
+      } else {
+        setError('Не удалось загрузить данные пользователей')
       }
     } catch (error) {
       console.error('Ошибка при загрузке данных артиста:', error)
+      setError('Произошла ошибка при загрузке данных. Пожалуйста, обновите страницу.')
     } finally {
       setLoading(false)
     }
@@ -201,6 +207,12 @@ export default function ArtistDashboard({ params }: { params: { username: string
     <Layout role="artist" requiredRole="artist" username={params.username}>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Главная</h1>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-xl p-4">
+            {error}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
