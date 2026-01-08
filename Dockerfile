@@ -34,12 +34,15 @@ RUN npm ci --omit=dev
 COPY . .
 
 # 8. Устанавливаем Python зависимости для парсеров
+# ВАЖНО: blinker<1.8 нужен для совместимости с selenium-wire
 RUN pip3 install --break-system-packages \
     selenium \
     beautifulsoup4 \
     requests \
     webdriver-manager \
-    2captcha-python
+    2captcha-python \
+    'blinker<1.8' \
+    selenium-wire
 
 # Указываем Node.js, где искать модули (для поддержки baseUrl из tsconfig.json)
 ENV NODE_PATH=./
