@@ -17,18 +17,54 @@ export async function POST(request: NextRequest) {
     // Получаем API ключ 2captcha из переменных окружения
     const captchaApiKey = process.env.TWOCAPTCHA_API_KEY;
     
+    // Получаем прокси credentials из переменных окружения
+    const proxyUsername = process.env.BRIGHT_DATA_RESIDENTIAL_USERNAME;
+    const proxyPassword = process.env.BRIGHT_DATA_RESIDENTIAL_PASSWORD;
+    const proxyHost = process.env.PROXY_HOST || '94.154.188.161';
+    const proxyPort = process.env.PROXY_PORT || '63194';
+    
     // Проверяем наличие API ключа 2captcha
     if (!captchaApiKey) {
       console.warn('⚠️  2captcha API ключ не настроен в переменных окружения! VK капчи не будут решаться автоматически');
     } else {
       console.log('🔑 2captcha API ключ найден в переменных окружения для VK');
     }
+    
+    // Загружаем VK cookies из БД
+    let cookies: Record<string, string> = {};
+    try {
+      const sqlite3 = require('sqlite3').verbose();
+      const dbPath = path.join(process.cwd(), 'vk_playlists.db');
+      const db = new sqlite3.Database(dbPath);
+      
+      const cookiesData = await new Promise<any[]>((resolve, reject) => {
+        db.all('SELECT cookie_name, cookie_value FROM vk_cookies', (err: any, rows: any) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        });
+        db.close();
+      });
+      
+      // Преобразуем в объект
+      for (const cookie of cookiesData) {
+        cookies[cookie.cookie_name] = cookie.cookie_value;
+      }
+      
+      console.log(`🍪 Загружено ${Object.keys(cookies).length} VK кук из БД`);
+    } catch (error) {
+      console.warn('⚠️  Не удалось загрузить VK cookies из БД:', error);
+    }
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_vk_config.json');
     const config = {
       target_artists: artists.map(artist => `https://vk.com/artist/${artist}`),
-      captcha_api_key: captchaApiKey || null // Добавляем API ключ 2captcha из переменных окружения
+      captcha_api_key: captchaApiKey || null,
+      proxy_username: proxyUsername,
+      proxy_password: proxyPassword,
+      proxy_host: proxyHost,
+      proxy_port: parseInt(proxyPort),
+      cookies: cookies
     };
     
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -145,9 +181,9 @@ async function ensureVKDatabase(dbPath: string) {
     const db = new sqlite3.Database(dbPath);
     
     db.serialize(() => {
-      // Создаем таблицу artist_playlists
+      // Создаем таблицу vk_playlists
       db.run(`
-        CREATE TABLE IF NOT EXISTS artist_playlists (
+        CREATE TABLE IF NOT EXISTS vk_playlists (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           artist_url TEXT NOT NULL,
           artist_name TEXT NOT NULL,
@@ -157,11 +193,25 @@ async function ensureVKDatabase(dbPath: string) {
           playlist_id TEXT,
           owner_id TEXT,
           parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(artist_name, playlist_url)
+          UNIQUE(artist_name, playlist_name, playlist_url)
         )
       `, (err: any) => {
-        if (err) console.error('❌ Ошибка создания таблицы artist_playlists:', err);
-        else console.log('✅ Таблица artist_playlists инициализирована');
+        if (err) console.error('❌ Ошибка создания таблицы vk_playlists:', err);
+        else console.log('✅ Таблица vk_playlists инициализирована');
+      });
+      
+      // Создаем таблицу vk_cookies
+      db.run(`
+        CREATE TABLE IF NOT EXISTS vk_cookies (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          cookie_name TEXT NOT NULL UNIQUE,
+          cookie_value TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err: any) => {
+        if (err) console.error('❌ Ошибка создания таблицы vk_cookies:', err);
+        else console.log('✅ Таблица vk_cookies инициализирована');
       });
     });
     
@@ -177,7 +227,7 @@ async function readVKResults() {
     const sqlite3 = require('sqlite3').verbose();
     const dbPath = path.join(process.cwd(), 'vk_playlists.db');
     
-    // ✅ Всегда инициализируем БД (как в lib/storage.ts с JSON файлами)
+    // ✅ Всегда инициализируем БД
     console.log(`📦 Инициализация VK БД: vk_playlists.db`);
     await ensureVKDatabase(dbPath);
     
@@ -185,7 +235,7 @@ async function readVKResults() {
       const db = new sqlite3.Database(dbPath);
       
       db.all(`
-        SELECT * FROM artist_playlists 
+        SELECT * FROM vk_playlists 
         ORDER BY parsed_at DESC 
         LIMIT 100
       `, (err: any, rows: any) => {

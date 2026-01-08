@@ -15,7 +15,8 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 try:
-    from selenium import webdriver
+    # Используем selenium-wire для работы с прокси с авторизацией
+    from seleniumwire import webdriver
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
@@ -24,9 +25,24 @@ try:
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.common.exceptions import TimeoutException, NoSuchElementException
     from webdriver_manager.chrome import ChromeDriverManager
+    SELENIUM_WIRE_AVAILABLE = True
 except ImportError:
-    print("❌ Selenium не установлен. Установите: pip install selenium webdriver-manager")
-    sys.exit(1)
+    try:
+        # Fallback на обычный selenium если selenium-wire не установлен
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
+        from selenium.webdriver.common.action_chains import ActionChains
+        from selenium.common.exceptions import TimeoutException, NoSuchElementException
+        from webdriver_manager.chrome import ChromeDriverManager
+        SELENIUM_WIRE_AVAILABLE = False
+        print("⚠️  selenium-wire не установлен, прокси с авторизацией может не работать")
+    except ImportError:
+        print("❌ Selenium не установлен. Установите: pip install selenium webdriver-manager selenium-wire")
+        sys.exit(1)
 
 # User-Agent ротация
 USER_AGENTS = [
@@ -193,10 +209,10 @@ class BandlinkParserProductionLinux:
             print(f"⚠️  Ошибка очистки процессов: {e}")
     
     def setup_driver(self, use_proxy: bool = True) -> bool:
-        """Настраивает Chrome драйвер с прокси и ротацией IP"""
+        """Настраивает Chrome драйвер с прокси через selenium-wire"""
         try:
             print("=" * 60)
-            print("🐧 LINUX PARSER С ПРОКСИ")
+            print("🐧 LINUX PARSER С SELENIUM-WIRE")
             print("=" * 60)
             
             # Очищаем зависшие процессы только при первой попытке
@@ -208,7 +224,7 @@ class BandlinkParserProductionLinux:
             
             options = Options()
             
-            # Путь к Chromium в Docker контейнере (Alpine Linux)
+            # Путь к Chromium в Docker контейнере
             chrome_binary = os.environ.get('CHROME_BIN', '/usr/bin/chromium-browser')
             if os.path.exists(chrome_binary):
                 options.binary_location = chrome_binary
@@ -216,25 +232,6 @@ class BandlinkParserProductionLinux:
             
             # HEADLESS режим для Linux
             options.add_argument('--headless=new')
-            
-            # Настройка прокси (Proxyline - статический IP, без session ID)
-            if use_proxy and self.proxy_username and self.proxy_password:
-                import urllib.parse
-                
-                # URL-кодируем username и password для безопасности
-                encoded_username = urllib.parse.quote(self.proxy_username)
-                encoded_password = urllib.parse.quote(self.proxy_password)
-                
-                # Формат прокси для Chrome: username:password@host:port
-                proxy_url = f"{encoded_username}:{encoded_password}@{self.proxy_host}:{self.proxy_port}"
-                
-                # Добавляем прокси через --proxy-server
-                options.add_argument(f'--proxy-server=http://{proxy_url}')
-                
-                print(f"🌐 Прокси настроен: {self.proxy_host}:{self.proxy_port}")
-                print(f"👤 Username: {self.proxy_username}")
-            else:
-                print("⚠️  Прокси отключен")
             
             # Базовые настройки стелса
             options.add_argument('--disable-blink-features=AutomationControlled')
@@ -258,33 +255,66 @@ class BandlinkParserProductionLinux:
             # User-Agent для Linux
             options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
             
-            # НЕ ИСПОЛЬЗУЕМ --user-data-dir ВООБЩЕ!
-            print("📁 Selenium использует дефолтное управление профилями")
+            # Настройка selenium-wire для прокси с авторизацией
+            seleniumwire_options = {}
+            self._use_proxy = False
+            
+            if use_proxy and self.proxy_username and self.proxy_password:
+                # selenium-wire поддерживает прокси с авторизацией!
+                proxy_url = f"http://{self.proxy_username}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
+                seleniumwire_options = {
+                    'proxy': {
+                        'http': proxy_url,
+                        'https': proxy_url,
+                        'no_proxy': 'localhost,127.0.0.1'
+                    }
+                }
+                self._use_proxy = True
+                print(f"🌐 Прокси настроен через selenium-wire: {self.proxy_host}:{self.proxy_port}")
+                print(f"👤 Username: {self.proxy_username}")
+            else:
+                print("⚠️  Прокси отключен")
             
             print("🚀 Запуск Chrome...")
+            
             # В Docker используем chromium-browser напрямую
             try:
-                from selenium.webdriver.chrome.service import Service
-                
-                # Проверяем наличие chromium-browser в Docker
                 chromium_path = '/usr/bin/chromium-browser'
                 chromedriver_path = '/usr/bin/chromedriver'
                 
                 if os.path.exists(chromium_path):
                     options.binary_location = chromium_path
-                    print(f"🌐 Chrome binary: {chromium_path}")
                 
                 if os.path.exists(chromedriver_path):
                     service = Service(chromedriver_path)
-                    self.driver = webdriver.Chrome(service=service, options=options)
+                    if seleniumwire_options:
+                        self.driver = webdriver.Chrome(
+                            service=service, 
+                            options=options,
+                            seleniumwire_options=seleniumwire_options
+                        )
+                    else:
+                        self.driver = webdriver.Chrome(service=service, options=options)
                 else:
-                    # Fallback на webdriver-manager если chromedriver не найден
-                    from webdriver_manager.chrome import ChromeDriverManager
                     service = Service(ChromeDriverManager().install())
-                    self.driver = webdriver.Chrome(service=service, options=options)
+                    if seleniumwire_options:
+                        self.driver = webdriver.Chrome(
+                            service=service, 
+                            options=options,
+                            seleniumwire_options=seleniumwire_options
+                        )
+                    else:
+                        self.driver = webdriver.Chrome(service=service, options=options)
+                        
             except Exception as e:
                 print(f"⚠️  Ошибка настройки Service: {e}, используем дефолтный Chrome")
-                self.driver = webdriver.Chrome(options=options)
+                if seleniumwire_options:
+                    self.driver = webdriver.Chrome(
+                        options=options,
+                        seleniumwire_options=seleniumwire_options
+                    )
+                else:
+                    self.driver = webdriver.Chrome(options=options)
             
             # Удаляем признаки автоматизации
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -295,7 +325,7 @@ class BandlinkParserProductionLinux:
             self.driver.set_page_load_timeout(60)
             self.driver.implicitly_wait(10)
             
-            print("✅ Chrome драйвер настроен (headless режим с прокси)")
+            print("✅ Chrome драйвер настроен (headless режим с selenium-wire)")
             return True
             
         except Exception as e:
@@ -764,100 +794,31 @@ class BandlinkParserProductionLinux:
         """Запускает цикл парсинга"""
         print("🚀 Запуск Bandlink Parser Production для Linux")
         
-        # ВАЖНО: Сначала запускаем БЕЗ прокси для добавления кук
-        print("🔧 Этап 1: Добавление кук (без прокси)")
-        if not self.setup_driver(use_proxy=False):
+        use_proxy = bool(self.proxy_username and self.proxy_password)
+        
+        # С selenium-wire можно сразу запускать с прокси и устанавливать куки
+        # selenium-wire создает локальный прокси который корректно авторизуется
+        
+        if use_proxy:
+            print("🔧 Запуск браузера С прокси (selenium-wire)")
+        else:
+            print("🔧 Запуск браузера БЕЗ прокси")
+        
+        if not self.setup_driver(use_proxy=use_proxy):
             return False
         
+        # Устанавливаем куки
+        self.add_cookies()
+        
+        # Проверяем что куки добавились
+        selenium_cookies = self.driver.get_cookies()
+        cookies_count = len(selenium_cookies)
+        print(f"✅ Добавлено кук в браузер: {cookies_count}")
+        
+        if cookies_count == 0:
+            print("⚠️  Куки не установлены! Продолжаем без кук (может появиться капча)")
+        
         try:
-            # Добавляем куки БЕЗ прокси
-            self.add_cookies()
-            
-            # Проверяем что куки добавились
-            selenium_cookies = self.driver.get_cookies()
-            cookies_count = len(selenium_cookies)
-            print(f"✅ Добавлено кук в браузер: {cookies_count}")
-            
-            # Если куки добавились и есть прокси credentials - перезапускаем С прокси
-            if cookies_count > 0 and self.proxy_username and self.proxy_password:
-                print("\n🔧 Этап 2: Перезапуск С прокси для парсинга")
-                
-                # ВАЖНО: Сохраняем куки перед закрытием браузера
-                saved_cookies = selenium_cookies.copy()
-                print(f"💾 Сохранено {len(saved_cookies)} кук для переноса")
-                
-                # Закрываем браузер
-                self.driver.quit()
-                
-                # Сбрасываем счетчик попыток
-                self.proxy_attempts = 0
-                
-                # Запускаем С прокси
-                if not self.setup_driver(use_proxy=True):
-                    return False
-                
-                # Восстанавливаем куки в новом браузере
-                print(f"🍪 Восстановление {len(saved_cookies)} кук...")
-                try:
-                    # Сначала переходим на band.link
-                    self.driver.get("https://band.link")
-                    self.human_delay(1, 2)
-                    
-                    # Добавляем сохраненные куки с той же логикой что в add_cookies()
-                    restored = 0
-                    failed = 0
-                    
-                    for cookie in saved_cookies:
-                        cookie_name = cookie.get('name')
-                        cookie_value = cookie.get('value')
-                        
-                        if not cookie_name or not cookie_value:
-                            continue
-                        
-                        # Создаем новый объект куки (только name и value)
-                        cookie_data = {
-                            'name': cookie_name,
-                            'value': str(cookie_value)
-                        }
-                        
-                        # Пробуем разные варианты domain (как в add_cookies)
-                        success = False
-                        
-                        # 1. Пробуем без domain (автоопределение)
-                        try:
-                            self.driver.add_cookie(cookie_data)
-                            restored += 1
-                            success = True
-                        except:
-                            pass
-                        
-                        if not success:
-                            # 2. Пробуем с .band.link
-                            try:
-                                cookie_data_with_domain = cookie_data.copy()
-                                cookie_data_with_domain['domain'] = '.band.link'
-                                self.driver.add_cookie(cookie_data_with_domain)
-                                restored += 1
-                                success = True
-                            except:
-                                pass
-                        
-                        if not success:
-                            # 3. Пробуем с band.link
-                            try:
-                                cookie_data_with_domain = cookie_data.copy()
-                                cookie_data_with_domain['domain'] = 'band.link'
-                                self.driver.add_cookie(cookie_data_with_domain)
-                                restored += 1
-                                success = True
-                            except Exception as e:
-                                failed += 1
-                                print(f"⚠️  Не удалось восстановить куку {cookie_name}: {e}")
-                    
-                    print(f"✅ Восстановлено {restored} кук в браузере с прокси (не удалось: {failed})")
-                except Exception as e:
-                    print(f"❌ Ошибка восстановления кук: {e}")
-            
             # Парсим артистов
             artists = self.config.get('target_artists', [])
             if not artists:
