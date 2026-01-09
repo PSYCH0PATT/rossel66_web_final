@@ -79,11 +79,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Конфигурация для Vercel Cron
-export const config = {
-  runtime: 'nodejs',
-  // Для Vercel Cron Jobs
-  schedule: '0 12,20 * * *' // Запуск в 12:00 и 20:00 каждый день
-};
+// Используем Node.js runtime
+export const runtime = 'nodejs';
+
+// Расписание (для node-cron в lib/scheduler.ts):
+// - 12:00 и 20:00 по Москве ежедневно
 
 

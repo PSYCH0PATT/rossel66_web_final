@@ -242,13 +242,12 @@ function getArtistsWithRecentReleases(): Array<{
   return Array.from(artistMap.values());
 }
 
-// Конфигурация для Vercel Cron (информативная)
-export const config = {
-  runtime: 'nodejs',
-  // Расписание в vercel.json:
-  // - Пятница 00:30 МСК (Четверг 21:30 UTC)
-  // - Суббота 16:00 МСК (13:00 UTC)
-  // - Воскресенье 16:00 МСК (13:00 UTC)  
-  // - Понедельник 16:00 МСК (13:00 UTC)
-};
+// Используем Node.js runtime для парсеров
+export const runtime = 'nodejs';
+
+// Расписание (для node-cron в lib/scheduler.ts):
+// - Пятница 00:30 МСК — первый скан после выхода
+// - Суббота 16:00 МСК
+// - Воскресенье 16:00 МСК  
+// - Понедельник 16:00 МСК
 
