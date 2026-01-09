@@ -7,6 +7,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Включаем instrumentation для запуска планировщика при старте сервера
+  experimental: {
+    instrumentationHook: true,
+  },
   webpack: (config) => { // Убираем неиспользуемые параметры
     config.resolve.alias['@'] = path.resolve(__dirname);
     return config;

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { AdminSelect, AdminSelectContent, AdminSelectItem, AdminSelectTrigger, AdminSelectValue } from "@/components/ui/admin-select"
 import { SelectContent, SelectItem } from "@/components/ui/select"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Plus, Edit, Trash, Loader2, Filter, Search, X } from "lucide-react"
+import { Music, Calendar, Barcode, Plus, Edit, Trash, Loader2, Filter, Search, X, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 interface Release {
@@ -20,12 +20,14 @@ interface Release {
   artistName: string
   title: string
   coverUrl: string
-  upc: string
+  upc?: string
   releaseDate: string
-  status: 'released' | 'moderation' | 'delivery' | 'scheduled'
+  status?: string
   tracks: any[]
   createdAt: string
   updatedAt: string
+  koalaId?: string
+  bandlinkUrl?: string
 }
 
 export default function AdminReleasesPage() {
@@ -181,20 +183,36 @@ export default function AdminReleasesPage() {
     }
   }
 
-  // Status badge colors
-  const statusColors = {
+  // Status badge colors - новые статусы из Koala Music
+  const statusColors: Record<string, string> = {
+    // Новые статусы Koala Music
+    "На модерации": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Одобрен": "bg-blue-500 hover:bg-blue-600 text-white",
+    "Отклонён": "bg-red-500 hover:bg-red-600 text-white",
+    "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
+    "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
+    "Снят": "bg-gray-500 hover:bg-gray-600 text-white",
+    // Legacy статусы для обратной совместимости
     released: "bg-green-500 hover:bg-green-600 text-white",
     moderation: "bg-orange-500 hover:bg-orange-600 text-white",
     delivery: "bg-blue-500 hover:bg-blue-600 text-white",
     scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
   }
 
-  // Status translations
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
+  // Status translations - новые статусы Koala Music
+  const statusLabels: Record<string, string> = {
+    // Новые статусы Koala Music (отображаются как есть)
+    "На модерации": "На модерации",
+    "Одобрен": "Одобрен",
+    "Отклонён": "Отклонён",
+    "В доставке": "В доставке",
+    "Доставлен": "Доставлен",
+    "Снят": "Снят",
+    // Legacy статусы для обратной совместимости
+    released: "Доставлен",
+    moderation: "На модерации",
+    delivery: "В доставке",
+    scheduled: "На модерации",
   }
 
   if (isLoading) {
@@ -215,6 +233,29 @@ export default function AdminReleasesPage() {
           <h1 className="text-2xl font-bold text-white">Релизы ({filteredReleases.length} из {releases.length})</h1>
 
           <div className="flex gap-3">
+            {/* Koala Parser */}
+            <Link href="/dashboard/admin/releases/koala-parser">
+              <Button
+                variant="outline"
+                style={{
+                  borderColor: '#10b981',
+                  color: '#10b981',
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#10b981'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = '#10b981'
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Koala Parser
+              </Button>
+            </Link>
+            
             {/* Поиск */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -281,10 +322,12 @@ export default function AdminReleasesPage() {
               </AdminSelectTrigger>
                       <SelectContent className="border-slate-600 text-white" style={{ backgroundColor: '#1a1d24' }}>
                         <SelectItem value="all" className="hover:bg-slate-700 focus:bg-slate-700">Все статусы</SelectItem>
-                        <SelectItem value="released" className="hover:bg-slate-700 focus:bg-slate-700">Вышел</SelectItem>
-                        <SelectItem value="moderation" className="hover:bg-slate-700 focus:bg-slate-700">Модерация</SelectItem>
-                        <SelectItem value="delivery" className="hover:bg-slate-700 focus:bg-slate-700">Отгрузка</SelectItem>
-                        <SelectItem value="scheduled" className="hover:bg-slate-700 focus:bg-slate-700">Запланирован</SelectItem>
+                        <SelectItem value="На модерации" className="hover:bg-slate-700 focus:bg-slate-700">На модерации</SelectItem>
+                        <SelectItem value="Одобрен" className="hover:bg-slate-700 focus:bg-slate-700">Одобрен</SelectItem>
+                        <SelectItem value="Отклонён" className="hover:bg-slate-700 focus:bg-slate-700">Отклонён</SelectItem>
+                        <SelectItem value="В доставке" className="hover:bg-slate-700 focus:bg-slate-700">В доставке</SelectItem>
+                        <SelectItem value="Доставлен" className="hover:bg-slate-700 focus:bg-slate-700">Доставлен</SelectItem>
+                        <SelectItem value="Снят" className="hover:bg-slate-700 focus:bg-slate-700">Снят</SelectItem>
                       </SelectContent>
                     </AdminSelect>
                   </div>
@@ -490,8 +533,8 @@ export default function AdminReleasesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={statusColors[release.status]}>
-                        {statusLabels[release.status]}
+                      <Badge className={statusColors[release.status || 'Доставлен'] || 'bg-gray-500 hover:bg-gray-600 text-white'}>
+                        {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

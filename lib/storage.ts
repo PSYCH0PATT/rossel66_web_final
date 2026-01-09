@@ -15,26 +15,45 @@ export interface User {
   spotifyUrl?: string
 }
 
+// Статусы релизов из Koala Music
+export type ReleaseStatus = 
+  | 'На модерации' 
+  | 'Одобрен' 
+  | 'Отклонён' 
+  | 'В доставке' 
+  | 'Доставлен' 
+  | 'Снят'
+  // Legacy статусы для обратной совместимости
+  | 'released' 
+  | 'moderation' 
+  | 'delivery' 
+  | 'scheduled'
+
 export interface Release {
   id: string
   title: string
   artistId: string
   releaseDate: string
-  type: 'single' | 'album' | 'ep'
+  type?: 'single' | 'album' | 'ep'
   coverUrl?: string
   tracks: Track[]
   createdAt: string
   updatedAt: string
   upc?: string
+  status?: ReleaseStatus | string
   featuredArtistIds?: string[]
   featuredArtistNames?: string[]
+  // Новые поля для Koala Music
+  koalaId?: string          // ID релиза в Koala Music
+  bandlinkUrl?: string      // Ссылка BandLink
 }
 
 export interface Track {
   id: string
   title: string
   duration: string
-  trackNumber: number
+  trackNumber?: number
+  isrc?: string              // ISRC код трека
   featuredArtistIds?: string[]
   featuredArtistNames?: string[]
 }
@@ -509,4 +528,35 @@ export function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): Report
   reports.push(newReport as Report)
   saveReports(reports)
   return newReport
+}
+
+// ============================================================
+// Функции для Koala Music Parser
+// ============================================================
+
+// Функция для поиска релиза по Koala ID
+export function getReleaseByKoalaId(koalaId: string): Release | null {
+  const releases = loadReleases()
+  return releases.find(release => release.koalaId === koalaId) || null
+}
+
+// Функция для поиска артистов по именам
+export function findArtistsByNames(artistNames: string[]): User[] {
+  const users = loadUsers()
+  return artistNames
+    .map(name => users.find(u => 
+      u.role === 'artist' && 
+      u.name.toLowerCase() === name.toLowerCase()
+    ))
+    .filter((user): user is User => user !== undefined)
+}
+
+// Функция для поиска всех артистов по имени (частичное совпадение)
+export function findArtistsByPartialName(partialName: string): User[] {
+  const users = loadUsers()
+  const searchName = partialName.toLowerCase()
+  return users.filter(u => 
+    u.role === 'artist' && 
+    u.name.toLowerCase().includes(searchName)
+  )
 }

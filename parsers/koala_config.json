@@ -1,0 +1,9 @@
+{
+  "login": "Maks.lat@bk.ru",
+  "password": "IXLth1gU5v",
+  "base_url": "https://portal.koala-music.com",
+  "headless": true,
+  "timeout": 30
+}
+
+

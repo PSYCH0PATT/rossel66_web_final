@@ -31,20 +31,36 @@ export default function ReleasesPage() {
     }
   }, [artistId])
 
-  // Цвета для статусов релизов
-  const statusColors = {
+  // Цвета для статусов релизов - новые статусы из Koala Music
+  const statusColors: Record<string, string> = {
+    // Новые статусы Koala Music
+    "На модерации": "bg-category-amber text-black",
+    "Одобрен": "bg-category-blue text-black",
+    "Отклонён": "bg-red-500 text-white",
+    "В доставке": "bg-category-purple text-white",
+    "Доставлен": "bg-category-green text-black",
+    "Снят": "bg-gray-500 text-white",
+    // Legacy статусы для обратной совместимости
     released: "bg-category-green text-black",
     moderation: "bg-category-amber text-black",
     delivery: "bg-category-blue text-black",
     scheduled: "bg-category-purple text-white",
   }
 
-  // Переводы статусов
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
+  // Переводы статусов - новые статусы Koala Music
+  const statusLabels: Record<string, string> = {
+    // Новые статусы Koala Music
+    "На модерации": "На модерации",
+    "Одобрен": "Одобрен",
+    "Отклонён": "Отклонён",
+    "В доставке": "В доставке",
+    "Доставлен": "Доставлен",
+    "Снят": "Снят",
+    // Legacy статусы для обратной совместимости
+    released: "Доставлен",
+    moderation: "На модерации",
+    delivery: "В доставке",
+    scheduled: "На модерации",
   }
 
   return (
@@ -66,8 +82,8 @@ export default function ReleasesPage() {
                       fill
                       className="object-cover"
                     />
-                    <Badge className={`absolute top-1 right-1 sm:top-2 sm:right-2 rounded-xl text-xs ${statusColors[release.status]}`}>
-                      {statusLabels[release.status]}
+                    <Badge className={`absolute top-1 right-1 sm:top-2 sm:right-2 rounded-xl text-xs ${statusColors[release.status || 'Доставлен'] || 'bg-gray-500 text-white'}`}>
+                      {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
                     </Badge>
                     {release.tracks.length > 1 && (
                       <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black/70 text-white text-xs px-1 sm:px-2 py-1 rounded-lg flex items-center gap-1">
@@ -80,10 +96,12 @@ export default function ReleasesPage() {
                     <h2 className="text-base font-bold mb-2 line-clamp-1">{release.title}</h2>
 
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Barcode className="h-4 w-4 text-category-purple" />
-                        <span className="text-muted-foreground line-clamp-1">UPC: {release.upc}</span>
-                      </div>
+                      {release.upc && (
+                        <div className="flex items-center gap-2">
+                          <Barcode className="h-4 w-4 text-category-purple" />
+                          <span className="text-muted-foreground line-clamp-1">UPC: {release.upc}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-category-amber" />

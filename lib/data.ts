@@ -14,17 +14,32 @@ export interface User {
   spotifyUrl?: string // Ссылка на профиль в Spotify (добавим для полноты)
 }
 
-export type ReleaseStatus = "released" | "moderation" | "delivery" | "scheduled"
+// Статусы релизов из Koala Music
+export type ReleaseStatus = 
+  | "На модерации" 
+  | "Одобрен" 
+  | "Отклонён" 
+  | "В доставке" 
+  | "Доставлен" 
+  | "Снят"
+  // Legacy статусы для обратной совместимости
+  | "released" 
+  | "moderation" 
+  | "delivery" 
+  | "scheduled"
 
 export interface Release {
   id: string
   artistId: string
   title: string
   coverUrl: string
-  upc: string
+  upc?: string
   releaseDate: string
-  status: ReleaseStatus
+  status?: ReleaseStatus | string
   tracks: Track[]
+  // Новые поля для Koala Music
+  koalaId?: string          // ID релиза в Koala Music
+  bandlinkUrl?: string      // Ссылка BandLink
 }
 
 export interface Track {

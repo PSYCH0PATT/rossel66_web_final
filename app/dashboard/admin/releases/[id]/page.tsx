@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Clock, ArrowLeft, Save, User } from "lucide-react"
+import { Music, Calendar, Barcode, Clock, ArrowLeft, Save, User, Link as LinkIcon, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -17,10 +17,12 @@ type Release = {
   artistId: string
   title: string
   coverUrl: string
-  upc: string
+  upc?: string
   releaseDate: string
-  status: "released" | "moderation" | "delivery" | "scheduled"
+  status?: string
   tracks: any[]
+  koalaId?: string
+  bandlinkUrl?: string
 }
 
 export default function AdminReleaseDetailPage({ params }: { params: { id: string } }) {
@@ -67,7 +69,9 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
         status: release.status,
         coverUrl: release.coverUrl,
         tracks: release.tracks,
-        artistId: release.artistId
+        artistId: release.artistId,
+        koalaId: release.koalaId,
+        bandlinkUrl: release.bandlinkUrl
       }
       await fetch(`/api/releases/${release.id}`, {
         method: 'PUT',
@@ -80,6 +84,14 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   }
 
   const statusColors: Record<string, string> = {
+    // Новые статусы Koala Music
+    "На модерации": "bg-orange-500 text-white",
+    "Одобрен": "bg-blue-500 text-white",
+    "Отклонён": "bg-red-500 text-white",
+    "В доставке": "bg-purple-500 text-white",
+    "Доставлен": "bg-green-500 text-white",
+    "Снят": "bg-gray-500 text-white",
+    // Legacy статусы
     released: "bg-green-500 text-white",
     moderation: "bg-orange-500 text-white",
     delivery: "bg-blue-500 text-white",
@@ -87,10 +99,18 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   }
 
   const statusLabels: Record<string, string> = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
+    // Новые статусы Koala Music
+    "На модерации": "На модерации",
+    "Одобрен": "Одобрен",
+    "Отклонён": "Отклонён",
+    "В доставке": "В доставке",
+    "Доставлен": "Доставлен",
+    "Снят": "Снят",
+    // Legacy статусы
+    released: "Доставлен",
+    moderation: "На модерации",
+    delivery: "В доставке",
+    scheduled: "На модерации",
   }
 
   if (loading || !release) {
@@ -123,8 +143,8 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
             <Card className="bg-card border-border text-white overflow-hidden">
               <div className="aspect-square relative">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
-                <Badge className={`absolute top-2 right-2 ${statusColors[release.status]}`}>
-                  {statusLabels[release.status]}
+                <Badge className={`absolute top-2 right-2 ${statusColors[release.status || 'Доставлен'] || 'bg-gray-500 text-white'}`}>
+                  {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
                 </Badge>
               </div>
               <CardContent className="p-4 space-y-3">
@@ -134,8 +154,31 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                 </div>
                 <div>
                   <div className="text-xs text-slate-400 mb-1">UPC</div>
-                  <Input value={release.upc} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
+                  <Input value={release.upc || ''} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
                 </div>
+                {release.koalaId && (
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">Koala ID</div>
+                    <div className="text-sm text-slate-300 py-2 px-3 bg-slate-800 rounded-md">
+                      {release.koalaId}
+                    </div>
+                  </div>
+                )}
+                {release.bandlinkUrl && (
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">BandLink</div>
+                    <a 
+                      href={release.bandlinkUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800 rounded-md"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      {release.bandlinkUrl}
+                      <ExternalLink className="h-3 w-3 ml-auto" />
+                    </a>
+                  </div>
+                )}
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Дата релиза</div>
                   <Input type="date" value={release.releaseDate?.slice(0,10)} onChange={(e) => setRelease({ ...release, releaseDate: e.target.value })} />
@@ -189,13 +232,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                 </div>
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Статус</div>
-                  <Select value={release.status} onValueChange={(v) => setRelease({ ...release, status: v as Release['status'] })}>
+                  <Select value={release.status || 'Доставлен'} onValueChange={(v) => setRelease({ ...release, status: v })}>
                     <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="released">Вышел</SelectItem>
-                      <SelectItem value="moderation">Модерация</SelectItem>
-                      <SelectItem value="delivery">Отгрузка</SelectItem>
-                      <SelectItem value="scheduled">Запланирован</SelectItem>
+                      <SelectItem value="На модерации">На модерации</SelectItem>
+                      <SelectItem value="Одобрен">Одобрен</SelectItem>
+                      <SelectItem value="Отклонён">Отклонён</SelectItem>
+                      <SelectItem value="В доставке">В доставке</SelectItem>
+                      <SelectItem value="Доставлен">Доставлен</SelectItem>
+                      <SelectItem value="Снят">Снят</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
