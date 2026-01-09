@@ -79,7 +79,44 @@ class KoalaReleasesParser:
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option('useAutomationExtension', False)
             
-            service = Service(ChromeDriverManager().install())
+            # Определяем ОС и настраиваем драйвер
+            import platform
+            is_linux = platform.system() == 'Linux'
+            
+            if is_linux:
+                # На Linux/Alpine используем системный Chromium
+                # Alpine: /usr/bin/chromium-browser
+                # Debian/Ubuntu: /usr/bin/chromium или /usr/bin/google-chrome
+                for chrome_path in ['/usr/bin/chromium-browser', '/usr/bin/chromium', '/usr/bin/google-chrome']:
+                    if os.path.exists(chrome_path):
+                        chrome_options.binary_location = chrome_path
+                        print(f"🐧 Chrome binary: {chrome_path}")
+                        break
+                
+                # Проверяем доступные пути к chromedriver
+                chromedriver_paths = [
+                    '/usr/bin/chromedriver',           # Alpine (chromium-chromedriver)
+                    '/usr/bin/chromium-driver',        # Некоторые дистрибутивы
+                    '/usr/lib/chromium/chromedriver',  # Debian
+                    '/usr/local/bin/chromedriver'      # Manual install
+                ]
+                
+                chromedriver_path = None
+                for path in chromedriver_paths:
+                    if os.path.exists(path):
+                        chromedriver_path = path
+                        break
+                
+                if chromedriver_path:
+                    print(f"🐧 Linux: используем системный chromedriver: {chromedriver_path}")
+                    service = Service(chromedriver_path)
+                else:
+                    print("⚠️  Системный chromedriver не найден, пробуем webdriver-manager...")
+                    service = Service(ChromeDriverManager().install())
+            else:
+                # На Mac/Windows используем webdriver-manager
+                service = Service(ChromeDriverManager().install())
+            
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             
             # Убираем флаг webdriver
