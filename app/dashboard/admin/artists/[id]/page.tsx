@@ -35,6 +35,12 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   const [artistNotFound, setArtistNotFound] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   
+  // Новые поля для артиста
+  const [fio, setFio] = useState("")
+  const [fioShort, setFioShort] = useState("")
+  const [contract, setContract] = useState("")
+  const [percentage, setPercentage] = useState("")
+  
   // Состояния для управления контентом
   const [releases, setReleases] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
@@ -68,6 +74,12 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
             setSpotifyUrl(artist.spotifyUrl || "")
             setAvatarPreview(artist.avatarUrl || null)
             setCurrentPassword(artist.password)
+            
+            // Новые поля
+            setFio(artist.fio || "")
+            setFioShort(artist.fioShort || "")
+            setContract(artist.contract || "")
+            setPercentage(artist.percentage?.toString() || "")
           } else {
             setArtistNotFound(true)
           }
@@ -197,6 +209,11 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           yandexMusicUrl: yandexMusicUrl || undefined,
           spotifyUrl: spotifyUrl || undefined,
           avatarUrl: avatarPreview || undefined,
+          // Новые поля
+          fio: fio || undefined,
+          fioShort: fioShort || undefined,
+          contract: contract || undefined,
+          percentage: percentage ? parseInt(percentage) : undefined,
         }),
       })
 
@@ -390,6 +407,65 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       placeholder="Введите email"
                     />
                     <p className="text-xs text-muted-foreground">Необязательно</p>
+                  </div>
+
+                  {/* Новые поля для артиста */}
+                  <div className="space-y-2">
+                    <Label htmlFor="fio" className="text-white">
+                      Полное ФИО
+                    </Label>
+                    <Input
+                      id="fio"
+                      type="text"
+                      value={fio}
+                      onChange={(e) => setFio(e.target.value)}
+                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      placeholder="Введите полное ФИО"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fioShort" className="text-white">
+                      ФИО кратко
+                    </Label>
+                    <Input
+                      id="fioShort"
+                      type="text"
+                      value={fioShort}
+                      onChange={(e) => setFioShort(e.target.value)}
+                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      placeholder="Введите ФИО кратко (И. О.)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contract" className="text-white">
+                      Номер договора
+                    </Label>
+                    <Input
+                      id="contract"
+                      type="text"
+                      value={contract}
+                      onChange={(e) => setContract(e.target.value)}
+                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      placeholder="Введите номер договора"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="percentage" className="text-white">
+                      Процент
+                    </Label>
+                    <Input
+                      id="percentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={percentage}
+                      onChange={(e) => setPercentage(e.target.value)}
+                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      placeholder="Введите процент (0-100)"
+                    />
                   </div>
 
                   {/* Добавляем новые поля для ссылок на музыкальные сервисы */}

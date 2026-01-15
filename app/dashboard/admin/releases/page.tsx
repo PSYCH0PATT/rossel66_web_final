@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { AdminSelect, AdminSelectContent, AdminSelectItem, AdminSelectTrigger, AdminSelectValue } from "@/components/ui/admin-select"
 import { SelectContent, SelectItem } from "@/components/ui/select"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Plus, Edit, Trash, Loader2, Filter, Search, X, RefreshCw } from "lucide-react"
+import { Music, Calendar, Barcode, Plus, Edit, Trash, Loader2, Filter, Search, X, RefreshCw, Download } from "lucide-react"
 import Link from "next/link"
 
 interface Release {
@@ -119,9 +119,9 @@ export default function AdminReleasesPage() {
     return Array.from(new Set(artists)).sort()
   }, [releases])
 
-  // Фильтрация и поиск
+  // Фильтрация и поиск с сортировкой
   const filteredReleases = useMemo(() => {
-    return releases.filter(release => {
+    const filtered = releases.filter(release => {
       // Поиск по названию или артисту
       const matchesSearch = searchQuery === "" || 
         release.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,6 +140,13 @@ export default function AdminReleasesPage() {
       const matchesDateTo = !filterDateTo || releaseDate <= new Date(filterDateTo)
 
       return matchesSearch && matchesStatus && matchesArtist && matchesDateFrom && matchesDateTo
+    })
+    
+    // Сортировка от самых новых к самым старым
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.releaseDate)
+      const dateB = new Date(b.releaseDate)
+      return dateB.getTime() - dateA.getTime()
     })
   }, [releases, searchQuery, filterStatus, filterArtist, filterDateFrom, filterDateTo])
 
@@ -233,6 +240,29 @@ export default function AdminReleasesPage() {
           <h1 className="text-2xl font-bold text-white">Релизы ({filteredReleases.length} из {releases.length})</h1>
 
           <div className="flex gap-3">
+            {/* Zvonko Parser */}
+            <Link href="/dashboard/admin/releases/zvonko-parser">
+              <Button
+                variant="outline"
+                style={{
+                  borderColor: '#3b82f6',
+                  color: '#3b82f6',
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3b82f6'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = '#3b82f6'
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Zvonko Parser
+              </Button>
+            </Link>
+            
             {/* Koala Parser */}
             <Link href="/dashboard/admin/releases/koala-parser">
               <Button

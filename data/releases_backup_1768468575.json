@@ -1,0 +1,4447 @@
+[
+  {
+    "id": "release_1759097981601_0",
+    "artistId": "user_1759096823226",
+    "title": "Stfu",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26055153/",
+    "upc": "194616166974",
+    "releaseDate": "2019-10-04",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981564_2pfa35bsv",
+        "title": "Stfu",
+        "isrc": "QZFZ61900987",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.442Z"
+  },
+  {
+    "id": "release_1759097981601_1",
+    "artistId": "user_1759013711284",
+    "title": "When I Have You",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25835124/",
+    "upc": "3616845887972",
+    "releaseDate": "2022-04-02",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981564_62tmx4u4j",
+        "title": "When I Have You",
+        "isrc": "FR59R2242659",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_2",
+    "artistId": "user_1759096823822",
+    "title": "BRXVKDXWN",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25906850/",
+    "upc": "3616847395109",
+    "releaseDate": "2022-06-02",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981564_wfkdmzewt",
+        "title": "BRXVKDXWN",
+        "isrc": "FR96X2283023",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_3",
+    "artistId": "user_1759096824938",
+    "title": "Burnout Is My Truth",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/30007390/",
+    "upc": "3616847810640",
+    "releaseDate": "2022-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981564_onhica9bx",
+        "title": "Burnout Is My Truth",
+        "isrc": "FRX202226133",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_4",
+    "artistId": "user_1759013711284",
+    "title": "SHREDDER",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25834798/",
+    "upc": "3617050265760",
+    "releaseDate": "2022-08-21",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981564_co6k12t68",
+        "title": "SHREDDER",
+        "isrc": "FRX452255420",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_5",
+    "artistId": "user_1759013711284",
+    "title": "UNIVERSE IN MY HEART",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25909747/",
+    "upc": "3617051836877",
+    "releaseDate": "2022-10-12",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_wxal7anrt",
+        "title": "UNIVERSE IN MY HEART",
+        "isrc": "FRX872246104",
+        "duration": "3:30",
+        "featuredArtistNames": [
+          "CXRBER"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_6",
+    "artistId": "user_1759013711284",
+    "title": "CROWS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25835082/",
+    "upc": "3617052207676",
+    "releaseDate": "2022-10-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_l50ru4eim",
+        "title": "CROWS",
+        "isrc": "DGA052209974",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_7",
+    "artistId": "user_1759096824371",
+    "title": "Танец души",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28734303/",
+    "upc": "3617055921159",
+    "releaseDate": "2023-02-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_q52oqzvoa",
+        "title": "Танец души",
+        "isrc": "FR2X42360402",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_8",
+    "artistId": "user_1759096824371",
+    "title": "Ты не знаешь",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28734362/",
+    "upc": "3617224898961",
+    "releaseDate": "2023-07-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_0etaae7c7",
+        "title": "Ты не знаешь",
+        "isrc": "DGA062343863",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_9",
+    "artistId": "user_1759096823822",
+    "title": "Witchery",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27391527/",
+    "upc": "3617385733736",
+    "releaseDate": "2024-03-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_i2zbejm7t",
+        "title": "Witchery",
+        "isrc": "FRX202442316",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981601_10",
+    "artistId": "user_1759096823822",
+    "title": "Massacre",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27390689/",
+    "upc": "3617385957675",
+    "releaseDate": "2024-04-11",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_tqlfs6yi5",
+        "title": "Massacre",
+        "isrc": "FRX202464835",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.601Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_11",
+    "artistId": "user_1759096824938",
+    "title": "Амнезия",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27382105/",
+    "upc": "3617386366636",
+    "releaseDate": "2024-04-11",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981565_ifkcwyx6m",
+        "title": "Амнезия",
+        "isrc": "FRX282421490",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_12",
+    "artistId": "user_1759096823822",
+    "title": "GO KRUSH!",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27382047/",
+    "upc": "3617386530419",
+    "releaseDate": "2024-04-18",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_cw6wj4w4g",
+        "title": "GO KRUSH!",
+        "isrc": "FRX282434433",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_13",
+    "artistId": "user_1759096823226",
+    "title": "Sunrise",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27383122/",
+    "upc": "3617386668693",
+    "releaseDate": "2024-04-25",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_jeva0r90g",
+        "title": "Sunrise",
+        "isrc": "FRX282459297",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_14",
+    "artistId": "user_1759096823226",
+    "title": "Hypnosis",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27391421/",
+    "upc": "3617386681258",
+    "releaseDate": "2024-05-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_ampbxg9l7",
+        "title": "Hypnosis",
+        "isrc": "FRX282460324",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_15",
+    "artistId": "user_1759096825419",
+    "title": "Хочу её",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381217/",
+    "upc": "3617386928179",
+    "releaseDate": "2024-05-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_2tj9zfhou",
+        "title": "Хочу её",
+        "isrc": "FRX452403449",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_16",
+    "artistId": "user_1759013711284",
+    "title": "Blue Winte",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381503/",
+    "upc": "3617387017148",
+    "releaseDate": "2024-05-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_vthny06f7",
+        "title": "Blue Winte",
+        "isrc": "FRX452421630",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_17",
+    "artistId": "user_1759096823074",
+    "title": "BEBE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27390575/",
+    "upc": "3617387295454",
+    "releaseDate": "2024-05-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_75zcuq63w",
+        "title": "BEBE",
+        "isrc": "FRX452452047",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981566_onpy3u4jt",
+        "title": "BEBE (Slowed)",
+        "isrc": "FRX452452048",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_18",
+    "artistId": "user_1759013711284",
+    "title": "YUREY",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381419/",
+    "upc": "3617387578359",
+    "releaseDate": "2024-05-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_sd2teklg3",
+        "title": "YUREY",
+        "isrc": "FRX452485305",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_19",
+    "artistId": "user_1759096824221",
+    "title": "CHAINSAW",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27413722/",
+    "upc": "3617387677908",
+    "releaseDate": "2024-05-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981566_ttwpavisu",
+        "title": "CHAINSAW",
+        "isrc": "FRX762401142",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_20",
+    "artistId": "user_1759011689584",
+    "title": "SOMEDAY",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27397391/",
+    "upc": "3617387752285",
+    "releaseDate": "2024-05-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_iow4pezi6",
+        "title": "SOMEDAY",
+        "isrc": "FRX762421843",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_21",
+    "artistId": "user_1759096823970",
+    "title": "STREET WALK",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381228/",
+    "upc": "3617388182876",
+    "releaseDate": "2024-05-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_4lm8dj0zs",
+        "title": "STREET WALK",
+        "isrc": "FRX762489760",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_22",
+    "artistId": "user_1759011689584",
+    "title": "Gold&Silver",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381619/",
+    "upc": "3617388281487",
+    "releaseDate": "2024-05-30",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_alodw8nnw",
+        "title": "Gold",
+        "isrc": "FRX762499951",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_7ldpa4u4k",
+        "title": "Silver",
+        "isrc": "FRX762499952",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_23",
+    "artistId": "user_1759011689584",
+    "title": "Like You",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27397399/",
+    "upc": "3617388632876",
+    "releaseDate": "2024-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_gjwz9vlu1",
+        "title": "Like You",
+        "isrc": "FRX872450245",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_24",
+    "artistId": "user_1759096823226",
+    "title": "Low Vibration",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381431/",
+    "upc": "3617388778215",
+    "releaseDate": "2024-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_0xcied5em",
+        "title": "Low Vibration",
+        "isrc": "FRX872468391",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981602_25",
+    "artistId": "user_1759096824619",
+    "title": "EVIL EMPIRE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27430690/",
+    "upc": "3617388906441",
+    "releaseDate": "2024-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981567_n8p46x5vm",
+        "title": "WANT YOU",
+        "isrc": "FRX872497722",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_6ze56kl5p",
+        "title": "UNDER THE SKIN",
+        "isrc": "FRX872497723",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_n9xhv5haq",
+        "title": "ANTIPSYCHOTIC",
+        "isrc": "FRX872497724",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_jlbaegc3w",
+        "title": "HOES WANT US",
+        "isrc": "FRX872497725",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_cc7w80sau",
+        "title": "NEW TIME",
+        "isrc": "FRX872497726",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981567_z88f1ka1y",
+        "title": "MISS YOU",
+        "isrc": "FRX872497727",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_828frcobv",
+        "title": "INTERIOR",
+        "isrc": "FRX872497728",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_vie8em0j4",
+        "title": "KENNY WATCHES",
+        "isrc": "FRX872497729",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_n964eu8mb",
+        "title": "TO CUP",
+        "isrc": "FRX872497730",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_es7f6bixt",
+        "title": "KICK IT LIKE THIS",
+        "isrc": "FRX872497731",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_hmlo5jqpp",
+        "title": "AQUAMARINE",
+        "isrc": "FRX872497732",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_mbd4eq9cy",
+        "title": "REVERSED MOTION",
+        "isrc": "FRX872497733",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_8jwsnn0b3",
+        "title": "REVIVAL",
+        "isrc": "FRX872497734",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_9xdvkuw1e",
+        "title": "SAY MY NAME",
+        "isrc": "FRX872497735",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_5ekyp59ij",
+        "title": "WORLDWIDE",
+        "isrc": "FRX872497736",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_n6twg5l8e",
+        "title": "MANHUNT",
+        "isrc": "FRX872497737",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_mowix31p0",
+        "title": "RAWMATIC INTRODUCTION",
+        "isrc": "FRX872497738",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_0kgubie1t",
+        "title": "BALLOUT DIS PURPP",
+        "isrc": "FRX872497739",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981568_v7yqmlqr2",
+        "title": "DROP TOP",
+        "isrc": "FRX872497740",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981569_ti4cjhj1o",
+        "title": "NUMBER THREE",
+        "isrc": "FRX872497741",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981569_rajgyvglt",
+        "title": "SATAN IS AT WAR WITH ME",
+        "isrc": "FRX872497742",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981569_wyltagqkq",
+        "title": "SCREW ADDICT",
+        "isrc": "FRX872497743",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981569_hrq3rs554",
+        "title": "HAZE",
+        "isrc": "FRX872497744",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.602Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_26",
+    "artistId": "user_1759013711284",
+    "title": "KILL ME AGAIN",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27382463/",
+    "upc": "3617389196629",
+    "releaseDate": "2024-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981569_wy4pasb71",
+        "title": "KILL ME AGAIN",
+        "isrc": "DGA052432571",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823518"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_27",
+    "artistId": "user_1759096824938",
+    "title": "Rocky Road",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/30019356/",
+    "upc": "4039967149725",
+    "releaseDate": "2021-10-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_e20n1yam3",
+        "title": "Паразит",
+        "isrc": "DEP551937684",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_krz7reoed",
+        "title": "Безразлично",
+        "isrc": "DEP551937685",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_gg8x0blor",
+        "title": "Я прав",
+        "isrc": "DEP551937687",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_kq37o52gy",
+        "title": "Девочка из аниме 2",
+        "isrc": "DEP551937682",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_dr8nt8kou",
+        "title": "Этот глупый свин",
+        "isrc": "DEP551937681",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_rgyqmxu0i",
+        "title": "Узы",
+        "isrc": "DEP551937683",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981570_7kwuubvd3",
+        "title": "Руками",
+        "isrc": "DEP551937686",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_28",
+    "artistId": "user_1759096824938",
+    "title": "Воспоминания",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29777060/",
+    "upc": "4039967177346",
+    "releaseDate": "2021-12-24",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_x82qk4y6a",
+        "title": "Воспоминания",
+        "isrc": "DEP551942846",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_29",
+    "artistId": "user_1759096823226",
+    "title": "Say Hello to Da Devil",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25926997/",
+    "upc": "4062994537210",
+    "releaseDate": "2021-02-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_yi3bu4occ",
+        "title": "Say Hello to Da Devil",
+        "isrc": "QZKDK2171781",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_30",
+    "artistId": "user_1759096823226",
+    "title": "Phonky",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25930244/",
+    "upc": "4062994625160",
+    "releaseDate": "2021-03-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_5qwra9e1g",
+        "title": "Phonky",
+        "isrc": "QZMHN2023033",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_31",
+    "artistId": "user_1759096823822",
+    "title": "DXRKNXSS SLXYXRS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26008876/",
+    "upc": "4680961201591",
+    "releaseDate": "2022-03-24",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_gmj0f3xg7",
+        "title": "DXRKNXSS SLXYXRS",
+        "isrc": "UKEX32207030",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_32",
+    "artistId": "user_1759096823822",
+    "title": "DEMOLITION",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007334/",
+    "upc": "4680961220240",
+    "releaseDate": "2022-04-14",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981570_g1e0f5zu2",
+        "title": "DEMOLITION",
+        "isrc": "UKEX32210502",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_33",
+    "artistId": "user_1759013711284",
+    "title": "Fairy",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965743/",
+    "upc": "4680961226440",
+    "releaseDate": "2022-04-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_ms6qtk0pq",
+        "title": "Fairy",
+        "isrc": "UKEX32211671",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_34",
+    "artistId": "user_1759096823822",
+    "title": "Osenseva",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25998079/",
+    "upc": "4680961228024",
+    "releaseDate": "2022-04-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_2l1zuzth5",
+        "title": "Osenseva",
+        "isrc": "UKEX32211990",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_35",
+    "artistId": "user_1759013711284",
+    "title": "FANATICS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26002071/",
+    "upc": "4680961231000",
+    "releaseDate": "2022-04-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_kg03phu15",
+        "title": "FANATICS",
+        "isrc": "UKEX32212577",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_36",
+    "artistId": "user_1759013711284",
+    "title": "DEAD SPACE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007576/",
+    "upc": "4680961247544",
+    "releaseDate": "2022-05-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_cttt1am96",
+        "title": "Dead Space",
+        "isrc": "UKEX32215625",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_bpho0vwt7",
+        "title": "Icy",
+        "isrc": "UKEX32215626",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_m26h6w44w",
+        "title": "Moon",
+        "isrc": "UKEX32215627",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_u13aa5ssb",
+        "title": "Oreon",
+        "isrc": "UKEX32215628",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_508mqtq60",
+        "title": "Universe",
+        "isrc": "UKEX32215629",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_ii3vcyp17",
+        "title": "Uran",
+        "isrc": "UKEX32215630",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_ci8sj1w25",
+        "title": "Zona-x",
+        "isrc": "UKEX32215631",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_37",
+    "artistId": "user_1759096823822",
+    "title": "Hopelessness",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26003469/",
+    "upc": "4680961261458",
+    "releaseDate": "2022-06-30",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_th4xpasjy",
+        "title": "Hopelessness",
+        "isrc": "UKEX32218344",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_38",
+    "artistId": "user_1759013711284",
+    "title": "SHADOW",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25980585/",
+    "upc": "4680961262486",
+    "releaseDate": "2022-06-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_h6qiexfq1",
+        "title": "SHADOW (Slowed)",
+        "isrc": "UKEX32218524",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981571_2xhmy3kly",
+        "title": "SHADOW (Sped Up)",
+        "isrc": "UKEX32218525",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_39",
+    "artistId": "user_1759096823822",
+    "title": "NIGTMARES",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965640/",
+    "upc": "4680961277206",
+    "releaseDate": "2022-07-05",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_9t75iiitz",
+        "title": "NIGTMARES",
+        "isrc": "UKEX32221419",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_40",
+    "artistId": "user_1759096823822",
+    "title": "SNIPER",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25908290/",
+    "upc": "4680961277664",
+    "releaseDate": "2022-07-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_nct3trcqc",
+        "title": "SNIPER",
+        "isrc": "UKEX32221542",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_41",
+    "artistId": "user_1759013711284",
+    "title": "JAPAN",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25746967/",
+    "upc": "4680961304681",
+    "releaseDate": "2022-08-17",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981571_qa4mgaf5r",
+        "title": "JAPAN",
+        "isrc": "UKEX32227138",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_42",
+    "artistId": "user_1759013711284",
+    "title": "HEART",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25797797/",
+    "upc": "4680961349088",
+    "releaseDate": "2022-11-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_9whmk83nv",
+        "title": "HEART",
+        "isrc": "UKEX32235871",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981603_43",
+    "artistId": "user_1759013711284",
+    "title": "CYBERPUNK",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25797513/",
+    "upc": "4680961386014",
+    "releaseDate": "2022-12-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_t6ej8u92c",
+        "title": "CYBERPUNK",
+        "isrc": "UKEX32244841",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.603Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_44",
+    "artistId": "user_1759013711284",
+    "title": "Dark Rider",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25797533/",
+    "upc": "4680961418906",
+    "releaseDate": "2023-02-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_dbo03zuqr",
+        "title": "Dark Rider",
+        "isrc": "UKEX32305990",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_45",
+    "artistId": "user_1759096823970",
+    "title": "FORTUNES",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31409546/",
+    "upc": "4680961427106",
+    "releaseDate": "2023-02-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_z9wgxob6d",
+        "title": ".40",
+        "isrc": "UKEX32307730",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_w7p0t67qr",
+        "title": "BODYBLEED",
+        "isrc": "UKEX32307731",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_db4dlhezb",
+        "title": "CRANIUM",
+        "isrc": "UKEX32307732",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_f0flj3agx",
+        "title": "PUSTO",
+        "isrc": "UKEX32307733",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_4tfmj3w7p",
+        "title": "DEMAND",
+        "isrc": "UKEX32307734",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_re0u07va4",
+        "title": "25BONES",
+        "isrc": "UKEX32307735",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_7c6743urf",
+        "title": "REASON",
+        "isrc": "UKEX32307736",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_ovo7hfz81",
+        "title": "YOLA",
+        "isrc": "UKEX32307737",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981572_jls22ipop",
+        "title": "KUKURUZA",
+        "isrc": "UKEX32307738",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_46",
+    "artistId": "user_1759011689584",
+    "title": "i can't never let u go",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31868735/",
+    "upc": "5016122265444",
+    "releaseDate": "2024-12-12",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_gk0svtfv5",
+        "title": "i can't never let u go",
+        "isrc": "AEA2Z2501229",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_47",
+    "artistId": "user_1759096824221",
+    "title": "Нету вен",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31868727/",
+    "upc": "5016122269077",
+    "releaseDate": "2024-12-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981572_61b2ernzl",
+        "title": "Нету вен",
+        "isrc": "AEA2Z2502121",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_48",
+    "artistId": "user_1759096823074",
+    "title": "Громко захожу",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192795/",
+    "upc": "5016122275559",
+    "releaseDate": "2025-01-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_38n6cw2mu",
+        "title": "Громко захожу",
+        "isrc": "AEA2Z2504006",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_49",
+    "artistId": "user_1759096825749",
+    "title": "Broky",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/30016231/",
+    "upc": "5016122277287",
+    "releaseDate": "2024-12-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_u047mavjh",
+        "title": "Broky",
+        "isrc": "AEA2Z2504435",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_50",
+    "artistId": "user_1759096823822",
+    "title": "Vertigo",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192735/",
+    "upc": "5016122278857",
+    "releaseDate": "2025-01-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_m7ome8iom",
+        "title": "Vertigo",
+        "isrc": "AEA2Z2504778",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_51",
+    "artistId": "user_1759096823518",
+    "title": "Snowball",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192803/",
+    "upc": "5016122279946",
+    "releaseDate": "2025-01-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_6naguxobi",
+        "title": "Snowball",
+        "isrc": "AEA2Z2505038",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_52",
+    "artistId": "user_1759096823666",
+    "title": "Health P",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31868705/",
+    "upc": "5016122283363",
+    "releaseDate": "2025-01-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_3krd5a122",
+        "title": "Health P",
+        "isrc": "AEA2Z2505655",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_53",
+    "artistId": "user_1759096825419",
+    "title": "LUVWINTER",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192811/",
+    "upc": "5016122283370",
+    "releaseDate": "2025-01-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_s0vi38jel",
+        "title": "LUVWINTER",
+        "isrc": "AEA2Z2505656",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_54",
+    "artistId": "user_1759096823822",
+    "title": "Night Love",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192727/",
+    "upc": "5016122287446",
+    "releaseDate": "2025-02-06",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981573_fqwdlb2d3",
+        "title": "Night Love",
+        "isrc": "AEA2Z2506291",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_55",
+    "artistId": "user_1759096823822",
+    "title": "Override",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29192847/",
+    "upc": "5016122289297",
+    "releaseDate": "2025-01-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_vo53muv0d",
+        "title": "Override",
+        "isrc": "AEA2Z2506667",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_56",
+    "artistId": "user_1759096823970",
+    "title": "MIRAGE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29250548/",
+    "upc": "5016122290415",
+    "releaseDate": "2025-01-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_ht444f5ou",
+        "title": "MIRAGE",
+        "isrc": "AEA2Z2506850",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_57",
+    "artistId": "user_1759096823666",
+    "title": "Mors Somnium",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29378590/",
+    "upc": "5016122301562",
+    "releaseDate": "2025-02-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_9hij6a2eg",
+        "title": "Mors Somnium",
+        "isrc": "AEA2Z2509317",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_58",
+    "artistId": "user_1759096824938",
+    "title": "Токсин",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29521017/",
+    "upc": "5016122313022",
+    "releaseDate": "2025-02-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_vi35p96zl",
+        "title": "Токсин",
+        "isrc": "AEA2Z2512152",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_59",
+    "artistId": "user_1759096823970",
+    "title": "CREEP",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29594497/",
+    "upc": "5016122314579",
+    "releaseDate": "2025-02-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_t53fz6v92",
+        "title": "CREEP",
+        "isrc": "AEA2Z2512692",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_60",
+    "artistId": "user_1759096824371",
+    "title": "Электро",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29750774/",
+    "upc": "5016122326114",
+    "releaseDate": "2025-02-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_l2pq6i8jo",
+        "title": "Электро",
+        "isrc": "AEA2Z2515634",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_61",
+    "artistId": "user_1759096822770",
+    "title": "Города",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29795039/",
+    "upc": "5016122327098",
+    "releaseDate": "2025-02-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981574_ngsrv3xrg",
+        "title": "Города",
+        "isrc": "AEA2Z2515762",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_62",
+    "artistId": "user_1759096823970",
+    "title": "Pistol Whip",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/30233542/",
+    "upc": "5016122363195",
+    "releaseDate": "2025-04-10",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981577_xyhkp4590",
+        "title": "Pistol Whip",
+        "isrc": "AEA2Z2529366",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981604_63",
+    "artistId": "user_1759096825419",
+    "title": "I WANT TO LXVE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31803239/",
+    "upc": "5016122441350",
+    "releaseDate": "2025-06-12",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981577_mgh7bxhcy",
+        "title": "I WANT TO LXVE",
+        "isrc": "AEA2Z2553684",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.604Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_64",
+    "artistId": "user_1759096823822",
+    "title": "DISXRDER",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007414/",
+    "upc": "5057272797980",
+    "releaseDate": "2022-03-10",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981577_2krf387z0",
+        "title": "DISXRDER",
+        "isrc": "UKU932248987",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_65",
+    "artistId": "user_1759096823822",
+    "title": "GENOCIDE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26063621/",
+    "upc": "5057272894290",
+    "releaseDate": "2022-06-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981577_2qg5tv1b8",
+        "title": "GENOCIDE",
+        "isrc": "UKU932271236",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_66",
+    "artistId": "user_1759096823970",
+    "title": "Hella Storm",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27383525/",
+    "upc": "5059921556894",
+    "releaseDate": "2022-02-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981577_jxrah6s1w",
+        "title": "Bulletproof",
+        "isrc": "RUA1H2250463",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981577_qv56q7x14",
+        "title": "I Can't Even Think for Myself Anymore",
+        "isrc": "RUA1H2250464",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981577_rkctcimti",
+        "title": "Conversations with God",
+        "isrc": "RUA1H2250465",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981577_phpxf2v5r",
+        "title": "New Junt (feat. $evenchapta$)",
+        "isrc": "RUA1H2250466",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981577_ea9kj744o",
+        "title": "Behelit",
+        "isrc": "RUA1H2250467",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_p37jq2r4o",
+        "title": "Hellmark",
+        "isrc": "RUA1H2250468",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_rfuo6r5dp",
+        "title": "Amortensia",
+        "isrc": "RUA1H2250469",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_67",
+    "artistId": "user_1759013711284",
+    "title": "Detroit9000",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25909937/",
+    "upc": "5063015119674",
+    "releaseDate": "2022-02-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_wnqq4w5so",
+        "title": "Detroit9000",
+        "isrc": "RUA1H2283768",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_68",
+    "artistId": "user_1759013711284",
+    "title": "Witches Sins",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25997062/",
+    "upc": "5063015136770",
+    "releaseDate": "2022-03-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_qvtkt3bcz",
+        "title": "Witches Sins",
+        "isrc": "RUA1H2287745",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_69",
+    "artistId": "user_1759013711284",
+    "title": "Mole",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26001828/",
+    "upc": "5063015175267",
+    "releaseDate": "2022-03-11",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_6y6ssdkjj",
+        "title": "Mole",
+        "isrc": "RUA1H2296920",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.446Z"
+  },
+  {
+    "id": "release_1759097981605_70",
+    "artistId": "user_1759013711284",
+    "title": "Woodcutter",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25996520/",
+    "upc": "5063015200778",
+    "releaseDate": "2022-03-18",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_kmg5oir8j",
+        "title": "Woodcutter",
+        "isrc": "AEA2M2203286",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_71",
+    "artistId": "user_1759096823226",
+    "title": "Kronik City",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25928628/",
+    "upc": "5063181043797",
+    "releaseDate": "2019-04-02",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_pjpml422t",
+        "title": "Intro",
+        "isrc": "UKR6V2235914",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_d0wchyjee",
+        "title": "Kronik City",
+        "isrc": "UKR6V2235915",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_cb26kzxsc",
+        "title": "Evilcreeps",
+        "isrc": "UKR6V2235916",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_5sgic477k",
+        "title": "Im a Pervert",
+        "isrc": "UKR6V2235917",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_0iq6gziab",
+        "title": "Outro",
+        "isrc": "UKR6V2235918",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_ggsgdfog3",
+        "title": "Deadly Friend",
+        "isrc": "UKR6V2235919",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_72",
+    "artistId": "user_1759096823226",
+    "title": "Infernal",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25926890/",
+    "upc": "5063181043803",
+    "releaseDate": "2019-08-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981578_rpx04r4k0",
+        "title": "Intro",
+        "isrc": "UKR6V2235920",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_ra95ydtpu",
+        "title": "Mad Murder",
+        "isrc": "UKR6V2235921",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_8ty3eb2vz",
+        "title": "Sound of the South",
+        "isrc": "UKR6V2235922",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981578_0tgr9jmdi",
+        "title": "Die Here",
+        "isrc": "UKR6V2235923",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_xdihur2cu",
+        "title": "Watch Me",
+        "isrc": "UKR6V2235924",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_j4kpzhrjq",
+        "title": "Murderous Minds",
+        "isrc": "UKR6V2235925",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_peiyycgfe",
+        "title": "I Got a Hoe",
+        "isrc": "UKR6V2235939",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_5k167pzoc",
+        "title": "Infernal",
+        "isrc": "UKR6V2235927",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_e72unhrsm",
+        "title": "Orange Mound",
+        "isrc": "UKR6V2235928",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_73",
+    "artistId": "user_1759096823666",
+    "title": "Love Story",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/31326954/",
+    "upc": "5063287040133",
+    "releaseDate": "2023-08-10",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981579_aysba5g0h",
+        "title": "Love Pt. 1",
+        "isrc": "UKEX32337367",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_za3mia58p",
+        "title": "Love Pt. 2",
+        "isrc": "UKEX32337368",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_svhhca5lt",
+        "title": "M+M",
+        "isrc": "UKEX32337369",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_pb97b78vn",
+        "title": "The Forest",
+        "isrc": "UKEX32337370",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_dze3fx3q1",
+        "title": "Sorry",
+        "isrc": "UKEX32337371",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981579_5srer1gv7",
+        "title": "Masha End",
+        "isrc": "UKEX32337372",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_74",
+    "artistId": "user_1759096823666",
+    "title": "Mistress",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28924491/",
+    "upc": "5063287104323",
+    "releaseDate": "2023-11-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981579_qvp4pbrbl",
+        "title": "Mistress",
+        "isrc": "UKEX32353302",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_75",
+    "artistId": "user_1759096823666",
+    "title": "BERSERK",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28943093/",
+    "upc": "5063287147108",
+    "releaseDate": "2024-01-18",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981579_yzkiu3ekd",
+        "title": "BERSERK",
+        "isrc": "UKEX32400851",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823970"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_76",
+    "artistId": "user_1759096823666",
+    "title": "ip1p",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28926341/",
+    "upc": "5063287223314",
+    "releaseDate": "2024-05-04",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981579_u6rz33zd3",
+        "title": "ip1p",
+        "isrc": "UKEX32416602",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_77",
+    "artistId": "user_1759011689584",
+    "title": "myheart",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25357186/",
+    "upc": "5063316778907",
+    "releaseDate": "2024-02-08",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981579_lamzrfqec",
+        "title": "myheart",
+        "isrc": "RUA1D2405088",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_78",
+    "artistId": "user_1759096823822",
+    "title": "Strange",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25797361/",
+    "upc": "5063316937663",
+    "releaseDate": "2024-03-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_a94v6kjky",
+        "title": "Strange",
+        "isrc": "RUA1D2431095",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_79",
+    "artistId": "user_1759011689584",
+    "title": "takeitslow",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25797964/",
+    "upc": "5063316938103",
+    "releaseDate": "2024-03-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_cuko27q89",
+        "title": "takeitslow",
+        "isrc": "RUA1D2431161",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_80",
+    "artistId": "user_1759096823226",
+    "title": "Down in the dungeon",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965610/",
+    "upc": "5063316996233",
+    "releaseDate": "2021-05-15",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_dpwjuckn8",
+        "title": "Down in the dungeon",
+        "isrc": "QZMHL2002111",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_81",
+    "artistId": "user_1759096823226",
+    "title": "Sunset Scalpel",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965618/",
+    "upc": "5063316996240",
+    "releaseDate": "2021-06-24",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_5mbryx8xf",
+        "title": "Sunset Scalpel",
+        "isrc": "QZS642109022",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_82",
+    "artistId": "user_1759096823226",
+    "title": "Cryptic Killaz",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965630/",
+    "upc": "5063316996257",
+    "releaseDate": "2020-12-17",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_oqicgrkdx",
+        "title": "Cryptic Killaz",
+        "isrc": "QZMHP2036067",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981605_83",
+    "artistId": "user_1759096823226",
+    "title": "Judgement day",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965648/",
+    "upc": "5063316996264",
+    "releaseDate": "2021-03-24",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_awuk6xsg6",
+        "title": "Judgement day",
+        "isrc": "UKR6V2235883",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.605Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_84",
+    "artistId": "user_1759096823226",
+    "title": "Shades Of Beauty 2",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965673/",
+    "upc": "5063316996271",
+    "releaseDate": "2021-06-06",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981580_clo0a8s4o",
+        "title": "F da B",
+        "isrc": "QZMHP2023925",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981580_yuvmo3z0m",
+        "title": "Buzz",
+        "isrc": "QZMHP2009574",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981580_mmnq7zext",
+        "title": "Disclose",
+        "isrc": "QZMHP2020505",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_e2onvj6p9",
+        "title": "Sun Always Shines",
+        "isrc": "QZMHL2026757",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_k229x28fm",
+        "title": "The Real Bass",
+        "isrc": "QZMHN2055980",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_qdahgwdnu",
+        "title": "Life After Dead",
+        "isrc": "QZMHK2085832",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_59qm5rio6",
+        "title": "Midnight",
+        "isrc": "QZMHN2072675",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_re47wo6up",
+        "title": "Feel My Energy",
+        "isrc": "QZMHP2097151",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_lk7cwd9ss",
+        "title": "Shades Of Beauty Part II",
+        "isrc": "QZMHK2026922",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981581_bcmbp7pkv",
+        "title": "Can’t Get Enough",
+        "isrc": "QZMHP2094225",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_85",
+    "artistId": "user_1759096823226",
+    "title": "Beyond belive",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965772/",
+    "upc": "5063316996318",
+    "releaseDate": "2021-01-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981581_ebooq695m",
+        "title": "Beyond belive",
+        "isrc": "UKR6V2235880",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_86",
+    "artistId": "user_1759096823226",
+    "title": "Blast U",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965809/",
+    "upc": "5063316996332",
+    "releaseDate": "2021-01-02",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981581_oiwtp53yw",
+        "title": "Blast U",
+        "isrc": "UKR6V2235881",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_87",
+    "artistId": "user_1759096823226",
+    "title": "Spring Fever",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25965817/",
+    "upc": "5063316996349",
+    "releaseDate": "2019-04-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981581_6znn8z2sj",
+        "title": "Spring Fever",
+        "isrc": "UKR6V2235889",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_88",
+    "artistId": "user_1759013711284",
+    "title": "UPSCALED",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26002063/",
+    "upc": "5063466009869",
+    "releaseDate": "2023-06-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981581_pi64cjktx",
+        "title": "UPSCALED",
+        "isrc": "UKU932347522",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_89",
+    "artistId": "user_1759096823226",
+    "title": "R.I.P. to Robert Davis",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26002117/",
+    "upc": "5063466009906",
+    "releaseDate": "2019-11-01",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981581_4cx2w5kvj",
+        "title": "R.I.P. to Robert Davis",
+        "isrc": "UKR6V2235886",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_90",
+    "artistId": "user_1759013711284",
+    "title": "INSPIRATION",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26002807/",
+    "upc": "5063466010216",
+    "releaseDate": "2022-03-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_5f19ljyid",
+        "title": "INSPIRATION",
+        "isrc": "UKU932251285",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_91",
+    "artistId": "user_1759096823226",
+    "title": "Awakening",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26003846/",
+    "upc": "5063466010322",
+    "releaseDate": "2019-11-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_phawcvs57",
+        "title": "Awakening",
+        "isrc": "UKR6V2235940",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981582_xsz2kam2t",
+        "title": "Time 2 Say Goodbye",
+        "isrc": "UKR6V2235941",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_92",
+    "artistId": "user_1759096823226",
+    "title": "Rare Series",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26005843/",
+    "upc": "5063466010537",
+    "releaseDate": "2019-06-15",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_k5icutu5p",
+        "title": "Rare Series",
+        "isrc": "UKR6V2235961",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_93",
+    "artistId": "user_1759096823822",
+    "title": "SECTOR",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007171/",
+    "upc": "5063466010988",
+    "releaseDate": "2023-01-26",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_1ui0w7zom",
+        "title": "SECTOR",
+        "isrc": "UKR6V2352960",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_94",
+    "artistId": "user_1759096823822",
+    "title": "STREET DRUMS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007640/",
+    "upc": "5063466011114",
+    "releaseDate": "2022-05-30",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_qk2kd5ppm",
+        "title": "STREET DRUMS",
+        "isrc": "UKEX32215622",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_95",
+    "artistId": "user_1759096823226",
+    "title": "Im Rolling wit That Nigga Wrek",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26007972/",
+    "upc": "5063466011213",
+    "releaseDate": "2019-04-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_j40dbr2t0",
+        "title": "Im Rolling wit That Nigga Wrek",
+        "isrc": "UKR6V2235891",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_96",
+    "artistId": "user_1759096823226",
+    "title": "Trippin Around",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26009083/",
+    "upc": "5063466011701",
+    "releaseDate": "2019-07-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_x1dei444e",
+        "title": "Trippin Around",
+        "isrc": "UKR6V2235887",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_97",
+    "artistId": "user_1759096823226",
+    "title": "Lxst in Myself",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26055161/",
+    "upc": "5063466027931",
+    "releaseDate": "2019-09-08",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_xl8k2vrso",
+        "title": "Lxst in Myself",
+        "isrc": "UKR6V2235882",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_98",
+    "artistId": "user_1759096823822",
+    "title": "Sniperz",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26063629/",
+    "upc": "5063466029676",
+    "releaseDate": "2023-03-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_kwxnardwm",
+        "title": "Sniperz",
+        "isrc": "UKR6V2330978",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_99",
+    "artistId": "user_1759096823226",
+    "title": "Mystery Shit",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26064024/",
+    "upc": "5063466029782",
+    "releaseDate": "2019-07-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_5958cq51f",
+        "title": "Mystery Shit",
+        "isrc": "UKR6V2235884",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_100",
+    "artistId": "user_1759096823226",
+    "title": "Down with Some Real Playas",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26064038/",
+    "upc": "5063466029799",
+    "releaseDate": "2019-08-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_b9hrwc6bw",
+        "title": "Down with Some Real Playas",
+        "isrc": "UKR6V2235890",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981606_101",
+    "artistId": "user_1759096823226",
+    "title": "Shades of Beauty",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26064047/",
+    "upc": "5063466029805",
+    "releaseDate": "2019-10-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981582_257bcfojo",
+        "title": "Shades of Beauty",
+        "isrc": "UKR6V2235903",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981582_um30gaby0",
+        "title": "Fallin",
+        "isrc": "UKR6V2235904",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_yvrs17riz",
+        "title": "All About You",
+        "isrc": "UKR6V2235905",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_qkoycjkyd",
+        "title": "Fatty Girl",
+        "isrc": "UKR6V2235906",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_tfvmrs4rq",
+        "title": "Get Dripped",
+        "isrc": "UKR6V2235907",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_qoco4wm44",
+        "title": "What U Know About",
+        "isrc": "UKR6V2235908",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_1mhxsf2bi",
+        "title": "True G",
+        "isrc": "UKR6V2235909",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_b4s88cuth",
+        "title": "Stay with Me",
+        "isrc": "UKR6V2235910",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_e13cc7rzf",
+        "title": "Gangsta",
+        "isrc": "UKR6V2235911",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_4q429p194",
+        "title": "1000 Shots",
+        "isrc": "UKR6V2235912",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981583_zwm678k8j",
+        "title": "Outro",
+        "isrc": "UKR6V2235913",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.606Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_102",
+    "artistId": "user_1759096824938",
+    "title": "Страдай",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26117667/",
+    "upc": "5063466047021",
+    "releaseDate": "2024-03-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981583_vdbtdev70",
+        "title": "Страдай",
+        "isrc": "RUA1D2428720",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_103",
+    "artistId": "user_1759096823226",
+    "title": "Psychxpathic Lunatic",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125167/",
+    "upc": "5063466050748",
+    "releaseDate": "2019-09-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981583_10qythcnx",
+        "title": "Psychxpathic Lunatic",
+        "isrc": "UKR6V2235885",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_104",
+    "artistId": "user_1759096823226",
+    "title": "Shades of Beauty 3",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125374/",
+    "upc": "5063466050908",
+    "releaseDate": "2022-10-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981583_2e5ztjw5j",
+        "title": "Pacification",
+        "isrc": "RUA9M2200038",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_up3hb6kmy",
+        "title": "My Life",
+        "isrc": "RUA9M2200039",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_7qmlvip1d",
+        "title": "Deep Space",
+        "isrc": "RUA9M2200040",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_4kwelln3x",
+        "title": "Euphoria",
+        "isrc": "RUA9M2200041",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_ek9e7q9ig",
+        "title": "Perfection",
+        "isrc": "RUA9M2200042",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_vaq5hkgu8",
+        "title": "Shes the Golden One",
+        "isrc": "RUA9M2200043",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_63uqvq8nf",
+        "title": "No Limits",
+        "isrc": "RUA9M2200044",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_rxgt5r03k",
+        "title": "Kόσμος",
+        "isrc": "RUA9M2200045",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_i6np0mgsv",
+        "title": "This Dream",
+        "isrc": "RUA9M2200046",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_62vbm3e40",
+        "title": "Falling People",
+        "isrc": "RUA9M2200047",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_hzehoysam",
+        "title": "Groove Pimps",
+        "isrc": "RUA9M2200048",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_105",
+    "artistId": "user_1759096823226",
+    "title": "Fade into Darkness",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125442/",
+    "upc": "5063466050915",
+    "releaseDate": "2023-03-16",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981585_u70t8equa",
+        "title": "Fade into Darkness",
+        "isrc": "RUA9M2300003",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_106",
+    "artistId": "user_1759096823226",
+    "title": "Ethereal",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125518/",
+    "upc": "5063466050960",
+    "releaseDate": "2019-08-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981585_3u3vm582d",
+        "title": "Ladomi",
+        "isrc": "UKR6V2235929",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981585_0pe9h99i7",
+        "title": "Spirit",
+        "isrc": "UKR6V2235930",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_t79lfhgws",
+        "title": "Ta Ta Ta",
+        "isrc": "UKR6V2235931",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_d7s0krhwc",
+        "title": "Floor Seats",
+        "isrc": "UKR6V2235932",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_jzyrtek8u",
+        "title": "Got Love",
+        "isrc": "UKR6V2235933",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_lf214tr9o",
+        "title": "Sadness",
+        "isrc": "UKR6V2235934",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_r4bboa156",
+        "title": "Alright",
+        "isrc": "UKR6V2235935",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_1dnrgb7pz",
+        "title": "Ethereal",
+        "isrc": "UKR6V2235936",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_cppyz9mly",
+        "title": "Outro",
+        "isrc": "UKR6V2235937",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981586_x5izygv94",
+        "title": "Love Y`All",
+        "isrc": "UKR6V2235938",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_107",
+    "artistId": "user_1759096823226",
+    "title": "Try Me",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125593/",
+    "upc": "5063466050977",
+    "releaseDate": "2023-04-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_6b16l01yt",
+        "title": "Try Me",
+        "isrc": "RUA9M2300009",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_108",
+    "artistId": "user_1759096823226",
+    "title": "F Da B, Pt. II",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26125603/",
+    "upc": "5063466050984",
+    "releaseDate": "2022-05-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_rotfa20hs",
+        "title": "F Da B, Pt. II",
+        "isrc": "RUA9M2200015",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_109",
+    "artistId": "user_1759096823226",
+    "title": "Talkin with My Kate, Pt. II",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26126328/",
+    "upc": "5063466051585",
+    "releaseDate": "2019-05-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_9074tk3ws",
+        "title": "Talkin with My Kate, Pt. II",
+        "isrc": "UKR6V2235892",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_110",
+    "artistId": "user_1759096824938",
+    "title": "Let Me Cook (feat. GATASKI)",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26769395/",
+    "upc": "5063466275226",
+    "releaseDate": "2024-06-20",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_pbypok385",
+        "title": "Let Me Cook (feat. GATASKI)",
+        "isrc": "RUA1D2485710",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_111",
+    "artistId": "user_1759096823074",
+    "title": "Пятно",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/26983076/",
+    "upc": "5063466344892",
+    "releaseDate": "2024-07-11",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_edq5w1tzh",
+        "title": "Пятно",
+        "isrc": "RUA1D2498138",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825419"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_112",
+    "artistId": "user_1759096823666",
+    "title": "MAKISHIMA RECORDS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27003185/",
+    "upc": "5063466350084",
+    "releaseDate": "2024-07-04",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981586_fzfx9nsvj",
+        "title": "5e0 (Intro)",
+        "isrc": "RUA1D2499094",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_sm697fq01",
+        "title": "Bad State",
+        "isrc": "RUA1D2499095",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_iezc555wu",
+        "title": "MILKSHAKE TRX3450",
+        "isrc": "RUA1D2499096",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_xt0wpegms",
+        "title": "BURN",
+        "isrc": "RUA1D2499097",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_u41npjmtg",
+        "title": "Ak74u",
+        "isrc": "RUA1D2499098",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_f3np52rl4",
+        "title": "SUBHOUND",
+        "isrc": "RUA1D2499099",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_uu8wrcznj",
+        "title": "FAT",
+        "isrc": "RUA1D2499100",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_fp4ffil3n",
+        "title": "Double Barrel",
+        "isrc": "RUA1D2499101",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_oz78e3qch",
+        "title": "Uh",
+        "isrc": "RUA1D2499102",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_himvcembk",
+        "title": "Subset Stage",
+        "isrc": "RUA1D2499103",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_um7zkcigs",
+        "title": "GANJASHIMA",
+        "isrc": "RUA1D2499104",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_d9cpcu989",
+        "title": "Loli Tape",
+        "isrc": "RUA1D2499105",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_zboxrlsze",
+        "title": "Lucky Maniac",
+        "isrc": "RUA1D2499106",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_wh3krb1l7",
+        "title": "Haunted",
+        "isrc": "RUA1D2499107",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_vnhc7kdco",
+        "title": "4е1 Memories",
+        "isrc": "RUA1D2499108",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_1jbsa7u5n",
+        "title": "Mindset",
+        "isrc": "RUA1D2499109",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_2v71n6cwq",
+        "title": "UwU Exe",
+        "isrc": "RUA1D2499110",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981587_5tw7ni6b2",
+        "title": "5e1 Pain",
+        "isrc": "RUA1D2499111",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981588_1v0w0ccwf",
+        "title": "Angel Slayer",
+        "isrc": "RUA1D2499112",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981588_8o5a3dnxn",
+        "title": "5e2 (Outro)",
+        "isrc": "RUA1D2499113",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_113",
+    "artistId": "user_1759096824221",
+    "title": "На моих руках",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27068106/",
+    "upc": "5063466370419",
+    "releaseDate": "2024-07-25",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_xjj79c33j",
+        "title": "На моих руках",
+        "isrc": "RUAGT2402180",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_114",
+    "artistId": "user_1759096823226",
+    "title": "Eternal Echo",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27103092/",
+    "upc": "5063466380845",
+    "releaseDate": "2024-07-25",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_mn23vul6c",
+        "title": "Eternal Echo",
+        "isrc": "RUAGT2403868",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_115",
+    "artistId": "user_1759096822770",
+    "title": "Сухоцвет",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27183326/",
+    "upc": "5063466404459",
+    "releaseDate": "2024-08-15",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_zz4egepd6",
+        "title": "Сухоцвет",
+        "isrc": "RUAGT2407575",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_116",
+    "artistId": "user_1759096824221",
+    "title": "Соткан",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27211690/",
+    "upc": "5063466414564",
+    "releaseDate": "2024-08-01",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_sqtm57iu0",
+        "title": "Соткан",
+        "isrc": "RUAGT2409371",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_117",
+    "artistId": "user_1759096825419",
+    "title": "SXNDER",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27253033/",
+    "upc": "5063466427793",
+    "releaseDate": "2024-08-01",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_f6lj8w5z4",
+        "title": "SXNDER",
+        "isrc": "RUAGT2411545",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981607_118",
+    "artistId": "user_1759096823074",
+    "title": "BYE BYE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27256194/",
+    "upc": "5063466429568",
+    "releaseDate": "2024-08-01",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981588_7ccbpmvza",
+        "title": "BYE BYE",
+        "isrc": "RUAGT2411785",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.607Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_119",
+    "artistId": "user_1759011689584",
+    "title": "I NEED YOU",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27323472/",
+    "upc": "5063466451545",
+    "releaseDate": "2024-08-08",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_503t5v7mx",
+        "title": "I NEED YOU",
+        "isrc": "RUAGT2415568",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_120",
+    "artistId": "user_1759096824619",
+    "title": "HIGH KILLAZ",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27381545/",
+    "upc": "5063466473950",
+    "releaseDate": "2024-03-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_dq3uxy0il",
+        "title": "HIGH KILLAZ",
+        "isrc": "FRX202442409",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_121",
+    "artistId": "user_1759096823822",
+    "title": "Betrayal",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27390567/",
+    "upc": "5063466476319",
+    "releaseDate": "2024-04-04",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_ojgqrqz7i",
+        "title": "Betrayal",
+        "isrc": "FRX202464834",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_122",
+    "artistId": "user_1759011689584",
+    "title": "HEARTBEAT",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27396873/",
+    "upc": "5063466477804",
+    "releaseDate": "2024-03-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_emmz4ruin",
+        "title": "HEARTBEAT",
+        "isrc": "FR96X2487851",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_123",
+    "artistId": "user_1759096823970",
+    "title": "HOLLOW",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27397370/",
+    "upc": "5063466477880",
+    "releaseDate": "2024-08-22",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_k92rkvkif",
+        "title": "HOLLOW",
+        "isrc": "RUAGT2419568",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_124",
+    "artistId": "user_1759096824221",
+    "title": "loveinblack",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27469336/",
+    "upc": "5063466504074",
+    "releaseDate": "2024-08-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_vdg96jrzx",
+        "title": "loveinblack",
+        "isrc": "RUAGT2424122",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_125",
+    "artistId": "user_1759096823666",
+    "title": "LOST",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27501065/",
+    "upc": "5063466516237",
+    "releaseDate": "2024-08-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_b0whyqvkl",
+        "title": "LOST",
+        "isrc": "RUAGT2426094",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981589_6z1dh41il",
+        "title": "LOST (Sped Up)",
+        "isrc": "RUAGT2426095",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_126",
+    "artistId": "user_1759096825097",
+    "title": "CLIPS 1",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27541306/",
+    "upc": "5063466527431",
+    "releaseDate": "2024-08-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_5oypgxffj",
+        "title": "TWO FREAKY HOES",
+        "isrc": "RUAGT2428332",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981589_todt8tuz2",
+        "title": "FUCK OFF",
+        "isrc": "RUAGT2428333",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981589_6ewnx1tnr",
+        "title": "LIKE THAT",
+        "isrc": "RUAGT2428334",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981589_1vb7x3uzg",
+        "title": "ALL GOLD",
+        "isrc": "RUAGT2428335",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_127",
+    "artistId": "user_1759013711284",
+    "title": "TECHNO",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27573533/",
+    "upc": "5063466538741",
+    "releaseDate": "2024-08-29",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_qfvlpjeh4",
+        "title": "TECHNO",
+        "isrc": "RUAGT2430520",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_128",
+    "artistId": "user_1759013711284",
+    "title": "NECROCITY",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27580165/",
+    "upc": "5063466539700",
+    "releaseDate": "2024-09-12",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981589_j2cli01s4",
+        "title": "NECROCITY",
+        "isrc": "RUAGT2430650",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823518"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_129",
+    "artistId": "user_1759096825419",
+    "title": "Dance Mode",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27590333/",
+    "upc": "5063466542144",
+    "releaseDate": "2024-09-05",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981590_bhofd9ny5",
+        "title": "Dance Mode",
+        "isrc": "RUAGT2431294",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_130",
+    "artistId": "user_1759096823226",
+    "title": "Oblivion",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27598515/",
+    "upc": "5063466543882",
+    "releaseDate": "2021-03-03",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981590_7lxuefzya",
+        "title": "Cry of the Afterlife",
+        "isrc": "QZKDK2177903",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_ncxzs7dgv",
+        "title": "Livin N This Hellhole",
+        "isrc": "QZKDK2121490",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_yrhi0hem4",
+        "title": "Business Is Still Boomin",
+        "isrc": "QZKDK2136876",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_qmq76mpvk",
+        "title": "Say Hello to Da Devil",
+        "isrc": "QZKDK2171781",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_z5g4vqz1t",
+        "title": "Everything Is Completly Fuked",
+        "isrc": "QZKDK2134839",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_83hqkwt53",
+        "title": "Desolation",
+        "isrc": "QM42K2115167",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_6949g2j0c",
+        "title": "Other Side of the Universe",
+        "isrc": "QZKDK2196843",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_z1zngzptc",
+        "title": "Distruction",
+        "isrc": "QZKDK2135214",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_lkyb5jhpx",
+        "title": "Depraved Night",
+        "isrc": "QZKDK2134548",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_2ulg23925",
+        "title": "First Contact",
+        "isrc": "QZKDK2152854",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_itfcf4ivj",
+        "title": "Wasteland",
+        "isrc": "QM42K2195850",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_0k3hw2o55",
+        "title": "Wanted by the Law",
+        "isrc": "QM42K2167602",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_44ggbpn5t",
+        "title": "Heavy Profits",
+        "isrc": "QM42K2132765",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_131",
+    "artistId": "user_1759096825097",
+    "title": "LIGHTS DOWN",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27607518/",
+    "upc": "5063466548078",
+    "releaseDate": "2024-08-22",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981590_52tsw24cj",
+        "title": "BOOMERANG",
+        "isrc": "RUAGT2432451",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_x18tx30ff",
+        "title": "ONLY ONCE",
+        "isrc": "RUAGT2432452",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_132",
+    "artistId": "user_1759096825583",
+    "title": "blurred",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27720207/",
+    "upc": "5063466585172",
+    "releaseDate": "2024-09-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981590_dbf6hw436",
+        "title": "blurred",
+        "isrc": "RUAGT2438246",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981590_4x7y60cge",
+        "title": "blurred (slowed + reverb)",
+        "isrc": "RUAGT2438247",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981591_0j82lkur8",
+        "title": "blurred (sped up)",
+        "isrc": "RUAGT2438248",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_133",
+    "artistId": "user_1759096823226",
+    "title": "Beat the System",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27758000/",
+    "upc": "5063466600387",
+    "releaseDate": "2024-09-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_n0nk64tmn",
+        "title": "Beat the System",
+        "isrc": "RUAGT2440539",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_134",
+    "artistId": "user_1759096823518",
+    "title": "SHEPARD",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27760771/",
+    "upc": "5063466601476",
+    "releaseDate": "2024-09-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_dnwqservw",
+        "title": "SHEPARD",
+        "isrc": "RUAGT2440699",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981591_r8iz2egql",
+        "title": "SHEPARD (Slowed + Reverb)",
+        "isrc": "RUAGT2440700",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981591_euqdla3uo",
+        "title": "SHEPARD (Sped Up)",
+        "isrc": "RUAGT2440701",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_135",
+    "artistId": "user_1759096825583",
+    "title": "USUAL TYPE OF NIGHT",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28154529/",
+    "upc": "5063466741486",
+    "releaseDate": "2024-10-24",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_gueskzgw1",
+        "title": "USUAL TYPE OF NIGHT",
+        "isrc": "RUAGT2463804",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981591_vuz8da587",
+        "title": "USUAL TYPE OF NIGHT (Slowed + Reverb)",
+        "isrc": "RUAGT2463805",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981591_2qvpn4gzr",
+        "title": "USUAL TYPE OF NIGHT (Sped Up)",
+        "isrc": "RUAGT2463806",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_136",
+    "artistId": "user_1759013711284",
+    "title": "Enchanted",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28309158/",
+    "upc": "5063466794543",
+    "releaseDate": "2024-11-21",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_z0iebyyx3",
+        "title": "Enchanted",
+        "isrc": "RUAGT2473263",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981608_137",
+    "artistId": "user_1759096825419",
+    "title": "TOKYO GOAT",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28310550/",
+    "upc": "5063466795311",
+    "releaseDate": "2024-11-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_a2k3wat8z",
+        "title": "TOKYO GOAT",
+        "isrc": "RUAGT2473400",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.608Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_138",
+    "artistId": "user_1759096824619",
+    "title": "808 OPPONENTS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28346213/",
+    "upc": "5063466805997",
+    "releaseDate": "2024-11-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_cecf0keal",
+        "title": "808 OPPONENTS",
+        "isrc": "RUAGT2475085",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_139",
+    "artistId": "user_1759011689584",
+    "title": "flying",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28347555/",
+    "upc": "5063466806932",
+    "releaseDate": "2024-11-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_0cwpownwj",
+        "title": "flying",
+        "isrc": "RUAGT2475209",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_140",
+    "artistId": "user_1759096824938",
+    "title": "Angel",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28348592/",
+    "upc": "5063466807441",
+    "releaseDate": "2024-11-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981591_irhskawq7",
+        "title": "Angel",
+        "isrc": "RUAGT2475272",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_141",
+    "artistId": "user_1759013711284",
+    "title": "FALL OF THE EMPIRE",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28383042/",
+    "upc": "5063466817662",
+    "releaseDate": "2024-11-07",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981592_29g4rusd7",
+        "title": "FALL OF THE EMPIRE",
+        "isrc": "RUAGT2476737",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823518"
+        ]
+      },
+      {
+        "id": "track_1759097981592_5e9jaw09d",
+        "title": "FALL OF THE EMPIRE (Sped Up)",
+        "isrc": "RUAGT2476738",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823518"
+        ]
+      },
+      {
+        "id": "track_1759097981592_3z89snfqt",
+        "title": "FALL OF THE EMPIRE (Slowed + Reverb)",
+        "isrc": "RUAGT2476739",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096823518"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_142",
+    "artistId": "user_1759096823074",
+    "title": "ТЕЛО",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28416344/",
+    "upc": "5063466828750",
+    "releaseDate": "2024-11-14",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981592_mnuzad0yl",
+        "title": "ТЕЛО",
+        "isrc": "RUAGT2478482",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_143",
+    "artistId": "user_1759096825749",
+    "title": "In Da Memories",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28463167/",
+    "upc": "5063466847171",
+    "releaseDate": "2024-11-14",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981592_ioo5pgxql",
+        "title": "In Da Memories",
+        "isrc": "RUAGT2481480",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_144",
+    "artistId": "user_1759096824221",
+    "title": "Порезы",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28464427/",
+    "upc": "5063466847690",
+    "releaseDate": "2024-11-28",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981592_c657je9ag",
+        "title": "Порезы",
+        "isrc": "RUAGT2481582",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_145",
+    "artistId": "user_1759096824619",
+    "title": "BROKEN DRUMS / THE DARK AGES",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28478195/",
+    "upc": "5063466864024",
+    "releaseDate": "2024-11-14",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981592_o1bsd8yob",
+        "title": "MAFIA",
+        "isrc": "RUAGT2482411",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_z0dfbr54o",
+        "title": "BIZZARE",
+        "isrc": "RUAGT2482430",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_spyohwais",
+        "title": "BIG TALK",
+        "isrc": "RUAGT2482412",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_6th8mkrcs",
+        "title": "WACK",
+        "isrc": "RUAGT2482431",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_8u8fq2lrh",
+        "title": "RAW",
+        "isrc": "RUAGT2482432",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_x03qgo994",
+        "title": "MASTER PLAN",
+        "isrc": "RUAGT2482413",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_dutdvkee9",
+        "title": "BENZ",
+        "isrc": "RUAGT2482433",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_ejf9hnv0p",
+        "title": "SLUMP GOD",
+        "isrc": "RUAGT2482414",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_oat69mg6f",
+        "title": "DIRTY SHIT",
+        "isrc": "RUAGT2482434",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_2mxl4wcxu",
+        "title": "HEAT",
+        "isrc": "RUAGT2482415",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981592_28wbl88qp",
+        "title": "SPYDERBITE",
+        "isrc": "RUAGT2482435",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_oymg2tomm",
+        "title": "NO TRUST",
+        "isrc": "RUAGT2482416",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_lnphjsk83",
+        "title": "MY LAST CALL",
+        "isrc": "RUAGT2482417",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_ybt2l883d",
+        "title": "DIRTY LIQUID",
+        "isrc": "RUAGT2482436",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_uegh548wj",
+        "title": "BROKE",
+        "isrc": "RUAGT2482418",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_loey3i2na",
+        "title": "SKIMASK",
+        "isrc": "RUAGT2482437",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_8a66jgjvq",
+        "title": "LOST MONEY",
+        "isrc": "RUAGT2482438",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_lqjyizrbo",
+        "title": "NASTY",
+        "isrc": "RUAGT2482419",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_ii69e5taa",
+        "title": "SCREAM WALLS",
+        "isrc": "RUAGT2482439",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_zc7h75u4q",
+        "title": "ECCO",
+        "isrc": "RUAGT2482420",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_nlsabvwr0",
+        "title": "MURDA GANG",
+        "isrc": "RUAGT2482440",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_slhyke014",
+        "title": "INFLUENCE",
+        "isrc": "RUAGT2482421",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_b0n8tcvsp",
+        "title": "IN A NIGHT",
+        "isrc": "RUAGT2482422",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_p26s6ueyo",
+        "title": "SAVE ME",
+        "isrc": "RUAGT2482423",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_vf6pkp8kc",
+        "title": "SHARDS",
+        "isrc": "RUAGT2482424",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_lclao1kv5",
+        "title": "SPADE",
+        "isrc": "RUAGT2482425",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_o99tnzvug",
+        "title": "CHASE",
+        "isrc": "RUAGT2482426",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981593_gshz9v2jy",
+        "title": "LOW FLO",
+        "isrc": "RUAGT2482427",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981594_t6558mp1n",
+        "title": "ON A LIFE",
+        "isrc": "RUAGT2482428",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      },
+      {
+        "id": "track_1759097981594_fb07scghz",
+        "title": "MEMPHIS TAKING OVER",
+        "isrc": "RUAGT2482429",
+        "duration": "3:30",
+        "featuredArtistIds": [
+          "user_1759096825097"
+        ]
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_146",
+    "artistId": "user_1759096824221",
+    "title": "Боль",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28488080/",
+    "upc": "5063466866820",
+    "releaseDate": "2024-11-21",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981594_uw9sj79fj",
+        "title": "Боль",
+        "isrc": "RUAGT2482900",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_147",
+    "artistId": "user_1759096823970",
+    "title": "PLENTY TOMBS",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28524966/",
+    "upc": "5063466879776",
+    "releaseDate": "2024-11-21",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981594_xrre61o10",
+        "title": "PLENTY TOMBS",
+        "isrc": "RUAGT2485510",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_148",
+    "artistId": "user_1759096823822",
+    "title": "Pulse",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28716908/",
+    "upc": "5063466950116",
+    "releaseDate": "2024-12-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981595_btf7cnoka",
+        "title": "Pulse",
+        "isrc": "RUAH62403087",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_149",
+    "artistId": "user_1759096823822",
+    "title": "Blood Side",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28716920/",
+    "upc": "5063466950123",
+    "releaseDate": "2024-12-05",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981595_484apalg2",
+        "title": "Blood Side",
+        "isrc": "RUAH62403088",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_150",
+    "artistId": "user_1759096824371",
+    "title": "Пустяки",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28731525/",
+    "upc": "5063466954190",
+    "releaseDate": "2024-09-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981595_bgb83xp7f",
+        "title": "Пустяки",
+        "isrc": "RUAGT2440456",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_151",
+    "artistId": "user_1759096822770",
+    "title": "Пить чай",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28917022/",
+    "upc": "5063635020718",
+    "releaseDate": "2024-12-19",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981595_0stylpyhi",
+        "title": "Пить чай",
+        "isrc": "RUAH62415733",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_152",
+    "artistId": "user_1759096825097",
+    "title": "DARK KINGDOM 3",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/28956981/",
+    "upc": "5063635035422",
+    "releaseDate": "2024-10-17",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981595_uth6gsxm0",
+        "title": "RAIN DROP",
+        "isrc": "RUAGT2462536",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_ftwue5bzo",
+        "title": "ICE $HIP",
+        "isrc": "RUAGT2462537",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_pcuormd79",
+        "title": "KILLA",
+        "isrc": "RUAGT2462539",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_4k2s7qtb7",
+        "title": "SWITCH BACK",
+        "isrc": "RUAGT2462540",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_5284b2y3t",
+        "title": "BY THE END",
+        "isrc": "RUAGT2462541",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_1gei085ql",
+        "title": "FULL METAL",
+        "isrc": "RUAGT2462542",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_r1o60xf1d",
+        "title": "GEEKED UP",
+        "isrc": "RUAGT2462543",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_u2mkxjq2l",
+        "title": "GET RICH",
+        "isrc": "RUAGT2462544",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_23t3tzghy",
+        "title": "GAS",
+        "isrc": "RUAGT2462545",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981595_5peqfy3j3",
+        "title": "PUT IT IN MY HAND",
+        "isrc": "RUAGT2462546",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_153",
+    "artistId": "user_1759096823666",
+    "title": "ENERGY FM",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29866395/",
+    "upc": "5063635305341",
+    "releaseDate": "2025-03-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981596_yrn24e61u",
+        "title": "ENERGY FM",
+        "isrc": "RUA1D2529653",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_154",
+    "artistId": "user_1759096823666",
+    "title": "Silly Player",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29867052/",
+    "upc": "5063635305563",
+    "releaseDate": "2025-03-27",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981596_6ska2m1ku",
+        "title": "Silly Player",
+        "isrc": "RUA1D2529703",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_155",
+    "artistId": "user_1759096823518",
+    "title": "Movement",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/29884389/",
+    "upc": "5063635312264",
+    "releaseDate": "2025-03-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981596_ge2q2jzqg",
+        "title": "Movement",
+        "isrc": "RUA1D2530719",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981609_156",
+    "artistId": "user_1759096823226",
+    "title": "Evilwayz",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/25907770/",
+    "upc": "689690323110",
+    "releaseDate": "2021-11-09",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981599_r0om3pshu",
+        "title": "Evilwayz",
+        "isrc": "QZS642116919",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.609Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981610_157",
+    "artistId": "user_1759096825097",
+    "title": "REDEMPTION 2",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27087968/",
+    "upc": "725336867423",
+    "releaseDate": "2024-06-23",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981599_7jl2a8nlc",
+        "title": "SHUT YO MOUTH",
+        "isrc": "QZS652426539",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_jjmstjafo",
+        "title": "HATE BEING MF",
+        "isrc": "QZMHN2419207",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_hhgn1zjw9",
+        "title": "PROUD",
+        "isrc": "QZMHP2472476",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_3049f1g1p",
+        "title": "CHOPPAZ ON US",
+        "isrc": "QZMHP2480164",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_dc0x3zcu6",
+        "title": "TELL EM",
+        "isrc": "QZMHL2480256",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_nqyfowr8s",
+        "title": "GUNZ",
+        "isrc": "QZS652401992",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981599_wvzeoqs3s",
+        "title": "HOW TO HUSTLE",
+        "isrc": "QZMHP2452777",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_vrkyxkrqr",
+        "title": "ACT RIGHT",
+        "isrc": "QZS662456570",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_mfbgzyg2b",
+        "title": "STRONGER",
+        "isrc": "QZS642433983",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_jhi5zzvfg",
+        "title": "ImGone!",
+        "isrc": "QM42K2498479",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_l47xjdzmi",
+        "title": "RIDIN CLEAN",
+        "isrc": "QZS672408374",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_o6hrd8ye2",
+        "title": "PROPER",
+        "isrc": "QZMHL2468009",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_o9j7zduaa",
+        "title": "AMMA LORD",
+        "isrc": "QZMHK2458171",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_qh1wun0w9",
+        "title": "BUMPIN SOUTH",
+        "isrc": "QZS632413190",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_g60xu9q2u",
+        "title": "SMOKING 94'S",
+        "isrc": "QZMHP2473078",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_b9soosidx",
+        "title": "TEST ME",
+        "isrc": "QZS632455361",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_15q5mjthj",
+        "title": "TROUBLE",
+        "isrc": "QZMHP2468420",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_87fl4axmm",
+        "title": "FANTA",
+        "isrc": "QZS652432544",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_8wps7klcs",
+        "title": "GEEKIN OVER",
+        "isrc": "QZS662463972",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_1iyxd3kjr",
+        "title": "CADILLAC",
+        "isrc": "QZMHP2482723",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_r8e69d2tg",
+        "title": "ESCALADE",
+        "isrc": "QZMHL2420956",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_oyhmfy570",
+        "title": "GIMME SPICE",
+        "isrc": "QZS662484912",
+        "duration": "3:30"
+      },
+      {
+        "id": "track_1759097981600_ju0e36ewc",
+        "title": "BACK ON TIME",
+        "isrc": "QZMHN2490525",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.610Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981610_158",
+    "artistId": "user_1759096825097",
+    "title": "GRIND",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27068645/",
+    "upc": "732138394330",
+    "releaseDate": "2024-06-06",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981600_anlwmhysg",
+        "title": "GRIND",
+        "isrc": "QZMHM2438685",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.610Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981610_159",
+    "artistId": "user_1759096825097",
+    "title": "TAKE A RISK 2",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27101273/",
+    "upc": "734167808604",
+    "releaseDate": "2024-02-01",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981600_776fuactm",
+        "title": "TAKE A RISK 2",
+        "isrc": "QZMHL2459764",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.610Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  },
+  {
+    "id": "release_1759097981610_160",
+    "artistId": "user_1759096825097",
+    "title": "LAST DAY OUT",
+    "coverUrl": "https://media.zvonkodigital.ru/api/cover/100/27077988/",
+    "upc": "752470704239",
+    "releaseDate": "2024-06-13",
+    "status": "Доставлен",
+    "tracks": [
+      {
+        "id": "track_1759097981601_ntih7qz1y",
+        "title": "LAST DAY OUT",
+        "isrc": "QZS662473369",
+        "duration": "3:30"
+      }
+    ],
+    "createdAt": "2025-09-28T22:19:41.610Z",
+    "updatedAt": "2026-01-08T20:26:48.447Z"
+  }
+]

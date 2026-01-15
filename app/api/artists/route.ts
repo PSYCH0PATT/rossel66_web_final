@@ -116,6 +116,11 @@ export async function GET() {
         vkMusicUrl: artist.vkMusicUrl,
         yandexMusicUrl: artist.yandexMusicUrl,
         spotifyUrl: artist.spotifyUrl,
+        // Новые поля
+        fio: artist.fio,
+        fioShort: artist.fioShort,
+        contract: artist.contract,
+        percentage: artist.percentage,
       }))
     })
   } catch (error) {
@@ -130,7 +135,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const data = await request.json()
-    const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl } = data
+    const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl, fio, fioShort, contract, percentage } = data
 
     // Validate required field (only ID is required)
     if (!id) {
@@ -158,6 +163,11 @@ export async function PUT(request: Request) {
     if (spotifyUrl !== undefined) updateData.spotifyUrl = spotifyUrl
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
     if (password !== undefined) updateData.password = password
+    // Новые поля
+    if (fio !== undefined) updateData.fio = fio
+    if (fioShort !== undefined) updateData.fioShort = fioShort
+    if (contract !== undefined) updateData.contract = contract
+    if (percentage !== undefined) updateData.percentage = percentage
 
     const updatedUser = updateUser(id, updateData)
 
@@ -188,6 +198,11 @@ export async function PUT(request: Request) {
         vkMusicUrl: updatedUser.vkMusicUrl,
         yandexMusicUrl: updatedUser.yandexMusicUrl,
         spotifyUrl: updatedUser.spotifyUrl,
+        // Новые поля
+        fio: updatedUser.fio,
+        fioShort: updatedUser.fioShort,
+        contract: updatedUser.contract,
+        percentage: updatedUser.percentage,
       },
     })
   } catch (error) {

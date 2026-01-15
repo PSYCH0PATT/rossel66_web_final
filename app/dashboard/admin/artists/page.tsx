@@ -312,7 +312,7 @@ export default function ArtistsPage() {
                     style={{ 
                       color: '#94a3b8',
                       fontSize: `${Math.round(getAdaptiveSize(11) * 1.3)}px`,
-                      marginBottom: `${getAdaptiveSize(6)}px`
+                      marginBottom: `${getAdaptiveSize(3)}px`
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#cbd5e1' }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8' }}
@@ -320,6 +320,34 @@ export default function ArtistsPage() {
                   >
                     @{artist.username}
                   </p>
+                  
+                  {/* Новые поля */}
+                  {artist.fioShort && (
+                    <p 
+                      className="truncate transition-colors w-full"
+                      style={{ 
+                        color: '#64748b',
+                        fontSize: `${Math.round(getAdaptiveSize(10) * 1.2)}px`,
+                        marginBottom: `${getAdaptiveSize(2)}px`
+                      }}
+                      title={artist.fio}
+                    >
+                      {artist.fioShort}
+                    </p>
+                  )}
+                  
+                  {artist.percentage && (
+                    <p 
+                      className="truncate transition-colors w-full"
+                      style={{ 
+                        color: '#10b981',
+                        fontSize: `${Math.round(getAdaptiveSize(10) * 1.2)}px`,
+                        marginBottom: `${getAdaptiveSize(2)}px`
+                      }}
+                    >
+                      {artist.percentage}%
+                    </p>
+                  )}
                 </div>
 
                 {/* Password - в самом низу */}

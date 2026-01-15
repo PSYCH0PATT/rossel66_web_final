@@ -1,0 +1,666 @@
+{
+  "timestamp": "2026-01-15T14:14:09.186745",
+  "summary": {
+    "total_new": 131,
+    "added": 131,
+    "failed": 0
+  },
+  "added_releases": [
+    {
+      "id": "release_1768482849174_9fef5388",
+      "title": "GOLD TIME",
+      "artist": "ripznxx"
+    },
+    {
+      "id": "release_1768482849174_dd9dbadc",
+      "title": "BANDO",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1768482849174_e7dd531a",
+      "title": "Как тебе идея?",
+      "artist": "rompy"
+    },
+    {
+      "id": "release_1768482849174_27fe6d3b",
+      "title": "Стало холодно",
+      "artist": "Nnaia"
+    },
+    {
+      "id": "release_1768482849174_4e7fd355",
+      "title": "War",
+      "artist": "Matcukito Kioto"
+    },
+    {
+      "id": "release_1768482849174_b697e716",
+      "title": "BORN TO SWAGGIN",
+      "artist": "Roudie J."
+    },
+    {
+      "id": "release_1768482849174_3b37ac7f",
+      "title": "I WILL BECOME YOU",
+      "artist": "Roudie J."
+    },
+    {
+      "id": "release_1768482849174_9f5abb9a",
+      "title": "Электро 2.0",
+      "artist": "Nnaia"
+    },
+    {
+      "id": "release_1768482849174_505b7428",
+      "title": "Глубина",
+      "artist": "W.1ce3"
+    },
+    {
+      "id": "release_1768482849174_5a4d3991",
+      "title": "HATRED",
+      "artist": "MEELBRN, BITSA MANIAC"
+    },
+    {
+      "id": "release_1768482849175_20cde928",
+      "title": "Fxk New Yer",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849175_f9836ebf",
+      "title": "Fame T Tells",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1768482849175_f6f702ca",
+      "title": "реплика",
+      "artist": "kvvitz, Exp13"
+    },
+    {
+      "id": "release_1768482849175_0cb0faf5",
+      "title": "XX.XX.XX",
+      "artist": "GPMONTANA"
+    },
+    {
+      "id": "release_1768482849175_efebf590",
+      "title": "Взрослая игра",
+      "artist": "WhyMeowKreet"
+    },
+    {
+      "id": "release_1768482849175_3832048c",
+      "title": "FERVENT KID",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1768482849175_884b0c19",
+      "title": "In the Dark",
+      "artist": "HLWD"
+    },
+    {
+      "id": "release_1768482849175_1dbf8753",
+      "title": "Dissonance",
+      "artist": "HLWD"
+    },
+    {
+      "id": "release_1768482849175_a3709284",
+      "title": "LEGASX",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849175_c04e7e3f",
+      "title": "WWW",
+      "artist": "stemstyl, Tulapse"
+    },
+    {
+      "id": "release_1768482849175_575a4039",
+      "title": "Lose Her",
+      "artist": "n8ver"
+    },
+    {
+      "id": "release_1768482849175_e4f89d70",
+      "title": "Sad Robot",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1768482849175_e474fbc4",
+      "title": "SZN SHIT",
+      "artist": "yngcough"
+    },
+    {
+      "id": "release_1768482849175_f00e2dab",
+      "title": "Амбициозный реп",
+      "artist": "Double Damage"
+    },
+    {
+      "id": "release_1768482849175_035e1ea1",
+      "title": "PAINKILLER",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849175_6bc4c5cb",
+      "title": "знаю",
+      "artist": "kvvitz"
+    },
+    {
+      "id": "release_1768482849175_d8851d93",
+      "title": "Atmosphere",
+      "artist": "stukioo"
+    },
+    {
+      "id": "release_1768482849175_7a0d4f81",
+      "title": "@percgod",
+      "artist": "WhyMeowKreet, phuneral2000"
+    },
+    {
+      "id": "release_1768482849175_a3be164f",
+      "title": "Забвение",
+      "artist": "ne zhizn'"
+    },
+    {
+      "id": "release_1768482849175_e086bc56",
+      "title": "My Heart Bled Out",
+      "artist": "Мавтей"
+    },
+    {
+      "id": "release_1768482849175_fa57390e",
+      "title": "Power",
+      "artist": "ГУМАНОИД"
+    },
+    {
+      "id": "release_1768482849175_7fda51c2",
+      "title": "Scarecrow",
+      "artist": "SHWTY"
+    },
+    {
+      "id": "release_1768482849175_47033f29",
+      "title": "пиздят",
+      "artist": "kvvitz"
+    },
+    {
+      "id": "release_1768482849175_bd2b6b71",
+      "title": "GiveMeDope",
+      "artist": "GIVEMEDOPE"
+    },
+    {
+      "id": "release_1768482849175_f4117a62",
+      "title": "Save Me",
+      "artist": "coldn1ght, ВАЙНОТ"
+    },
+    {
+      "id": "release_1768482849175_9033bd11",
+      "title": "Четырка занижена",
+      "artist": "Kolya Pravda"
+    },
+    {
+      "id": "release_1768482849175_a91822d8",
+      "title": "BOTU A BUCETA",
+      "artist": "0XR"
+    },
+    {
+      "id": "release_1768482849175_e99e309d",
+      "title": "Завтра",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1768482849175_7a1116b5",
+      "title": "DanMachi",
+      "artist": "yaroshi, drugdamage"
+    },
+    {
+      "id": "release_1768482849175_59a966ec",
+      "title": "Pirates",
+      "artist": "SHWTY"
+    },
+    {
+      "id": "release_1768482849175_a7e02f3e",
+      "title": "Завтра рассвет",
+      "artist": "ЭНТЕNДАНS"
+    },
+    {
+      "id": "release_1768482849175_0fe868fb",
+      "title": "На рельсах метро",
+      "artist": "ЭНТЕNДАНS"
+    },
+    {
+      "id": "release_1768482849175_e86990d9",
+      "title": "В отражении серых глаз",
+      "artist": "ЭНТЕNДАНS"
+    },
+    {
+      "id": "release_1768482849175_97d67472",
+      "title": "Огоньки",
+      "artist": "ЭНТЕNДАНS"
+    },
+    {
+      "id": "release_1768482849175_47b2e6ca",
+      "title": "НАСВАЙЧИК",
+      "artist": "ripznxx, Hxmix"
+    },
+    {
+      "id": "release_1768482849175_c2af5e66",
+      "title": "МУЗЫКА ДЛЯ СЕКСА 2005",
+      "artist": "BULOVACH, SHELOVESME"
+    },
+    {
+      "id": "release_1768482849175_ca259bcc",
+      "title": "WindowED",
+      "artist": "stukioo"
+    },
+    {
+      "id": "release_1768482849175_6eee6161",
+      "title": "Венок из одуванчиков",
+      "artist": "ЭНТЕNДАНS"
+    },
+    {
+      "id": "release_1768482849175_02a839d2",
+      "title": "BURNING RESULT",
+      "artist": "GPMONTANA"
+    },
+    {
+      "id": "release_1768482849175_7e326a83",
+      "title": "Новогодний движ",
+      "artist": "School Gang"
+    },
+    {
+      "id": "release_1768482849175_fa574797",
+      "title": "wayback machine",
+      "artist": "aboygreenbeatz"
+    },
+    {
+      "id": "release_1768482849176_1915687a",
+      "title": "черно-белый реверанс",
+      "artist": "эбойгрин"
+    },
+    {
+      "id": "release_1768482849176_333f8c89",
+      "title": "LAST",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849176_a4c09585",
+      "title": "404",
+      "artist": "BULOVACH"
+    },
+    {
+      "id": "release_1768482849176_37e5abb3",
+      "title": "история болезни (part. 2)",
+      "artist": "эбойгрин"
+    },
+    {
+      "id": "release_1768482849176_990c6504",
+      "title": "fly",
+      "artist": "kvvitz"
+    },
+    {
+      "id": "release_1768482849176_58488feb",
+      "title": "SOUND MONSTER",
+      "artist": "NENEVESTA"
+    },
+    {
+      "id": "release_1768482849176_7163f856",
+      "title": "load",
+      "artist": "nedodelok"
+    },
+    {
+      "id": "release_1768482849176_f111c35e",
+      "title": "Спасибо деду",
+      "artist": "skazal, KebabOG"
+    },
+    {
+      "id": "release_1768482849176_d38ed7ed",
+      "title": "AVARIO",
+      "artist": "FRENBAT, triplepeepy, КИСЕСС"
+    },
+    {
+      "id": "release_1768482849176_9301f60d",
+      "title": "MIU MIU",
+      "artist": "triplepeepy"
+    },
+    {
+      "id": "release_1768482849176_4865feb9",
+      "title": "ОСТОРОЖНО ОЧЕНЬ ПИЗДАТО",
+      "artist": "BULOVACH"
+    },
+    {
+      "id": "release_1768482849176_19c0701d",
+      "title": "Побудь со мной",
+      "artist": "GARSY, platö"
+    },
+    {
+      "id": "release_1768482849176_3a66b67c",
+      "title": "Queen",
+      "artist": "BULOVACH"
+    },
+    {
+      "id": "release_1768482849176_c7ea8497",
+      "title": "4st Street",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849176_375b03cb",
+      "title": "детка!",
+      "artist": "чудесно!, lunidsky"
+    },
+    {
+      "id": "release_1768482849176_b3b4adec",
+      "title": "ШАЛАВА",
+      "artist": "МИКИ ФИНН"
+    },
+    {
+      "id": "release_1768482849176_4446d598",
+      "title": "Нагибайся",
+      "artist": "BULOVACH"
+    },
+    {
+      "id": "release_1768482849176_cc5c1ba8",
+      "title": "Табуретыч Tell",
+      "artist": "nime, Табуретыч"
+    },
+    {
+      "id": "release_1768482849176_1d170e46",
+      "title": "Катрина/Неповторимо",
+      "artist": "elmntal"
+    },
+    {
+      "id": "release_1768482849176_3eba70ba",
+      "title": "временно",
+      "artist": "elmntal"
+    },
+    {
+      "id": "release_1768482849176_a3f4e304",
+      "title": "Trapped Abroad",
+      "artist": "KebabOG, skazal"
+    },
+    {
+      "id": "release_1768482849176_1013360f",
+      "title": "FRESH",
+      "artist": "SHWTY"
+    },
+    {
+      "id": "release_1768482849176_dfb8fb97",
+      "title": "2093",
+      "artist": "KebabOG, skazal"
+    },
+    {
+      "id": "release_1768482849176_8b6a623a",
+      "title": "HUNGRY BOY",
+      "artist": "NENEVESTA"
+    },
+    {
+      "id": "release_1768482849176_71763ff9",
+      "title": "Правда",
+      "artist": "Повешусь на венах"
+    },
+    {
+      "id": "release_1768482849176_061ab227",
+      "title": "Украшение",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1768482849176_517e2bab",
+      "title": "мясо, зелень, соус",
+      "artist": "KebabOG"
+    },
+    {
+      "id": "release_1768482849176_8baa584d",
+      "title": "вместе",
+      "artist": "kvvitz, sylveonlover"
+    },
+    {
+      "id": "release_1768482849176_959314c7",
+      "title": "Brevity of Thought, Vol. 2",
+      "artist": "CURSED PLAYA"
+    },
+    {
+      "id": "release_1768482849176_400647e6",
+      "title": "From the Province 2k18",
+      "artist": "NORTHXRN DRAMA"
+    },
+    {
+      "id": "release_1768482849176_a884e8fc",
+      "title": "Солянка 2",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1768482849176_7cf01cf6",
+      "title": "шашлык",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849176_24e6b46f",
+      "title": "Амням",
+      "artist": "m3d, Neea"
+    },
+    {
+      "id": "release_1768482849176_df357325",
+      "title": "NOTRUST",
+      "artist": "FRENBAT, triplepeepy"
+    },
+    {
+      "id": "release_1768482849176_74d86781",
+      "title": "Secrets of Broken Hearts",
+      "artist": "ENTINE"
+    },
+    {
+      "id": "release_1768482849176_8844174c",
+      "title": "Феназепам",
+      "artist": "Sour Diesel, qmanso"
+    },
+    {
+      "id": "release_1768482849176_43a5d192",
+      "title": "Gangsta Squid",
+      "artist": "NORTHXRN DRAMA"
+    },
+    {
+      "id": "release_1768482849177_4bce84f5",
+      "title": "д000п (feat. DayKeys)",
+      "artist": "эбойгрин feat. DayKeys"
+    },
+    {
+      "id": "release_1768482849177_692607b4",
+      "title": "собирательный образ всех наших загонов",
+      "artist": "эбойгрин"
+    },
+    {
+      "id": "release_1768482849177_4c3d0559",
+      "title": "киса",
+      "artist": "эбойгрин"
+    },
+    {
+      "id": "release_1768482849177_d2888be8",
+      "title": "Diss and Diss",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1768482849177_46313a95",
+      "title": "улетай",
+      "artist": "чудесно!"
+    },
+    {
+      "id": "release_1768482849177_310ee158",
+      "title": "Memories of Marseille",
+      "artist": "NORTHXRN DRAMA"
+    },
+    {
+      "id": "release_1768482849177_9c5273dc",
+      "title": "объебошенный",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_4ebfff9f",
+      "title": "Солянка Bivis",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1768482849177_fd108734",
+      "title": "The Fire Will Always Burn",
+      "artist": "NORTHXRN DRAMA"
+    },
+    {
+      "id": "release_1768482849177_3cea871c",
+      "title": "why u so rude",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_cb167f2a",
+      "title": "DEAD SOULS",
+      "artist": "TXYK"
+    },
+    {
+      "id": "release_1768482849177_7d9435a0",
+      "title": "Хедшот",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1768482849177_11bd750a",
+      "title": "Не могу говорить",
+      "artist": "ripznxx"
+    },
+    {
+      "id": "release_1768482849177_0d437693",
+      "title": "Miss U",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_1da53f6c",
+      "title": "г*шик!!",
+      "artist": "theflexxboy"
+    },
+    {
+      "id": "release_1768482849177_c1550b37",
+      "title": "Trap Queen",
+      "artist": "Sour Diesel"
+    },
+    {
+      "id": "release_1768482849177_b1b65498",
+      "title": "umi",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_439500da",
+      "title": "ХоумВидео",
+      "artist": "Jelato, COSTYMER"
+    },
+    {
+      "id": "release_1768482849177_69b7cf5e",
+      "title": "melancholia",
+      "artist": "vxlkxv"
+    },
+    {
+      "id": "release_1768482849177_5d66fe08",
+      "title": "замкнутая и депрессивная",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_0544e162",
+      "title": "psycho",
+      "artist": "platö"
+    },
+    {
+      "id": "release_1768482849177_177572a1",
+      "title": "похороны",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_e38a6c58",
+      "title": "ALONE",
+      "artist": "ZIND"
+    },
+    {
+      "id": "release_1768482849177_dd3748f1",
+      "title": "мёртвая бабка",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_8da0c8de",
+      "title": "КОРНИ",
+      "artist": "ASTRODYA"
+    },
+    {
+      "id": "release_1768482849177_ed42a23e",
+      "title": "Overvoltage",
+      "artist": "cherrypiertd"
+    },
+    {
+      "id": "release_1768482849177_69850dd9",
+      "title": "Грязный Грю",
+      "artist": "Jelato"
+    },
+    {
+      "id": "release_1768482849177_17327ead",
+      "title": "42",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_addd05db",
+      "title": "ТВОЙ КОСМОС",
+      "artist": "ASTRODYA"
+    },
+    {
+      "id": "release_1768482849177_bd1d98d6",
+      "title": "Deep Dive",
+      "artist": "VvZz"
+    },
+    {
+      "id": "release_1768482849177_e8ab6d45",
+      "title": "сумасшедший",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_796dd989",
+      "title": "Противоположен",
+      "artist": "TROUBLEDD"
+    },
+    {
+      "id": "release_1768482849177_6a12244f",
+      "title": "последняя лилия",
+      "artist": "LINBY"
+    },
+    {
+      "id": "release_1768482849177_6a45cd43",
+      "title": "Силуэт",
+      "artist": "DayKeys"
+    },
+    {
+      "id": "release_1768482849177_0d2c0f30",
+      "title": "FREE SPIN",
+      "artist": "SLAVKESH"
+    },
+    {
+      "id": "release_1768482849177_fa47b45a",
+      "title": "метели",
+      "artist": "LINBY"
+    },
+    {
+      "id": "release_1768482849177_3e2badce",
+      "title": "Думы",
+      "artist": "Ego"
+    },
+    {
+      "id": "release_1768482849177_316f4bd0",
+      "title": "vivienne",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_f079f1a2",
+      "title": "мрачной ночью сентября",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_093670a4",
+      "title": "STOP",
+      "artist": "Amori"
+    },
+    {
+      "id": "release_1768482849177_cdc2aeef",
+      "title": "использованные трусы японской школьницы",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849177_6030025f",
+      "title": "мефедроновая сучка",
+      "artist": "передоз"
+    },
+    {
+      "id": "release_1768482849178_018928e3",
+      "title": "отходос",
+      "artist": "передоз"
+    }
+  ],
+  "failed_releases": []
+}

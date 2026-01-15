@@ -11,7 +11,9 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    dcron \
+    curl
 
 # 3. Настраиваем переменные окружения для Chromium
 ENV CHROME_BIN=/usr/bin/chromium-browser \
@@ -50,9 +52,13 @@ ENV NODE_PATH=./
 # 9. Собираем Next.js приложение
 RUN npm run build
 
-# 7. Указываем порт, который будет слушать приложение (Next.js по умолчанию 3000)
+# 8. Создаем директорию для логов и настраиваем cron
+RUN mkdir -p /app/logs
+COPY crontab /etc/crontabs/root
+COPY entrypoint.sh ./
+
+# 9. Указываем порт, который будет слушать приложение (Next.js по умолчанию 3000)
 EXPOSE 3000
 
-# 8. Запускаем приложение
-# Используем "next start" напрямую, так как "npm start" может быть переопределен
-CMD ["node_modules/.bin/next", "start"] 
+# 10. Запускаем приложение через entrypoint
+CMD ["./entrypoint.sh"] 

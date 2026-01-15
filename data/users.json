@@ -17,7 +17,11 @@
     "name": "СКАЯ",
     "vkMusicUrl": "https://vk.com/artist/skaya",
     "createdAt": "2025-09-26T23:03:45.281Z",
-    "updatedAt": "2025-09-26T23:03:45.281Z"
+    "updatedAt": "2026-01-15T14:46:04.916248",
+    "fio": "Калинская Юлия Иосифовна",
+    "fioShort": "Калинская Ю. И.",
+    "contract": "№ ФЛ/ИП-06/01/2026-СКАЯ-ЛД",
+    "percentage": 60
   },
   {
     "id": "user_1759011689584",
@@ -26,7 +30,11 @@
     "role": "artist",
     "name": "PLVT",
     "createdAt": "2025-09-27T22:21:29.584Z",
-    "updatedAt": "2025-09-27T22:21:29.584Z"
+    "updatedAt": "2026-01-15T14:46:04.916256",
+    "fio": "Шипицин Платон Алексеевич",
+    "fioShort": "Шипицин П. А.",
+    "contract": "№ ФЛ/ФЛ-04/03/2024-PLVT-ЛД",
+    "percentage": 60
   },
   {
     "username": "MENDXZA",
@@ -35,7 +43,11 @@
     "name": "MENDXZA",
     "id": "user_1759013711284",
     "createdAt": "2025-09-27T22:55:11.284Z",
-    "updatedAt": "2025-09-27T22:55:11.284Z"
+    "updatedAt": "2026-01-15T14:46:04.916259",
+    "fio": "Галец Артём Олегович",
+    "fioShort": "Галец А. О.",
+    "contract": "№ ФЛ/ФЛ-30/12/2023-MENDXZA-ЛД",
+    "percentage": 60
   },
   {
     "username": "ns",
@@ -53,7 +65,11 @@
     "name": "EnellySayk",
     "id": "user_1759096823074",
     "createdAt": "2025-09-28T22:00:23.074Z",
-    "updatedAt": "2025-09-28T22:00:23.074Z"
+    "updatedAt": "2026-01-15T14:46:04.916262",
+    "fio": "Ишутин Александр Владиславович",
+    "fioShort": "Ишутин А. В.",
+    "contract": "№ ФЛ/ФЛ-18/04/2024-EnellySayk-ЛД",
+    "percentage": 60
   },
   {
     "username": "etxrnxtx",
@@ -62,7 +78,11 @@
     "name": "Etxrnxtx",
     "id": "user_1759096823226",
     "createdAt": "2025-09-28T22:00:23.226Z",
-    "updatedAt": "2025-09-28T22:00:23.226Z"
+    "updatedAt": "2026-01-15T14:46:04.916264",
+    "fio": "Исхаков Руслан Вакильевич",
+    "fioShort": "Исхаков Р. В.",
+    "contract": "№ ИП/ФЛ-03/09/2024-Etxrnxtx-ЛД",
+    "percentage": 60
   },
   {
     "username": "lxnower",
@@ -71,7 +91,11 @@
     "name": "LXNOWER",
     "id": "user_1759096823518",
     "createdAt": "2025-09-28T22:00:23.518Z",
-    "updatedAt": "2025-09-28T22:00:23.518Z"
+    "updatedAt": "2026-01-15T14:46:04.916266",
+    "fio": "Мальцев Иван Алексеевич",
+    "fioShort": "Мальцев И. А.",
+    "contract": "№ ФЛ/ФЛ-02/09/2024-LXNOWER-ЛД",
+    "percentage": 60
   },
   {
     "username": "makishima",
@@ -80,7 +104,11 @@
     "name": "Makishima",
     "id": "user_1759096823666",
     "createdAt": "2025-09-28T22:00:23.666Z",
-    "updatedAt": "2025-09-28T22:00:23.666Z"
+    "updatedAt": "2026-01-15T14:46:04.916268",
+    "fio": "Чемезов Максим Артемович",
+    "fioShort": "Чемезов М. А.",
+    "contract": "№ ФЛ/ИП-08/01/2026-Makishima-ЛД",
+    "percentage": 65
   },
   {
     "username": "matcukitokioto",
@@ -89,7 +117,11 @@
     "name": "Matcukito Kioto",
     "id": "user_1759096823822",
     "createdAt": "2025-09-28T22:00:23.822Z",
-    "updatedAt": "2025-09-28T22:00:23.822Z"
+    "updatedAt": "2026-01-15T14:46:04.916270",
+    "fio": "Озеров Александр Владимирович",
+    "fioShort": "Озеров А. В.",
+    "contract": "№ ФЛ/ФЛ-31/07/2024-Matcukito-Kioto-ЛД",
+    "percentage": 60
   },
   {
     "username": "meelbrn",
@@ -98,7 +130,11 @@
     "name": "MEELBRN",
     "id": "user_1759096823970",
     "createdAt": "2025-09-28T22:00:23.970Z",
-    "updatedAt": "2025-09-28T22:00:23.970Z"
+    "updatedAt": "2026-01-15T14:46:04.916272",
+    "fio": "Алтунин Пётр Андреевич",
+    "fioShort": "Алтунин П. А.",
+    "contract": "№ ФЛ/ФЛ-09/05/2024-MEELBRN-ЛД",
+    "percentage": 70
   },
   {
     "username": "nightmoral",
@@ -107,7 +143,11 @@
     "name": "night moral",
     "id": "user_1759096824221",
     "createdAt": "2025-09-28T22:00:24.221Z",
-    "updatedAt": "2025-09-28T22:00:24.221Z"
+    "updatedAt": "2026-01-15T14:46:04.916274",
+    "fio": "Шаповалов Владимир Александрович",
+    "fioShort": "Шаповалов В. А.",
+    "contract": "№ ФЛ/ФЛ-16/04/2024-Night-Moral-ЛД",
+    "percentage": 60
   },
   {
     "username": "nnaia",
@@ -116,7 +156,11 @@
     "name": "Nnaia",
     "id": "user_1759096824371",
     "createdAt": "2025-09-28T22:00:24.371Z",
-    "updatedAt": "2025-09-28T22:00:24.371Z"
+    "updatedAt": "2026-01-15T14:46:04.916275",
+    "fio": "Процевич Анастасия Александровна",
+    "fioShort": "Процевич А. А.",
+    "contract": "№ ФЛ/ФЛ-11/11/2024-Nnaia-ЛД",
+    "percentage": 60
   },
   {
     "username": "roudiej",
@@ -125,7 +169,11 @@
     "name": "Roudie J.",
     "id": "user_1759096824619",
     "createdAt": "2025-09-28T22:00:24.619Z",
-    "updatedAt": "2025-09-28T22:00:24.619Z"
+    "updatedAt": "2026-01-15T14:46:04.916277",
+    "fio": "Литвинов Георгий Андреевич",
+    "fioShort": "Литвинов Г. А.",
+    "contract": "№ ФЛ/ФЛ-28/05/2024-Roudie-J.-ЛД",
+    "percentage": 60
   },
   {
     "username": "sourdiesel",
@@ -134,7 +182,11 @@
     "name": "Sour Diesel",
     "id": "user_1759096824938",
     "createdAt": "2025-09-28T22:00:24.938Z",
-    "updatedAt": "2025-09-28T22:00:24.938Z"
+    "updatedAt": "2026-01-15T14:46:04.916279",
+    "fio": "Резанов Никита Евгеньевич",
+    "fioShort": "Резанов Н. Е.",
+    "contract": "№ ФЛ/ФЛ-13/37/1488-Sour Diesel-ЛД",
+    "percentage": 100
   },
   {
     "username": "takeda",
@@ -143,7 +195,11 @@
     "name": "Takeda",
     "id": "user_1759096825097",
     "createdAt": "2025-09-28T22:00:25.097Z",
-    "updatedAt": "2025-09-28T22:00:25.097Z"
+    "updatedAt": "2026-01-15T14:46:04.916281",
+    "fio": "Курбанов Шахриёр Шухратбекович",
+    "fioShort": "Курбанов Ш. Ш.",
+    "contract": "№ ФЛ/ФЛ-03/07/2024-TAKEDA-ЛД",
+    "percentage": 60
   },
   {
     "username": "w1ce3",
@@ -152,7 +208,11 @@
     "name": "W.1ce3",
     "id": "user_1759096825419",
     "createdAt": "2025-09-28T22:00:25.419Z",
-    "updatedAt": "2025-09-28T22:00:25.419Z"
+    "updatedAt": "2026-01-15T14:46:04.916282",
+    "fio": "Вишняков Дмитрий Владиславович",
+    "fioShort": "Вишняков Д. В.",
+    "contract": "№ ФЛ/ФЛ-16/04/2024-W.1ce3-ЛД",
+    "percentage": 60
   },
   {
     "username": "widepie",
@@ -161,7 +221,11 @@
     "name": "WIDE PIE",
     "id": "user_1759096825583",
     "createdAt": "2025-09-28T22:00:25.583Z",
-    "updatedAt": "2025-09-28T22:00:25.583Z"
+    "updatedAt": "2026-01-15T14:46:04.916284",
+    "fio": "Сидун Иван Викторович",
+    "fioShort": "Сидун И. В.",
+    "contract": "№ ФЛ/ФЛ-29/08/2024-WIDE-PIE-ЛД",
+    "percentage": 75
   },
   {
     "username": "wvlaik",
@@ -170,7 +234,11 @@
     "name": "wvlaik",
     "id": "user_1759096825749",
     "createdAt": "2025-09-28T22:00:25.749Z",
-    "updatedAt": "2025-09-28T22:00:25.749Z"
+    "updatedAt": "2026-01-15T14:46:04.916286",
+    "fio": "Рубцов Владислав Сергеевич",
+    "fioShort": "Рубцов В. С.",
+    "contract": "На птичьих правах",
+    "percentage": 70
   },
   {
     "username": "test",
@@ -184,5 +252,317 @@
     "spotifyUrl": "https://tunebat.com/Analyzer",
     "id": "1760059101057",
     "createdAt": "2025-10-10T01:18:21.057Z"
+  },
+  {
+    "id": "9318e666-493b-4fe7-a445-248aa1b80f32",
+    "username": "0xr",
+    "password": "0xr1234",
+    "role": "artist",
+    "name": "0XR",
+    "fio": "Смирнов Даниил Викторович",
+    "fioShort": "Смирнов Д. В.",
+    "contract": "№ ФЛ/ФЛ-18/09/2025-0XR-ЛД",
+    "percentage": 70,
+    "createdAt": "2026-01-15T14:29:49.086940",
+    "updatedAt": "2026-01-15T14:46:04.916288"
+  },
+  {
+    "id": "5c123786-38ba-4f54-a081-33a26f41efb7",
+    "username": "передоз",
+    "password": "передоз1234",
+    "role": "artist",
+    "name": "передоз",
+    "fio": "Дмитриев Константин Сергеевич",
+    "fioShort": "Дмитриев К. С.",
+    "contract": "№ ФЛ/ФЛ-11/09/2024-передоз-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.086955",
+    "updatedAt": "2026-01-15T14:46:04.916289"
+  },
+  {
+    "id": "20695850-5af4-44f7-9f03-f2e9c330beda",
+    "username": "энтеnдаns",
+    "password": "энтеnдаns1234",
+    "role": "artist",
+    "name": "ЭНТЕNДАNS",
+    "fio": "Вознесенский Александр Ильич",
+    "fioShort": "Вознесенский А. И.",
+    "contract": "На птичьих правах",
+    "percentage": 70,
+    "createdAt": "2026-01-15T14:29:49.086966",
+    "updatedAt": "2026-01-15T14:46:04.916291"
+  },
+  {
+    "id": "f3d5c37d-2ede-416a-8825-2bf2b90dacb9",
+    "username": "astrodya",
+    "password": "astrodya1234",
+    "role": "artist",
+    "name": "ASTRODYA",
+    "fio": "Семухин Никита Андреевич",
+    "fioShort": "Семухин Н. А.",
+    "contract": "№ ФЛ/ФЛ-19/02/2024-ASTRODYA-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.086972",
+    "updatedAt": "2026-01-15T14:46:04.916293"
+  },
+  {
+    "id": "530ef548-0483-468e-8fe6-e3f215359f14",
+    "username": "bordun",
+    "password": "bordun1234",
+    "role": "artist",
+    "name": "BORDUN",
+    "fio": "Бордун Святослав Александрович",
+    "fioShort": "Бордун С. А.",
+    "contract": "№ ФЛ/ФЛ-03/04/2025-BORDUN-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.086978",
+    "updatedAt": "2026-01-15T14:46:04.916294"
+  },
+  {
+    "id": "aae20a15-9b34-4e83-8f0c-e9661a20007c",
+    "username": "cherrypiertd",
+    "password": "cherrypiertd1234",
+    "role": "artist",
+    "name": "cherrypiertd",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.086983",
+    "updatedAt": "2026-01-15T14:46:04.916334"
+  },
+  {
+    "id": "185139a0-9bec-4dbd-b8f4-4019f1206a78",
+    "username": "coldn1ght",
+    "password": "coldn1ght1234",
+    "role": "artist",
+    "name": "Coldn1ght",
+    "fio": "Бауэр Игорь Алексеевич",
+    "fioShort": "Бауэр И. А.",
+    "contract": "№ ФЛ/ФЛ-02/12/2024-Coldn1ght-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.086988",
+    "updatedAt": "2026-01-15T14:46:04.916336"
+  },
+  {
+    "id": "2c29a492-08b2-4dfa-baca-e39a265a1ae7",
+    "username": "daykeys",
+    "password": "daykeys1234",
+    "role": "artist",
+    "name": "DayKeys",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.086993",
+    "updatedAt": "2026-01-15T14:46:04.916338"
+  },
+  {
+    "id": "803eb88c-220b-4c96-bfbc-35e303a9fc3a",
+    "username": "ego",
+    "password": "ego1234",
+    "role": "artist",
+    "name": "Ego",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.086998",
+    "updatedAt": "2026-01-15T14:46:04.916340"
+  },
+  {
+    "id": "f20a760f-dc10-46e3-a03f-ea4e702f43b0",
+    "username": "jelato",
+    "password": "jelato1234",
+    "role": "artist",
+    "name": "Jelato",
+    "fio": "Котенко Владислав Сергеевич",
+    "fioShort": "Котенко В. С.",
+    "contract": "№ ФЛ/ФЛ-08/10/2024-Jelato-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.087007",
+    "updatedAt": "2026-01-15T14:46:04.916341"
+  },
+  {
+    "id": "9b516f9c-ea5b-4331-88d1-852f8e996381",
+    "username": "linby",
+    "password": "linby1234",
+    "role": "artist",
+    "name": "LINBY",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087012",
+    "updatedAt": "2026-01-15T14:46:04.916343"
+  },
+  {
+    "id": "04ac2d85-56b8-4b85-8477-4ff9e32ce05f",
+    "username": "neea",
+    "password": "neea1234",
+    "role": "artist",
+    "name": "Neea",
+    "fio": "Орешков Никита Романович",
+    "fioShort": "Орешков Н. Р.",
+    "contract": "№ ФЛ/ФЛ-21/10/2024-Neea-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.087027",
+    "updatedAt": "2026-01-15T14:46:04.916345"
+  },
+  {
+    "id": "5e16f2c2-0450-4eb9-a76c-62cca8dc2ee0",
+    "username": "nenevesta",
+    "password": "nenevesta1234",
+    "role": "artist",
+    "name": "NENEVESTA",
+    "fio": "Григораш Александр Викторович",
+    "fioShort": "Григораш А. В.",
+    "contract": "№ ФЛ/ФЛ-17/03/2025-NENEVESTA-ЛД",
+    "percentage": 70,
+    "createdAt": "2026-01-15T14:29:49.087032",
+    "updatedAt": "2026-01-15T14:46:04.916346"
+  },
+  {
+    "id": "7b0f3cc5-b254-43ff-bef0-5c031c2c15cb",
+    "username": "ripznxx",
+    "password": "ripznxx1234",
+    "role": "artist",
+    "name": "ripznxx",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087043",
+    "updatedAt": "2026-01-15T14:46:04.916348"
+  },
+  {
+    "id": "adbede7c-7bdb-49bf-810d-777a2923a6cd",
+    "username": "shwty",
+    "password": "shwty1234",
+    "role": "artist",
+    "name": "SHWTY",
+    "fio": "Гоголев Андрей Дмитриевич",
+    "fioShort": "Гоголев А. Д.",
+    "contract": "№ ФЛ/ФЛ-06/01/2025-SHWTY-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.087049",
+    "updatedAt": "2026-01-15T14:46:04.916350"
+  },
+  {
+    "id": "9172d1c7-c2be-4125-b5ec-89e8c38283ca",
+    "username": "slavkesh",
+    "password": "slavkesh1234",
+    "role": "artist",
+    "name": "SLAVKESH",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087054",
+    "updatedAt": "2026-01-15T14:46:04.916352"
+  },
+  {
+    "id": "0e7ad2b3-f2bd-4b1c-bfe4-240bdadfeafe",
+    "username": "stemstyl",
+    "password": "stemstyl1234",
+    "role": "artist",
+    "name": "stemstyl",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087061",
+    "updatedAt": "2026-01-15T14:46:04.916353"
+  },
+  {
+    "id": "fc081bc5-8291-49ab-8ef9-da9681e165f2",
+    "username": "theflexxboy",
+    "password": "theflexxboy1234",
+    "role": "artist",
+    "name": "theflexxboy",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087067",
+    "updatedAt": "2026-01-15T14:46:04.916355"
+  },
+  {
+    "id": "934781c8-23b3-4c6a-bfe4-f4cf2cb3e6a5",
+    "username": "txyk",
+    "password": "txyk1234",
+    "role": "artist",
+    "name": "TXYK",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087072",
+    "updatedAt": "2026-01-15T14:46:04.916357"
+  },
+  {
+    "id": "47e03d86-7b48-4331-bb7d-0ebe1cc53451",
+    "username": "vvzz",
+    "password": "vvzz1234",
+    "role": "artist",
+    "name": "VvZz",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087077",
+    "updatedAt": "2026-01-15T14:46:04.916358"
+  },
+  {
+    "id": "2af20ba4-4e4b-4856-bca1-2cb56cad53c8",
+    "username": "vxlkxv",
+    "password": "vxlkxv1234",
+    "role": "artist",
+    "name": "vxlkxv",
+    "fio": "-",
+    "fioShort": "-",
+    "contract": "-",
+    "percentage": 0,
+    "createdAt": "2026-01-15T14:29:49.087081",
+    "updatedAt": "2026-01-15T14:46:04.916360"
+  },
+  {
+    "id": "343b4282-ba42-459e-8ad4-da756a02f6d2",
+    "username": "yaroshi",
+    "password": "yaroshi1234",
+    "role": "artist",
+    "name": "yaroshi",
+    "fio": "Федосов Андрей Геральдович",
+    "fioShort": "Федосов А. Г.",
+    "contract": "№ ФЛ/ФЛ-13/06/2025-yaroshi-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.087091",
+    "updatedAt": "2026-01-15T14:46:04.916362"
+  },
+  {
+    "id": "fb6cb9b9-fa62-4669-ba71-4d8abd93294b",
+    "username": "zind",
+    "password": "zind1234",
+    "role": "artist",
+    "name": "ZIND",
+    "fio": "Китаев Максим Анатольевич",
+    "fioShort": "Китаев М. А.",
+    "contract": "№ ФЛ/ФЛ-25/03/2024-ZIND-ЛД",
+    "percentage": 60,
+    "createdAt": "2026-01-15T14:29:49.087095",
+    "updatedAt": "2026-01-15T14:46:04.916364"
+  },
+  {
+    "id": "b1086154-1249-4320-99ee-e643c951c008",
+    "username": "sadaround",
+    "password": "sadaround1234",
+    "role": "artist",
+    "name": "sadaround",
+    "fio": "Базилевич Андрей Игоревич",
+    "fioShort": "Базилевич А. И.",
+    "contract": "№ ФЛ/ИП-05/12/2025-sadaround-ЛД",
+    "percentage": 70,
+    "createdAt": "2026-01-15T14:29:49.087100",
+    "updatedAt": "2026-01-15T14:46:04.916365"
   }
 ]

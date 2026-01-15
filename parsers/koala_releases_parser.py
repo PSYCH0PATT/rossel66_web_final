@@ -10,9 +10,9 @@ import time
 import random
 import os
 import sys
+import re
 from datetime import datetime
 from typing import Dict, List, Optional
-import re
 
 try:
     from selenium import webdriver
@@ -356,16 +356,131 @@ class KoalaReleasesParser:
             # Извлекаем обложку
             cover_url = None
             try:
-                img_elements = self.driver.find_elements(
-                    By.CSS_SELECTOR, 'img[src*="cover"], img[src*="image"], aside img, main img'
-                )
-                for img in img_elements:
-                    src = img.get_attribute('src')
-                    if src and ('http' in src) and ('logo' not in src.lower()):
-                        cover_url = src
-                        print(f"  🖼️  Обложка найдена")
-                        break
-            except:
+                # Ищем элементы с background-image содержащим blob
+                elements_with_blob_bg = self.driver.execute_script("""
+                    var elements = [];
+                    var all = document.getElementsByTagName('*');
+                    for (var i = 0; i < all.length; i++) {
+                        var elem = all[i];
+                        var style = window.getComputedStyle(elem);
+                        var bgImage = style.backgroundImage;
+                        if (bgImage && bgImage.indexOf('blob:') !== -1) {
+                            elements.push({
+                                element: elem,
+                                backgroundImage: bgImage
+                            });
+                        }
+                    }
+                    return elements;
+                """)
+                
+                if elements_with_blob_bg:
+                    # Конвертируем blob из background-image
+                    elem_data = elements_with_blob_bg[0]
+                    bg_image = elem_data['backgroundImage']
+                    
+                    # Извлекаем blob URL
+                    blob_match = re.search(r'blob:[^")]+', bg_image)
+                    if blob_match:
+                        blob_url = blob_match.group(0)
+                        
+                        # Конвертируем blob в data URL
+                        try:
+                            data_url = self.driver.execute_script("""
+                                var blobUrl = arguments[0];
+                                
+                                return new Promise(function(resolve) {
+                                    var img = new Image();
+                                    img.onload = function() {
+                                        try {
+                                            var canvas = document.createElement('canvas');
+                                            var ctx = canvas.getContext('2d');
+                                            canvas.width = img.naturalWidth;
+                                            canvas.height = img.naturalHeight;
+                                            ctx.drawImage(img, 0, 0);
+                                            
+                                            var dataURL = canvas.toDataURL('image/jpeg', 0.8);
+                                            resolve({
+                                                success: true,
+                                                dataURL: dataURL,
+                                                width: img.naturalWidth,
+                                                height: img.naturalHeight
+                                            });
+                                        } catch(e) {
+                                            resolve({
+                                                success: false,
+                                                error: e.toString()
+                                            });
+                                        }
+                                    };
+                                    img.onerror = function() {
+                                        resolve({
+                                            success: false,
+                                            error: 'Image load error'
+                                        });
+                                    };
+                                    img.src = blobUrl;
+                                });
+                            """, blob_url)
+                            
+                            # Ждем результат асинхронной операции
+                            time.sleep(2)
+                            
+                            if data_url and data_url.get('success'):
+                                cover_url = data_url['dataURL']
+                                print(f"  🖼️  Обложка конвертирована из blob: {data_url['width']}x{data_url['height']}")
+                            else:
+                                print(f"  ⚠️  Ошибка конвертации blob: {data_url.get('error') if data_url else 'Timeout'}")
+                                
+                        except Exception as e:
+                            print(f"  ⚠️  Ошибка скрипта конвертации: {e}")
+                else:
+                    # Fallback - ищем обычные изображения
+                    img_elements = self.driver.find_elements(
+                        By.CSS_SELECTOR, 'img[src*="blob"], img[alt*="cover"], img[alt*="Cover"], .cover img'
+                    )
+                    
+                    for img in img_elements:
+                        src = img.get_attribute('src')
+                        if src and src.startswith('blob:'):
+                            # Конвертируем blob из img
+                            try:
+                                data_url = self.driver.execute_script("""
+                                    var img = arguments[0];
+                                    try {
+                                        var canvas = document.createElement('canvas');
+                                        var ctx = canvas.getContext('2d');
+                                        canvas.width = img.naturalWidth;
+                                        canvas.height = img.naturalHeight;
+                                        ctx.drawImage(img, 0, 0);
+                                        return {
+                                            success: true,
+                                            dataURL: canvas.toDataURL('image/jpeg', 0.8),
+                                            width: img.naturalWidth,
+                                            height: img.naturalHeight
+                                        };
+                                    } catch(e) {
+                                        return {
+                                            success: false,
+                                            error: e.toString()
+                                        };
+                                    }
+                                """, img)
+                                
+                                if data_url and data_url.get('success'):
+                                    cover_url = data_url['dataURL']
+                                    print(f"  🖼️  Обложка из img конвертирована: {data_url['width']}x{data_url['height']}")
+                                    break
+                            except Exception as e:
+                                print(f"  ⚠️  Ошибка конвертации img: {e}")
+                                continue
+                        elif src and src.startswith('http') and 'logo' not in src.lower():
+                            cover_url = src
+                            print(f"  🖼️  Обложка найдена: {src}")
+                            break
+                            
+            except Exception as e:
+                print(f"  ⚠️  Ошибка поиска обложки: {e}")
                 pass
             
             # Извлекаем ISRC коды из трек-листа

@@ -13,6 +13,12 @@ export interface User {
   vkMusicUrl?: string
   yandexMusicUrl?: string
   spotifyUrl?: string
+  // Новые поля для артистов
+  fio?: string
+  fioShort?: string
+  contract?: string
+  percentage?: number
+  updatedAt?: string
 }
 
 // Статусы релизов из Koala Music

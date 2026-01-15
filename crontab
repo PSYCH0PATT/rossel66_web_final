@@ -1,0 +1,20 @@
+# Логи: /app/logs/cron.log
+
+# Koala: каждый день в 12:00 и 20:00 МСК -> 09:00 и 17:00 UTC
+0 9,17 * * * curl -X POST http://127.0.0.1:3000/api/koala-parser >> /app/logs/cron.log 2>&1
+
+# Zvonko: каждый день в 14:00 МСК -> 11:00 UTC
+0 11 * * * curl -X POST http://127.0.0.1:3000/api/zvonko-parser >> /app/logs/cron.log 2>&1
+
+# Bandlink:
+# Пятница 00:30 МСК -> Четверг 21:30 UTC
+30 21 * * 4 curl -X POST http://127.0.0.1:3000/api/parsers/bandlink >> /app/logs/cron.log 2>&1
+
+# Суббота 16:00 МСК -> 13:00 UTC
+0 13 * * 6 curl -X POST http://127.0.0.1:3000/api/parsers/bandlink >> /app/logs/cron.log 2>&1
+
+# Воскресенье 16:00 МСК -> 13:00 UTC
+0 13 * * 0 curl -X POST http://127.0.0.1:3000/api/parsers/bandlink >> /app/logs/cron.log 2>&1
+
+# Понедельник 16:00 МСК -> 13:00 UTC
+0 13 * * 1 curl -X POST http://127.0.0.1:3000/api/parsers/bandlink >> /app/logs/cron.log 2>&1
