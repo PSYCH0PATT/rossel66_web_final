@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Play, Users, Calendar, ExternalLink, Image } from 'lucide-react';
+import { Loader2, Play, Users, Calendar, ExternalLink, Image, RefreshCw, Save, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Artist {
   id: string;
@@ -44,10 +45,21 @@ export default function ParsersPage() {
   const [vkResults, setVkResults] = useState<ParseResult[]>([]);
   const [bandlinkResults, setBandlinkResults] = useState<ParseResult[]>([]);
   const [parsingOutput, setParsingOutput] = useState<string>('');
+  const [parsingHistory, setParsingHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [bandlinkCookies, setBandlinkCookies] = useState<string>('');
+  const [vkCookies, setVkCookies] = useState<string>('');
+  const [bandlinkCookiesLastUpdated, setBandlinkCookiesLastUpdated] = useState<string | null>(null);
+  const [vkCookiesLastUpdated, setVkCookiesLastUpdated] = useState<string | null>(null);
+  const [isSavingBandlinkCookies, setIsSavingBandlinkCookies] = useState(false);
+  const [isSavingVkCookies, setIsSavingVkCookies] = useState(false);
+  
   useEffect(() => {
     loadArtists();
     loadRecentArtists();
     loadParsingResults();
+    loadParsingHistory();
+    loadCookies();
   }, []);
 
   const loadArtists = async () => {
@@ -172,14 +184,17 @@ export default function ParsersPage() {
         setParsingOutput(prev => prev + '\n✅ VK парсинг завершен успешно!\n');
         setParsingOutput(prev => prev + data.output + '\n');
         setVkResults(data.results || []);
+        loadParsingHistory(); // Обновляем историю
       } else {
         setParsingOutput(prev => prev + '\n❌ Ошибка VK парсинга: ' + data.error + '\n');
         if (data.stderr) {
           setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n');
         }
+        loadParsingHistory(); // Обновляем историю даже при ошибке
       }
     } catch (error) {
       setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n');
+      loadParsingHistory();
     } finally {
       setIsParsingVK(false);
     }
@@ -233,14 +248,17 @@ export default function ParsersPage() {
         setParsingOutput(prev => prev + '\n✅ Bandlink парсинг завершен успешно!\n');
         setParsingOutput(prev => prev + data.output + '\n');
         setBandlinkResults(data.results || []);
+        loadParsingHistory(); // Обновляем историю
       } else {
         setParsingOutput(prev => prev + '\n❌ Ошибка Bandlink парсинга: ' + data.error + '\n');
         if (data.stderr) {
           setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n');
         }
+        loadParsingHistory(); // Обновляем историю даже при ошибке
       }
     } catch (error) {
       setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n');
+      loadParsingHistory();
     } finally {
       setIsParsingBandlink(false);
     }
@@ -248,6 +266,125 @@ export default function ParsersPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ru-RU');
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const loadParsingHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch('/api/parsers/history?type=all&limit=20');
+      const data = await response.json();
+      if (data.success) {
+        setParsingHistory(data.history || []);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки истории парсинга:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const loadCookies = async () => {
+    try {
+      const [bandlinkResponse, vkResponse] = await Promise.all([
+        fetch('/api/bandlink/cookies'),
+        fetch('/api/vk/cookies')
+      ]);
+      
+      const bandlinkData = await bandlinkResponse.json();
+      const vkData = await vkResponse.json();
+      
+      if (bandlinkData.success && bandlinkData.lastUpdated) {
+        setBandlinkCookiesLastUpdated(bandlinkData.lastUpdated);
+      }
+      
+      if (vkData.success && vkData.lastUpdated) {
+        setVkCookiesLastUpdated(vkData.lastUpdated);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки информации о cookies:', error);
+    }
+  };
+
+  const saveBandlinkCookies = async () => {
+    if (!bandlinkCookies.trim()) {
+      alert('Введите cookies для Bandlink');
+      return;
+    }
+
+    setIsSavingBandlinkCookies(true);
+    try {
+      const response = await fetch('/api/bandlink/cookies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cookieString: bandlinkCookies
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setBandlinkCookies('');
+        setBandlinkCookiesLastUpdated(new Date().toISOString());
+        alert(`✅ Cookies Bandlink успешно обновлены (${data.count} шт.)`);
+        loadCookies();
+      } else {
+        alert('❌ Ошибка: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения Bandlink cookies:', error);
+      alert('❌ Ошибка сохранения cookies');
+    } finally {
+      setIsSavingBandlinkCookies(false);
+    }
+  };
+
+  const saveVkCookies = async () => {
+    if (!vkCookies.trim()) {
+      alert('Введите cookies для VK');
+      return;
+    }
+
+    setIsSavingVkCookies(true);
+    try {
+      const response = await fetch('/api/vk/cookies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cookieString: vkCookies
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setVkCookies('');
+        setVkCookiesLastUpdated(new Date().toISOString());
+        alert(`✅ Cookies VK успешно обновлены (${data.count} шт.)`);
+        loadCookies();
+      } else {
+        alert('❌ Ошибка: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения VK cookies:', error);
+      alert('❌ Ошибка сохранения cookies');
+    } finally {
+      setIsSavingVkCookies(false);
+    }
   };
 
   return (
@@ -264,6 +401,10 @@ export default function ParsersPage() {
       <Tabs defaultValue="control" className="space-y-6">
         <TabsList>
           <TabsTrigger value="control">Управление</TabsTrigger>
+          <TabsTrigger value="history">
+            История парсинга {parsingHistory.length > 0 && `(${parsingHistory.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="cookies">Cookies</TabsTrigger>
           <TabsTrigger value="vk-results">
             Результаты VK {vkResults.length > 0 && `(${vkResults.length})`}
           </TabsTrigger>
@@ -462,6 +603,178 @@ export default function ParsersPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    История парсинга
+                  </CardTitle>
+                  <CardDescription>
+                    История всех запусков парсеров с результатами и ошибками
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadParsingHistory}
+                  disabled={isLoadingHistory}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : (
+                <ScrollArea className="h-[600px]">
+                  <div className="space-y-4">
+                    {parsingHistory.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant={item.parser_type === 'bandlink' ? 'default' : 'secondary'}>
+                                {item.parser_type === 'bandlink' ? 'Bandlink' : 'VK'}
+                              </Badge>
+                              {item.status === 'completed' ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : item.status === 'failed' ? (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                              )}
+                              <span className="text-sm font-medium">
+                                {item.status === 'completed' ? 'Успешно' : item.status === 'failed' ? 'Ошибка' : 'Выполняется'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              <strong>Артисты:</strong> {item.artists}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Найдено плейлистов:</span>
+                                <span className="ml-2 font-medium">{item.playlists_found || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Добавлено:</span>
+                                <span className="ml-2 font-medium text-green-600">{item.playlists_added || 0}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              <Clock className="w-3 h-3 inline mr-1" />
+                              {formatDateTime(item.started_at)}
+                            </p>
+                            {item.errors && (
+                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                  <span className="text-sm font-medium text-red-800">Ошибки:</span>
+                                </div>
+                                <pre className="text-xs text-red-700 whitespace-pre-wrap">{item.errors}</pre>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {parsingHistory.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">
+                        История парсинга пуста
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cookies" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Bandlink Cookies */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5" />
+                  Cookies Bandlink
+                </CardTitle>
+                <CardDescription>
+                  Вставьте cookies для Bandlink в формате строки (каждая строка: name=value)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="Вставьте cookies для Bandlink...&#10;_yascZbPBpGejBI8wyUctjcuMZQX8ThOZfHYB5DN8GWR3zkzmGIuIN9V4/Lu9t62ssa13vA==&#10;_ym_d1768914125&#10;..."
+                  value={bandlinkCookies}
+                  onChange={(e) => setBandlinkCookies(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                />
+                <Button
+                  onClick={saveBandlinkCookies}
+                  disabled={isSavingBandlinkCookies || !bandlinkCookies.trim()}
+                  className="w-full"
+                >
+                  {isSavingBandlinkCookies ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Обновить Cookies
+                </Button>
+                {bandlinkCookiesLastUpdated && (
+                  <p className="text-xs text-muted-foreground">
+                    Последнее обновление: {formatDateTime(bandlinkCookiesLastUpdated)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* VK Cookies */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5" />
+                  Cookies VK
+                </CardTitle>
+                <CardDescription>
+                  Вставьте cookies для VK в формате строки (каждая строка: name=value)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="Вставьте cookies для VK...&#10;adblock1&#10;domain_sidw3y9a5vc6Kz6rEXNpmFZX%3A1768866028820&#10;httokenjzx5WH7NpAcA8fnDeklUB6xDpwlgX4bAGyi5jYNGT3JsF-q-K7ACAWN3IXZXjmJgIBzPumtgTSgGud6x72Oy5EhMpk9kajtz_W3WaSDbQwXUjzV9HLoIEj5KZG8v5hbFK1k&#10;..."
+                  value={vkCookies}
+                  onChange={(e) => setVkCookies(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                />
+                <Button
+                  onClick={saveVkCookies}
+                  disabled={isSavingVkCookies || !vkCookies.trim()}
+                  className="w-full"
+                >
+                  {isSavingVkCookies ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Обновить Cookies
+                </Button>
+                {vkCookiesLastUpdated && (
+                  <p className="text-xs text-muted-foreground">
+                    Последнее обновление: {formatDateTime(vkCookiesLastUpdated)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="vk-results">

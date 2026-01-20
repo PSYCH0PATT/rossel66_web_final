@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save } from 'lucide-react'
+import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -66,6 +66,14 @@ export default function PlaylistsPage() {
   const [isUpdatingCookies, setIsUpdatingCookies] = useState(false)
   const [cookiesStatus, setCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
   const [lastCookiesUpdate, setLastCookiesUpdate] = useState<string | null>(null)
+  const [vkCookiesInput, setVkCookiesInput] = useState('')
+  const [isUpdatingVkCookies, setIsUpdatingVkCookies] = useState(false)
+  const [vkCookiesStatus, setVkCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
+  const [lastVkCookiesUpdate, setLastVkCookiesUpdate] = useState<string | null>(null)
+  
+  // Состояния для истории парсинга
+  const [parsingHistory, setParsingHistory] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   useEffect(() => {
     loadArtists()
@@ -73,6 +81,8 @@ export default function PlaylistsPage() {
     loadResults()
     loadCookiesStatus()
     checkCookiesNotification()
+    loadParsingHistory()
+    loadVkCookiesStatus()
   }, [])
 
   // Отслеживание ширины окна
@@ -188,10 +198,39 @@ export default function PlaylistsPage() {
     }
   }
 
-  // Обновление cookies
+  // Загрузка истории парсинга
+  const loadParsingHistory = async () => {
+    setIsLoadingHistory(true)
+    try {
+      const response = await fetch('/api/parsers/history?type=all&limit=10')
+      const data = await response.json()
+      if (data.success) {
+        setParsingHistory(data.history || [])
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки истории парсинга:', error)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  // Загрузка статуса VK cookies
+  const loadVkCookiesStatus = async () => {
+    try {
+      const response = await fetch('/api/vk/cookies')
+      const data = await response.json()
+      if (data.success && data.lastUpdated) {
+        setLastVkCookiesUpdate(new Date(data.lastUpdated).toLocaleString('ru-RU'))
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки статуса VK cookies:', error)
+    }
+  }
+
+  // Обновление cookies Bandlink
   const updateCookies = async () => {
     if (!cookiesInput.trim()) {
-      setCookiesStatus({ type: 'destructive', message: 'Введите curl команду с cookies' })
+      setCookiesStatus({ type: 'destructive', message: 'Введите cookies для Bandlink' })
       return
     }
 
@@ -202,7 +241,7 @@ export default function PlaylistsPage() {
       const response = await fetch('/api/bandlink/cookies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ curlCommand: cookiesInput })
+        body: JSON.stringify({ cookieString: cookiesInput })
       })
       const data = await response.json()
       
@@ -221,6 +260,51 @@ export default function PlaylistsPage() {
     } finally {
       setIsUpdatingCookies(false)
     }
+  }
+
+  // Обновление cookies VK
+  const updateVkCookies = async () => {
+    if (!vkCookiesInput.trim()) {
+      setVkCookiesStatus({ type: 'destructive', message: 'Введите cookies для VK' })
+      return
+    }
+
+    setIsUpdatingVkCookies(true)
+    setVkCookiesStatus(null)
+
+    try {
+      const response = await fetch('/api/vk/cookies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cookieString: vkCookiesInput })
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setVkCookiesStatus({ type: 'default', message: `✅ ${data.message}` })
+        setLastVkCookiesUpdate(new Date().toLocaleString('ru-RU'))
+        setVkCookiesInput('')
+        
+        // Перезагружаем статус cookies
+        await loadVkCookiesStatus()
+      } else {
+        setVkCookiesStatus({ type: 'destructive', message: `❌ ${data.error || 'Ошибка обновления'}` })
+      }
+    } catch (error) {
+      setVkCookiesStatus({ type: 'destructive', message: '❌ Ошибка соединения' })
+    } finally {
+      setIsUpdatingVkCookies(false)
+    }
+  }
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   const handleArtistSelect = (artistId: string, checked: boolean) => {
@@ -266,14 +350,18 @@ export default function PlaylistsPage() {
         setParsingOutput(prev => prev + '\n✅ VK парсинг завершен успешно!\n')
         setParsingOutput(prev => prev + data.output + '\n')
         setVkResults(data.results || [])
+        loadParsingHistory() // Обновляем историю
+        loadResults() // Обновляем результаты
       } else {
         setParsingOutput(prev => prev + '\n❌ Ошибка VK парсинга: ' + data.error + '\n')
         if (data.stderr) {
           setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n')
         }
+        loadParsingHistory() // Обновляем историю даже при ошибке
       }
     } catch (error) {
       setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n')
+      loadParsingHistory()
     } finally {
       setIsParsingVK(false)
     }
@@ -310,15 +398,19 @@ export default function PlaylistsPage() {
       if (data.success) {
         setParsingOutput(prev => prev + '\n✅ Bandlink парсинг завершен успешно!\n')
         setParsingOutput(prev => prev + data.output + '\n')
+        loadParsingHistory() // Обновляем историю
+        loadResults() // Обновляем результаты
         setBandlinkResults(data.results || [])
       } else {
         setParsingOutput(prev => prev + '\n❌ Ошибка Bandlink парсинга: ' + data.error + '\n')
         if (data.stderr) {
           setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n')
         }
+        loadParsingHistory() // Обновляем историю даже при ошибке
       }
     } catch (error) {
       setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n')
+      loadParsingHistory()
     } finally {
       setIsParsingBandlink(false)
     }
@@ -585,7 +677,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center gap-3 rounded-lg px-4 py-3">
                   <div className="rounded-lg p-2">
                     <img 
-                      src="https://appteka.store/get/e2Up17I-CKFD00SOu6guqRlr1xf2VWKt00nKbMpxN0mWU6Sbz-H2_KDnRivvKElyWyBcGKvocgGS-b70rVdkR4kU-I4=/6eaef668d24126abac8a69524492af8e349e4920.png" 
+                      src="data:image/png;base64,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" 
                       alt="VK Music" 
                       className="w-5 h-5"
                     />
@@ -791,7 +883,9 @@ export default function PlaylistsPage() {
             {/* Панель управления парсингом */}
             <Card>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="space-y-6">
+                  {/* Первая строка: Выбор артистов и Парсинг */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Поиск и выбор артистов */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -925,30 +1019,90 @@ export default function PlaylistsPage() {
               </div>
             </div>
 
-            {/* Лог парсинга */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Статус</h3>
-              </div>
+                  </div>
 
-              <div className="bg-background/50 rounded-lg p-3 border min-h-[200px]">
-                {parsingOutput ? (
-                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto">
-                    {parsingOutput}
-                  </pre>
+                  {/* Вторая строка: История парсинга */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <h3 className="font-semibold">История парсинга</h3>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={loadParsingHistory}
+                        disabled={isLoadingHistory}
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
+
+              <div className="bg-background/50 rounded-lg p-3 border min-h-[200px] max-h-[400px] overflow-y-auto">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center h-full">
+                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : parsingHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {parsingHistory.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-3 space-y-2 bg-background/30">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={item.parser_type === 'bandlink' ? 'default' : 'secondary'} className="text-xs">
+                            {item.parser_type === 'bandlink' ? 'Bandlink' : 'VK'}
+                          </Badge>
+                          {item.status === 'completed' ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          ) : item.status === 'failed' ? (
+                            <XCircle className="w-3 h-3 text-red-500" />
+                          ) : (
+                            <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+                          )}
+                          <span className="text-xs font-medium">
+                            {item.status === 'completed' ? 'Успешно' : item.status === 'failed' ? 'Ошибка' : 'Выполняется'}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {formatDateTime(item.started_at)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Артисты:</strong> {item.artists}
+                        </p>
+                        <div className="flex gap-4 text-xs">
+                          <span className="text-muted-foreground">
+                            Найдено: <span className="font-medium text-foreground">{item.playlists_found || 0}</span>
+                          </span>
+                          <span className="text-muted-foreground">
+                            Добавлено: <span className="font-medium text-green-500">{item.playlists_added || 0}</span>
+                          </span>
+                        </div>
+                        {item.errors && (
+                          <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs">
+                            <div className="flex items-center gap-1 mb-1">
+                              <AlertCircle className="w-3 h-3 text-red-500" />
+                              <span className="font-medium text-red-500">Ошибки:</span>
+                            </div>
+                            <pre className="text-red-400 whitespace-pre-wrap text-xs">{item.errors}</pre>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <div className="text-center">
-                      <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Логи парсинга появятся здесь</p>
+                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">История парсинга пуста</p>
+                      <p className="text-xs mt-1">Запустите парсинг, чтобы увидеть историю</p>
                     </div>
-                </div>
-              )}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Управление Cookies */}
+                  {/* Третья строка: Cookies */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Управление Cookies Bandlink */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Cookie className="w-4 h-4 text-primary" />
@@ -956,7 +1110,7 @@ export default function PlaylistsPage() {
               </div>
               
               <Textarea
-                placeholder="Вставьте curl команду с cookies..."
+                placeholder={`Вставьте cookies для Bandlink в формате строки (каждая строка: name=value):\n_yascZbPBpGejBI8wyUctjcuMZQX8ThOZfHYB5DN8GWR3zkzmGIuIN9V4/Lu9t62ssa13vA==\n_ym_d1768914125\n...`}
                 value={cookiesInput}
                 onChange={(e) => setCookiesInput(e.target.value)}
                 className="min-h-[120px] font-mono text-xs"
@@ -964,7 +1118,7 @@ export default function PlaylistsPage() {
               
               <Button
                 onClick={updateCookies}
-                disabled={isUpdatingCookies}
+                disabled={isUpdatingCookies || !cookiesInput.trim()}
                 size="sm"
                 className="w-full"
               >
@@ -986,7 +1140,47 @@ export default function PlaylistsPage() {
                 <p className="font-mono">{lastCookiesUpdate || 'Не обновлялись'}</p>
               </div>
             </div>
-          </div>
+
+            {/* Управление Cookies VK */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Cookie className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold">Cookies VK</h3>
+              </div>
+              
+              <Textarea
+                placeholder={`Вставьте cookies для VK в формате строки (каждая строка: name=value):\nadblock1\ndomain_sidw3y9a5vc6Kz6rEXNpmFZX%3A1768866028820\nhttokenjzx5WH7NpAcA8fnDeklUB6xDpwlgX4bAGyi5jYNGT3JsF-q-K7ACAWN3IXZXjmJgIBzPumtgTSgGud6x72Oy5EhMpk9kajtz_W3WaSDbQwXUjzV9HLoIEj5KZG8v5hbFK1k\n...`}
+                value={vkCookiesInput}
+                onChange={(e) => setVkCookiesInput(e.target.value)}
+                className="min-h-[120px] font-mono text-xs"
+              />
+              
+              <Button
+                onClick={updateVkCookies}
+                disabled={isUpdatingVkCookies || !vkCookiesInput.trim()}
+                size="sm"
+                className="w-full"
+              >
+                {isUpdatingVkCookies ? (
+                  <><RefreshCw className="w-3 h-3 mr-2 animate-spin" />Обновление...</>
+                ) : (
+                  <><Save className="w-3 h-3 mr-2" />Обновить Cookies</>
+                )}
+              </Button>
+              
+              {vkCookiesStatus && (
+                <Alert variant={vkCookiesStatus.type}>
+                  <AlertDescription>{vkCookiesStatus.message}</AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
+                <p>Последнее обновление:</p>
+                <p className="font-mono">{lastVkCookiesUpdate || 'Не обновлялись'}</p>
+              </div>
+            </div>
+                  </div>
+                </div>
             </CardContent>
           </Card>
     </TabsContent>

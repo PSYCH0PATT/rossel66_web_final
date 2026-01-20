@@ -50,27 +50,33 @@ def create_release_from_zvonko(zvonko_release, users):
     artist_name = zvonko_release.get('artist', 'Unknown Artist')
     artist_id = None
     
-    # Ищем существующего пользователя
+    # Нормализует имя артиста для сравнения
+    def normalize_artist_name(name):
+        if not name:
+            return ''
+        return name.lower().strip().replace(' ', ' ').replace('  ', ' ')
+    
+    # Ищем существующего пользователя по точному совпадению name или username
+    normalized_search = normalize_artist_name(artist_name)
+    artist_id = None
+    
     for user in users:
-        if user.get('name', '').lower() == artist_name.lower():
+        if user.get('role') != 'artist':
+            continue
+        
+        normalized_name = normalize_artist_name(user.get('name', ''))
+        normalized_username = normalize_artist_name(user.get('username', ''))
+        
+        # Только точное совпадение
+        if normalized_name == normalized_search or normalized_username == normalized_search:
             artist_id = user.get('id')
             break
     
-    # Если не нашли, используем тестового пользователя
+    # ВАЖНО: artistName - это просто текст для отображения, не связан с artistId
+    # Если артист не найден, все равно создаем релиз, но artistId будет None
+    # artistName всегда берется из парсера (zvonko_release.get('artist'))
     if not artist_id:
-        # Ищем первого пользователя с ролью artist
-        for user in users:
-            if user.get('role') == 'artist':
-                artist_id = user.get('id')
-                break
-        
-        # Если все еще не нашли, создаем ID тестового пользователя
-        if not artist_id and users:
-            artist_id = users[0].get('id')
-    
-    if not artist_id:
-        logger.warning(f"Не найден пользователь для артиста {artist_name}")
-        return None
+        logger.warning(f"⚠️  Артист '{artist_name}' не найден в системе. Релиз будет создан с artistId=None, но artistName будет заполнен.")
     
     # Создаем релиз
     release_id = f"release_{int(datetime.now().timestamp() * 1000)}_{uuid.uuid4().hex[:8]}"
@@ -85,14 +91,18 @@ def create_release_from_zvonko(zvonko_release, users):
     elif len(isrc) < 8:
         isrc = isrc.ljust(8, '0')
     
+    # artistName всегда берется из парсера, даже если артист не найден
+    display_artist_name = zvonko_release.get('artist', artist_name)
+    
     release = {
         "id": release_id,
-        "artistId": artist_id,
+        "artistId": artist_id if artist_id else None,  # Может быть None, если артист не найден
+        "artistName": display_artist_name,  # Всегда заполняем из парсера
         "title": zvonko_release.get('title', ''),
         "coverUrl": zvonko_release.get('cover', ''),
         "upc": zvonko_release.get('upc', ''),
         "releaseDate": zvonko_release.get('date', ''),
-        "status": "Новый",  # Статус для новых релизов
+        "status": "Доставлен",  # Статус для новых релизов - всегда "Доставлен"
         "genre": zvonko_release.get('genre', ''),
         "label": zvonko_release.get('label', ''),
         "territories": zvonko_release.get('territories', ''),

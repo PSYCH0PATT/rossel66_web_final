@@ -103,6 +103,31 @@ export async function POST(request: NextRequest) {
           try {
             const results = await readVKResults();
             
+            // Сохраняем историю парсинга
+            try {
+              const totalFound = (results as any[]).length;
+              const newPlaylists = (results as any[]).filter((r: any) => {
+                const parsedDate = new Date(r.parsed_at);
+                const now = new Date();
+                const diffMinutes = (now.getTime() - parsedDate.getTime()) / (1000 * 60);
+                return diffMinutes < 5; // Плейлисты, добавленные в последние 5 минут
+              }).length;
+              
+              await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parsers/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parserType: 'vk',
+                  artists: artists,
+                  playlistsFound: totalFound,
+                  playlistsAdded: newPlaylists,
+                  status: 'completed'
+                })
+              });
+            } catch (historyError) {
+              console.error('Ошибка сохранения истории парсинга:', historyError);
+            }
+            
             // Создаем активность для каждого найденного артиста
             for (const artist of artists) {
               const artistData = getUserByUsername(artist);
@@ -155,6 +180,24 @@ export async function POST(request: NextRequest) {
             }, { status: 500 }));
           }
         } else {
+          // Сохраняем историю парсинга с ошибкой
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parsers/history`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                parserType: 'vk',
+                artists: artists,
+                playlistsFound: 0,
+                playlistsAdded: 0,
+                errors: error || `Python процесс завершился с кодом ${code}`,
+                status: 'failed'
+              })
+            });
+          } catch (historyError) {
+            console.error('Ошибка сохранения истории парсинга:', historyError);
+          }
+          
           resolve(NextResponse.json({ 
             success: false, 
             error: `Python процесс завершился с кодом ${code}`,

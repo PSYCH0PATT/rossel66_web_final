@@ -336,7 +336,10 @@ class ZvonkoLinuxParser:
                 # Извлекаем данные
                 data = self.extract_release_data_from_element(release, release_global_num)
                 if data:
-                    data['status'] = 'Доставлен'
+                    # Статус уже извлечен в extract_release_data_from_element
+                    # Если статус не был найден, устанавливаем по умолчанию
+                    if not data.get('status'):
+                        data['status'] = 'Доставлен'  # По умолчанию для страницы releases
                     data['source_page'] = 'releases'
                     data['page'] = page_num
                     data['position_on_page'] = i + 1

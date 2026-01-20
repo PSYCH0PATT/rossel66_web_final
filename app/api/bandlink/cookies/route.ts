@@ -30,31 +30,106 @@ const dbAll = (db: sqlite3.Database, sql: string, params?: any[]) => {
   });
 };
 
-// Парсинг cookies из curl команды
-function parseCurlCookies(curlCommand: string): { name: string; value: string }[] {
+// Парсинг cookies из curl команды или строки
+function parseCookies(input: string): { name: string; value: string }[] {
   const cookies: { name: string; value: string }[] = [];
   
-  // Ищем строку с Cookie заголовком
-  const cookieMatch = curlCommand.match(/-H\s+['"]Cookie:\s*(.+?)['"]/i);
+  // Проверяем, это curl команда или строка с куками
+  let cookieString = '';
   
-  if (!cookieMatch) {
-    return cookies;
+  // Если это curl команда, извлекаем Cookie заголовок
+  const curlMatch = input.match(/-H\s+['"]Cookie:\s*(.+?)['"]/i);
+  if (curlMatch) {
+    cookieString = curlMatch[1];
+  } else {
+    // Иначе считаем, что это строка с куками в формате:
+    // cookie_name1cookie_value1
+    // cookie_name2cookie_value2
+    // или
+    // cookie_name1=cookie_value1
+    // cookie_name2=cookie_value2
+    cookieString = input;
   }
   
-  const cookieString = cookieMatch[1];
+  // Разбиваем на строки
+  const lines = cookieString.split('\n').map(line => line.trim()).filter(line => line);
   
-  // Разбиваем на отдельные cookies
-  const cookiePairs = cookieString.split(/;\s*/);
-  
-  for (const pair of cookiePairs) {
-    const [name, ...valueParts] = pair.split('=');
-    const value = valueParts.join('='); // На случай если в значении есть '='
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
     
-    if (name && value) {
-      cookies.push({
-        name: name.trim(),
-        value: value.trim()
-      });
+    // Пробуем формат "name=value"
+    if (line.includes('=')) {
+      const [name, ...valueParts] = line.split('=');
+      const value = valueParts.join('=');
+      if (name && value) {
+        cookies.push({
+          name: name.trim(),
+          value: value.trim()
+        });
+      }
+      i++;
+    } else {
+      // Формат без "=" - пробуем разные варианты
+      const parts = line.split(/\s+/);
+      
+      if (parts.length >= 2) {
+        // Если есть пробелы, первая часть - имя, остальное - значение
+        const name = parts[0];
+        const value = parts.slice(1).join(' ');
+        if (name) {
+          cookies.push({
+            name: name.trim(),
+            value: value.trim()
+          });
+        }
+        i++;
+      } else if (parts.length === 1) {
+        // Если только одна часть, это может быть имя куки
+        // Проверяем следующую строку - возможно, там значение
+        const name = parts[0];
+        
+        // Если строка выглядит как имя куки (только буквы, цифры, подчеркивания, дефисы)
+        if (name.match(/^[a-zA-Z0-9_\-]+$/)) {
+          // Проверяем следующую строку
+          if (i + 1 < lines.length && !lines[i + 1].includes('=') && !lines[i + 1].match(/^[a-zA-Z0-9_\-]+$/)) {
+            // Следующая строка - это значение
+            cookies.push({
+              name: name.trim(),
+              value: lines[i + 1].trim()
+            });
+            i += 2;
+            continue;
+          } else {
+            // Следующая строка тоже похожа на имя куки или нет следующей строки
+            // Пропускаем эту строку (нет значения)
+            i++;
+            continue;
+          }
+        } else {
+          // Строка не похожа на имя куки - возможно, это значение предыдущей строки
+          // Но мы уже обработали предыдущую строку, так что пропускаем
+          i++;
+          continue;
+        }
+      } else {
+        i++;
+      }
+    }
+  }
+  
+  // Если не получилось распарсить построчно, пробуем через ";"
+  if (cookies.length === 0) {
+    const cookiePairs = cookieString.split(/;\s*/);
+    for (const pair of cookiePairs) {
+      const [name, ...valueParts] = pair.split('=');
+      const value = valueParts.join('=');
+      if (name && value) {
+        cookies.push({
+          name: name.trim(),
+          value: value.trim()
+        });
+      }
     }
   }
   
@@ -101,29 +176,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Обновление cookies из curl команды
+// POST: Обновление cookies из curl команды или строки
 export async function POST(request: NextRequest) {
   const db = getDb();
   
   try {
     const body = await request.json();
-    const { curlCommand } = body;
+    const { curlCommand, cookieString } = body;
     
-    if (!curlCommand) {
+    const input = curlCommand || cookieString;
+    
+    if (!input) {
       db.close();
       return NextResponse.json(
-        { success: false, error: 'Curl команда не предоставлена' },
+        { success: false, error: 'Curl команда или строка с cookies не предоставлена' },
         { status: 400 }
       );
     }
     
-    // Парсим cookies из curl команды
-    const cookies = parseCurlCookies(curlCommand);
+    // Парсим cookies из curl команды или строки
+    const cookies = parseCookies(input);
     
     if (cookies.length === 0) {
       db.close();
       return NextResponse.json(
-        { success: false, error: 'Cookies не найдены в curl команде. Убедитесь, что присутствует заголовок -H \'Cookie: ...\'' },
+        { success: false, error: 'Cookies не найдены. Убедитесь, что формат правильный (curl команда или строка с cookies в формате name=value)' },
         { status: 400 }
       );
     }

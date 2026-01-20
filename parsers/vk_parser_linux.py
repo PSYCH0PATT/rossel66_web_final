@@ -87,37 +87,60 @@ class VKParser:
     
     def init_database(self):
         """Инициализирует базу данных"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS vk_playlists (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                artist_url TEXT,
-                artist_name TEXT,
-                playlist_name TEXT,
-                playlist_url TEXT,
-                playlist_cover_url TEXT,
-                playlist_id TEXT,
-                owner_id TEXT,
-                parsed_at TIMESTAMP,
-                UNIQUE(artist_name, playlist_name, playlist_url)
-            )
-        ''')
-        
-        # Таблица для VK cookies
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS vk_cookies (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cookie_name TEXT NOT NULL UNIQUE,
-                cookie_value TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
+        try:
+            # Используем абсолютный путь для надежности
+            abs_db_path = os.path.abspath(self.db_path)
+            self.db_path = abs_db_path
+            
+            # Проверяем, существует ли база данных
+            db_exists = os.path.exists(abs_db_path)
+            
+            conn = sqlite3.connect(abs_db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS vk_playlists (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    artist_url TEXT,
+                    artist_name TEXT,
+                    playlist_name TEXT,
+                    playlist_url TEXT,
+                    playlist_cover_url TEXT,
+                    playlist_id TEXT,
+                    owner_id TEXT,
+                    parsed_at TIMESTAMP,
+                    UNIQUE(artist_name, playlist_name, playlist_url)
+                )
+            ''')
+            
+            # Таблица для VK cookies
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS vk_cookies (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cookie_name TEXT NOT NULL UNIQUE,
+                    cookie_value TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            conn.commit()
+            
+            # Проверяем количество записей в БД
+            cursor.execute('SELECT COUNT(*) FROM vk_playlists')
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            if db_exists:
+                print(f"📦 База данных существует: {abs_db_path} ({count} записей)")
+            else:
+                print(f"📦 Создана новая база данных: {abs_db_path}")
+                
+        except Exception as e:
+            print(f"❌ Ошибка инициализации БД: {e}")
+            import traceback
+            traceback.print_exc()
     
     def init_captcha_solver(self):
         """Инициализирует 2captcha solver если API ключ предоставлен"""
@@ -605,9 +628,23 @@ class VKParser:
             conn.close()
             
             print(f"💾 Добавлено {saved_count} новых, обновлено {updated_count} плейлистов")
+            print(f"📁 База данных: {os.path.abspath(self.db_path)}")
+            
+            # Проверяем, что данные действительно сохранились
+            try:
+                check_conn = sqlite3.connect(self.db_path)
+                check_cursor = check_conn.cursor()
+                check_cursor.execute('SELECT COUNT(*) FROM vk_playlists')
+                total_count = check_cursor.fetchone()[0]
+                check_conn.close()
+                print(f"✅ Проверка: в БД всего {total_count} плейлистов")
+            except Exception as check_error:
+                print(f"⚠️  Ошибка проверки БД: {check_error}")
             
         except Exception as e:
             print(f"❌ Ошибка сохранения в БД: {e}")
+            import traceback
+            traceback.print_exc()
     
     def run_parsing_cycle(self):
         """Запускает цикл парсинга"""

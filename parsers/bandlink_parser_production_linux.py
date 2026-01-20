@@ -93,7 +93,14 @@ class BandlinkParserProductionLinux:
     def init_database(self):
         """Инициализирует базу данных"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            # Используем абсолютный путь для надежности
+            abs_db_path = os.path.abspath(self.db_path)
+            self.db_path = abs_db_path
+            
+            # Проверяем, существует ли база данных
+            db_exists = os.path.exists(abs_db_path)
+            
+            conn = sqlite3.connect(abs_db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -114,9 +121,22 @@ class BandlinkParserProductionLinux:
             ''')
             
             conn.commit()
+            
+            # Проверяем количество записей в БД
+            cursor.execute('SELECT COUNT(*) FROM playlists')
+            count = cursor.fetchone()[0]
+            
             conn.close()
+            
+            if db_exists:
+                print(f"📦 База данных существует: {abs_db_path} ({count} записей)")
+            else:
+                print(f"📦 Создана новая база данных: {abs_db_path}")
+                
         except Exception as e:
             print(f"❌ Ошибка инициализации БД: {e}")
+            import traceback
+            traceback.print_exc()
     
     def get_random_user_agent(self) -> str:
         """Возвращает случайный User-Agent"""
@@ -572,28 +592,81 @@ class BandlinkParserProductionLinux:
                 
                 return []
             
-            # Ищем кнопку "Показать все"
+            # Ищем кнопку "Показать все" / "Смотреть все"
+            # Структура из DevTools: div.card_cardMore с data-testid="load-more-button"
+            button_clicked = False
             try:
-                show_all_buttons = article.find_elements(By.CSS_SELECTOR, '[data-testid="load-more-button"], button')
+                # Сначала прокручиваем страницу, чтобы кнопка была видна
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
+                self.human_delay(1, 2)
+                
+                # Ищем кнопку по data-testid (самый надежный способ)
+                show_all_buttons = self.driver.find_elements(By.CSS_SELECTOR, '[data-testid="load-more-button"]')
+                
+                # Если не найдено по data-testid, ищем по классам из DevTools
+                if not show_all_buttons:
+                    show_all_buttons = self.driver.find_elements(By.CSS_SELECTOR, 'div[class*="card_cardMore"]')
+                
+                # Если все еще не найдено, ищем в article
+                if not show_all_buttons:
+                    show_all_buttons = article.find_elements(By.CSS_SELECTOR, '[data-testid="load-more-button"], div[class*="card_cardMore"], button, a')
+                
+                print(f"🔍 Найдено {len(show_all_buttons)} потенциальных кнопок 'Показать все'")
+                
                 for button in show_all_buttons:
-                    button_text = button.text.lower().strip()
-                    if ("показать" in button_text or "смотреть" in button_text) and "все" in button_text:
-                        if button.is_displayed():
-                            print(f"✅ Нажимаем кнопку: {button.text}")
-                            self.driver.execute_script("arguments[0].scrollIntoView(true);", button)
-                            self.human_delay(1, 2)
-                            
+                    try:
+                        # Получаем текст кнопки (может быть в дочернем элементе)
+                        button_text = button.text.lower().strip()
+                        
+                        # Если текст пустой, проверяем дочерний элемент с классом card_cardMoreText
+                        if not button_text:
                             try:
-                                button.click()
+                                text_elem = button.find_element(By.CSS_SELECTOR, '[class*="card_cardMoreText"]')
+                                button_text = text_elem.text.lower().strip()
                             except:
-                                self.driver.execute_script("arguments[0].click();", button)
+                                pass
+                        
+                        # Проверяем, содержит ли текст "показать все" или "смотреть все"
+                        if (("показать" in button_text or "смотреть" in button_text) and "все" in button_text) or \
+                           (button.get_attribute('data-testid') == 'load-more-button'):
                             
-                            print("✅ Кнопка нажата, загружаем контент...")
-                            self.human_delay(3, 5)
-                            self.scroll_to_load_all()
-                            break
+                            # Проверяем видимость
+                            if button.is_displayed():
+                                print(f"✅ Найдена кнопка '{button.text or 'Смотреть все'}', нажимаем...")
+                                
+                                # Прокручиваем к кнопке перед нажатием
+                                self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
+                                self.human_delay(1, 2)
+                                
+                                # Пробуем нажать кнопку
+                                try:
+                                    # Сначала обычный клик
+                                    button.click()
+                                    print("✅ Кнопка нажата обычным кликом")
+                                except Exception as click_error:
+                                    # Если не сработало, используем JavaScript клик
+                                    print(f"⚠️  Обычный клик не сработал: {click_error}")
+                                    print("🔄 Пробуем клик через JavaScript...")
+                                    self.driver.execute_script("arguments[0].click();", button)
+                                    print("✅ Кнопка нажата через JavaScript")
+                                
+                                button_clicked = True
+                                print("✅ Кнопка нажата, ждем загрузки контента...")
+                                self.human_delay(3, 5)
+                                
+                                # Прокручиваем вниз для загрузки всех плейлистов
+                                print("📜 Прокручиваем страницу для загрузки всех плейлистов...")
+                                self.scroll_to_load_all()
+                                
+                                break
+                    except Exception as button_error:
+                        print(f"⚠️  Ошибка при обработке кнопки: {button_error}")
+                        continue
+                
+                if not button_clicked:
+                    print("ℹ️  Кнопка 'Показать все' не найдена или не видна")
             except Exception as e:
-                print(f"ℹ️  Кнопка 'Показать все' не найдена: {e}")
+                print(f"ℹ️  Ошибка при поиске кнопки 'Показать все': {e}")
             
             # Ищем контейнер плейлистов
             try:
@@ -627,24 +700,49 @@ class BandlinkParserProductionLinux:
             return []
     
     def scroll_to_load_all(self):
-        """Прокручивает страницу для загрузки контента"""
+        """Прокручивает страницу для загрузки всего контента после нажатия 'Показать все'"""
         try:
+            print("📜 Начинаем прокрутку для загрузки всех плейлистов...")
             last_height = self.driver.execute_script("return document.body.scrollHeight")
             attempts = 0
-            max_attempts = 5
+            max_attempts = 10  # Увеличено с 5 до 10 для более полной загрузки
+            no_change_count = 0
+            max_no_change = 2  # Останавливаемся после 2 попыток без изменений
             
             while attempts < max_attempts:
+                # Прокручиваем вниз
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                self.human_delay(2, 4)
+                self.human_delay(2, 3)  # Даем время на загрузку
                 
+                # Проверяем новую высоту
                 new_height = self.driver.execute_script("return document.body.scrollHeight")
+                
                 if new_height == last_height:
-                    break
+                    no_change_count += 1
+                    print(f"  ⏸️  Высота не изменилась ({no_change_count}/{max_no_change})")
+                    if no_change_count >= max_no_change:
+                        print("  ✅ Достигнут конец страницы")
+                        break
+                else:
+                    no_change_count = 0
+                    print(f"  📏 Высота страницы: {last_height} → {new_height} (+{new_height - last_height}px)")
+                
                 last_height = new_height
                 attempts += 1
             
+            # Прокручиваем обратно вверх для начала парсинга
+            print("📜 Возвращаемся к началу страницы...")
             self.driver.execute_script("window.scrollTo(0, 0);")
             self.human_delay(1, 2)
+            
+            # Финальная прокрутка вниз для загрузки всех элементов
+            print("📜 Финальная прокрутка для загрузки всех элементов...")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            self.human_delay(2, 3)
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            self.human_delay(1, 2)
+            
+            print(f"✅ Прокрутка завершена. Обработано {attempts} попыток")
         except Exception as e:
             print(f"⚠️  Ошибка прокрутки: {e}")
     
@@ -786,9 +884,23 @@ class BandlinkParserProductionLinux:
             conn.commit()
             conn.close()
             print(f"💾 Добавлено {saved_count} новых, обновлено {updated_count} плейлистов")
+            print(f"📁 База данных: {os.path.abspath(self.db_path)}")
+            
+            # Проверяем, что данные действительно сохранились
+            try:
+                check_conn = sqlite3.connect(self.db_path)
+                check_cursor = check_conn.cursor()
+                check_cursor.execute('SELECT COUNT(*) FROM playlists')
+                total_count = check_cursor.fetchone()[0]
+                check_conn.close()
+                print(f"✅ Проверка: в БД всего {total_count} плейлистов")
+            except Exception as check_error:
+                print(f"⚠️  Ошибка проверки БД: {check_error}")
             
         except Exception as e:
             print(f"❌ Ошибка сохранения в БД: {e}")
+            import traceback
+            traceback.print_exc()
     
     def run_parsing_cycle(self):
         """Запускает цикл парсинга"""

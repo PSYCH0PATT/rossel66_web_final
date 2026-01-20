@@ -29,8 +29,6 @@ interface ProcessedReport {
 
 export default function ReportProcessor() {
   const [file, setFile] = useState<File | null>(null)
-  const [artistsFile, setArtistsFile] = useState<File | null>(null)
-  const [royaltyFile, setRoyaltyFile] = useState<File | null>(null)
   const [quarter, setQuarter] = useState("")
   const [year, setYear] = useState(new Date().getFullYear())
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
@@ -54,20 +52,6 @@ export default function ReportProcessor() {
     if (selectedFile) {
       setFile(selectedFile)
       setResult(null)
-    }
-  }
-
-  const handleArtistsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setArtistsFile(selectedFile)
-    }
-  }
-
-  const handleRoyaltyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setRoyaltyFile(selectedFile)
     }
   }
 
@@ -106,14 +90,6 @@ export default function ReportProcessor() {
       formData.append("file", file)
       formData.append("quarter", quarter)
       formData.append("year", year.toString())
-      
-      // Добавляем файлы артистов и долей (как в оригинальной программе)
-      if (artistsFile) {
-        formData.append("artistsFile", artistsFile)
-      }
-      if (royaltyFile) {
-        formData.append("royaltyFile", royaltyFile)
-      }
       
       // Добавляем маппинг столбцов
       Object.entries(columnMapping).forEach(([key, value]) => {
@@ -163,38 +139,13 @@ export default function ReportProcessor() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Загрузка файлов (как в оригинальной программе) */}
+            {/* Загрузка файлов */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="artistsFile">Список артистов (.xlsx)</Label>
-                <Input
-                  id="artistsFile"
-                  type="file"
-                  accept=".xlsx"
-                  onChange={handleArtistsFileChange}
-                  disabled={processing}
-                />
-                {artistsFile && (
-                  <p className="text-sm text-gray-600">
-                    Выбран файл: {artistsFile.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="royaltyFile">Доли роялти (.xlsx)</Label>
-                <Input
-                  id="royaltyFile"
-                  type="file"
-                  accept=".xlsx"
-                  onChange={handleRoyaltyFileChange}
-                  disabled={processing}
-                />
-                {royaltyFile && (
-                  <p className="text-sm text-gray-600">
-                    Выбран файл: {royaltyFile.name}
-                  </p>
-                )}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>ℹ️ Информация:</strong> Данные артистов (ФИО, договор, процент) берутся из профилей артистов в системе. 
+                  Отчеты создаются только для артистов с указанным процентом. Доли роялти берутся из настроек треков в релизах (если указаны).
+                </p>
               </div>
 
               <div className="space-y-2">

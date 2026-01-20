@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Clock, ArrowLeft, Save, User, Link as LinkIcon, ExternalLink } from "lucide-react"
+import { Music, Calendar, Barcode, Clock, ArrowLeft, Save, User, Link as LinkIcon, ExternalLink, Percent, Users } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -84,33 +84,39 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   }
 
   const statusColors: Record<string, string> = {
-    // Новые статусы Koala Music
+    "Модерируется": "bg-orange-500 text-white",
+    "Отклонен": "bg-red-500 text-white",
+    "В доставке": "bg-purple-500 text-white",
+    "Доставлен": "bg-green-500 text-white",
+    // Legacy статусы (маппинг старых значений)
     "На модерации": "bg-orange-500 text-white",
     "Одобрен": "bg-blue-500 text-white",
     "Отклонён": "bg-red-500 text-white",
-    "В доставке": "bg-purple-500 text-white",
-    "Доставлен": "bg-green-500 text-white",
     "Снят": "bg-gray-500 text-white",
-    // Legacy статусы
     released: "bg-green-500 text-white",
     moderation: "bg-orange-500 text-white",
-    delivery: "bg-blue-500 text-white",
-    scheduled: "bg-purple-500 text-white",
+    delivery: "bg-purple-500 text-white",
+    scheduled: "bg-orange-500 text-white",
+    "новый": "bg-gray-500 text-white",
+    "Новый": "bg-gray-500 text-white",
   }
 
   const statusLabels: Record<string, string> = {
-    // Новые статусы Koala Music
-    "На модерации": "На модерации",
-    "Одобрен": "Одобрен",
-    "Отклонён": "Отклонён",
+    "Модерируется": "Модерируется",
+    "Отклонен": "Отклонен",
     "В доставке": "В доставке",
     "Доставлен": "Доставлен",
-    "Снят": "Снят",
-    // Legacy статусы
+    // Legacy статусы (маппинг старых значений)
+    "На модерации": "Модерируется",
+    "Одобрен": "Модерируется",
+    "Отклонён": "Отклонен",
+    "Снят": "Отклонен",
     released: "Доставлен",
-    moderation: "На модерации",
+    moderation: "Модерируется",
     delivery: "В доставке",
-    scheduled: "На модерации",
+    scheduled: "Модерируется",
+    "новый": "Модерируется",
+    "Новый": "Модерируется",
   }
 
   if (loading || !release) {
@@ -232,15 +238,13 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                 </div>
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Статус</div>
-                  <Select value={release.status || 'Доставлен'} onValueChange={(v) => setRelease({ ...release, status: v })}>
+                  <Select value={release.status || 'Модерируется'} onValueChange={(v) => setRelease({ ...release, status: v })}>
                     <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="На модерации">На модерации</SelectItem>
-                      <SelectItem value="Одобрен">Одобрен</SelectItem>
-                      <SelectItem value="Отклонён">Отклонён</SelectItem>
+                      <SelectItem value="Модерируется">Модерируется</SelectItem>
+                      <SelectItem value="Отклонен">Отклонен</SelectItem>
                       <SelectItem value="В доставке">В доставке</SelectItem>
                       <SelectItem value="Доставлен">Доставлен</SelectItem>
-                      <SelectItem value="Снят">Снят</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -290,6 +294,94 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                           const tracks = [...release.tracks]; tracks[index] = { ...track, duration: e.target.value }; setRelease({ ...release, tracks })
                         }} placeholder="Длительность mm:ss" />
                       </div>
+
+                      {/* Доли роялти - показываем только если есть несколько артистов */}
+                      {(() => {
+                        const mainArtist = users.find(u => u.id === release.artistId)
+                        const mainArtistName = mainArtist?.name || ''
+                        const featuredArtists = [
+                          ...(track.featuredArtistIds || []).map(id => {
+                            const artist = users.find(u => u.id === id)
+                            return artist?.name || id
+                          }),
+                          ...(track.featuredArtistNames || [])
+                        ].filter(Boolean)
+                        const allArtists = [mainArtistName, ...featuredArtists].filter(Boolean)
+                        const hasMultipleArtists = allArtists.length > 1
+
+                        if (!hasMultipleArtists) return null
+
+                        const royaltyShares = track.royaltyShares || {}
+                        const totalShare = Object.values(royaltyShares).reduce((sum, val) => sum + (Number(val) || 0), 0)
+                        const isValid = totalShare === 100 || totalShare === 0
+
+                        return (
+                          <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Percent className="h-4 w-4 text-green-400" />
+                                <span className="text-sm font-medium text-slate-300">Доли роялти</span>
+                                {!isValid && totalShare > 0 && (
+                                  <span className="text-xs text-red-400">(Сумма: {totalShare}%, должно быть 100%)</span>
+                                )}
+                                {isValid && totalShare === 100 && (
+                                  <span className="text-xs text-green-400">✓ 100%</span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const equalShare = Math.round(100 / allArtists.length)
+                                  const shares: Record<string, number> = {}
+                                  allArtists.forEach(artist => {
+                                    shares[artist] = equalShare
+                                  })
+                                  // Корректируем последнего артиста для точности
+                                  const lastArtist = allArtists[allArtists.length - 1]
+                                  shares[lastArtist] = 100 - (equalShare * (allArtists.length - 1))
+                                  
+                                  const tracks = [...release.tracks]
+                                  tracks[index] = { ...track, royaltyShares: shares }
+                                  setRelease({ ...release, tracks })
+                                }}
+                                className="text-xs"
+                              >
+                                Распределить поровну
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {allArtists.map((artistName) => (
+                                <div key={artistName} className="space-y-1">
+                                  <label className="text-xs text-slate-400">{artistName}</label>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={royaltyShares[artistName] || ''}
+                                      onChange={(e) => {
+                                        const value = parseInt(e.target.value) || 0
+                                        const tracks = [...release.tracks]
+                                        const newShares = { ...royaltyShares, [artistName]: value }
+                                        tracks[index] = { ...track, royaltyShares: newShares }
+                                        setRelease({ ...release, tracks })
+                                      }}
+                                      placeholder="0"
+                                      className="w-20"
+                                    />
+                                    <span className="text-sm text-slate-400">%</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {totalShare === 0 && (
+                              <p className="text-xs text-slate-500">Доли не заданы. Используется процент из профиля артиста или равное деление.</p>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </div>
                   ))}
                   <div className="pt-2">

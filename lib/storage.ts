@@ -62,6 +62,7 @@ export interface Track {
   isrc?: string              // ISRC код трека
   featuredArtistIds?: string[]
   featuredArtistNames?: string[]
+  royaltyShares?: Record<string, number>  // Доли роялти: { "artistName": 60, "otherArtist": 40 } (в процентах)
 }
 
 export interface Report {
@@ -494,12 +495,29 @@ export function updateReportPaidStatus(reportId: string, isPaid: boolean): boole
 }
 
 // Функция для поиска артиста по имени
+// Нормализует имя артиста для сравнения (убирает пробелы, приводит к нижнему регистру)
+function normalizeArtistName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ') // Множественные пробелы в один
+    .replace(/[^\w\s]/g, '') // Убираем спецсимволы
+}
+
 export function findArtistByName(artistName: string): User | null {
   const users = loadUsers()
-  return users.find(user => 
-    user.role === 'artist' && 
-    user.name.toLowerCase() === artistName.toLowerCase()
-  ) || null
+  const normalizedSearch = normalizeArtistName(artistName)
+  
+  // Ищем по name и username с нормализацией - ТОЛЬКО точное совпадение
+  return users.find(user => {
+    if (user.role !== 'artist') return false
+    
+    const normalizedName = normalizeArtistName(user.name || '')
+    const normalizedUsername = normalizeArtistName(user.username || '')
+    
+    // Только точное совпадение - никаких частичных!
+    return normalizedName === normalizedSearch || normalizedUsername === normalizedSearch
+  }) || null
 }
 
 // Функция для назначения отчетов артисту (алиас для совместимости)

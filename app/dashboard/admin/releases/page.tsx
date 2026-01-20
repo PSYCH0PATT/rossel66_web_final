@@ -60,10 +60,9 @@ export default function AdminReleasesPage() {
         
         // Удалено смешивание с localStorage: используем только данные из API для консистентности ID
         
-        // Добавляем информацию об артисте к каждому релизу (+ фиты с треков)
+        // ВАЖНО: artistName - это просто текст для отображения из парсера, не связан с artistId
+        // artistId используется только для связи с профилем артиста, но не для отображения имени
         const releasesWithArtists = result.releases.map((release: any) => {
-          const mainArtist = allUsers.find(user => user.id === release.artistId)
-
           // Собираем список уникальных фитующих артистов из треков
           const featuredIdSet = new Set<string>()
           if (Array.isArray(release.tracks)) {
@@ -89,9 +88,12 @@ export default function AdminReleasesPage() {
             }
           }
 
-          const displayName = mainArtist
-            ? (featuredNames.length ? `${mainArtist.name}, ${featuredNames.join(', ')}` : mainArtist.name)
-            : (release.artistName || (featuredNames.length ? featuredNames.join(', ') : 'Неизвестный артист'))
+          // ВАЖНО: Всегда используем artistName из парсера (release.artistName)
+          // Это текст из zvonko_data или koala_data, не из users.json
+          const baseArtistName = release.artistName || 'Неизвестный артист'
+          const displayName = featuredNames.length 
+            ? `${baseArtistName}, ${featuredNames.join(', ')}` 
+            : baseArtistName
 
           return {
             ...release,
@@ -352,12 +354,10 @@ export default function AdminReleasesPage() {
               </AdminSelectTrigger>
                       <SelectContent className="border-slate-600 text-white" style={{ backgroundColor: '#1a1d24' }}>
                         <SelectItem value="all" className="hover:bg-slate-700 focus:bg-slate-700">Все статусы</SelectItem>
-                        <SelectItem value="На модерации" className="hover:bg-slate-700 focus:bg-slate-700">На модерации</SelectItem>
-                        <SelectItem value="Одобрен" className="hover:bg-slate-700 focus:bg-slate-700">Одобрен</SelectItem>
-                        <SelectItem value="Отклонён" className="hover:bg-slate-700 focus:bg-slate-700">Отклонён</SelectItem>
+                        <SelectItem value="Модерируется" className="hover:bg-slate-700 focus:bg-slate-700">Модерируется</SelectItem>
+                        <SelectItem value="Отклонен" className="hover:bg-slate-700 focus:bg-slate-700">Отклонен</SelectItem>
                         <SelectItem value="В доставке" className="hover:bg-slate-700 focus:bg-slate-700">В доставке</SelectItem>
                         <SelectItem value="Доставлен" className="hover:bg-slate-700 focus:bg-slate-700">Доставлен</SelectItem>
-                        <SelectItem value="Снят" className="hover:bg-slate-700 focus:bg-slate-700">Снят</SelectItem>
                       </SelectContent>
                     </AdminSelect>
                   </div>

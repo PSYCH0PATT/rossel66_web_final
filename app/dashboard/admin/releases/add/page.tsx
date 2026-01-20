@@ -35,7 +35,7 @@ export default function AddReleasePage() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [upc, setUpc] = useState("")
   const [releaseDate, setReleaseDate] = useState("")
-  const [status, setStatus] = useState<"released" | "moderation" | "delivery" | "scheduled">("moderation")
+  const [status, setStatus] = useState<"Модерируется" | "Отклонен" | "В доставке" | "Доставлен">("Модерируется")
   const [tracks, setTracks] = useState<Track[]>([
     { title: "", isrc: "", duration: "" }
   ])
@@ -177,7 +177,11 @@ export default function AddReleasePage() {
     }
   }
 
-  const statusLabels = {
+  const statusLabels: Record<string, string> = {
+    "Модерируется": "Модерируется",
+    "Отклонен": "Отклонен",
+    "В доставке": "В доставке",
+    "Доставлен": "Доставлен",
     released: "Вышел",
     moderation: "Модерация",
     delivery: "Отгрузка",

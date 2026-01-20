@@ -2,25 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import sqlite3 from 'sqlite3';
 
-// Путь к БД для VK
+// Путь к БД
 const DB_PATH = path.join(process.cwd(), 'vk_playlists.db');
 
 // Вспомогательная функция для работы с БД
 function getDb() {
-  const db = new sqlite3.Database(DB_PATH);
-  
-  // Создаем таблицу если не существует
-  db.run(`
-    CREATE TABLE IF NOT EXISTS vk_cookies (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      cookie_name TEXT NOT NULL UNIQUE,
-      cookie_value TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  
-  return db;
+  return new sqlite3.Database(DB_PATH);
 }
 
 // Промисифицированные методы
@@ -37,69 +24,105 @@ const dbAll = (db: sqlite3.Database, sql: string, params?: any[]) => {
   return new Promise<any[]>((resolve, reject) => {
     db.all(sql, params || [], (err, rows) => {
       if (err) reject(err);
-      else resolve(rows);
+      else resolve(rows || []);
     });
   });
 };
 
-// Парсинг cookies из текстового формата (name\nvalue\nname\nvalue...)
-function parseTextCookies(text: string): { name: string; value: string }[] {
+// Парсинг cookies из curl команды или строки
+function parseCookies(input: string): { name: string; value: string }[] {
   const cookies: { name: string; value: string }[] = [];
   
-  // Разбиваем текст на строки и обрабатываем пары
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  // Проверяем, это curl команда или строка с куками
+  let cookieString = '';
   
-  for (let i = 0; i < lines.length; i += 2) {
-    const name = lines[i];
-    const value = lines[i + 1];
+  // Если это curl команда, извлекаем Cookie заголовок
+  const curlMatch = input.match(/-H\s+['"]Cookie:\s*(.+?)['"]/i);
+  if (curlMatch) {
+    cookieString = curlMatch[1];
+  } else {
+    // Иначе считаем, что это строка с куками
+    cookieString = input;
+  }
+  
+  // Разбиваем на строки
+  const lines = cookieString.split('\n').map(line => line.trim()).filter(line => line);
+  
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
     
-    if (name && value) {
-      cookies.push({ name, value });
+    // Пробуем формат "name=value"
+    if (line.includes('=')) {
+      const [name, ...valueParts] = line.split('=');
+      const value = valueParts.join('=');
+      if (name && value) {
+        cookies.push({
+          name: name.trim(),
+          value: value.trim()
+        });
+      }
+      i++;
+    } else {
+      // Формат без "=" - пробуем разные варианты
+      const parts = line.split(/\s+/);
+      
+      if (parts.length >= 2) {
+        // Если есть пробелы, первая часть - имя, остальное - значение
+        const name = parts[0];
+        const value = parts.slice(1).join(' ');
+        if (name) {
+          cookies.push({
+            name: name.trim(),
+            value: value.trim()
+          });
+        }
+        i++;
+      } else if (parts.length === 1) {
+        // Если только одна часть, это может быть имя куки
+        // Проверяем следующую строку - возможно, там значение
+        const name = parts[0];
+        
+        // Если строка выглядит как имя куки (только буквы, цифры, подчеркивания, дефисы)
+        if (name.match(/^[a-zA-Z0-9_\-]+$/)) {
+          // Проверяем следующую строку
+          if (i + 1 < lines.length && !lines[i + 1].includes('=') && !lines[i + 1].match(/^[a-zA-Z0-9_\-]+$/)) {
+            // Следующая строка - это значение
+            cookies.push({
+              name: name.trim(),
+              value: lines[i + 1].trim()
+            });
+            i += 2;
+            continue;
+          } else {
+            // Следующая строка тоже похожа на имя куки или нет следующей строки
+            // Пропускаем эту строку (нет значения)
+            i++;
+            continue;
+          }
+        } else {
+          // Строка не похожа на имя куки - возможно, это значение предыдущей строки
+          // Но мы уже обработали предыдущую строку, так что пропускаем
+          i++;
+          continue;
+        }
+      } else {
+        i++;
+      }
     }
   }
   
-  return cookies;
-}
-
-// Парсинг cookies из curl команды
-function parseCurlCookies(curlCommand: string): { name: string; value: string }[] {
-  const cookies: { name: string; value: string }[] = [];
-  
-  // Ищем строку с Cookie заголовком
-  const cookieMatch = curlCommand.match(/-H\s+['"]Cookie:\s*(.+?)['"]/i);
-  
-  if (!cookieMatch) {
-    return cookies;
-  }
-  
-  const cookieString = cookieMatch[1];
-  
-  // Разбиваем на отдельные cookies
-  const cookiePairs = cookieString.split(/;\s*/);
-  
-  for (const pair of cookiePairs) {
-    const [name, ...valueParts] = pair.split('=');
-    const value = valueParts.join('=');
-    
-    if (name && value) {
-      cookies.push({
-        name: name.trim(),
-        value: value.trim()
-      });
-    }
-  }
-  
-  return cookies;
-}
-
-// Парсинг cookies из JSON формата (массив объектов {name, value})
-function parseJsonCookies(jsonData: any): { name: string; value: string }[] {
-  const cookies: { name: string; value: string }[] = [];
-  
-  if (Array.isArray(jsonData)) {
-    for (const item of jsonData) {
-      if (item.name && item.value) {
-        cookies.push({ name: item.name, value: item.value });
+  // Если не получилось распарсить построчно, пробуем через ";"
+  if (cookies.length === 0) {
+    const cookiePairs = cookieString.split(/;\s*/);
+    for (const pair of cookiePairs) {
+      const [name, ...valueParts] = pair.split('=');
+      const value = valueParts.join('=');
+      if (name && value) {
+        cookies.push({
+          name: name.trim(),
+          value: value.trim()
+        });
       }
     }
   }
@@ -107,13 +130,21 @@ function parseJsonCookies(jsonData: any): { name: string; value: string }[] {
   return cookies;
 }
 
-// GET: Получение текущих VK cookies
+// GET: Получение текущих cookies
 export async function GET(request: NextRequest) {
   const db = getDb();
   
   try {
-    // Небольшая задержка чтобы таблица успела создаться
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Инициализируем таблицу если нужно
+    await dbRun(db, `
+      CREATE TABLE IF NOT EXISTS vk_cookies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cookie_name TEXT NOT NULL UNIQUE,
+        cookie_value TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     
     // Получаем cookies
     const cookies = await dbAll(db, 'SELECT cookie_name, cookie_value, updated_at FROM vk_cookies ORDER BY id');
@@ -144,61 +175,68 @@ export async function GET(request: NextRequest) {
     db.close();
     console.error('Ошибка получения VK cookies:', error);
     return NextResponse.json(
-      { success: false, error: 'Ошибка получения VK cookies' },
+      { success: false, error: 'Ошибка получения cookies' },
       { status: 500 }
     );
   }
 }
 
-// POST: Обновление VK cookies
+// POST: Обновление cookies из curl команды или строки
 export async function POST(request: NextRequest) {
   const db = getDb();
   
   try {
-    // Небольшая задержка чтобы таблица успела создаться
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Инициализируем таблицу если нужно
+    await dbRun(db, `
+      CREATE TABLE IF NOT EXISTS vk_cookies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cookie_name TEXT NOT NULL UNIQUE,
+        cookie_value TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     
     const body = await request.json();
-    const { curlCommand, textCookies, jsonCookies } = body;
+    const { curlCommand, cookieString } = body;
     
-    let cookies: { name: string; value: string }[] = [];
+    const input = curlCommand || cookieString;
     
-    // Пробуем разные форматы
-    if (curlCommand) {
-      cookies = parseCurlCookies(curlCommand);
-    } else if (textCookies) {
-      cookies = parseTextCookies(textCookies);
-    } else if (jsonCookies) {
-      cookies = parseJsonCookies(jsonCookies);
-    }
-    
-    if (cookies.length === 0) {
+    if (!input) {
       db.close();
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Cookies не найдены. Поддерживаемые форматы: curl команда с -H "Cookie: ...", текст (name\\nvalue\\n...), или JSON массив [{name, value}]' 
-        },
+        { success: false, error: 'Curl команда или строка с cookies не предоставлена' },
         { status: 400 }
       );
     }
     
-    console.log(`📥 VK: Получено ${cookies.length} cookies для обновления`);
+    // Парсим cookies из curl команды или строки
+    const cookies = parseCookies(input);
+    
+    if (cookies.length === 0) {
+      db.close();
+      return NextResponse.json(
+        { success: false, error: 'Cookies не найдены. Убедитесь, что формат правильный (curl команда или строка с cookies в формате name=value)' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`📥 Получено ${cookies.length} VK cookies для обновления`);
     
     // Удаляем старые cookies
     await dbRun(db, 'DELETE FROM vk_cookies');
-    console.log('🗑️  VK: Старые cookies удалены');
+    console.log('🗑️  Старые VK cookies удалены');
     
     // Вставляем новые cookies
     const now = new Date().toISOString();
     for (const cookie of cookies) {
       await dbRun(db, `
-        INSERT INTO vk_cookies (cookie_name, cookie_value, created_at, updated_at)
+        INSERT OR REPLACE INTO vk_cookies (cookie_name, cookie_value, created_at, updated_at)
         VALUES (?, ?, ?, ?)
       `, [cookie.name, cookie.value, now, now]);
     }
     
-    console.log(`✅ VK: Вставлено ${cookies.length} новых cookies`);
+    console.log(`✅ Вставлено ${cookies.length} новых VK cookies`);
     
     db.close();
     
@@ -213,13 +251,13 @@ export async function POST(request: NextRequest) {
     db.close();
     console.error('Ошибка обновления VK cookies:', error);
     return NextResponse.json(
-      { success: false, error: 'Ошибка обновления VK cookies' },
+      { success: false, error: 'Ошибка обновления cookies' },
       { status: 500 }
     );
   }
 }
 
-// DELETE: Удаление всех VK cookies
+// DELETE: Удаление всех cookies
 export async function DELETE(request: NextRequest) {
   const db = getDb();
   
@@ -237,9 +275,8 @@ export async function DELETE(request: NextRequest) {
     db.close();
     console.error('Ошибка удаления VK cookies:', error);
     return NextResponse.json(
-      { success: false, error: 'Ошибка удаления VK cookies' },
+      { success: false, error: 'Ошибка удаления cookies' },
       { status: 500 }
     );
   }
 }
-
