@@ -40,11 +40,19 @@ class ZvonkoLinuxParser:
     def __init__(self, max_pages: int = None):
         self.base_url = "https://account.zvonkodigital.com"
         self.releases_url = "https://account.zvonkodigital.com/music/releases"
+        self.moderating_url = "https://account.zvonkodigital.com/music/moderating"
+        self.editing_url = "https://account.zvonkodigital.com/music/editing"
         self.username = "rossel_66"
         self.password = "rossel_66_27122023"
         self.driver = None
         self.max_pages = max_pages
         self.results: List[Dict] = []
+        
+        # Статусы для обработки
+        self.STATUSES = ['Доставлен', 'Модерация', 'Отклонен']
+        
+        # Хранилище для сравнения статусов
+        self.previous_releases: Dict[str, Dict] = {}
         
     def setup_driver(self) -> bool:
         """Настраивает WebDriver для Linux"""
@@ -265,6 +273,9 @@ class ZvonkoLinuxParser:
             except Exception as e:
                 logger.debug(f"⚠️ Ошибка поиска по селекторам: {e}")
             
+            # Извлекаем статус
+            found_data['status'] = self.extract_release_status(release_element)
+            
             return found_data
             
         except Exception as e:
@@ -293,11 +304,24 @@ class ZvonkoLinuxParser:
             for selector in main_selectors:
                 try:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                    if len(elements) > 1:
-                        release_containers = elements
-                        logger.info(f"📊 На странице #{page_num} найдено {len(elements)} релизов")
+                    logger.info(f"🔍 Селектор '{selector}': найдено {len(elements)} элементов")
+                    if len(elements) >= 1:  # Изменено с > 1 на >= 1 для обработки одного релиза
+                        # Проверяем, что это действительно контейнеры релизов
+                        if len(elements) == 1:
+                            first_elem = elements[0]
+                            child_releases = first_elem.find_elements(By.CSS_SELECTOR, "div.css-1xgpa60, div.chakra-stack.css-muke40")
+                            if len(child_releases) > 0:
+                                logger.info(f"🔍 Найден родительский контейнер с {len(child_releases)} дочерними релизами")
+                                release_containers = child_releases
+                            else:
+                                logger.info(f"🔍 Найден один элемент, проверяем как релиз")
+                                release_containers = elements
+                        else:
+                            release_containers = elements
+                        logger.info(f"📊 На странице #{page_num} найдено {len(release_containers)} релизов")
                         break
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка при поиске по селектору '{selector}': {e}")
                     continue
             
             if not release_containers:
@@ -312,6 +336,8 @@ class ZvonkoLinuxParser:
                 # Извлекаем данные
                 data = self.extract_release_data_from_element(release, release_global_num)
                 if data:
+                    data['status'] = 'Доставлен'
+                    data['source_page'] = 'releases'
                     data['page'] = page_num
                     data['position_on_page'] = i + 1
                     page_releases.append(data)
@@ -374,15 +400,298 @@ class ZvonkoLinuxParser:
                 json.dump(all_releases, f, ensure_ascii=False, indent=2)
             
             self.results = all_releases
-            return True
+            return all_releases
             
         except Exception as e:
             logger.error(f"❌ Ошибка при парсинге всех страниц: {e}")
             return False
     
+    def extract_release_status(self, release_element) -> str:
+        """Извлекает статус релиза из элемента"""
+        try:
+            # Ищем статус в текстовых элементах
+            text_elements = release_element.find_elements(By.XPATH, ".//*[text()]")
+            for elem in text_elements:
+                try:
+                    elem_text = elem.text.strip()
+                    if elem_text in self.STATUSES:
+                        return elem_text
+                except:
+                    continue
+            
+            # Если статус не найден в текстовых элементах, ищем в полном тексте
+            full_text = release_element.text.strip()
+            for status in self.STATUSES:
+                if status in full_text:
+                    return status
+            
+            return 'Неизвестен'
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка извлечения статуса: {e}")
+            return 'Неизвестен'
+    
+    def parse_moderating_page(self):
+        """Парсит страницу модерации - ИДЕНТИЧНО основной странице"""
+        logger.info("🔍 Парсинг страницы модерации...")
+        try:
+            self.driver.get(self.moderating_url)
+            time.sleep(3)
+            
+            # ИСПОЛЬЗУЕМ ТОЧНО ТАКУЮ ЖЕ ЛОГИКУ КАК parse_current_page
+            # Прокрутка для загрузки всех элементов
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(2)
+            
+            # Ищем контейнеры релизов - ТОЧНО КАК НА ОСНОВНОЙ СТРАНИЦЕ
+            release_containers = []
+            
+            main_selectors = [
+                'div.css-1xgpa60',
+                'div.chakra-stack.css-muke40',
+            ]
+            
+            for selector in main_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    logger.info(f"🔍 Селектор '{selector}': найдено {len(elements)} элементов")
+                    if len(elements) >= 1:  # Изменено с > 1 на >= 1 для обработки одного релиза
+                        # Проверяем, что это действительно контейнеры релизов
+                        if len(elements) == 1:
+                            first_elem = elements[0]
+                            child_releases = first_elem.find_elements(By.CSS_SELECTOR, "div.css-1xgpa60, div.chakra-stack.css-muke40")
+                            if len(child_releases) > 0:
+                                logger.info(f"🔍 Найден родительский контейнер с {len(child_releases)} дочерними релизами")
+                                release_containers = child_releases
+                            else:
+                                logger.info(f"🔍 Найден один элемент, проверяем как релиз")
+                                release_containers = elements
+                        else:
+                            release_containers = elements
+                        logger.info(f"📊 На странице moderating найдено {len(release_containers)} релизов")
+                        break
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка при поиске по селектору '{selector}': {e}")
+                    continue
+            
+            if not release_containers:
+                logger.warning(f"⚠️ На странице moderating контейнеры не найдены")
+                return []
+            
+            # ПАРСИМ ТОЧНО КАК В parse_current_page
+            moderating_releases = []
+            for i, release in enumerate(release_containers):
+                release_global_num = (1 - 1) * len(release_containers) + i + 1
+                
+                # Извлекаем данные - ТОЧНО КАК НА ОСНОВНОЙ
+                data = self.extract_release_data_from_element(release, release_global_num)
+                if data:
+                    data['status'] = 'Модерация'
+                    data['source_page'] = 'moderating'
+                    data['page'] = 1
+                    data['position_on_page'] = i + 1
+                    moderating_releases.append(data)
+                    logger.info(f"  ✅ {data.get('title', 'N/A')} ({data.get('artist', 'N/A')}) - Модерация")
+            
+            logger.info(f"✅ Страница #{1} завершена! Обработано {len(moderating_releases)} релизов")
+            return moderating_releases
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка парсинга страницы #{1}: {e}")
+            return []
+    
+    def parse_editing_page(self):
+        """Парсит страницу редактирования - ИДЕНТИЧНО основной странице"""
+        logger.info("🔍 Парсинг страницы редактирования...")
+        try:
+            self.driver.get(self.editing_url)
+            time.sleep(6)  # Увеличенный таймаут в 2 раза
+            
+            # Ждем загрузки основных селекторов
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.css-1xgpa60, div.chakra-stack.css-muke40"))
+                )
+                logger.info("✅ Элементы загрузились")
+            except:
+                logger.warning("⚠️ Элементы не загрузились за 10 секунд")
+            
+            # ИСПОЛЬЗУЕМ ТОЧНО ТАКУЮ ЖЕ ЛОГИКУ КАК parse_current_page
+            # Прокрутка для загрузки всех элементов
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(4)  # Увеличенный таймаут в 2 раза
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(4)  # Увеличенный таймаут в 2 раза
+            
+            # Дополнительная прокрутка вниз перед парсингом
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            
+            # Ищем контейнеры релизов - ТОЧНО КАК НА ОСНОВНОЙ СТРАНИЦЕ
+            release_containers = []
+            
+            main_selectors = [
+                'div.css-1xgpa60',
+                'div.chakra-stack.css-muke40',
+            ]
+            
+            for selector in main_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    logger.info(f"🔍 Селектор '{selector}': найдено {len(elements)} элементов")
+                    if len(elements) >= 1:  # Изменено с > 1 на >= 1 для обработки одного релиза
+                        # Проверяем, что это действительно контейнеры релизов, а не общий контейнер
+                        # Если элементов много, это скорее всего релизы
+                        # Если элемент один, проверяем его содержимое
+                        if len(elements) == 1:
+                            # Проверяем, есть ли внутри дочерние элементы с релизами
+                            first_elem = elements[0]
+                            child_releases = first_elem.find_elements(By.CSS_SELECTOR, "div.css-1xgpa60, div.chakra-stack.css-muke40")
+                            if len(child_releases) > 0:
+                                logger.info(f"🔍 Найден родительский контейнер с {len(child_releases)} дочерними релизами")
+                                release_containers = child_releases
+                            else:
+                                # Если дочерних нет, возможно это сам релиз
+                                logger.info(f"🔍 Найден один элемент, проверяем как релиз")
+                                release_containers = elements
+                        else:
+                            release_containers = elements
+                        logger.info(f"📊 На странице editing найдено {len(release_containers)} релизов")
+                        break
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка при поиске по селектору '{selector}': {e}")
+                    continue
+            
+            if not release_containers:
+                logger.warning(f"⚠️ На странице editing контейнеры не найдены")
+                # Дополнительная диагностика: сохраняем HTML для анализа
+                try:
+                    page_source = self.driver.page_source
+                    logger.debug(f"📄 Длина HTML страницы: {len(page_source)} символов")
+                    # Ищем альтернативные селекторы
+                    alt_selectors = [
+                        'div[class*="css-"]',
+                        'div[class*="chakra"]',
+                        '[class*="release"]',
+                        '[class*="music"]'
+                    ]
+                    for alt_sel in alt_selectors:
+                        try:
+                            alt_elements = self.driver.find_elements(By.CSS_SELECTOR, alt_sel)
+                            if len(alt_elements) > 0:
+                                logger.info(f"🔍 Альтернативный селектор '{alt_sel}': найдено {len(alt_elements)} элементов")
+                        except:
+                            pass
+                except Exception as e:
+                    logger.debug(f"⚠️ Ошибка диагностики: {e}")
+                return []
+            
+            # ПАРСИМ ТОЧНО КАК В parse_current_page
+            editing_releases = []
+            for i, release in enumerate(release_containers):
+                release_global_num = (1 - 1) * len(release_containers) + i + 1
+                
+                # Извлекаем данные - ТОЧНО КАК НА ОСНОВНОЙ
+                data = self.extract_release_data_from_element(release, release_global_num)
+                if data:
+                    data['status'] = 'Отклонен'
+                    data['source_page'] = 'editing'
+                    data['page'] = 1
+                    data['position_on_page'] = i + 1
+                    editing_releases.append(data)
+                    logger.info(f"  ✅ {data.get('title', 'N/A')} ({data.get('artist', 'N/A')}) - Отклонен")
+            
+            logger.info(f"✅ Страница #{1} завершена! Обработано {len(editing_releases)} релизов")
+            return editing_releases
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка парсинга страницы #{1}: {e}")
+            return []
+    
+    def update_statuses_based_on_changes(self, releases_page, moderating_page, editing_page):
+        """Обновляет статусы на основе изменений между страницами"""
+        logger.info("🔄 Анализ изменений статусов...")
+        
+        # Создаем словари для быстрого поиска по артисту и названию
+        def create_key(release):
+            return f"{release.get('artist', '').lower()}_{release.get('title', '').lower()}"
+        
+        releases_dict = {create_key(r): r for r in releases_page}
+        moderating_dict = {create_key(r): r for r in moderating_page}
+        editing_dict = {create_key(r): r for r in editing_page}
+        
+        updated_releases = []
+        
+        # Проверяем релизы из модерации
+        for key, moderating_release in moderating_dict.items():
+            # Если релиз был в редактировании и теперь в модерации
+            if key in editing_dict:
+                logger.info(f"🔄 {moderating_release.get('title')} - Отклонен → Модерация")
+                updated_release = moderating_release.copy()
+                updated_release['status'] = 'Модерация'
+                updated_release['previous_status'] = 'Отклонен'
+                updated_releases.append(updated_release)
+        
+        # Проверяем релизы из основного списка
+        for key, release in releases_dict.items():
+            # Если релиз был в модерации и теперь доставлен
+            if key in moderating_dict:
+                logger.info(f"🔄 {release.get('title')} - Модерация → Доставлен")
+                updated_release = release.copy()
+                updated_release['status'] = 'Доставлен'
+                updated_release['previous_status'] = 'Модерация'
+                updated_releases.append(updated_release)
+        
+        logger.info(f"✅ Обновлено {len(updated_releases)} статусов")
+        return updated_releases
+    
+    def parse_all_pages_with_status_updates(self):
+        """Парсит все страницы с обновлением статусов"""
+        logger.info("🔍 Начало полного парсинга с обновлением статусов...")
+        
+        try:
+            # 1. Парсим основную страницу релизов
+            logger.info("\n📄 Шаг 1: Парсинг основной страницы релизов...")
+            self.driver.get(self.releases_url)
+            time.sleep(3)
+            releases_page = self.parse_all_pages()
+            
+            # 2. Парсим страницу модерации
+            logger.info("\n📄 Шаг 2: Парсинг страницы модерации...")
+            moderating_page = self.parse_moderating_page()
+            
+            # 3. Парсим страницу редактирования
+            logger.info("\n📄 Шаг 3: Парсинг страницы редактирования...")
+            editing_page = self.parse_editing_page()
+            
+            # 4. Обновляем статусы
+            logger.info("\n🔄 Шаг 4: Анализ и обновление статусов...")
+            updated_releases = self.update_statuses_based_on_changes(releases_page, moderating_page, editing_page)
+            
+            # 5. Объединяем все результаты
+            all_results = releases_page + moderating_page + editing_page + updated_releases
+            
+            # Обновляем результаты парсера
+            self.results = all_results
+            
+            logger.info(f"✅ Полный парсинг завершен!")
+            logger.info(f"   - Основные релизы: {len(releases_page)}")
+            logger.info(f"   - На модерации: {len(moderating_page)}")
+            logger.info(f"   - Отклоненные: {len(editing_page)}")
+            logger.info(f"   - Обновлено статусов: {len(updated_releases)}")
+            logger.info(f"   - Всего: {len(all_results)}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка полного парсинга: {e}")
+            return False
+    
     def run_parser(self):
-        """Запускает полный парсер"""
-        logger.info("🚀 Запуск Zvonko Linux Parser...")
+        """Запускает полный парсер с обновлением статусов"""
+        logger.info("🚀 Запуск Zvonko Parser с обновлением статусов...")
         
         try:
             if not self.setup_driver():
@@ -393,8 +702,8 @@ class ZvonkoLinuxParser:
                 logger.error("❌ Не удалось авторизоваться")
                 return False
             
-            if not self.parse_all_pages():
-                logger.error("❌ Не удалось распарсить релизы")
+            if not self.parse_all_pages_with_status_updates():
+                logger.error("❌ Не удалось выполнить полный парсинг")
                 return False
             
             logger.info("✅ Парсинг успешно завершен!")
@@ -425,13 +734,18 @@ def main():
     parser = ZvonkoLinuxParser(max_pages)
     success = parser.run_parser()
     
-    if success:
-        # Выводим результат для API
-        print("JSON_OUTPUT_START")
+    # Всегда выводим JSON, даже при ошибках, чтобы API мог обработать результат
+    print("JSON_OUTPUT_START")
+    try:
         print(json.dumps(parser.results, ensure_ascii=False))
-        print("JSON_OUTPUT_END")
-        
+    except Exception as e:
+        logger.error(f"❌ Ошибка сериализации JSON: {e}")
+        print(json.dumps([], ensure_ascii=False))  # Выводим пустой массив при ошибке
+    print("JSON_OUTPUT_END")
+    
+    if success:
         logger.info("🎉 Парсинг успешно завершен!")
+        sys.exit(0)
     else:
         logger.error("💥 Парсинг завершился с ошибками!")
         sys.exit(1)

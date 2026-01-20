@@ -64,7 +64,7 @@ export default function ZvonkoParserPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [lastReleases, setLastReleases] = useState<ZvonkoRelease[]>([])
-  const [pagesToParse, setPagesToParse] = useState<number>(5)
+  const [pagesToParse, setPagesToParse] = useState<number>(1)
   const [selectedAction, setSelectedAction] = useState<'parse' | 'compare' | 'add'>('parse')
 
   // Загрузка статуса при монтировании

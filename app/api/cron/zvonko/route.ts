@@ -39,16 +39,50 @@ export async function GET(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        action: 'parse',
+        pagesToParse: 1  // Для автоматического запуска парсим только 1 страницу
+      })
     });
-    
-    const result = await response.json();
     
     const duration = Date.now() - startTime;
     
+    // Проверяем статус ответа
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`❌ Cron Zvonko: HTTP ошибка ${response.status}: ${errorText}`);
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: `HTTP ${response.status}: ${errorText}`,
+        duration: `${duration}ms`
+      }, { status: response.status });
+    }
+    
+    // Парсим JSON с обработкой ошибок
+    let result;
+    try {
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response from API');
+      }
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Cron Zvonko: Ошибка парсинга JSON ответа:', parseError);
+      const responseText = await response.text().catch(() => 'Could not read response');
+      console.error('   Ответ API:', responseText.substring(0, 500));
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: `JSON parse error: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        duration: `${duration}ms`
+      }, { status: 500 });
+    }
+    
     if (result.success) {
       console.log(`✅ Cron Zvonko: Парсинг завершен за ${duration}ms`);
-      console.log(`   Статистика: добавлено ${result.stats?.added || 0}, обновлено ${result.stats?.updated || 0}`);
+      console.log(`   Статистика: найдено ${result.stats?.total || 0}, добавлено ${result.stats?.added || 0}, обновлено ${result.stats?.updated || 0}`);
       
       return NextResponse.json({ 
         success: true, 
@@ -61,7 +95,8 @@ export async function GET(request: NextRequest) {
       
       return NextResponse.json({ 
         success: false, 
-        error: result.error,
+        error: result.error || 'Unknown error',
+        stats: result.stats,
         duration: `${duration}ms`
       }, { status: 500 });
     }

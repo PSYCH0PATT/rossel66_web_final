@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { action = 'parse', pagesToParse = 5 } = body
+    const { action = 'parse', pagesToParse = 1 } = body
     
     const parsersDir = path.join(process.cwd(), 'parsers')
     let scriptPath = ''
@@ -175,7 +175,11 @@ export async function POST(request: NextRequest) {
           const jsonMatch = output.match(/JSON_OUTPUT_START\n([\s\S]*?)\nJSON_OUTPUT_END/)
           if (jsonMatch) {
             try {
-              const parsedReleases = JSON.parse(jsonMatch[1])
+              const jsonText = jsonMatch[1].trim()
+              if (!jsonText) {
+                throw new Error('Empty JSON content between markers')
+              }
+              const parsedReleases = JSON.parse(jsonText)
               stats.total = parsedReleases.length || 0
               message = `Найдено ${stats.total} релизов`
               
@@ -187,15 +191,20 @@ export async function POST(request: NextRequest) {
                 pagesProcessed = Math.max(...parsedReleases.map((r: any) => r.page || 1))
               }
             } catch (e) {
-              console.error('Ошибка парсинга JSON:', e)
-              stats.errors.push('Ошибка парсинга JSON')
+              console.error('Ошибка парсинга JSON из stdout:', e)
+              console.error('JSON текст:', jsonMatch[1].substring(0, 500))
+              stats.errors.push(`Ошибка парсинга JSON: ${e instanceof Error ? e.message : String(e)}`)
             }
           } else {
             // Пробуем прочитать из файла
             const resultsFile = path.join(parsersDir, 'zvonko_all_releases_full.json')
             if (fs.existsSync(resultsFile)) {
               try {
-                const results = JSON.parse(fs.readFileSync(resultsFile, 'utf-8'))
+                const fileContent = fs.readFileSync(resultsFile, 'utf-8')
+                if (!fileContent.trim()) {
+                  throw new Error('File is empty')
+                }
+                const results = JSON.parse(fileContent)
                 stats.total = results.length || 0
                 message = `Найдено ${stats.total} релизов`
                 releases = results.slice(-10).reverse()
@@ -205,8 +214,14 @@ export async function POST(request: NextRequest) {
                 }
               } catch (e) {
                 console.error('Ошибка чтения файла результатов:', e)
-                stats.errors.push('Ошибка чтения файла результатов')
+                stats.errors.push(`Ошибка чтения файла результатов: ${e instanceof Error ? e.message : String(e)}`)
               }
+            } else {
+              // Если JSON не найден ни в stdout, ни в файле
+              console.warning('⚠️ JSON_OUTPUT не найден в stdout и файл результатов отсутствует')
+              console.log('Вывод парсера (последние 1000 символов):', output.substring(Math.max(0, output.length - 1000)))
+              stats.errors.push('JSON_OUTPUT не найден в выводе парсера')
+              message = 'Парсинг завершен, но результаты не найдены'
             }
           }
         } else if (action === 'compare') {
@@ -240,27 +255,31 @@ export async function POST(request: NextRequest) {
           }
         }
         
+        // Проверяем, есть ли критические ошибки
+        const hasCriticalErrors = stats.errors.length > 0 && stats.total === 0 && action === 'parse'
+        const isSuccess = !hasCriticalErrors
+        
         // Сохраняем статус
-        const successStatus: ParserStatus = {
+        const status: ParserStatus = {
           lastRun: new Date().toISOString(),
-          success: true,
+          success: isSuccess,
           stats,
-          message,
+          message: message || (isSuccess ? 'Парсинг завершен' : 'Парсинг завершен с ошибками'),
           pagesProcessed,
           totalPages
         }
         
-        saveParserStatus(successStatus)
+        saveParserStatus(status)
         
         resolve(NextResponse.json({ 
-          success: true, 
-          message: action === 'parse' ? 'Парсинг завершен успешно' : message,
+          success: isSuccess, 
+          message: action === 'parse' ? (isSuccess ? 'Парсинг завершен успешно' : 'Парсинг завершен с ошибками') : message,
           stats,
           releases,
           pagesProcessed,
           totalPages,
-          output
-        }))
+          output: output.substring(Math.max(0, output.length - 2000)) // Ограничиваем размер вывода
+        }, { status: isSuccess ? 200 : 500 }))
       })
     })
     
