@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { updateReportSignedStatus, updateReportPaidStatus } from "@/lib/storage"
+import { updateReportSignedStatus, updateReportPaidStatus, loadReports, addActivity } from "@/lib/storage"
 
 export async function PUT(request: Request) {
   try {
@@ -23,6 +23,20 @@ export async function PUT(request: Request) {
     } else if (statusType === 'paid') {
       console.log(`API: Обновляем статус выплаты для отчета ${reportId}`)
       success = updateReportPaidStatus(reportId, value)
+      if (success && value === true) {
+        const reports = loadReports()
+        const report = reports.find(r => r.id === reportId)
+        if (report?.artistId) {
+          addActivity({
+            type: 'payment_sent',
+            userId: report.artistId,
+            userRole: 'artist',
+            title: 'Выплата отправлена',
+            description: 'Отмечена выплата по отчёту',
+            metadata: { reportId, artistId: report.artistId }
+          })
+        }
+      }
     } else {
       console.log(`API: Неверный тип статуса: ${statusType}`)
       return NextResponse.json(

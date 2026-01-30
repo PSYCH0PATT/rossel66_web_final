@@ -85,9 +85,20 @@ export interface Report {
   fileUrl?: string
 }
 
+export type ActivityType =
+  | 'release_added'
+  | 'playlist_found'
+  | 'report_received'
+  | 'payment_sent'
+  | 'user_data_updated'
+  | 'reports_generated'
+  | 'artist_added'
+  | 'artist_removed'
+  | 'release_status_updated'
+
 export interface Activity {
   id: string
-  type: 'release_added' | 'playlist_found' | 'report_received' | 'payment_sent' | 'user_data_updated' | 'reports_generated'
+  type: ActivityType
   userId: string
   userRole: 'artist' | 'admin'
   title: string
@@ -95,6 +106,8 @@ export interface Activity {
   metadata?: Record<string, any>
   createdAt: string
 }
+
+const ACTIVITY_RETENTION_DAYS = 90
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const USERS_FILE = path.join(DATA_DIR, 'users.json')
@@ -349,6 +362,17 @@ export function saveActivities(activities: Activity[]): void {
   }
 }
 
+export function trimActivitiesOlderThanDays(days: number): void {
+  const activities = loadActivities()
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  const cutoffIso = cutoff.toISOString()
+  const trimmed = activities.filter(a => a.createdAt >= cutoffIso)
+  if (trimmed.length !== activities.length) {
+    saveActivities(trimmed)
+  }
+}
+
 export function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>): Activity {
   const activities = loadActivities()
   const newActivity: Activity = {
@@ -358,7 +382,45 @@ export function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>): Activ
   }
   activities.unshift(newActivity) // Add to beginning for chronological order
   saveActivities(activities)
+  trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
   return newActivity
+}
+
+export interface ActivityFilters {
+  userId?: string
+  role?: 'artist' | 'admin'
+  types?: ActivityType[]
+  dateFrom?: string
+  dateTo?: string
+}
+
+export function getActivitiesFiltered(
+  filters: ActivityFilters,
+  limit: number = 50,
+  offset: number = 0
+): { activities: Activity[]; total: number } {
+  let activities = loadActivities()
+
+  if (filters.userId) {
+    activities = activities.filter(a => a.userId === filters.userId)
+  }
+  if (filters.role) {
+    activities = activities.filter(a => a.userRole === filters.role)
+  }
+  if (filters.types?.length) {
+    const set = new Set(filters.types)
+    activities = activities.filter(a => set.has(a.type))
+  }
+  if (filters.dateFrom) {
+    activities = activities.filter(a => a.createdAt >= filters.dateFrom!)
+  }
+  if (filters.dateTo) {
+    activities = activities.filter(a => a.createdAt <= filters.dateTo!)
+  }
+
+  const total = activities.length
+  const paginated = activities.slice(offset, offset + limit)
+  return { activities: paginated, total }
 }
 
 export function getActivitiesByUserId(userId: string, limit: number = 10): Activity[] {
@@ -496,7 +558,7 @@ export function updateReportPaidStatus(reportId: string, isPaid: boolean): boole
 
 // Функция для поиска артиста по имени
 // Нормализует имя артиста для сравнения (убирает пробелы, приводит к нижнему регистру)
-function normalizeArtistName(name: string): string {
+export function normalizeArtistName(name: string): string {
   return name
     .toLowerCase()
     .trim()

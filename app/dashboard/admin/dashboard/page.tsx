@@ -173,7 +173,7 @@ export default function AdminDashboard() {
             <CardTitle className="text-lg">Последние действия</CardTitle>
           </CardHeader>
           <CardContent>
-            {currentUser && <ActivityFeed userId={currentUser.id} role="admin" limit={5} />}
+            <ActivityFeed role="admin" limit={10} />
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Link

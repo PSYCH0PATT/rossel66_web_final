@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Music, ListMusic, FileText, DollarSign, User, FileCheck } from 'lucide-react'
+import { Music, ListMusic, FileText, DollarSign, User, FileCheck, UserPlus, UserMinus, CheckCircle } from 'lucide-react'
 import { Activity } from '@/lib/storage'
 
 interface ActivityFeedProps {
@@ -54,6 +54,12 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false }: Activ
         return <User className="h-4 w-4 text-category-purple" />
       case 'reports_generated':
         return <FileCheck className="h-4 w-4 text-category-green" />
+      case 'artist_added':
+        return <UserPlus className="h-4 w-4 text-category-green" />
+      case 'artist_removed':
+        return <UserMinus className="h-4 w-4 text-category-red" />
+      case 'release_status_updated':
+        return <CheckCircle className="h-4 w-4 text-category-blue" />
       default:
         return <FileText className="h-4 w-4 text-gray-400" />
     }

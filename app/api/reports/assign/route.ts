@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { moveReportToArtist } from "@/lib/storage"
+import { moveReportToArtist, addActivity } from "@/lib/storage"
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +12,14 @@ export async function POST(request: Request) {
     const success = moveReportToArtist(reportId, artistId)
 
     if (success) {
+      addActivity({
+        type: 'report_received',
+        userId: artistId,
+        userRole: 'artist',
+        title: 'Назначен отчёт',
+        description: 'Вам назначен отчёт по кварталу',
+        metadata: { reportId, artistId }
+      })
       return NextResponse.json({
         success: true,
         message: "Отчет успешно назначен артисту"

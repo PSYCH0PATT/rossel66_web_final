@@ -79,6 +79,15 @@ export async function POST(request: Request) {
     // Assign any existing unregistered reports to this artist
     assignReportsToNewArtist(newUser.id, name)
 
+    addActivity({
+      type: 'artist_added',
+      userId: 'system',
+      userRole: 'admin',
+      title: 'Добавлен артист',
+      description: `Артист "${newUser.name}" создан`,
+      metadata: { artistId: newUser.id, artistName: newUser.name }
+    })
+
     return NextResponse.json({
       success: true,
       message: "Artist created successfully",
@@ -175,11 +184,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }
 
-    // Создаем активность для админа (тот, кто обновил данные)
-    // В реальной системе нужно передавать ID админа из сессии
     addActivity({
       type: 'user_data_updated',
-      userId: updatedUser.id,
+      userId: 'system',
       userRole: 'admin',
       title: 'Данные артиста обновлены',
       description: `Профиль артиста "${updatedUser.name}" был обновлен`,
@@ -233,6 +240,15 @@ export async function DELETE(request: Request) {
 
     // Удаляем артиста
     deleteUser(artistId)
+
+    addActivity({
+      type: 'artist_removed',
+      userId: 'system',
+      userRole: 'admin',
+      title: 'Артист удалён',
+      description: `Артист "${artist.name}" удалён`,
+      metadata: { artistId, artistName: artist.name }
+    })
 
     console.log(`Артист ${artist.name} (${artistId}) успешно удален`)
 

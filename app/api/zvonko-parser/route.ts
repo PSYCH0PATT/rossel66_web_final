@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import { loadReleases, saveReleases, addActivity } from '@/lib/storage'
+import type { Release } from '@/lib/storage'
 
 interface ParseStats {
   total: number
@@ -22,6 +24,76 @@ interface ParserStatus {
 
 // Файл для хранения статуса последнего парсинга
 const STATUS_FILE = path.join(process.cwd(), 'data', 'zvonko_parser_status.json')
+
+const MODERATION_STATUSES = ['Модерируется', 'Модерация', 'модерируется', 'модерация']
+const ZVONKO_MOD_REJECTED = ['Модерация', 'Отклонен', 'модерация', 'отклонен']
+
+function normalizeTitle(title: string): string {
+  return (title || '').toLowerCase().trim()
+}
+
+function normalizeUpc(upc: string): string {
+  return (upc || '').trim().replace(/^0+/, '')
+}
+
+/**
+ * Релизы, которые были на модерации, но после парсера НЕТ ни во вкладке модерации,
+ * ни во вкладке отклонённых — считаем доставленными и помечаем статус «Доставлен».
+ */
+function markModerationDeliveredAfterParse(parsersDir: string): number {
+  const zvonkoFile = path.join(parsersDir, 'zvonko_all_releases_full.json')
+  if (!fs.existsSync(zvonkoFile)) return 0
+
+  let zvonkoReleases: any[] = []
+  try {
+    zvonkoReleases = JSON.parse(fs.readFileSync(zvonkoFile, 'utf-8'))
+  } catch {
+    return 0
+  }
+
+  const modOrRejectedTitles = new Set<string>()
+  const modOrRejectedUpcs = new Set<string>()
+  for (const r of zvonkoReleases) {
+    const status = (r.status || '').trim().toLowerCase()
+    if (status === 'модерация' || status === 'отклонен') {
+      const t = normalizeTitle(r.title)
+      if (t) modOrRejectedTitles.add(t)
+      const u = normalizeUpc(r.upc)
+      if (u) modOrRejectedUpcs.add(u)
+    }
+  }
+
+  const releases = loadReleases()
+  const markedReleases: Release[] = []
+  for (const release of releases) {
+    const s = (release.status || '').trim()
+    if (!MODERATION_STATUSES.some(m => m === s)) continue
+
+    const titleKey = normalizeTitle(release.title)
+    const upcKey = normalizeUpc(release.upc || '')
+    const stillOnModByTitle = titleKey && modOrRejectedTitles.has(titleKey)
+    const stillOnModByUpc = upcKey && modOrRejectedUpcs.has(upcKey)
+    if (stillOnModByTitle || stillOnModByUpc) continue
+
+    ;(release as any).status = 'Доставлен'
+    markedReleases.push(release)
+    console.log(`✅ Zvonko: релиз "${release.title}" больше не на модерации и не отклонён → Доставлен`)
+  }
+  if (markedReleases.length > 0) {
+    saveReleases(releases)
+    for (const release of markedReleases) {
+      addActivity({
+        type: 'release_status_updated',
+        userId: release.artistId,
+        userRole: 'artist',
+        title: 'Статус релиза обновлён',
+        description: `Релиз "${release.title}" переведён в «Доставлен»`,
+        metadata: { releaseId: release.id, artistId: release.artistId, status: 'Доставлен' }
+      })
+    }
+  }
+  return markedReleases.length
+}
 
 // Сохранение статуса парсинга
 function saveParserStatus(status: ParserStatus) {
@@ -222,6 +294,140 @@ export async function POST(request: NextRequest) {
               console.log('Вывод парсера (последние 1000 символов):', output.substring(Math.max(0, output.length - 1000)))
               stats.errors.push('JSON_OUTPUT не найден в выводе парсера')
               message = 'Парсинг завершен, но результаты не найдены'
+            }
+          }
+          
+          // После успешного парсинга автоматически запускаем сравнение и добавление
+          // ВАЖНО: Это должно выполняться ДО отправки ответа, чтобы статистика была актуальной
+          if (action === 'parse' && stats.total > 0 && code === 0) {
+            console.log('🔄 Автоматически запускаем сравнение релизов...')
+            
+            try {
+              // Запускаем compare
+              const compareScript = path.join(parsersDir, 'compare_releases.py')
+              const compareProcess = spawn('python3', [compareScript], { cwd: process.cwd() })
+              
+              let compareOutput = ''
+              let compareError = ''
+              
+              compareProcess.stdout.on('data', (data) => {
+                compareOutput += data.toString()
+                console.log('Compare:', data.toString())
+              })
+              
+              compareProcess.stderr.on('data', (data) => {
+                compareError += data.toString()
+                console.error('Compare Error:', data.toString())
+              })
+              
+              // Ждем завершения процесса сравнения
+              const compareCode = await new Promise<number>((resolve) => {
+                compareProcess.on('close', (code) => {
+                  resolve(code)
+                })
+              })
+              
+              if (compareCode === 0) {
+                console.log('✅ Сравнение завершено')
+                
+                // Читаем результаты сравнения
+                const comparisonFile = path.join(parsersDir, 'comparison_results.json')
+                if (fs.existsSync(comparisonFile)) {
+                  try {
+                    const comparisonResults = JSON.parse(fs.readFileSync(comparisonFile, 'utf-8'))
+                    const newReleasesCount = comparisonResults.summary?.new_releases || 0
+                    const existingByUpc = comparisonResults.summary?.existing_by_upc || 0
+                    const existingByTitle = comparisonResults.summary?.existing_by_title || 0
+                    
+                    console.log(`📊 Найдено новых релизов: ${newReleasesCount}`)
+                    console.log(`📊 Существующих релизов: ${existingByUpc + existingByTitle}`)
+                    
+                    // Если есть новые релизы или существующие для обновления, запускаем добавление
+                    if (newReleasesCount > 0 || existingByUpc > 0 || existingByTitle > 0) {
+                      console.log('🔄 Автоматически запускаем добавление/обновление релизов...')
+                      
+                      const addScript = path.join(parsersDir, 'add_new_releases.py')
+                      const addProcess = spawn('python3', [addScript], { cwd: process.cwd() })
+                      
+                      let addOutput = ''
+                      let addError = ''
+                      
+                      addProcess.stdout.on('data', (data) => {
+                        addOutput += data.toString()
+                        console.log('Add:', data.toString())
+                      })
+                      
+                      addProcess.stderr.on('data', (data) => {
+                        addError += data.toString()
+                        console.error('Add Error:', data.toString())
+                      })
+                      
+                      // Ждем завершения процесса добавления
+                      const addCode = await new Promise<number>((resolve) => {
+                        addProcess.on('close', (code) => {
+                          resolve(code)
+                        })
+                      })
+                      
+                      if (addCode === 0) {
+                        console.log('✅ Добавление завершено')
+                        
+                        // Читаем отчет о добавлении
+                        const reportFile = path.join(parsersDir, 'add_releases_report.json')
+                        if (fs.existsSync(reportFile)) {
+                          try {
+                            const report = JSON.parse(fs.readFileSync(reportFile, 'utf-8'))
+                            const addedCount = report.summary?.added || 0
+                            const updatedCount = report.summary?.updated || 0
+                            
+                            // ОБНОВЛЯЕМ статистику ПЕРЕД отправкой ответа
+                            stats.added = addedCount
+                            stats.updated = updatedCount
+                            stats.skipped = existingByUpc + existingByTitle
+                            
+                            if (addedCount > 0 || updatedCount > 0) {
+                              message = `Добавлено ${addedCount} новых релизов${updatedCount > 0 ? `, обновлено ${updatedCount} статусов` : ''}`
+                            } else {
+                              message = `Найдено ${stats.total} релизов, новых для добавления: ${newReleasesCount}`
+                            }
+                            
+                            console.log(`📊 Добавлено: ${addedCount}, Обновлено: ${updatedCount}`)
+                          } catch (e) {
+                            console.error('Ошибка чтения отчета добавления:', e)
+                            stats.errors.push(`Ошибка чтения отчета: ${e instanceof Error ? e.message : String(e)}`)
+                          }
+                        }
+                      } else {
+                        console.error(`❌ Ошибка добавления релизов (код: ${addCode})`)
+                        stats.errors.push(`Ошибка добавления релизов: ${addError || 'Неизвестная ошибка'}`)
+                      }
+                    } else {
+                      console.log('ℹ️ Новых релизов для добавления нет')
+                      stats.skipped = existingByUpc + existingByTitle
+                      message = `Найдено ${stats.total} релизов, все уже есть в системе`
+                    }
+                  } catch (e) {
+                    console.error('Ошибка чтения результатов сравнения:', e)
+                    stats.errors.push(`Ошибка чтения результатов сравнения: ${e instanceof Error ? e.message : String(e)}`)
+                  }
+                } else {
+                  console.error('❌ Файл результатов сравнения не найден')
+                  stats.errors.push('Файл результатов сравнения не найден')
+                }
+              } else {
+                console.error(`❌ Ошибка сравнения релизов (код: ${compareCode})`)
+                stats.errors.push(`Ошибка сравнения релизов: ${compareError || 'Неизвестная ошибка'}`)
+              }
+
+              // Проверка «модерация/отклонённые → доставлен» выполняется и при ошибке compare (файл Zvonko уже есть)
+              const markedDelivered = markModerationDeliveredAfterParse(parsersDir)
+              if (markedDelivered > 0) {
+                console.log(`✅ Zvonko: помечено как Доставлен (были на модерации): ${markedDelivered}`)
+                message = (message ? message + '. ' : '') + `${markedDelivered} релизов переведены в Доставлен`
+              }
+            } catch (error) {
+              console.error('❌ Ошибка при автоматическом запуске compare/add:', error)
+              stats.errors.push(`Ошибка автоматического запуска: ${error instanceof Error ? error.message : String(error)}`)
             }
           }
         } else if (action === 'compare') {

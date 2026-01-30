@@ -1,25 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addActivity, getActivitiesByUserId, getActivitiesByRole, getAllActivities, Activity } from '@/lib/storage'
+import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
 
-// GET /api/activities?userId=xxx&role=artist&limit=10
+const ACTIVITY_TYPES: ActivityType[] = [
+  'release_added',
+  'playlist_found',
+  'report_received',
+  'payment_sent',
+  'user_data_updated',
+  'reports_generated',
+  'artist_added',
+  'artist_removed',
+  'release_status_updated'
+]
+
+// GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId')
-    const role = searchParams.get('role') as 'artist' | 'admin' | null
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const userId = searchParams.get('userId') || undefined
+    const role = (searchParams.get('role') as 'artist' | 'admin') || undefined
+    const typeParam = searchParams.getAll('type').filter(Boolean)
+    const types: ActivityType[] = typeParam.length
+      ? typeParam.filter((t): t is ActivityType => ACTIVITY_TYPES.includes(t as ActivityType))
+      : undefined
+    const dateFrom = searchParams.get('dateFrom') || undefined
+    const dateTo = searchParams.get('dateTo') || undefined
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 500)
+    const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
 
-    let activities: Activity[]
-
-    if (userId) {
-      activities = getActivitiesByUserId(userId, limit)
-    } else if (role) {
-      activities = getActivitiesByRole(role, limit)
-    } else {
-      activities = getAllActivities(limit)
+    const filters = {
+      ...(userId && { userId }),
+      ...(role && { role }),
+      ...(types?.length && { types }),
+      ...(dateFrom && { dateFrom }),
+      ...(dateTo && { dateTo })
     }
 
-    return NextResponse.json({ success: true, activities })
+    const { activities, total } = getActivitiesFiltered(filters, limit, offset)
+    return NextResponse.json({ success: true, activities, total })
   } catch (error) {
     console.error('Error getting activities:', error)
     return NextResponse.json(

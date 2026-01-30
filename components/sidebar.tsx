@@ -19,6 +19,8 @@ import {
   Upload,
   BarChart,
   Search,
+  Clock,
+  Activity,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -105,6 +107,8 @@ export default function Sidebar({ role, username }: SidebarProps) {
     { href: "/dashboard/admin/reports-generator", icon: BarChart, label: "Генератор отчетов", color: "purple" },
     // Объединенная страница плейлистов с парсерами
     { href: "/dashboard/admin/playlists", icon: Search, label: "Плейлисты", color: "blue" },
+    { href: "/dashboard/admin/playlists/history", icon: Clock, label: "История плейлистов", color: "purple" },
+    { href: "/dashboard/admin/activity", icon: Activity, label: "Активность", color: "emerald" },
   ]
 
   const navItems = role === "artist" ? artistNavItems : adminNavItems
