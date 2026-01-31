@@ -289,10 +289,8 @@ export default function PlaylistsPage() {
     try {
       setParsingOutput(prev => prev + '📥 Подключение к SFTP серверу...\n')
       
-      // Используем дефолтный секрет (в продакшене должен быть в env)
-      const cronSecret = 'x7Kp9mN2vQ8sL4wR'
-      
-      const response = await fetch(`/api/cron/playlists-sftp?secret=${encodeURIComponent(cronSecret)}`)
+      // Эндпоинт сам подставляет CRON_SECRET на сервере — с клиента секрет не передаём
+      const response = await fetch('/api/playlists/sync-sftp')
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
