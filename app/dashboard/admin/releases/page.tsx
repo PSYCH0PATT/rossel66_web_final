@@ -192,36 +192,40 @@ export default function AdminReleasesPage() {
     }
   }
 
-  // Status badge colors - новые статусы из Koala Music
+  // Status badge colors - стандартные статусы
   const statusColors: Record<string, string> = {
-    // Новые статусы Koala Music
+    // Стандартные статусы
+    "Модерируется": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Отклонен": "bg-red-500 hover:bg-red-600 text-white",
+    "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
+    "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
+    // Legacy статусы для обратной совместимости
     "На модерации": "bg-orange-500 hover:bg-orange-600 text-white",
     "Одобрен": "bg-blue-500 hover:bg-blue-600 text-white",
     "Отклонён": "bg-red-500 hover:bg-red-600 text-white",
-    "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
-    "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
     "Снят": "bg-gray-500 hover:bg-gray-600 text-white",
-    // Legacy статусы для обратной совместимости
     released: "bg-green-500 hover:bg-green-600 text-white",
     moderation: "bg-orange-500 hover:bg-orange-600 text-white",
     delivery: "bg-blue-500 hover:bg-blue-600 text-white",
     scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
   }
 
-  // Status translations - новые статусы Koala Music
+  // Status translations - стандартные статусы
   const statusLabels: Record<string, string> = {
-    // Новые статусы Koala Music (отображаются как есть)
-    "На модерации": "На модерации",
-    "Одобрен": "Одобрен",
-    "Отклонён": "Отклонён",
+    // Стандартные статусы
+    "Модерируется": "Модерируется",
+    "Отклонен": "Отклонен",
     "В доставке": "В доставке",
     "Доставлен": "Доставлен",
-    "Снят": "Снят",
     // Legacy статусы для обратной совместимости
+    "На модерации": "Модерируется",
+    "Одобрен": "Доставлен",
+    "Отклонён": "Отклонен",
+    "Снят": "Отклонен",
     released: "Доставлен",
-    moderation: "На модерации",
+    moderation: "Модерируется",
     delivery: "В доставке",
-    scheduled: "На модерации",
+    scheduled: "Модерируется",
   }
 
   if (isLoading) {

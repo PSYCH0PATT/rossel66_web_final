@@ -64,6 +64,9 @@ class KoalaReleasesParser:
     def setup_driver(self) -> bool:
         """Настраивает WebDriver"""
         try:
+            # Сначала очищаем зависшие процессы
+            self._cleanup_chromedriver_processes()
+            
             chrome_options = Options()
             
             # Headless режим (если включен)
@@ -85,20 +88,17 @@ class KoalaReleasesParser:
             
             if is_linux:
                 # На Linux/Alpine используем системный Chromium
-                # Alpine: /usr/bin/chromium-browser
-                # Debian/Ubuntu: /usr/bin/chromium или /usr/bin/google-chrome
                 for chrome_path in ['/usr/bin/chromium-browser', '/usr/bin/chromium', '/usr/bin/google-chrome']:
                     if os.path.exists(chrome_path):
                         chrome_options.binary_location = chrome_path
                         print(f"🐧 Chrome binary: {chrome_path}")
                         break
                 
-                # Проверяем доступные пути к chromedriver
                 chromedriver_paths = [
-                    '/usr/bin/chromedriver',           # Alpine (chromium-chromedriver)
-                    '/usr/bin/chromium-driver',        # Некоторые дистрибутивы
-                    '/usr/lib/chromium/chromedriver',  # Debian
-                    '/usr/local/bin/chromedriver'      # Manual install
+                    '/usr/bin/chromedriver',
+                    '/usr/bin/chromium-driver',
+                    '/usr/lib/chromium/chromedriver',
+                    '/usr/local/bin/chromedriver'
                 ]
                 
                 chromedriver_path = None
@@ -114,9 +114,67 @@ class KoalaReleasesParser:
                     print("⚠️  Системный chromedriver не найден, пробуем webdriver-manager...")
                     service = Service(ChromeDriverManager().install())
             else:
-                # На Mac/Windows используем webdriver-manager
-                service = Service(ChromeDriverManager().install())
+                # На Mac/Windows используем webdriver-manager для автоматической установки правильной версии
+                print("🍎 Mac: проверяем ChromeDriver...")
+                
+                # Сначала пробуем найти уже установленную версию 143
+                wdm_path = os.path.expanduser('~/.wdm/drivers/chromedriver')
+                chromedriver_path = None
+                
+                if os.path.exists(wdm_path):
+                    # Ищем версию 143.x
+                    for root, dirs, files in os.walk(wdm_path):
+                        if '143.' in root:
+                            for file in files:
+                                if file == 'chromedriver' or file == 'chromedriver-mac-arm64' or file == 'chromedriver-mac-x64':
+                                    full_path = os.path.join(root, file)
+                                    if os.access(full_path, os.X_OK):
+                                        chromedriver_path = full_path
+                                        print(f"✅ Найден ChromeDriver 143: {chromedriver_path}")
+                                        break
+                            if chromedriver_path:
+                                break
+                
+                if chromedriver_path:
+                    service = Service(chromedriver_path)
+                else:
+                    print("⚠️  ChromeDriver 143 не найден, устанавливаем через webdriver-manager...")
+                    try:
+                        # Устанавливаем с таймаутом через threading
+                        import threading
+                        driver_path_result = [None]
+                        exception_result = [None]
+                        
+                        def install_driver():
+                            try:
+                                driver_path_result[0] = ChromeDriverManager().install()
+                            except Exception as e:
+                                exception_result[0] = e
+                        
+                        thread = threading.Thread(target=install_driver)
+                        thread.daemon = True
+                        thread.start()
+                        thread.join(timeout=20)  # 20 секунд на установку
+                        
+                        if thread.is_alive():
+                            print("❌ ChromeDriverManager завис при установке")
+                            raise Exception("ChromeDriverManager завис")
+                        
+                        if exception_result[0]:
+                            raise exception_result[0]
+                        
+                        if driver_path_result[0]:
+                            print(f"✅ ChromeDriver установлен: {driver_path_result[0]}")
+                            service = Service(driver_path_result[0])
+                        else:
+                            raise Exception("ChromeDriver не установлен")
+                    except Exception as e:
+                        print(f"⚠️  Ошибка установки ChromeDriver: {e}")
+                        print("⚠️  Пробуем без указания пути...")
+                        service = Service()  # Пробуем без пути
             
+            # Создаем драйвер
+            print("🚀 Создаем WebDriver...")
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             
             # Убираем флаг webdriver
@@ -131,7 +189,33 @@ class KoalaReleasesParser:
             
         except Exception as e:
             print(f"❌ Ошибка запуска Chrome WebDriver: {e}")
+            import traceback
+            traceback.print_exc()
             return False
+    
+    def _cleanup_chromedriver_processes(self):
+        """Очищает зависшие процессы ChromeDriver"""
+        try:
+            import subprocess
+            import platform
+            
+            if platform.system() == 'Darwin':  # macOS
+                subprocess.run(['pkill', '-9', '-f', 'chromedriver'], 
+                             stderr=subprocess.DEVNULL, 
+                             stdout=subprocess.DEVNULL,
+                             timeout=2)
+                subprocess.run(['killall', '-9', 'chromedriver'], 
+                             stderr=subprocess.DEVNULL, 
+                             stdout=subprocess.DEVNULL,
+                             timeout=2)
+            elif platform.system() == 'Linux':
+                subprocess.run(['pkill', '-9', '-f', 'chromedriver'], 
+                             stderr=subprocess.DEVNULL, 
+                             stdout=subprocess.DEVNULL,
+                             timeout=2)
+            time.sleep(1)  # Даем время на завершение процессов
+        except:
+            pass
     
     def login(self) -> bool:
         """Авторизация на портале Koala Music"""
@@ -515,9 +599,10 @@ class KoalaReleasesParser:
         print("="*60)
         
         try:
-            # Настраиваем драйвер
-            if not self.setup_driver():
-                return []
+            # Настраиваем драйвер (если еще не настроен)
+            if not self.driver:
+                if not self.setup_driver():
+                    return []
             
             # Авторизуемся
             if not self.login():
@@ -569,13 +654,46 @@ class KoalaReleasesParser:
             print(f"❌ Ошибка сохранения результатов: {e}")
     
     def close(self):
-        """Закрывает браузер"""
+        """Закрывает браузер с принудительной очисткой процессов"""
         if self.driver:
             try:
+                # Сначала закрываем все окна
+                try:
+                    for handle in self.driver.window_handles:
+                        self.driver.switch_to.window(handle)
+                        self.driver.close()
+                except:
+                    pass
+                
+                # Пробуем корректно закрыть
                 self.driver.quit()
                 print("🔒 Браузер закрыт")
-            except:
-                pass
+            except Exception as e:
+                # Игнорируем ошибки закрытия - они не критичны
+                print(f"⚠️ Ошибка при закрытии браузера (не критично): {e}")
+            finally:
+                # Принудительно убиваем процессы если они остались
+                try:
+                    import subprocess
+                    import platform
+                    
+                    if platform.system() == 'Darwin':  # macOS
+                        subprocess.run(['pkill', '-9', 'chromedriver'], 
+                                     stderr=subprocess.DEVNULL, 
+                                     stdout=subprocess.DEVNULL,
+                                     timeout=1)
+                        subprocess.run(['killall', '-9', 'chromedriver'], 
+                                     stderr=subprocess.DEVNULL, 
+                                     stdout=subprocess.DEVNULL,
+                                     timeout=1)
+                    elif platform.system() == 'Linux':
+                        subprocess.run(['pkill', '-9', 'chromedriver'], 
+                                     stderr=subprocess.DEVNULL, 
+                                     stdout=subprocess.DEVNULL,
+                                     timeout=1)
+                except:
+                    pass
+                self.driver = None
 
 
 def main():
@@ -587,22 +705,28 @@ def main():
     parser.add_argument('--output', '-o', type=str, help='Путь для сохранения результатов')
     args = parser.parse_args()
     
-    # Создаем парсер
-    koala_parser = KoalaReleasesParser(config_file=args.config)
-    
-    # Запускаем парсинг
-    results = koala_parser.parse_all()
-    
-    # Сохраняем результаты
-    if results:
-        koala_parser.save_results(args.output)
+    koala_parser = None
+    try:
+        # Создаем парсер
+        koala_parser = KoalaReleasesParser(config_file=args.config)
         
-        # Выводим результаты в stdout для API
-        print("\n📤 JSON_OUTPUT_START")
-        print(json.dumps(results, ensure_ascii=False))
-        print("JSON_OUTPUT_END")
-    
-    return len(results)
+        # Запускаем парсинг
+        results = koala_parser.parse_all()
+        
+        # Сохраняем результаты
+        if results:
+            koala_parser.save_results(args.output)
+            
+            # Выводим результаты в stdout для API
+            print("\n📤 JSON_OUTPUT_START")
+            print(json.dumps(results, ensure_ascii=False))
+            print("JSON_OUTPUT_END")
+        
+        return len(results)
+    finally:
+        # Гарантируем закрытие драйвера
+        if koala_parser:
+            koala_parser.close()
 
 
 if __name__ == '__main__':

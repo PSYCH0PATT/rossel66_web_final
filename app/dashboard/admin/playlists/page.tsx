@@ -22,14 +22,21 @@ interface Artist {
 
 interface VKPlaylist {
   id: number
-  artist_url: string
+  artist_url?: string
   artist_name: string
   playlist_name: string
   playlist_url: string
   playlist_cover_url: string
-  playlist_id: string
-  owner_id: string
+  platform?: string
+  playlist_id?: string
+  owner_id?: string
   parsed_at: string
+  added_at?: string
+  tracks_count?: number
+  multiple_tracks?: boolean
+  track_position?: number | null
+  track_names?: string
+  tracks_info?: any[]
 }
 
 interface BandlinkPlaylist {
@@ -44,6 +51,10 @@ interface BandlinkPlaylist {
   playlist_url: string
   added_at: string
   parsed_at: string
+  tracks_count?: number
+  multiple_tracks?: boolean
+  track_position?: number | null
+  tracks_info?: any[]
 }
 
 export default function PlaylistsPage() {
@@ -54,6 +65,7 @@ export default function PlaylistsPage() {
   const [bandlinkResults, setBandlinkResults] = useState<BandlinkPlaylist[]>([])
   const [isParsingVK, setIsParsingVK] = useState(false)
   const [isParsingBandlink, setIsParsingBandlink] = useState(false)
+  const [isSftpSyncing, setIsSftpSyncing] = useState(false)
   const [parsingOutput, setParsingOutput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
@@ -135,14 +147,177 @@ export default function PlaylistsPage() {
       const vkData = await vkResponse.json()
       const bandlinkData = await bandlinkResponse.json()
       
+      // Преобразуем данные из SFTP формата в формат для отображения
       if (vkData.success) {
-        setVkResults(vkData.results || [])
+        const vkResultsFormatted = (vkData.results || []).map((p: any) => {
+          // Формируем список названий релизов для VK - ТОЛЬКО для этого артиста
+          const currentArtistName = p.artist_name || '';
+          let trackNames = '';
+          
+          if (p.tracks_info && p.tracks_info.length > 0) {
+            // Фильтруем релизы только для текущего артиста
+            const artistReleases = p.tracks_info
+              .filter((t: any) => {
+                // Проверяем, что релиз принадлежит текущему артисту
+                const releaseName = t.releaseName || t.title || '';
+                // Если релиз начинается с имени артиста, проверяем совпадение
+                const artistMatch = releaseName.match(/^([^-]+?)\s*-\s*/);
+                if (artistMatch) {
+                  const releaseArtist = artistMatch[1].trim().toLowerCase();
+                  return releaseArtist === currentArtistName.toLowerCase();
+                }
+                // Если нет дефиса, считаем что это релиз этого артиста (если tracks_info уже отфильтрован)
+                return true;
+              })
+              .map((t: any) => t.releaseName || t.title)
+              .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
+            
+            trackNames = artistReleases.join(', ');
+          } else if (p.release_names && p.release_names.length > 0) {
+            // Фильтруем release_names по артисту
+            const filteredReleases = p.release_names.filter((name: string) => {
+              const artistMatch = name.match(/^([^-]+?)\s*-\s*/);
+              if (artistMatch) {
+                const releaseArtist = artistMatch[1].trim().toLowerCase();
+                return releaseArtist === currentArtistName.toLowerCase();
+              }
+              return true;
+            });
+            trackNames = filteredReleases.join(', ');
+          }
+          
+          return {
+            id: p.id,
+            artist_url: '',
+            artist_name: currentArtistName,
+            playlist_name: p.playlist_name,
+            playlist_url: p.playlist_url,
+            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_id: '',
+            owner_id: '',
+            parsed_at: p.parsed_at || p.added_at,
+            added_at: p.added_at || p.parsed_at,
+            tracks_count: p.tracks_count || 0,
+            multiple_tracks: p.multiple_tracks || false,
+            track_position: p.track_position,
+            track_names: trackNames,
+            tracks_info: p.tracks_info || []
+          };
+        })
+        setVkResults(vkResultsFormatted)
       }
+      
       if (bandlinkData.success) {
-        setBandlinkResults(bandlinkData.results || [])
+        const bandlinkResultsFormatted = (bandlinkData.results || []).map((p: any) => {
+          // Формируем список названий релизов из tracks_info или release_names - ТОЛЬКО для этого артиста
+          const currentArtistName = p.artist_name || '';
+          let trackNames = '';
+          
+          if (p.tracks_info && p.tracks_info.length > 0) {
+            // Фильтруем релизы только для текущего артиста
+            const artistReleases = p.tracks_info
+              .filter((t: any) => {
+                // Проверяем, что релиз принадлежит текущему артисту
+                const releaseName = t.releaseName || t.title || '';
+                const artistMatch = releaseName.match(/^([^-]+?)\s*-\s*/);
+                if (artistMatch) {
+                  const releaseArtist = artistMatch[1].trim().toLowerCase();
+                  return releaseArtist === currentArtistName.toLowerCase();
+                }
+                return true; // Если tracks_info уже отфильтрован по артисту
+              })
+              .map((t: any) => t.releaseName || t.title)
+              .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
+            
+            trackNames = artistReleases.join(', ');
+          } else if (p.release_names && p.release_names.length > 0) {
+            // Фильтруем release_names по артисту
+            const filteredReleases = p.release_names.filter((name: string) => {
+              const artistMatch = name.match(/^([^-]+?)\s*-\s*/);
+              if (artistMatch) {
+                const releaseArtist = artistMatch[1].trim().toLowerCase();
+                return releaseArtist === currentArtistName.toLowerCase();
+              }
+              return true;
+            });
+            trackNames = filteredReleases.join(', ');
+          }
+          
+          // Получаем позицию трека
+          let trackPosition = p.track_position;
+          if (!trackPosition && p.tracks_info && p.tracks_info.length > 0) {
+            const positions = p.tracks_info.map((t: any) => t.position).filter((pos: number) => pos != null && !isNaN(pos));
+            if (positions.length > 0) {
+              trackPosition = Math.min(...positions);
+            }
+          }
+          
+          return {
+            id: p.id,
+            artist_name: p.artist_name || '',
+            playlist_name: p.playlist_name,
+            playlist_artist: p.artist_name || '',
+            track_names: trackNames,
+            likes_count: '',
+            platform: p.platform,
+            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_url: p.playlist_url,
+            added_at: p.added_at || p.parsed_at,
+            parsed_at: p.parsed_at || p.added_at,
+            tracks_count: p.tracks_count || 0,
+            multiple_tracks: p.multiple_tracks || false,
+            track_position: trackPosition,
+            tracks_info: p.tracks_info || []
+          };
+        });
+        setBandlinkResults(bandlinkResultsFormatted);
       }
     } catch (error) {
       console.error('Ошибка загрузки результатов парсинга:', error)
+    }
+  }
+  
+  // Функция для ручного запуска SFTP синхронизации
+  const runManualParser = async () => {
+    if (!confirm('Запустить синхронизацию плейлистов с SFTP сервером? Это может занять некоторое время.')) {
+      return
+    }
+    
+    setIsSftpSyncing(true)
+    setParsingOutput('🔄 Запуск синхронизации SFTP...\n')
+    
+    try {
+      setParsingOutput(prev => prev + '📥 Подключение к SFTP серверу...\n')
+      
+      // Используем дефолтный секрет (в продакшене должен быть в env)
+      const cronSecret = 'x7Kp9mN2vQ8sL4wR'
+      
+      const response = await fetch(`/api/cron/playlists-sftp?secret=${encodeURIComponent(cronSecret)}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setParsingOutput(prev => prev + `✅ Синхронизация завершена\n`)
+        setParsingOutput(prev => prev + `📥 Скачано файлов: ${data.stats?.downloaded || 0}\n`)
+        setParsingOutput(prev => prev + `➕ Добавлено плейлистов: ${data.stats?.added || 0}\n`)
+        setParsingOutput(prev => prev + `🔄 Обновлено плейлистов: ${data.stats?.updated || 0}\n`)
+        setParsingOutput(prev => prev + `🗑️  Удалено плейлистов: ${data.stats?.removed || 0}\n`)
+        loadResults()
+      } else {
+        setParsingOutput(prev => prev + `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}\n`)
+        if (data.details) {
+          setParsingOutput(prev => prev + `Детали: ${data.details}\n`)
+        }
+      }
+    } catch (error: any) {
+      console.error('Ошибка SFTP синхронизации:', error)
+      setParsingOutput(prev => prev + `❌ Ошибка запроса: ${error?.message || String(error)}\n`)
+    } finally {
+      setIsSftpSyncing(false)
     }
   }
 
@@ -450,6 +625,14 @@ export default function PlaylistsPage() {
     bandlinkResults.filter(p => p.platform === 'МТС Музыка'), 
     selectedArtistFilter
   )
+  const sberPlaylists = filterAndSortPlaylists(
+    bandlinkResults.filter(p => p.platform === 'Сбер Музыка'), 
+    selectedArtistFilter
+  )
+  const okPlaylists = filterAndSortPlaylists(
+    bandlinkResults.filter(p => p.platform === 'Одноклассники'), 
+    selectedArtistFilter
+  )
 
   // Получение уникальных артистов из результатов
   const getUniqueArtists = () => {
@@ -500,10 +683,72 @@ export default function PlaylistsPage() {
     }
   }
 
+  // Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.)
+  const getPlatformBadgeStyle = (platform: string) => {
+    const p = (platform || '').trim()
+    if (p === 'VK Музыка') return { bg: '#0077FF', color: '#FFFFFF' }
+    if (p === 'Яндекс Музыка') return { bg: '#FFCC00', color: '#000000' }
+    if (p === 'МТС Музыка' || p === 'MTS Music') return { bg: '#E30611', color: '#FFFFFF' }
+    if (p === 'Сбер Музыка' || p === 'Sber Music') return { bg: '#21A038', color: '#FFFFFF' }
+    if (p === 'Одноклассники') return { bg: '#EE8208', color: '#FFFFFF' }
+    return { bg: '#6b7280', color: '#FFFFFF' }
+  }
+
   const PlaylistCard = ({ playlist, type }: { playlist: VKPlaylist | BandlinkPlaylist, type: 'vk' | 'bandlink' }) => {
+    const tracksCount = (playlist as any).tracks_count || ((playlist as any).multiple_tracks ? 2 : 1)
+    const hasMultipleTracks = tracksCount > 1
     const isVK = type === 'vk'
     const vkPlaylist = playlist as VKPlaylist
     const bandlinkPlaylist = playlist as BandlinkPlaylist
+    const platformName = isVK ? (vkPlaylist.platform || 'VK Музыка') : bandlinkPlaylist.platform
+    const badgeStyle = getPlatformBadgeStyle(platformName)
+    
+    // Получаем позицию трека в плейлисте (для отображения "X место")
+    const getTrackPosition = () => {
+      if (isVK) {
+        if (vkPlaylist.track_position != null && !isNaN(vkPlaylist.track_position)) {
+          return vkPlaylist.track_position;
+        }
+        if (vkPlaylist.tracks_info && vkPlaylist.tracks_info.length > 0) {
+          const positions = vkPlaylist.tracks_info
+            .map((t: any) => t.position)
+            .filter((p: number) => p != null && !isNaN(p) && isFinite(p));
+          if (positions.length > 0) {
+            return Math.min(...positions);
+          }
+        }
+      } else {
+        if (bandlinkPlaylist.track_position != null && !isNaN(bandlinkPlaylist.track_position)) {
+          return bandlinkPlaylist.track_position;
+        }
+        if (bandlinkPlaylist.tracks_info && bandlinkPlaylist.tracks_info.length > 0) {
+          const positions = bandlinkPlaylist.tracks_info
+            .map((t: any) => t.position)
+            .filter((p: number) => p != null && !isNaN(p) && isFinite(p));
+          if (positions.length > 0) {
+            return Math.min(...positions);
+          }
+        }
+      }
+      return null;
+    };
+    
+    const trackPosition = getTrackPosition();
+    
+    // Форматируем дату
+    const formatDate = (dateString: string | undefined) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch {
+        return dateString;
+      }
+    };
+    
+    const displayDate = isVK 
+      ? formatDate(vkPlaylist.added_at || vkPlaylist.parsed_at)
+      : formatDate(bandlinkPlaylist.added_at || bandlinkPlaylist.parsed_at)
 
     return (
       <Card className="group hover:shadow-lg transition-all duration-200">
@@ -517,7 +762,7 @@ export default function PlaylistsPage() {
               className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted block cursor-pointer"
             >
               <Image
-                src={isVK ? vkPlaylist.playlist_cover_url : bandlinkPlaylist.playlist_cover_url}
+                src={isVK ? (vkPlaylist.playlist_cover_url || "/placeholder.svg") : (bandlinkPlaylist.playlist_cover_url || "/placeholder.svg")}
                 alt={isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -548,33 +793,59 @@ export default function PlaylistsPage() {
               
               <Badge 
                 className="text-xs font-medium border-0"
-                style={{
-                  backgroundColor: isVK 
-                    ? "#0077FF" 
-                    : bandlinkPlaylist.platform === "Яндекс Музыка" 
-                      ? "#FFCC00" 
-                      : "#E30611",
-                  color: isVK 
-                    ? "#FFFFFF" 
-                    : bandlinkPlaylist.platform === "Яндекс Музыка" 
-                      ? "#000000" 
-                      : "#FFFFFF"
-                }}
+                style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.color }}
               >
-                {isVK ? "VK" : bandlinkPlaylist.platform}
+                {platformName}
               </Badge>
 
-              <p className="text-xs text-muted-foreground line-clamp-1 font-medium">
+              <div className="text-xs text-muted-foreground line-clamp-1 font-medium">
                 {isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name}
-              </p>
+                {trackPosition !== null && trackPosition !== undefined && !isNaN(trackPosition) && (
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {trackPosition} место
+                  </Badge>
+                )}
+              </div>
 
-              {/* Названия треков для Bandlink */}
-              {!isVK && bandlinkPlaylist.track_names && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Треки:</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {bandlinkPlaylist.track_names}
-                  </p>
+              {/* Названия релизов - только для этого артиста */}
+              {(() => {
+                const currentArtistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name;
+                const tracksInfo = isVK ? (vkPlaylist.tracks_info || []) : (bandlinkPlaylist.tracks_info || []);
+                
+                // Фильтруем релизы только для текущего артиста
+                const artistReleases = tracksInfo
+                  .filter((t: any) => {
+                    // Проверяем, что трек принадлежит текущему артисту
+                    // Извлекаем имя артиста из title или releaseName
+                    const trackTitle = t.title || t.releaseName || '';
+                    const trackArtistMatch = trackTitle.match(/^([^-]+?)\s*-\s*/);
+                    const trackArtist = trackArtistMatch ? trackArtistMatch[1].trim() : '';
+                    return !trackArtist || trackArtist.toLowerCase() === currentArtistName.toLowerCase();
+                  })
+                  .map((t: any) => t.releaseName || t.title)
+                  .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
+                
+                const releaseNames = isVK 
+                  ? (vkPlaylist.track_names || artistReleases.join(', '))
+                  : (bandlinkPlaylist.track_names || artistReleases.join(', '));
+                
+                if (releaseNames && releaseNames.trim()) {
+                  return (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Релизы:</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {releaseNames}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
+              {/* Дата */}
+              {displayDate && (
+                <div className="text-xs text-muted-foreground">
+                  {displayDate}
                 </div>
               )}
             </div>
@@ -615,7 +886,7 @@ export default function PlaylistsPage() {
             </TabsTrigger>
             <TabsTrigger value="parsing" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              Парсинг
+              Парсинг (резерв)
             </TabsTrigger>
           </TabsList>
 
@@ -665,7 +936,7 @@ export default function PlaylistsPage() {
                   </Select>
                   
                   <div className="text-sm text-muted-foreground ml-auto">
-                    Показано: {vkPlaylists.length + yandexPlaylists.length + mtsPlaylists.length} плейлистов
+                    Показано: {vkPlaylists.length + yandexPlaylists.length + mtsPlaylists.length + sberPlaylists.length + okPlaylists.length} плейлистов
                   </div>
                 </div>
             </CardContent>
@@ -760,12 +1031,72 @@ export default function PlaylistsPage() {
                   {mtsPlaylists.map((playlist) => (
                     <PlaylistCard key={`mts-${playlist.id}`} playlist={playlist} type="bandlink" />
                   ))}
-                          </div>
-                        </div>
+                </div>
+              </div>
+            )}
+
+            {/* Сбер Музыка */}
+            {sberPlaylists.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
+                  <div className="rounded-lg p-2">
+                    <img 
+                      src="/images/playlists/sber-music.png" 
+                      alt="Сбер Музыка" 
+                      className="w-7 h-7 object-contain"
+                    />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Сбер Музыка</h2>
+                  <Badge 
+                    className="border-0"
+                    style={{ backgroundColor: "#21A038", color: "#FFFFFF" }}
+                  >
+                    {sberPlaylists.length}
+                  </Badge>
+                </div>
+                <div 
+                  className="grid gap-3" 
+                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
+                >
+                  {sberPlaylists.map((playlist) => (
+                    <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" />
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Пустое состояние */}
-            {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && (
+            {/* Одноклассники */}
+            {okPlaylists.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
+                  <div className="rounded-lg p-2">
+                    <img 
+                      src="/placeholder.svg" 
+                      alt="Одноклассники" 
+                      className="w-7 h-7 object-contain"
+                    />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Одноклассники</h2>
+                  <Badge 
+                    className="border-0"
+                    style={{ backgroundColor: "#EE8208", color: "#FFFFFF" }}
+                  >
+                    {okPlaylists.length}
+                  </Badge>
+                </div>
+                <div 
+                  className="grid gap-3" 
+                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
+                >
+                  {okPlaylists.map((playlist) => (
+                    <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && sberPlaylists.length === 0 && okPlaylists.length === 0 && (
               <Card className="border-2 border-dashed border-border/50">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="bg-muted rounded-full p-6 mb-6">
@@ -795,11 +1126,13 @@ export default function PlaylistsPage() {
           </TabsContent>
 
           <TabsContent value="by-artists" className="space-y-6">
-            {/* Группировка плейлистов по артистам */}
+            {/* Группировка плейлистов по артистам. VK только из vkResults; Bandlink — всё кроме VK (чтобы не дублировать). */}
             {getUniqueArtists().map(artistName => {
               const artist = artists.find(a => a.name === artistName)
               const artistVKPlaylists = vkResults.filter(p => p.artist_name === artistName)
-              const artistBandlinkPlaylists = bandlinkResults.filter(p => p.artist_name === artistName)
+              const artistBandlinkPlaylists = bandlinkResults.filter(
+                p => p.artist_name === artistName && p.platform !== 'VK Музыка'
+              )
               const totalPlaylists = artistVKPlaylists.length + artistBandlinkPlaylists.length
 
               if (totalPlaylists === 0) return null
@@ -831,6 +1164,16 @@ export default function PlaylistsPage() {
                       {artistBandlinkPlaylists.filter(p => p.platform === 'МТС Музыка').length > 0 && (
                         <Badge style={{ backgroundColor: "#E30611", color: "#FFFFFF" }}>
                           МТС: {artistBandlinkPlaylists.filter(p => p.platform === 'МТС Музыка').length}
+                        </Badge>
+                      )}
+                      {artistBandlinkPlaylists.filter(p => p.platform === 'Сбер Музыка').length > 0 && (
+                        <Badge style={{ backgroundColor: "#21A038", color: "#FFFFFF" }}>
+                          Сбер: {artistBandlinkPlaylists.filter(p => p.platform === 'Сбер Музыка').length}
+                        </Badge>
+                      )}
+                      {artistBandlinkPlaylists.filter(p => p.platform === 'Одноклассники').length > 0 && (
+                        <Badge style={{ backgroundColor: "#EE8208", color: "#FFFFFF" }}>
+                          ОК: {artistBandlinkPlaylists.filter(p => p.platform === 'Одноклассники').length}
                         </Badge>
                       )}
                     </div>
@@ -880,6 +1223,52 @@ export default function PlaylistsPage() {
           </TabsContent>
 
           <TabsContent value="parsing" className="space-y-6">
+            {/* Информация о SFTP синхронизации */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5" />
+                  Синхронизация SFTP
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    По умолчанию плейлисты синхронизируются с SFTP сервером автоматически в 16:00 и 00:30 ежедневно.
+                    Система подключается к SFTP серверу, скачивает CSV файлы и парсит их автоматически.
+                  </AlertDescription>
+                </Alert>
+                <Button 
+                  onClick={runManualParser}
+                  disabled={isSftpSyncing}
+                  className="w-full"
+                >
+                  {isSftpSyncing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Синхронизация...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Запустить синхронизацию SFTP
+                    </>
+                  )}
+                </Button>
+                
+                {/* Вывод парсинга */}
+                {parsingOutput && (
+                  <div className="mt-4 p-4 bg-muted rounded-lg border">
+                    <div className="text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
+                      {parsingOutput}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Существующий контент парсинга */}
             {/* Панель управления парсингом */}
             <Card>
               <CardContent className="p-6">

@@ -69,22 +69,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
     notFound()
   }
 
-  // Status badge colors
-  const statusColors = {
-    released: "bg-category-green text-black",
-    moderation: "bg-category-amber text-black",
-    delivery: "bg-category-blue text-black",
-    scheduled: "bg-category-purple text-white",
-  }
-
-  // Status translations
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
-  }
-
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
       <div className="space-y-6">
@@ -104,9 +88,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
             <Card className="bg-card border-border text-card-foreground overflow-hidden rounded-xl">
               <div className="aspect-square relative">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
-                <Badge className={`absolute top-2 right-2 rounded-xl ${statusColors[release.status]}`}>
-                  {statusLabels[release.status]}
-                </Badge>
               </div>
               <CardContent className="p-4">
                 <h1 className="text-xl font-bold mb-2">{release.title}</h1>

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Секрет для авторизации cron запросов
-const CRON_SECRET = process.env.CRON_SECRET || 'zvonko-parser-secret-2024';
+// Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
+const CRON_SECRET = process.env.CRON_SECRET;
+
+if (!CRON_SECRET) {
+  console.warn('⚠️ CRON_SECRET не установлен! Cron endpoints будут недоступны.');
+}
 
 /**
  * GET /api/cron/zvonko
@@ -19,8 +23,8 @@ export async function GET(request: NextRequest) {
     // Проверяем секрет (через заголовок или query параметр)
     const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
     
-    if (providedSecret !== CRON_SECRET) {
-      console.log('❌ Cron Zvonko: Неверный секрет авторизации');
+    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+      console.log('❌ Cron Zvonko: Неверный секрет авторизации или CRON_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized' 

@@ -1,5 +1,35 @@
 [
   {
+    "title": "Japanese Drift",
+    "artist": "FXTHER",
+    "cover": "https://media.zvonkodigital.ru/api/cover/100/35323195/",
+    "upc": "3617386432447",
+    "label": "ROSSEL 66",
+    "date": "2026-01-21",
+    "territories": "Все страны",
+    "platforms": "50",
+    "genre": "Phonk/Fonk",
+    "status": "Доставлен",
+    "source_page": "releases",
+    "page": 1,
+    "position_on_page": 1
+  },
+  {
+    "title": "Тебя встречает",
+    "artist": "Neea",
+    "cover": "https://media.zvonkodigital.ru/api/cover/100/35321128/",
+    "upc": "5016122235881",
+    "label": "ROSSEL 66",
+    "date": "2026-01-21",
+    "territories": "Все страны",
+    "platforms": "50",
+    "genre": "Rock",
+    "status": "Доставлен",
+    "source_page": "releases",
+    "page": 1,
+    "position_on_page": 2
+  },
+  {
     "title": "GOLD TIME",
     "artist": "ripznxx",
     "cover": "https://media.zvonkodigital.ru/api/cover/100/34919747/",
@@ -12,7 +42,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 1
+    "position_on_page": 3
   },
   {
     "title": "BANDO",
@@ -27,7 +57,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 2
+    "position_on_page": 4
   },
   {
     "title": "Как тебе идея?",
@@ -41,7 +71,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 3
+    "position_on_page": 5
   },
   {
     "title": "Стало холодно",
@@ -55,7 +85,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 4
+    "position_on_page": 6
   },
   {
     "title": "War",
@@ -70,7 +100,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 5
+    "position_on_page": 7
   },
   {
     "title": "BORN TO SWAGGIN",
@@ -85,7 +115,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 6
+    "position_on_page": 8
   },
   {
     "title": "I WILL BECOME YOU",
@@ -100,7 +130,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 7
+    "position_on_page": 9
   },
   {
     "title": "Электро 2.0",
@@ -114,7 +144,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 8
+    "position_on_page": 10
   },
   {
     "title": "Глубина",
@@ -129,7 +159,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 9
+    "position_on_page": 11
   },
   {
     "title": "HATRED",
@@ -144,7 +174,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 10
+    "position_on_page": 12
   },
   {
     "title": "Fxk New Yer",
@@ -159,7 +189,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 11
+    "position_on_page": 13
   },
   {
     "title": "Fame T Tells",
@@ -174,7 +204,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 12
+    "position_on_page": 14
   },
   {
     "title": "реплика",
@@ -189,7 +219,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 13
+    "position_on_page": 15
   },
   {
     "title": "XX.XX.XX",
@@ -204,7 +234,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 14
+    "position_on_page": 16
   },
   {
     "title": "Взрослая игра",
@@ -219,7 +249,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 15
+    "position_on_page": 17
   },
   {
     "title": "FERVENT KID",
@@ -234,7 +264,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 16
+    "position_on_page": 18
   },
   {
     "title": "In the Dark",
@@ -249,7 +279,7 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 17
+    "position_on_page": 19
   },
   {
     "title": "Dissonance",
@@ -264,36 +294,25 @@
     "status": "Доставлен",
     "source_page": "releases",
     "page": 1,
-    "position_on_page": 18
-  },
-  {
-    "title": "LEGASX",
-    "artist": "TXYK",
-    "cover": "https://media.zvonkodigital.ru/api/cover/100/33854060/",
-    "upc": "5016122263150",
-    "label": "ROSSEL 66",
-    "date": "2025-11-01",
-    "territories": "Все страны",
-    "platforms": "50",
-    "genre": "Phonk/Fonk",
-    "status": "Доставлен",
-    "source_page": "releases",
-    "page": 1,
-    "position_on_page": 19
-  },
-  {
-    "title": "WWW",
-    "artist": "stemstyl, Tulapse",
-    "cover": "https://media.zvonkodigital.ru/api/cover/100/33852321/",
-    "upc": "5016122275566",
-    "label": "ROSSEL 66",
-    "date": "2025-11-01",
-    "territories": "Все страны",
-    "platforms": "50",
-    "genre": "Hip Hop/Rap",
-    "status": "Доставлен",
-    "source_page": "releases",
-    "page": 1,
     "position_on_page": 20
+  },
+  {
+    "status": "Модерация",
+    "source_page": "moderating",
+    "page": 1,
+    "position_on_page": 1
+  },
+  {
+    "title": "С новым годом",
+    "artist": "ripznxx",
+    "cover": "blob:https://account.zvonkodigital.com/2b8226ab-9810-4168-845e-2ba9e1ea9e3b",
+    "label": "ROSSEL 66",
+    "date": "2025-12-26",
+    "platforms": "53",
+    "genre": "Hip Hop/Rap",
+    "status": "Отклонен",
+    "source_page": "editing",
+    "page": 1,
+    "position_on_page": 1
   }
 ]

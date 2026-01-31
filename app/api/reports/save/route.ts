@@ -30,10 +30,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Нет файлов для сохранения" }, { status: 400 })
     }
 
+    // Функция для санитизации имени файла (защита от path traversal)
+    const sanitizeFileName = (name: string): string => {
+      // Убираем путь и оставляем только имя файла
+      const baseName = name.split(/[/\\]/).pop() || name
+      // Убираем опасные символы и последовательности
+      return baseName
+        .replace(/\.\./g, '') // Убираем ..
+        .replace(/[<>:"|?*]/g, '') // Убираем недопустимые символы Windows
+        .replace(/^\.+/, '') // Убираем точки в начале
+        .trim()
+    }
+
     // Сохраняем каждый файл
     const savedFiles = []
     for (const file of files) {
-      const fileName = file.name
+      const fileName = sanitizeFileName(file.name)
+      if (!fileName) {
+        console.warn('Пропущен файл с недопустимым именем:', file.name)
+        continue
+      }
       const filePath = path.join(quarterDir, fileName)
 
       // Преобразуем File в Buffer и сохраняем

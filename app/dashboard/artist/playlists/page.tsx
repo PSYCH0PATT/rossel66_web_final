@@ -146,7 +146,7 @@ export default function ArtistPlaylistsPage() {
               className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted block cursor-pointer"
             >
               <Image
-                src={isVK ? vkPlaylist.playlist_cover_url : bandlinkPlaylist.playlist_cover_url}
+                src={isVK ? (vkPlaylist.playlist_cover_url || "/placeholder.svg") : (bandlinkPlaylist.playlist_cover_url || "/placeholder.svg")}
                 alt={isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"

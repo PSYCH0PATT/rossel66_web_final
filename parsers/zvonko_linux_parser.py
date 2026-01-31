@@ -222,15 +222,134 @@ class ZvonkoLinuxParser:
                 if artist_elements:
                     found_data['artist'] = artist_elements[0].text.strip()
                 
-                # Ищем обложку
-                img_elements = release_element.find_elements(By.CSS_SELECTOR, "img.chakra-image.css-1phd9a0")
+                # Ранний выход для пустого контейнера (баг Zvonko когда 0 релизов на editing)
+                # Пропускаем до поиска обложки/даты, чтобы не тратить 1–2 минуты на пустой элемент
+                if not found_data.get('title') and not found_data.get('artist'):
+                    logger.warning(f"⚠️ Пропущен пустой контейнер релиза #{release_num} (нет title и artist)")
+                    return None
+                
+                # Ищем обложку - пробуем несколько селекторов
+                img_elements = None
+                img_selectors = [
+                    "img.chakra-image.css-1phd9a0",  # Основной селектор
+                    "img.chakra-image",  # Без конкретного класса
+                    "img[class*='chakra-image']",  # Частичное совпадение класса
+                    "img",  # Любое изображение
+                ]
+                
+                for selector in img_selectors:
+                    try:
+                        img_elements = release_element.find_elements(By.CSS_SELECTOR, selector)
+                        if img_elements:
+                            logger.debug(f"✅ Найдено изображений с селектором '{selector}': {len(img_elements)}")
+                            break
+                    except:
+                        continue
+                
                 if img_elements:
-                    img_src = img_elements[0].get_attribute('src')
-                    if img_src:
-                        found_data['cover'] = img_src
+                    # Пробуем найти изображение с валидным src
+                    for img_elem in img_elements:
+                        try:
+                            img_src = img_elem.get_attribute('src')
+                            if img_src and img_src.strip():
+                                # КОНВЕРТИРУЕМ blob URL в data URL (ИДЕНТИЧНО КОАЛЕ)
+                                if img_src.startswith('blob:'):
+                                    logger.info(f"🔄 Найден blob URL, конвертируем в data URL: {img_src[:50]}...")
+                                    try:
+                                        # ИДЕНТИЧНО КОАЛЕ: Конвертируем blob из img
+                                        data_url = self.driver.execute_script("""
+                                            var img = arguments[0];
+                                            try {
+                                                var canvas = document.createElement('canvas');
+                                                var ctx = canvas.getContext('2d');
+                                                canvas.width = img.naturalWidth;
+                                                canvas.height = img.naturalHeight;
+                                                ctx.drawImage(img, 0, 0);
+                                                return {
+                                                    success: true,
+                                                    dataURL: canvas.toDataURL('image/jpeg', 0.8),
+                                                    width: img.naturalWidth,
+                                                    height: img.naturalHeight
+                                                };
+                                            } catch(e) {
+                                                return {
+                                                    success: false,
+                                                    error: e.toString()
+                                                };
+                                            }
+                                        """, img_elem)
+                                        
+                                        if data_url and data_url.get('success'):
+                                            found_data['cover'] = data_url['dataURL']
+                                            logger.info(f"✅ Blob URL конвертирован в data URL: {data_url['width']}x{data_url['height']}")
+                                            break
+                                        else:
+                                            logger.warning(f"⚠️ Ошибка конвертации blob URL: {data_url.get('error', 'Unknown error') if data_url else 'No result'}")
+                                    except Exception as e:
+                                        logger.warning(f"⚠️ Ошибка при конвертации blob URL: {e}")
+                                    continue
+                                
+                                # Игнорируем SVG placeholder'ы
+                                if img_src.startswith('data:image/svg'):
+                                    continue
+                                
+                                # Проверяем, что это валидный URL (http/https или относительный путь)
+                                if 'http' in img_src or img_src.startswith('//') or img_src.startswith('/'):
+                                    found_data['cover'] = img_src
+                                    logger.debug(f"✅ Обложка найдена: {img_src[:50]}...")
+                                    break
+                        except:
+                            continue
+                
+                if not found_data.get('cover'):
+                    logger.warning(f"⚠️ Обложка не найдена для релиза #{release_num}")
                 
                 # Ищем текстовые элементы для других данных
                 text_elements = release_element.find_elements(By.XPATH, ".//*[text()]")
+                
+                # ВАЖНО: Сначала ищем дату релиза по метке "Дата релиза" или "Дата старта"
+                # Это правильная дата, а не дата создания!
+                try:
+                    # Ищем элемент с текстом "Дата релиза" или "Дата старта"
+                    date_labels = ['Дата релиза', 'Дата старта', 'Release Date', 'Start Date']
+                    for label in date_labels:
+                        try:
+                            label_elem = release_element.find_element(By.XPATH, f".//*[contains(text(), '{label}')]")
+                            # Ищем следующий элемент со значением даты
+                            # Может быть в следующем sibling или в следующем элементе
+                            parent = label_elem.find_element(By.XPATH, "./..")
+                            following_elems = parent.find_elements(By.XPATH, ".//*[text()]")
+                            
+                            for follow_elem in following_elems:
+                                follow_text = follow_elem.text.strip()
+                                if re.match(r'^\d{4}-\d{2}-\d{2}$', follow_text):
+                                    found_data['date'] = follow_text
+                                    logger.info(f"✅ Найдена дата релиза: {follow_text} (из метки '{label}')")
+                                    break
+                            
+                            if found_data.get('date'):
+                                break
+                        except:
+                            continue
+                except:
+                    pass
+                
+                # Если дата релиза не найдена по метке, ищем любую дату как fallback
+                if not found_data.get('date'):
+                    for elem in text_elements:
+                        try:
+                            elem_text = elem.text.strip()
+                            if not elem_text or len(elem_text) < 2:
+                                continue
+                            
+                            # Ищем даты (только если еще не нашли дату релиза)
+                            if re.match(r'^\d{4}-\d{2}-\d{2}$', elem_text):
+                                found_data['date'] = elem_text
+                                logger.warning(f"⚠️ Использована дата без метки (может быть дата создания): {elem_text}")
+                                break
+                        except:
+                            continue
+                
                 for elem in text_elements:
                     try:
                         elem_text = elem.text.strip()
@@ -241,11 +360,6 @@ class ZvonkoLinuxParser:
                         if re.match(r'^\d{12,14}$', elem_text):
                             if not found_data.get('upc'):
                                 found_data['upc'] = elem_text
-                        
-                        # Ищем даты
-                        elif re.match(r'^\d{4}-\d{2}-\d{2}$', elem_text):
-                            if not found_data.get('date'):
-                                found_data['date'] = elem_text
                         
                         # Ищем лейбл
                         elif 'ROSSEL' in elem_text:
@@ -399,7 +513,10 @@ class ZvonkoLinuxParser:
             logger.info(f"✅ Парсинг завершен! Всего обработано {len(all_releases)} релизов с {current_page-1} страниц")
             
             # Сохраняем результаты
-            with open('zvonko_all_releases_full.json', 'w', encoding='utf-8') as f:
+            # Используем абсолютный путь, чтобы файл сохранялся в правильной директории
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            output_file = os.path.join(script_dir, 'zvonko_all_releases_full.json')
+            with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(all_releases, f, ensure_ascii=False, indent=2)
             
             self.results = all_releases
@@ -428,24 +545,37 @@ class ZvonkoLinuxParser:
                 if status in full_text:
                     return status
             
-            return 'Неизвестен'
+            return 'Доставлен'  # По умолчанию "Доставлен", если статус не найден
             
         except Exception as e:
             logger.error(f"❌ Ошибка извлечения статуса: {e}")
-            return 'Неизвестен'
+            return 'Доставлен'  # По умолчанию "Доставлен"
     
     def parse_moderating_page(self):
         """Парсит страницу модерации - ИДЕНТИЧНО основной странице"""
         logger.info("🔍 Парсинг страницы модерации...")
         try:
             self.driver.get(self.moderating_url)
-            time.sleep(3)
+            time.sleep(6)  # Увеличенный таймаут в 2 раза
+            
+            # Ждем загрузки основных селекторов
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.css-1xgpa60, div.chakra-stack.css-muke40"))
+                )
+                logger.info("✅ Элементы загрузились")
+            except:
+                logger.warning("⚠️ Элементы не загрузились за 10 секунд")
             
             # ИСПОЛЬЗУЕМ ТОЧНО ТАКУЮ ЖЕ ЛОГИКУ КАК parse_current_page
             # Прокрутка для загрузки всех элементов
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+            time.sleep(4)  # Увеличенный таймаут в 2 раза
             self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(4)  # Увеличенный таймаут в 2 раза
+            
+            # Дополнительная прокрутка вниз перед парсингом
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
             
             # Ищем контейнеры релизов - ТОЧНО КАК НА ОСНОВНОЙ СТРАНИЦЕ
@@ -679,12 +809,39 @@ class ZvonkoLinuxParser:
             # Обновляем результаты парсера
             self.results = all_results
             
+            # ВАЖНО: Сохраняем объединенные результаты в файл для сравнения
+            # Это гарантирует, что все релизы (включая с модерации и редактирования) попадут в файл
+            # Используем абсолютный путь, чтобы файл сохранялся в правильной директории
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            output_file = os.path.join(script_dir, 'zvonko_all_releases_full.json')
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(all_results, f, ensure_ascii=False, indent=2)
+            
+            # Проверяем, что файл сохранен правильно
+            try:
+                with open(output_file, 'r', encoding='utf-8') as f:
+                    saved_data = json.load(f)
+                logger.info(f"✅ Файл {output_file} сохранен: {len(saved_data)} релизов")
+                
+                # Проверяем статусы в сохраненном файле
+                statuses_count = {}
+                for r in saved_data:
+                    status = r.get('status', 'Неизвестен')
+                    statuses_count[status] = statuses_count.get(status, 0) + 1
+                
+                logger.info(f"📊 Статусы в сохраненном файле:")
+                for status, count in statuses_count.items():
+                    logger.info(f"   - {status}: {count}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка проверки сохраненного файла: {e}")
+            
             logger.info(f"✅ Полный парсинг завершен!")
             logger.info(f"   - Основные релизы: {len(releases_page)}")
             logger.info(f"   - На модерации: {len(moderating_page)}")
             logger.info(f"   - Отклоненные: {len(editing_page)}")
             logger.info(f"   - Обновлено статусов: {len(updated_releases)}")
             logger.info(f"   - Всего: {len(all_results)}")
+            logger.info(f"📄 Все результаты сохранены в {output_file}")
             
             return True
             

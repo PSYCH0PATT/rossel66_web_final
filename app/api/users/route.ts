@@ -10,7 +10,7 @@ export async function GET() {
       users: users.map(user => ({
         id: user.id,
         username: user.username,
-        password: user.password, // Включаем пароль для аутентификации
+        // password НЕ возвращаем - используйте /api/auth/login для аутентификации
         name: user.name,
         email: user.email,
         role: user.role,

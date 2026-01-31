@@ -127,21 +127,6 @@ export default function ReleasesPage({ params }: { params: { username: string } 
     )
   }
 
-  // Цвета статусов (как у админа)
-  const statusColors = {
-    released: "bg-green-500 hover:bg-green-600 text-white",
-    moderation: "bg-orange-500 hover:bg-orange-600 text-white",
-    delivery: "bg-blue-500 hover:bg-blue-600 text-white",
-    scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
-  }
-
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
-  }
-
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
       <div className="space-y-6">
@@ -169,7 +154,6 @@ export default function ReleasesPage({ params }: { params: { username: string } 
                   <TableHead className="text-slate-300">UPC</TableHead>
                   <TableHead className="text-slate-300">Дата релиза</TableHead>
                   <TableHead className="text-slate-300">Треков</TableHead>
-                  <TableHead className="text-slate-300">Статус</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -198,9 +182,6 @@ export default function ReleasesPage({ params }: { params: { username: string } 
                         <Music className="h-4 w-4 text-green-400" />
                         {release.tracks.length}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[release.status]}>{statusLabels[release.status]}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}

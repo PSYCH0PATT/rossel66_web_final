@@ -46,20 +46,40 @@ export default function ReleaseDetailPage({ params }: { params: { id: string } }
     notFound()
   }
 
-  // Status badge colors
-  const statusColors = {
-    released: "bg-category-green text-black",
-    moderation: "bg-category-amber text-black",
-    delivery: "bg-category-blue text-black",
-    scheduled: "bg-category-purple text-white",
+  // Status badge colors - соответствуют админской панели
+  const statusColors: Record<string, string> = {
+    // Стандартные статусы
+    "Модерируется": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Отклонен": "bg-red-500 hover:bg-red-600 text-white",
+    "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
+    "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
+    // Legacy статусы для обратной совместимости
+    "На модерации": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Одобрен": "bg-blue-500 hover:bg-blue-600 text-white",
+    "Отклонён": "bg-red-500 hover:bg-red-600 text-white",
+    "Снят": "bg-gray-500 hover:bg-gray-600 text-white",
+    released: "bg-green-500 hover:bg-green-600 text-white",
+    moderation: "bg-orange-500 hover:bg-orange-600 text-white",
+    delivery: "bg-blue-500 hover:bg-blue-600 text-white",
+    scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
   }
 
-  // Status translations
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
+  // Status translations - соответствуют админской панели
+  const statusLabels: Record<string, string> = {
+    // Стандартные статусы
+    "Модерируется": "Модерируется",
+    "Отклонен": "Отклонен",
+    "В доставке": "В доставке",
+    "Доставлен": "Доставлен",
+    // Legacy статусы для обратной совместимости
+    "На модерации": "Модерируется",
+    "Одобрен": "Доставлен",
+    "Отклонён": "Отклонен",
+    "Снят": "Отклонен",
+    released: "Доставлен",
+    moderation: "Модерируется",
+    delivery: "В доставке",
+    scheduled: "Модерируется",
   }
 
   return (
@@ -81,8 +101,8 @@ export default function ReleaseDetailPage({ params }: { params: { id: string } }
             <Card className="bg-card border-border text-card-foreground overflow-hidden rounded-xl">
               <div className="aspect-square relative">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
-                <Badge className={`absolute top-2 right-2 rounded-xl ${statusColors[release.status]}`}>
-                  {statusLabels[release.status]}
+                <Badge className={`absolute top-2 right-2 rounded-xl ${statusColors[release.status || 'Доставлен'] || 'bg-gray-500 hover:bg-gray-600 text-white'}`}>
+                  {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
                 </Badge>
               </div>
               <CardContent className="p-4">

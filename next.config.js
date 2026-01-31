@@ -48,6 +48,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'avatars.yandex.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'example.com',
+      },
     ],
   },
 };

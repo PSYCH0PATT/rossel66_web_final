@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import bcrypt from 'bcryptjs'
 
 export interface User {
   id: string
@@ -175,8 +176,16 @@ export function saveReleases(releases: Release[]): void {
 
 export function addUser(user: Omit<User, 'id' | 'createdAt'>): User {
   const users = loadUsers()
+  
+  // Хешируем пароль если он ещё не захеширован
+  let hashedPassword = user.password
+  if (user.password && !user.password.startsWith('$2')) {
+    hashedPassword = bcrypt.hashSync(user.password, 10)
+  }
+  
   const newUser: User = {
     ...user,
+    password: hashedPassword,
     id: Date.now().toString(),
     createdAt: new Date().toISOString()
   }
@@ -189,6 +198,11 @@ export function updateUser(id: string, updates: Partial<User>): User | null {
   const users = loadUsers()
   const index = users.findIndex(user => user.id === id)
   if (index === -1) return null
+  
+  // Хешируем пароль если он обновляется и ещё не захеширован
+  if (updates.password && !updates.password.startsWith('$2')) {
+    updates.password = bcrypt.hashSync(updates.password, 10)
+  }
   
   users[index] = { ...users[index], ...updates }
   saveUsers(users)

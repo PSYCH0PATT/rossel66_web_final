@@ -43,6 +43,29 @@ def load_system_users():
         logger.error(f"Ошибка загрузки пользователей: {e}")
         return []
 
+def normalize_status(status):
+    """Нормализует статус релиза"""
+    if not status:
+        return 'Доставлен'
+    
+    status_lower = status.lower().strip()
+    
+    status_map = {
+        'новый': 'Доставлен',
+        'неизвестен': 'Доставлен',  # "Неизвестен" → "Доставлен"
+        'на модерации': 'Модерируется',
+        'модерируется': 'Модерируется',
+        'модерация': 'Модерируется',  # "Модерация" → "Модерируется"
+        'одобрен': 'Доставлен',
+        'отклонён': 'Отклонен',
+        'отклонен': 'Отклонен',  # "Отклонен" остается "Отклонен"
+        'в доставке': 'В доставке',
+        'доставлен': 'Доставлен',
+        'снят': 'Отклонен',
+    }
+    
+    return status_map.get(status_lower, 'Доставлен')
+
 def create_release_from_zvonko(zvonko_release, users):
     """Создает релиз в формате системы из данных Zvonko"""
     
@@ -102,7 +125,7 @@ def create_release_from_zvonko(zvonko_release, users):
         "coverUrl": zvonko_release.get('cover', ''),
         "upc": zvonko_release.get('upc', ''),
         "releaseDate": zvonko_release.get('date', ''),
-        "status": "Доставлен",  # Статус для новых релизов - всегда "Доставлен"
+        "status": normalize_status(zvonko_release.get('status', 'Доставлен')),  # Нормализуем статус из парсера
         "genre": zvonko_release.get('genre', ''),
         "label": zvonko_release.get('label', ''),
         "territories": zvonko_release.get('territories', ''),
@@ -148,7 +171,113 @@ def add_new_releases():
         return False
     
     new_releases_data = comparison_results.get('new_releases', [])
+    existing_by_upc = comparison_results.get('existing_by_upc', [])
+    existing_by_title = comparison_results.get('existing_by_title', [])
+    
     logger.info(f"📊 Найдено {len(new_releases_data)} новых релизов для добавления")
+    logger.info(f"🔄 Найдено {len(existing_by_upc)} существующих релизов (по UPC) для обновления")
+    logger.info(f"🔄 Найдено {len(existing_by_title)} существующих релизов (по названию) для обновления")
+    
+    # Обновляем существующие релизы - ВСЕ поля, которые могут измениться
+    updated_count = 0
+    for item in existing_by_upc + existing_by_title:
+        try:
+            zvonko_release = item['zvonko']
+            system_release = item['system']
+            
+            # Находим релиз в системе
+            release_index = None
+            for i, r in enumerate(system_releases):
+                if r.get('id') == system_release.get('id'):
+                    release_index = i
+                    break
+            
+            if release_index is not None:
+                has_changes = False
+                release = system_releases[release_index]
+                
+                # Нормализуем статус из парсера
+                zvonko_status = zvonko_release.get('status', '')
+                normalized_status = normalize_status(zvonko_status)
+                
+                # Обновляем статус, если он изменился
+                old_status = release.get('status', '')
+                if old_status != normalized_status:
+                    release['status'] = normalized_status
+                    has_changes = True
+                    logger.info(f"🔄 Обновлен статус: '{old_status}' → '{normalized_status}'")
+                
+                # Обновляем дату релиза, если она изменилась
+                new_date = zvonko_release.get('date', '')
+                old_date = release.get('releaseDate', '')
+                if new_date and new_date != old_date:
+                    release['releaseDate'] = new_date
+                    has_changes = True
+                    logger.info(f"🔄 Обновлена дата релиза: '{old_date}' → '{new_date}'")
+                
+                # Обновляем обложку, если она изменилась
+                new_cover = zvonko_release.get('cover', '')
+                old_cover = release.get('coverUrl', '')
+                if new_cover and new_cover != old_cover:
+                    release['coverUrl'] = new_cover
+                    has_changes = True
+                    logger.info(f"🔄 Обновлена обложка")
+                
+                # Обновляем artistName, если он изменился
+                new_artist = zvonko_release.get('artist', '')
+                old_artist = release.get('artistName', '')
+                if new_artist and new_artist != old_artist:
+                    release['artistName'] = new_artist
+                    has_changes = True
+                    logger.info(f"🔄 Обновлен артист: '{old_artist}' → '{new_artist}'")
+                
+                # Обновляем UPC, если он изменился
+                new_upc = zvonko_release.get('upc', '')
+                old_upc = release.get('upc', '')
+                if new_upc and new_upc != old_upc:
+                    release['upc'] = new_upc
+                    has_changes = True
+                    logger.info(f"🔄 Обновлен UPC: '{old_upc}' → '{new_upc}'")
+                
+                # Обновляем жанр, если он изменился
+                new_genre = zvonko_release.get('genre', '')
+                old_genre = release.get('genre', '')
+                if new_genre and new_genre != old_genre:
+                    release['genre'] = new_genre
+                    has_changes = True
+                    logger.info(f"🔄 Обновлен жанр: '{old_genre}' → '{new_genre}'")
+                
+                # Обновляем platforms, если изменились
+                new_platforms = zvonko_release.get('platforms', '')
+                old_platforms = release.get('platforms', '')
+                if new_platforms and new_platforms != old_platforms:
+                    release['platforms'] = new_platforms
+                    has_changes = True
+                    logger.info(f"🔄 Обновлены площадки: '{old_platforms}' → '{new_platforms}'")
+                
+                # Обновляем zvonko_data
+                if 'zvonko_data' not in release:
+                    release['zvonko_data'] = {}
+                
+                release['zvonko_data'].update({
+                    'page': zvonko_release.get('page'),
+                    'position_on_page': zvonko_release.get('position_on_page'),
+                    'artist': zvonko_release.get('artist'),
+                    'label': zvonko_release.get('label'),
+                    'territories': zvonko_release.get('territories'),
+                    'platforms': zvonko_release.get('platforms'),
+                    'genre': zvonko_release.get('genre')
+                })
+                
+                # Если были изменения, обновляем updatedAt
+                if has_changes:
+                    release['updatedAt'] = datetime.now().isoformat() + "Z"
+                    updated_count += 1
+                    logger.info(f"✅ Обновлен релиз '{release.get('title', 'N/A')}'")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при обновлении релиза: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     # Создаем новые релизы
     added_releases = []
@@ -172,8 +301,8 @@ def add_new_releases():
             logger.error(f"❌ Ошибка при добавлении релиза {zvonko_release.get('title', 'N/A')}: {e}")
             failed_releases.append(zvonko_release)
     
-    # Обновляем файл релизов
-    if added_releases:
+    # Обновляем файл релизов (если есть новые релизы или обновления статусов)
+    if added_releases or updated_count > 0:
         updated_releases = system_releases + added_releases
         
         # Создаем бэкап
@@ -186,7 +315,7 @@ def add_new_releases():
         with open('/Users/macbook/proga/rossel-music/data/releases.json', 'w', encoding='utf-8') as f:
             json.dump(updated_releases, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"✅ Обновлен файл releases.json. Добавлено {len(added_releases)} релизов")
+        logger.info(f"✅ Обновлен файл releases.json. Добавлено {len(added_releases)} релизов, обновлено статусов: {updated_count}")
     
     # Сохраняем отчет
     report = {
@@ -194,6 +323,7 @@ def add_new_releases():
         'summary': {
             'total_new': len(new_releases_data),
             'added': len(added_releases),
+            'updated': updated_count,
             'failed': len(failed_releases)
         },
         'added_releases': [{'id': r['id'], 'title': r['title'], 'artist': r['zvonko_data']['artist']} for r in added_releases],
@@ -206,12 +336,13 @@ def add_new_releases():
     logger.info("📄 Отчет сохранен в add_releases_report.json")
     
     # Выводим результаты
-    logger.info(f"\n📊 Результаты добавления:")
+    logger.info(f"\n📊 Результаты обработки:")
     logger.info(f"  ✅ Успешно добавлено: {len(added_releases)}")
+    logger.info(f"  🔄 Обновлено статусов: {updated_count}")
     logger.info(f"  ❌ Не удалось добавить: {len(failed_releases)}")
     logger.info(f"  📄 Всего релизов в системе: {len(system_releases) + len(added_releases)}")
     
-    return len(added_releases) > 0
+    return len(added_releases) > 0 or updated_count > 0
 
 if __name__ == "__main__":
     success = add_new_releases()

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest as NextRequestType } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -358,8 +359,74 @@ async function readBandlinkResults() {
   }
 }
 
-export async function GET() {
+export async function GET(request?: NextRequestType) {
   try {
+    // Проверяем, использовать ли SFTP данные (по умолчанию)
+    const useSftpSync = process.env.USE_SFTP_SYNC !== 'false';
+    
+    if (useSftpSync) {
+      // Используем данные из SFTP
+      try {
+        const sftpResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/playlists/sftp`
+        );
+        const sftpData = await sftpResponse.json();
+        
+        // Преобразуем в формат Bandlink
+        const formattedResults = (sftpData.results || []).map((p: any) => {
+          // Формируем список названий релизов
+          let trackNames = '';
+          if (p.multiple_tracks && p.tracks_info && p.tracks_info.length > 0) {
+            const releaseNames = p.tracks_info
+              .map((t: any) => t.releaseName || t.title)
+              .filter((name: string, index: number, arr: string[]) => arr.indexOf(name) === index)
+              .join(', ');
+            trackNames = releaseNames || `${p.tracks_count} треков`;
+          } else if (p.release_names && p.release_names.length > 0) {
+            trackNames = p.release_names.join(', ');
+          } else if (p.multiple_tracks) {
+            trackNames = `${p.tracks_count} треков`;
+          }
+          
+          // Получаем позицию трека
+          let trackPosition = p.track_position;
+          if (!trackPosition && p.tracks_info && p.tracks_info.length > 0) {
+            const positions = p.tracks_info.map((t: any) => t.position).filter((pos: number) => pos != null && !isNaN(pos));
+            if (positions.length > 0) {
+              trackPosition = Math.min(...positions);
+            }
+          }
+          
+          return {
+            id: p.id,
+            artist_name: p.artist_name,
+            playlist_name: p.playlist_name,
+            playlist_url: p.playlist_url,
+            platform: p.platform,
+            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            parsed_at: p.parsed_at,
+            added_at: p.added_at,
+            tracks_count: p.tracks_count,
+            multiple_tracks: p.multiple_tracks || false,
+            track_names: trackNames,
+            release_names: p.release_names || [],
+            track_position: trackPosition,
+            tracks_info: p.tracks_info || []
+          };
+        });
+        
+        return NextResponse.json({
+          success: true,
+          results: formattedResults,
+          source: 'sftp'
+        });
+      } catch (error) {
+        console.error('Ошибка получения данных из SFTP, используем парсинг:', error);
+        // Fallback на парсинг при ошибке
+      }
+    }
+    
+    // Используем данные из парсинга
     const results = await readBandlinkResults();
     return NextResponse.json({ success: true, results });
   } catch (error) {

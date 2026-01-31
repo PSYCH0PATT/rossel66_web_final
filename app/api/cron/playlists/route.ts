@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadReleases, loadUsers, addActivity } from '@/lib/storage';
 
-// Секрет для авторизации cron запросов
-const CRON_SECRET = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+// Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
+const CRON_SECRET = process.env.CRON_SECRET;
+
+if (!CRON_SECRET) {
+  console.warn('⚠️ CRON_SECRET не установлен! Cron endpoints будут недоступны.');
+}
 
 /**
  * GET /api/cron/playlists
@@ -26,21 +30,48 @@ export async function GET(request: NextRequest) {
     // Проверяем авторизацию
     const authHeader = request.headers.get('authorization');
     const cronSecret = request.nextUrl.searchParams.get('secret');
+    const source = request.nextUrl.searchParams.get('source'); // 'parser' для ручного парсинга
     
     // Проверяем секрет (через заголовок или query параметр)
     const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
     
-    if (providedSecret !== CRON_SECRET) {
-      console.log('❌ Cron Playlists: Неверный секрет авторизации');
+    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+      console.log('❌ Cron Playlists: Неверный секрет авторизации или CRON_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized' 
       }, { status: 401 });
     }
     
+    // Проверяем, использовать ли SFTP синхронизацию (по умолчанию) или парсинг
+    const useSftpSync = process.env.USE_SFTP_SYNC !== 'false' && source !== 'parser';
+    
+    if (useSftpSync) {
+      // Перенаправляем на SFTP синхронизацию
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      
+      try {
+        const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${CRON_SECRET}`, {
+          headers: authHeader ? { 'Authorization': authHeader } : {}
+        });
+        
+        const sftpResult = await sftpResponse.json();
+        return NextResponse.json(sftpResult);
+      } catch (error) {
+        console.error('Ошибка при вызове SFTP синхронизации:', error);
+        return NextResponse.json({
+          success: false,
+          error: 'Ошибка SFTP синхронизации',
+          details: String(error)
+        }, { status: 500 });
+      }
+    }
+    
+    // Используем старый парсинг (только если явно запрошен или USE_SFTP_SYNC=false)
     console.log('');
     console.log('═══════════════════════════════════════════════════');
-    console.log('🎵 CRON PLAYLIST PARSER');
+    console.log('🎵 CRON PLAYLIST PARSER (Legacy)');
     console.log('═══════════════════════════════════════════════════');
     console.log(`📅 Время запуска: ${new Date().toISOString()}`);
     

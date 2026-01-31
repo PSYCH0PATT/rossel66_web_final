@@ -1,0 +1,395 @@
+{
+  "totalFiles": 49,
+  "dateRange": {
+    "from": "2025-12-05",
+    "to": "2026-01-22"
+  },
+  "structure": {
+    "columns": [
+      "title_artist",
+      "url",
+      "playlist_name",
+      "parsed_date",
+      "track_position",
+      "DSP",
+      "release_date",
+      "cpline",
+      "album_title",
+      "label",
+      "isrc",
+      "licensee"
+    ],
+    "averageLines": 5
+  },
+  "files": [
+    {
+      "filename": "rossel_playlist_2025_12_05.csv",
+      "date": "2025-12-05",
+      "lines": 3,
+      "size": 646
+    },
+    {
+      "filename": "rossel_playlist_2025_12_06.csv",
+      "date": "2025-12-06",
+      "lines": 3,
+      "size": 646
+    },
+    {
+      "filename": "rossel_playlist_2025_12_07.csv",
+      "date": "2025-12-07",
+      "lines": 3,
+      "size": 646
+    },
+    {
+      "filename": "rossel_playlist_2025_12_08.csv",
+      "date": "2025-12-08",
+      "lines": 3,
+      "size": 646
+    },
+    {
+      "filename": "rossel_playlist_2025_12_09.csv",
+      "date": "2025-12-09",
+      "lines": 3,
+      "size": 646
+    },
+    {
+      "filename": "rossel_playlist_2025_12_10.csv",
+      "date": "2025-12-10",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_11.csv",
+      "date": "2025-12-11",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_12.csv",
+      "date": "2025-12-12",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_13.csv",
+      "date": "2025-12-13",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_14.csv",
+      "date": "2025-12-14",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_15.csv",
+      "date": "2025-12-15",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_16.csv",
+      "date": "2025-12-16",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_17.csv",
+      "date": "2025-12-17",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_18.csv",
+      "date": "2025-12-18",
+      "lines": 3,
+      "size": 636
+    },
+    {
+      "filename": "rossel_playlist_2025_12_19.csv",
+      "date": "2025-12-19",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_20.csv",
+      "date": "2025-12-20",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_21.csv",
+      "date": "2025-12-21",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_22.csv",
+      "date": "2025-12-22",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_23.csv",
+      "date": "2025-12-23",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_24.csv",
+      "date": "2025-12-24",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_25.csv",
+      "date": "2025-12-25",
+      "lines": 2,
+      "size": 371
+    },
+    {
+      "filename": "rossel_playlist_2025_12_26.csv",
+      "date": "2025-12-26",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2025_12_27.csv",
+      "date": "2025-12-27",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2025_12_28.csv",
+      "date": "2025-12-28",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2025_12_29.csv",
+      "date": "2025-12-29",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2025_12_30.csv",
+      "date": "2025-12-30",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2025_12_31.csv",
+      "date": "2025-12-31",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2026_01_01.csv",
+      "date": "2026-01-01",
+      "lines": 7,
+      "size": 1699
+    },
+    {
+      "filename": "rossel_playlist_2026_01_02.csv",
+      "date": "2026-01-02",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_03.csv",
+      "date": "2026-01-03",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_04.csv",
+      "date": "2026-01-04",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_05.csv",
+      "date": "2026-01-05",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_06.csv",
+      "date": "2026-01-06",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_07.csv",
+      "date": "2026-01-07",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_08.csv",
+      "date": "2026-01-08",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_09.csv",
+      "date": "2026-01-09",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_10.csv",
+      "date": "2026-01-10",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_11.csv",
+      "date": "2026-01-11",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_12.csv",
+      "date": "2026-01-12",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_13.csv",
+      "date": "2026-01-13",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_14.csv",
+      "date": "2026-01-14",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_15.csv",
+      "date": "2026-01-15",
+      "lines": 6,
+      "size": 1426
+    },
+    {
+      "filename": "rossel_playlist_2026_01_16.csv",
+      "date": "2026-01-16",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_17.csv",
+      "date": "2026-01-17",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_18.csv",
+      "date": "2026-01-18",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_19.csv",
+      "date": "2026-01-19",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_20.csv",
+      "date": "2026-01-20",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_21.csv",
+      "date": "2026-01-21",
+      "lines": 6,
+      "size": 1428
+    },
+    {
+      "filename": "rossel_playlist_2026_01_22.csv",
+      "date": "2026-01-22",
+      "lines": 6,
+      "size": 1428
+    }
+  ],
+  "sampleData": {
+    "columns": [
+      "title_artist",
+      "url",
+      "playlist_name",
+      "parsed_date",
+      "track_position",
+      "DSP",
+      "release_date",
+      "cpline",
+      "album_title",
+      "label",
+      "isrc",
+      "licensee"
+    ],
+    "firstRow": [
+      "PLVT - stars",
+      "https://music.yandex.ru/users/yandexmusic/playlists/1216",
+      "Вечеринка под парусом",
+      "2025-12-05",
+      "114",
+      "yandex",
+      "2025-06-18",
+      "℗ 2025 ROSSEL 66",
+      "PLVT - stars",
+      "Koala Music",
+      "RUA1D2587886",
+      "ИП Латынин Максим Русланович"
+    ],
+    "uniqueValues": {
+      "title_artist": [
+        "PLVT - stars",
+        "rompy - //mаsка (prod. chs, rompy)"
+      ],
+      "url": [
+        "https://music.yandex.ru/users/yandexmusic/playlists/1216",
+        "https://music.yandex.ru/users/yamusic-new/playlists/1000"
+      ],
+      "playlist_name": [
+        "Вечеринка под парусом",
+        "Русский бит"
+      ],
+      "parsed_date": [
+        "2025-12-05"
+      ],
+      "track_position": [
+        "114",
+        "172"
+      ],
+      "DSP": [
+        "yandex"
+      ],
+      "release_date": [
+        "2025-06-18",
+        "2025-12-05"
+      ],
+      "cpline": [
+        "℗ 2025 ROSSEL 66"
+      ],
+      "album_title": [
+        "PLVT - stars",
+        "rompy;keijo! - //outlaw"
+      ],
+      "label": [
+        "Koala Music"
+      ],
+      "isrc": [
+        "RUA1D2587886",
+        "RUAGW2511177"
+      ],
+      "licensee": [
+        "ИП Латынин Максим Русланович"
+      ]
+    }
+  }
+}

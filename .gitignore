@@ -44,3 +44,15 @@ __pycache__/
 *.pyc
 *.db
 temp_*_config.json
+
+# Parser configs with credentials (NOT example files!)
+parsers/koala_config.json
+parsers/bandlink_config.json
+parsers/bandlink_config_mac.json
+parsers/bandlink_config_unlocker.json
+parsers/brightdata_test_config.json
+parsers/test_config*.json
+!parsers/*_config.example.json
+
+# Backup files with sensitive data
+data/users_backup_*.json

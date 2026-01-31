@@ -1,5 +1,138 @@
 [
   {
+    "type": "release_added",
+    "userId": "user_1759096825583",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"Kim\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1769811724234_93xoytjgl",
+      "koalaId": "44578",
+      "status": "Доставлен"
+    },
+    "id": "1769811724234",
+    "createdAt": "2026-01-30T22:22:04.234Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "user_1759096823970",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"FULL CLIP\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1769811724196_uszc3ma2f",
+      "koalaId": "44964",
+      "status": "Доставлен"
+    },
+    "id": "1769811724196",
+    "createdAt": "2026-01-30T22:22:04.196Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "9318e666-493b-4fe7-a445-248aa1b80f32",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"SOULFLARE\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1769811724170_jfgtl67sn",
+      "koalaId": "45084",
+      "status": "Доставлен"
+    },
+    "id": "1769811724170",
+    "createdAt": "2026-01-30T22:22:04.170Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "b1086154-1249-4320-99ee-e643c951c008",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"67th Parallel\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1769811724142_1lkwaf2pi",
+      "koalaId": "45529",
+      "status": "Доставлен"
+    },
+    "id": "1769811724142",
+    "createdAt": "2026-01-30T22:22:04.142Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "user_1759096823970",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"ROTTEN\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1769811724103_ach7e4ghg",
+      "koalaId": "45540",
+      "status": "Доставлен"
+    },
+    "id": "1769811724103",
+    "createdAt": "2026-01-30T22:22:04.103Z"
+  },
+  {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Синхронизация плейлистов с SFTP",
+    "description": "Скачано: 0, Добавлено: 0, Обновлено: 0, Удалено: 2",
+    "metadata": {
+      "downloaded": 0,
+      "added": 0,
+      "updated": 0,
+      "removed": 2,
+      "duration": "20040ms"
+    },
+    "id": "1769173222109",
+    "createdAt": "2026-01-23T13:00:22.109Z"
+  },
+  {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Синхронизация плейлистов с SFTP",
+    "description": "Скачано: 0, Добавлено: 7, Обновлено: 0, Удалено: 0",
+    "metadata": {
+      "downloaded": 0,
+      "added": 7,
+      "updated": 0,
+      "removed": 0,
+      "duration": "7242ms"
+    },
+    "id": "1769098132847",
+    "createdAt": "2026-01-22T16:08:52.847Z"
+  },
+  {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Автоматический парсинг плейлистов",
+    "description": "Сканирование 5 артистов. Bandlink: 0, VK: 0",
+    "metadata": {
+      "artists": [
+        "ripznxx",
+        "stemstyl",
+        "plvt",
+        "w1ce3",
+        "sadaround"
+      ],
+      "results": {
+        "bandlink": {
+          "success": false,
+          "count": 0,
+          "error": "Error: HTTP 500: Internal Server Error"
+        },
+        "vk": {
+          "success": false,
+          "count": 0,
+          "error": "TypeError: fetch failed"
+        }
+      },
+      "duration": "301499ms"
+    },
+    "id": "1769096782165",
+    "createdAt": "2026-01-22T15:46:22.165Z"
+  },
+  {
     "type": "user_data_updated",
     "userId": "2",
     "userRole": "admin",

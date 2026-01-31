@@ -37,37 +37,39 @@ export default function LoginForm() {
     }
 
     try {
-      // Получаем всех пользователей через API (включая админов и артистов)
-      const response = await fetch('/api/users')
+      // Аутентификация через безопасный API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      })
       const result = await response.json()
       
       if (!result.success) {
-        setError("Ошибка при проверке данных")
+        setError(result.error || "Неверный логин или пароль")
         setIsLoading(false)
         return
       }
 
-      const user = result.users.find((user: any) => user.username === username && user.password === password)
+      const user = result.user
 
-      if (user) {
-        // Сохраняем данные пользователя
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            username: user.username,
-            role: user.role,
-            id: user.id,
-            name: user.name,
-          }),
-        )
+      // Сохраняем данные пользователя (без пароля)
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          username: user.username,
+          role: user.role,
+          id: user.id,
+          name: user.name,
+        }),
+      )
 
-        if (user.role === "admin") {
-          router.push("/dashboard/admin/dashboard")
-        } else {
-          router.push(`/dashboard/artist/${user.username}/dashboard`)
-        }
+      if (user.role === "admin") {
+        router.push("/dashboard/admin/dashboard")
       } else {
-        setError("Неверный логин или пароль")
+        router.push(`/dashboard/artist/${user.username}/dashboard`)
       }
     } catch (error) {
       console.error('Ошибка при входе:', error)

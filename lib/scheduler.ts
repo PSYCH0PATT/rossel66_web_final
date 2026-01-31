@@ -30,11 +30,9 @@ export function initScheduler() {
   console.log('⏰ SCHEDULER INITIALIZED');
   console.log('═══════════════════════════════════════════════════');
   console.log('📅 Koala Parser: 12:00 and 20:00 MSK daily');
-  console.log('🎵 Playlist Parsers:');
-  console.log('   • Пятница 00:30 MSK — первый скан после выхода');
-  console.log('   • Суббота 16:00 MSK');
-  console.log('   • Воскресенье 16:00 MSK');
-  console.log('   • Понедельник 16:00 MSK');
+  console.log('🔄 SFTP Playlist Sync:');
+  console.log('   • 16:00 MSK ежедневно');
+  console.log('   • 00:30 MSK ежедневно');
   console.log('═══════════════════════════════════════════════════');
   console.log('');
   
@@ -59,44 +57,33 @@ export function initScheduler() {
   });
   
   // ============================================================
-  // PLAYLIST PARSERS - Пт 00:30, Сб/Вс/Пн 16:00 по Москве
+  // SFTP PLAYLIST SYNC - 16:00 и 00:30 ежедневно по Москве
   // ============================================================
   
-  // Пятница 00:30 — первый скан (релизы выходят в 00:00 пятницы)
-  cron.schedule('30 0 * * 5', async () => {
+  // 16:00 ежедневно — синхронизация SFTP
+  cron.schedule('0 16 * * *', async () => {
     console.log('');
-    console.log('🎵 [Пятница 00:30 MSK] Первый скан плейлистов после выхода релизов...');
-    await runPlaylistParsers();
+    console.log('🔄 [16:00 MSK] SFTP Playlist Sync...');
+    await runSftpPlaylistSync();
   }, {
     timezone: 'Europe/Moscow'
   });
   
-  // Суббота 16:00
-  cron.schedule('0 16 * * 6', async () => {
+  // 00:30 ежедневно — синхронизация SFTP
+  cron.schedule('30 0 * * *', async () => {
     console.log('');
-    console.log('🎵 [Суббота 16:00 MSK] Второй скан плейлистов...');
-    await runPlaylistParsers();
+    console.log('🔄 [00:30 MSK] SFTP Playlist Sync...');
+    await runSftpPlaylistSync();
   }, {
     timezone: 'Europe/Moscow'
   });
   
-  // Воскресенье 16:00
-  cron.schedule('0 16 * * 0', async () => {
-    console.log('');
-    console.log('🎵 [Воскресенье 16:00 MSK] Третий скан плейлистов...');
-    await runPlaylistParsers();
-  }, {
-    timezone: 'Europe/Moscow'
-  });
+  // ============================================================
+  // LEGACY PLAYLIST PARSERS - оставлено для ручного запуска
+  // ============================================================
   
-  // Понедельник 16:00
-  cron.schedule('0 16 * * 1', async () => {
-    console.log('');
-    console.log('🎵 [Понедельник 16:00 MSK] Четвёртый скан плейлистов...');
-    await runPlaylistParsers();
-  }, {
-    timezone: 'Europe/Moscow'
-  });
+  // Старые задачи парсинга удалены, но функция runPlaylistParsers() сохранена
+  // для возможности ручного запуска через UI
   
   console.log('✅ Scheduler started successfully');
 }
@@ -250,6 +237,31 @@ async function processKoalaResults(releases: any[]) {
 /**
  * Запуск парсеров плейлистов (Bandlink + VK)
  * Парсит только артистов с релизами за последние 7 дней
+ */
+/**
+ * Запускает SFTP синхронизацию плейлистов
+ */
+async function runSftpPlaylistSync() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    
+    const response = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${cronSecret}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`✅ SFTP Sync завершен: добавлено ${result.stats?.added || 0}, обновлено ${result.stats?.updated || 0}`);
+    } else {
+      console.error(`❌ SFTP Sync ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка запуска SFTP синхронизации:', error);
+  }
+}
+
+/**
+ * Запускает парсинг плейлистов (legacy, для ручного запуска)
  */
 async function runPlaylistParsers() {
   const startTime = Date.now();

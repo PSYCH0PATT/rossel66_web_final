@@ -1,0 +1,14 @@
+{
+  "lastRun": "2026-01-30T22:53:03.537Z",
+  "success": true,
+  "stats": {
+    "total": 22,
+    "added": 0,
+    "updated": 0,
+    "skipped": 22,
+    "errors": []
+  },
+  "message": "Найдено 22 релизов, новых для добавления: 0",
+  "pagesProcessed": 1,
+  "totalPages": 1
+}

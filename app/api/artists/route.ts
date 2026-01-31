@@ -118,7 +118,7 @@ export async function GET() {
       artists: artists.map(artist => ({
         id: artist.id,
         username: artist.username,
-        password: artist.password,
+        // password НЕ возвращаем - используйте /api/auth/login для аутентификации
         name: artist.name,
         email: artist.email,
         avatarUrl: artist.avatarUrl,

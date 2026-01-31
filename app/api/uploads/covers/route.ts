@@ -18,7 +18,10 @@ export async function POST(request: Request) {
     const dir = path.join(process.cwd(), 'public', 'uploads', 'covers')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-    const ext = path.extname((file as any).name || '') || '.jpg'
+    // Санитизация расширения файла (защита от path traversal)
+    const rawExt = path.extname((file as any).name || '')
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    const ext = allowedExtensions.includes(rawExt.toLowerCase()) ? rawExt.toLowerCase() : '.jpg'
     const filename = `cover_${Date.now()}${ext}`
     const filepath = path.join(dir, filename)
     fs.writeFileSync(filepath, buffer)

@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic'
 // This endpoint will be called by a cron job every 3 days at 3:00 AM
 export async function GET(request: NextRequest) {
   try {
-    // Simple authentication check (you should use a proper secret key)
+    // Проверка авторизации (ОБЯЗАТЕЛЬНО установите CRON_SECRET в переменных окружения!)
     const authHeader = request.headers.get('authorization')
-    const expectedAuth = process.env.CRON_SECRET || 'your-secret-key-here'
+    const expectedAuth = process.env.CRON_SECRET
     
-    if (authHeader !== `Bearer ${expectedAuth}`) {
+    if (!expectedAuth || authHeader !== `Bearer ${expectedAuth}`) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

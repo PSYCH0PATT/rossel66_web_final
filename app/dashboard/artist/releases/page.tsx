@@ -31,36 +31,40 @@ export default function ReleasesPage() {
     }
   }, [artistId])
 
-  // Цвета для статусов релизов - новые статусы из Koala Music
+  // Цвета для статусов релизов - соответствуют админской панели
   const statusColors: Record<string, string> = {
-    // Новые статусы Koala Music
-    "На модерации": "bg-category-amber text-black",
-    "Одобрен": "bg-category-blue text-black",
-    "Отклонён": "bg-red-500 text-white",
-    "В доставке": "bg-category-purple text-white",
-    "Доставлен": "bg-category-green text-black",
-    "Снят": "bg-gray-500 text-white",
+    // Стандартные статусы
+    "Модерируется": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Отклонен": "bg-red-500 hover:bg-red-600 text-white",
+    "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
+    "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
     // Legacy статусы для обратной совместимости
-    released: "bg-category-green text-black",
-    moderation: "bg-category-amber text-black",
-    delivery: "bg-category-blue text-black",
-    scheduled: "bg-category-purple text-white",
+    "На модерации": "bg-orange-500 hover:bg-orange-600 text-white",
+    "Одобрен": "bg-blue-500 hover:bg-blue-600 text-white",
+    "Отклонён": "bg-red-500 hover:bg-red-600 text-white",
+    "Снят": "bg-gray-500 hover:bg-gray-600 text-white",
+    released: "bg-green-500 hover:bg-green-600 text-white",
+    moderation: "bg-orange-500 hover:bg-orange-600 text-white",
+    delivery: "bg-blue-500 hover:bg-blue-600 text-white",
+    scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
   }
 
-  // Переводы статусов - новые статусы Koala Music
+  // Переводы статусов - соответствуют админской панели
   const statusLabels: Record<string, string> = {
-    // Новые статусы Koala Music
-    "На модерации": "На модерации",
-    "Одобрен": "Одобрен",
-    "Отклонён": "Отклонён",
+    // Стандартные статусы
+    "Модерируется": "Модерируется",
+    "Отклонен": "Отклонен",
     "В доставке": "В доставке",
     "Доставлен": "Доставлен",
-    "Снят": "Снят",
     // Legacy статусы для обратной совместимости
+    "На модерации": "Модерируется",
+    "Одобрен": "Доставлен",
+    "Отклонён": "Отклонен",
+    "Снят": "Отклонен",
     released: "Доставлен",
-    moderation: "На модерации",
+    moderation: "Модерируется",
     delivery: "В доставке",
-    scheduled: "На модерации",
+    scheduled: "Модерируется",
   }
 
   return (

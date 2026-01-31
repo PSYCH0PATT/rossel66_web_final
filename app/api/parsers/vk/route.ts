@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest as NextRequestType } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -296,8 +297,64 @@ async function readVKResults() {
   }
 }
 
-export async function GET() {
+export async function GET(request?: NextRequestType) {
   try {
+    // Проверяем, использовать ли SFTP данные (по умолчанию)
+    const useSftpSync = process.env.USE_SFTP_SYNC !== 'false';
+    
+    if (useSftpSync) {
+      // Используем данные из SFTP
+      try {
+        const sftpResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/playlists/sftp`
+        );
+        const sftpData = await sftpResponse.json();
+        
+        // Фильтруем только VK плейлисты и преобразуем в формат VK
+        const vkPlaylists = (sftpData.results || [])
+          .filter((p: any) => p.platform === 'VK Музыка')
+          .map((p: any) => {
+            // Находим позицию трека этого артиста в плейлисте
+            let trackPosition = null;
+            if (p.tracks_info && p.tracks_info.length > 0) {
+              // Берем первую позицию (если несколько треков, берем минимальную позицию)
+              trackPosition = Math.min(...p.tracks_info.map((t: any) => t.position));
+            } else if (p.tracks_by_artist && p.artist_name && p.tracks_by_artist[p.artist_name]) {
+              const artistTracks = p.tracks_by_artist[p.artist_name];
+              if (artistTracks.length > 0 && artistTracks[0].position) {
+                trackPosition = Math.min(...artistTracks.map((t: any) => t.position || Infinity));
+              }
+            }
+            
+            return {
+              id: p.id,
+              artist_name: p.artist_name,
+              playlist_name: p.playlist_name,
+              playlist_url: p.playlist_url,
+              platform: p.platform || 'VK Музыка',
+              playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+              parsed_at: p.parsed_at,
+              added_at: p.added_at,
+              tracks_count: p.tracks_count || 0,
+              multiple_tracks: p.multiple_tracks || false,
+              tracks_info: p.tracks_info || [],
+              track_position: trackPosition,
+              release_names: p.release_names || []
+            };
+          });
+        
+        return NextResponse.json({
+          success: true,
+          results: vkPlaylists,
+          source: 'sftp'
+        });
+      } catch (error) {
+        console.error('Ошибка получения данных из SFTP, используем парсинг:', error);
+        // Fallback на парсинг при ошибке
+      }
+    }
+    
+    // Используем данные из парсинга
     const results = await readVKResults();
     return NextResponse.json({ success: true, results });
   } catch (error) {
