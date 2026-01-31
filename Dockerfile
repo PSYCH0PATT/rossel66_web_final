@@ -34,6 +34,7 @@ RUN npm ci --omit=dev
 
 # 7. Копируем остальные файлы проекта
 COPY . .
+RUN chmod +x /app/scripts/cron-sftp.sh
 
 # 8. Устанавливаем Python зависимости для парсеров
 # ВАЖНО: blinker<1.8 нужен для совместимости с selenium-wire
