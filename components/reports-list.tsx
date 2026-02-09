@@ -217,12 +217,13 @@ export default function ReportsList() {
       </div>
 
       {/* Фильтры */}
-      <div className="flex items-center gap-2 mb-4">
-        <Filter className="h-4 w-4 text-slate-400" />
+      <div className="flex flex-wrap items-center gap-2 mb-4 overflow-x-auto pb-2">
+        <Filter className="h-4 w-4 text-slate-400 flex-shrink-0" />
         <Button
           variant="outline"
           size="sm"
           onClick={() => setFilter('all')}
+          className="text-xs sm:text-sm whitespace-nowrap"
           style={{
             backgroundColor: filter === 'all' ? '#3b82f6' : 'transparent',
             borderColor: filter === 'all' ? '#3b82f6' : '#64748b',
@@ -247,6 +248,7 @@ export default function ReportsList() {
           variant="outline"
           size="sm"
           onClick={() => setFilter('unsigned')}
+          className="text-xs sm:text-sm whitespace-nowrap"
           style={{
             backgroundColor: filter === 'unsigned' ? '#ef4444' : 'transparent',
             borderColor: filter === 'unsigned' ? '#ef4444' : '#64748b',
@@ -265,13 +267,14 @@ export default function ReportsList() {
             }
           }}
         >
-          <XCircle className="h-4 w-4 mr-1" />
-          Неподписанные ({reports.filter(r => !r.isSigned).length})
+          <XCircle className="h-4 w-4 sm:mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline">Неподписанные</span> ({reports.filter(r => !r.isSigned).length})
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setFilter('unpaid')}
+          className="text-xs sm:text-sm whitespace-nowrap"
           style={{
             backgroundColor: filter === 'unpaid' ? '#f97316' : 'transparent',
             borderColor: filter === 'unpaid' ? '#f97316' : '#64748b',
@@ -290,10 +293,9 @@ export default function ReportsList() {
             }
           }}
         >
-          <DollarSign className="h-4 w-4 mr-1" />
-          Невыплаченные ({reports.filter(r => !r.isPaid).length})
+          <DollarSign className="h-4 w-4 sm:mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline">Невыплаченные</span> ({reports.filter(r => !r.isPaid).length})
         </Button>
-        
       </div>
 
       {filteredReports.length === 0 ? (
@@ -357,46 +359,46 @@ export default function ReportsList() {
                   {quarterReports.map((report) => (
                     <div
                       key={report.id}
-                      className="flex items-center p-4 rounded-lg bg-transparent border border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700/20 transition-all duration-200"
+                      className="flex flex-col sm:flex-row sm:items-center p-3 sm:p-4 rounded-lg bg-transparent border border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700/20 transition-all duration-200 gap-3"
                     >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
                           {report.artistName.charAt(0).toUpperCase()}
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-white text-lg mb-2 truncate">
+                          <h4 className="font-semibold text-white text-base sm:text-lg mb-1 sm:mb-2 truncate">
                             {report.artistName}
                           </h4>
                           
-                          <div className="flex items-center flex-wrap gap-4 text-sm mb-3">
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              <Play className="h-4 w-4 text-green-400 flex-shrink-0" />
+                          <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm mb-2 sm:mb-3">
+                            <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                              <Play className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                               <span className="text-white font-medium">{report.totalPlays.toLocaleString()}</span>
-                              <span className="text-slate-400">прослушиваний</span>
+                              <span className="text-slate-400 hidden sm:inline">прослушиваний</span>
                             </div>
                             
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              <DollarSign className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+                            <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
                               <span className="text-white font-medium">{report.totalAmount.toFixed(2)} ₽</span>
                             </div>
                             
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
                               <span className="text-slate-400">{new Date(report.uploadDate).toLocaleDateString('ru-RU')}</span>
                             </div>
                           </div>
                           
                           {/* Админские контролы статусов */}
-                          <div className="flex items-center flex-wrap gap-6 text-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
+                          <div className="flex items-center flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="flex items-center gap-1 sm:gap-2">
                                 {report.isSigned ? (
-                                  <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                                 ) : (
-                                  <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 flex-shrink-0" />
                                 )}
-                                <Label htmlFor={`signed-${report.id}`} className="text-slate-300 whitespace-nowrap">
+                                <Label htmlFor={`signed-${report.id}`} className="text-slate-300 whitespace-nowrap text-xs sm:text-sm">
                                   Подписан
                                 </Label>
                               </div>
@@ -411,14 +413,14 @@ export default function ReportsList() {
                               />
                             </div>
                             
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="flex items-center gap-1 sm:gap-2">
                                 {report.isPaid ? (
-                                  <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                                 ) : (
-                                  <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 flex-shrink-0" />
                                 )}
-                                <Label htmlFor={`paid-${report.id}`} className="text-slate-300 whitespace-nowrap">
+                                <Label htmlFor={`paid-${report.id}`} className="text-slate-300 whitespace-nowrap text-xs sm:text-sm">
                                   Выплачено
                                 </Label>
                               </div>
@@ -436,15 +438,15 @@ export default function ReportsList() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <div className="flex items-center gap-2 sm:ml-4 flex-shrink-0 self-end sm:self-center">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDownloadReport(report.id)}
-                          className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300 whitespace-nowrap"
+                          className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300 whitespace-nowrap text-xs sm:text-sm"
                         >
-                          <Download className="h-4 w-4 mr-1" />
-                          Скачать
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Скачать</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -452,7 +454,7 @@ export default function ReportsList() {
                           onClick={() => handleDeleteReport(report.id, report.artistName)}
                           className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </div>

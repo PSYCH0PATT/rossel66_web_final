@@ -470,6 +470,38 @@ export async function getPlaylistsByArtist(artistName: string): Promise<any[]> {
 }
 
 /**
+ * Получает плейлисты по ID артиста (artist_id в таблице)
+ */
+export async function getPlaylistsByArtistId(artistId: string): Promise<any[]> {
+  await ensureSftpPlaylistDatabase();
+
+  const sqlite3 = require('sqlite3').verbose();
+
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_PATH);
+
+    db.all(
+      `SELECT * FROM sftp_playlists 
+       WHERE artist_id = ?
+       ORDER BY last_seen_date DESC, playlist_name ASC`,
+      [artistId],
+      (err: any, rows: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          const playlists = (rows || []).map((row: any) => ({
+            ...row,
+            tracks: JSON.parse(row.track_data || '[]')
+          }));
+          resolve(playlists);
+        }
+        db.close();
+      }
+    );
+  });
+}
+
+/**
  * Получает все уникальные URL плейлистов из базы (без учета артистов)
  */
 export async function getAllPlaylistUrls(): Promise<Set<string>> {
@@ -541,5 +573,107 @@ export async function deletePlaylist(
         }
       );
     }
+  });
+}
+
+/**
+ * Assigns existing playlists to a new artist by name matching
+ */
+export async function assignPlaylistsToArtist(
+  artistId: string,
+  artistName: string,
+  username: string
+): Promise<number> {
+  await ensureSftpPlaylistDatabase();
+  
+  const sqlite3 = require('sqlite3').verbose();
+  const normalizedName = normalizeArtistName(artistName);
+  const normalizedUsername = normalizeArtistName(username);
+  
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_PATH);
+    
+    // Find playlists without artist_id that match by name
+    db.all(
+      `SELECT * FROM sftp_playlists 
+       WHERE artist_id IS NULL OR artist_id = ''`,
+      [],
+      (err: any, rows: any[]) => {
+        if (err) {
+          db.close();
+          reject(err);
+          return;
+        }
+        
+        let assignedCount = 0;
+        const updates: Promise<void>[] = [];
+        
+        rows.forEach((row) => {
+          const rowArtistName = normalizeArtistName(row.artist_name || '');
+          
+          // Match by artist name or username
+          if (rowArtistName === normalizedName || rowArtistName === normalizedUsername) {
+            const updatePromise = new Promise<void>((resolveUpdate, rejectUpdate) => {
+              db.run(
+                `UPDATE sftp_playlists 
+                 SET artist_id = ?, updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = ?`,
+                [artistId, row.id],
+                (updateErr: any) => {
+                  if (updateErr) {
+                    rejectUpdate(updateErr);
+                  } else {
+                    assignedCount++;
+                    resolveUpdate();
+                  }
+                }
+              );
+            });
+            updates.push(updatePromise);
+          }
+        });
+        
+        Promise.all(updates)
+          .then(() => {
+            db.close();
+            resolve(assignedCount);
+          })
+          .catch((updateErr) => {
+            db.close();
+            reject(updateErr);
+          });
+      }
+    );
+  });
+}
+
+/**
+ * Manually assign a specific playlist to an artist
+ */
+export async function assignPlaylistToArtistManually(
+  playlistId: number,
+  artistId: string
+): Promise<boolean> {
+  await ensureSftpPlaylistDatabase();
+  
+  const sqlite3 = require('sqlite3').verbose();
+  
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(DB_PATH);
+    
+    db.run(
+      `UPDATE sftp_playlists 
+       SET artist_id = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [artistId, playlistId],
+      function(this: any, err: any) {
+        db.close();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes > 0);
+        }
+      }
+    );
   });
 }

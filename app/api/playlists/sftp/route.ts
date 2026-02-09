@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllPlaylists, getPlaylistsByArtist } from '@/lib/sftp-playlist-storage';
+import { getAllPlaylists, getPlaylistsByArtist, getPlaylistsByArtistId } from '@/lib/sftp-playlist-storage';
 import { getPlaylistCoverUrl } from '@/lib/playlist-cover';
 
 /**
  * GET /api/playlists/sftp
  * Получает плейлисты из SFTP источника
- * 
+ *
  * Query параметры:
+ * - artistId: фильтр по ID артиста (опционально)
  * - artistName: фильтр по имени артиста (опционально)
  */
 export async function GET(request: NextRequest) {
   try {
+    const artistId = request.nextUrl.searchParams.get('artistId');
     const artistName = request.nextUrl.searchParams.get('artistName');
-    
+
     let playlists;
-    if (artistName) {
+    if (artistId) {
+      playlists = await getPlaylistsByArtistId(artistId);
+    } else if (artistName) {
       playlists = await getPlaylistsByArtist(artistName);
     } else {
       playlists = await getAllPlaylists();

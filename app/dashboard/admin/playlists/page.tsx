@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react'
 import Image from 'next/image'
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -86,6 +86,12 @@ export default function PlaylistsPage() {
   // Состояния для истории парсинга
   const [parsingHistory, setParsingHistory] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  
+  // Состояния для привязки плейлиста к артисту
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [selectedPlaylist, setSelectedPlaylist] = useState<{id: number, name: string, type: 'vk' | 'bandlink'} | null>(null)
+  const [selectedArtistForAssign, setSelectedArtistForAssign] = useState<string>('')
+  const [isAssigning, setIsAssigning] = useState(false)
 
   useEffect(() => {
     loadArtists()
@@ -681,6 +687,48 @@ export default function PlaylistsPage() {
     }
   }
 
+  const openAssignModal = (id: number, name: string, type: 'vk' | 'bandlink') => {
+    setSelectedPlaylist({ id, name, type })
+    setSelectedArtistForAssign('')
+    setAssignModalOpen(true)
+  }
+
+  const assignPlaylistToArtist = async () => {
+    if (!selectedPlaylist || !selectedArtistForAssign) {
+      alert('Выберите артиста')
+      return
+    }
+
+    setIsAssigning(true)
+    try {
+      const response = await fetch('/api/playlists/assign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          playlistId: selectedPlaylist.id, 
+          artistId: selectedArtistForAssign 
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Плейлист успешно привязан к артисту!')
+        setAssignModalOpen(false)
+        loadResults()
+      } else {
+        alert('Ошибка привязки: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Ошибка привязки плейлиста:', error)
+      alert('Ошибка привязки плейлиста')
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
   // Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.)
   const getPlatformBadgeStyle = (platform: string) => {
     const p = (platform || '').trim()
@@ -769,6 +817,18 @@ export default function PlaylistsPage() {
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
                 <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
+              {/* Кнопка привязки к артисту */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  openAssignModal(playlist.id, isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name, type)
+                }}
+                className="absolute top-2 left-2 p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                title="Привязать к артисту"
+              >
+                <UserPlus className="w-3 h-3" />
+              </button>
               {/* Кнопка удаления */}
               <button
                 onClick={(e) => {
@@ -1574,6 +1634,66 @@ export default function PlaylistsPage() {
 
     </Tabs>
       </div>
+
+      {/* Модальное окно для привязки плейлиста к артисту */}
+      {assignModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAssignModalOpen(false)}>
+          <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Привязать плейлист к артисту</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Плейлист:</p>
+                <p className="font-medium">{selectedPlaylist?.name}</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Выберите артиста:</label>
+                <Select value={selectedArtistForAssign} onValueChange={setSelectedArtistForAssign}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите артиста" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {artists.map(artist => (
+                      <SelectItem key={artist.id} value={artist.id}>
+                        {artist.name} (@{artist.username})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => setAssignModalOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                  disabled={isAssigning}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={assignPlaylistToArtist}
+                  className="flex-1"
+                  disabled={isAssigning || !selectedArtistForAssign}
+                >
+                  {isAssigning ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Привязка...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Привязать
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

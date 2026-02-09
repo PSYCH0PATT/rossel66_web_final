@@ -96,6 +96,12 @@ export type ActivityType =
   | 'artist_added'
   | 'artist_removed'
   | 'release_status_updated'
+  | 'parser_started'
+  | 'parser_completed'
+  | 'parser_error'
+  | 'parser_release_found'
+  | 'parser_release_updated'
+  | 'parser_playlist_found'
 
 export interface Activity {
   id: string
@@ -333,9 +339,74 @@ export function getReleasesWithArtists(): (Release & { artist: User | null })[] 
   }))
 }
 
-// Placeholder function for reports (if needed)
-export function assignReportsToNewArtist(artistId: string, artistName: string): void {
-  // This function would handle report assignment if reports system exists
+// Assign existing unassigned reports to new artist by name matching
+// Helper to normalize artist names for matching
+export function normalizeArtistName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+// Find artist by name or username (case-insensitive)
+export function findArtistByName(name: string): User | null {
+  const users = loadUsers()
+  const normalized = normalizeArtistName(name)
+  return users.find(u => {
+    if (u.role !== 'artist') return false
+    if (normalizeArtistName(u.name) === normalized) return true
+    if (normalizeArtistName(u.username) === normalized) return true
+    return false
+  }) || null
+}
+
+// Assign existing unassigned reports to new artist by name matching
+export function assignReportsToNewArtist(artistId: string, artistName: string): number {
+  const reports = loadReports()
+  let assignedCount = 0
+  
+  const normalizedName = normalizeArtistName(artistName)
+  
+  reports.forEach(report => {
+    // Match by artist name (case-insensitive)
+    if (!report.artistId && report.artistName && 
+        normalizeArtistName(report.artistName) === normalizedName) {
+      report.artistId = artistId
+      report.isRegistered = true
+      assignedCount++
+    }
+  })
+  
+  if (assignedCount > 0) {
+    saveReports(reports)
+  }
+  
+  return assignedCount
+}
+
+// Assign existing releases to new artist by name matching
+export function assignReleasesToNewArtist(artistId: string, artistName: string, username: string): number {
+  const releases = loadReleases()
+  let assignedCount = 0
+  
+  const normalizedName = normalizeArtistName(artistName)
+  const normalizedUsername = normalizeArtistName(username)
+  
+  releases.forEach(release => {
+    // Skip if already has artistId
+    if (release.artistId) return
+    
+    // Match by artist name or username from release metadata
+    const releaseArtistName = (release as any).artistName || ''
+    if (normalizeArtistName(releaseArtistName) === normalizedName ||
+        normalizeArtistName(releaseArtistName) === normalizedUsername) {
+      release.artistId = artistId
+      assignedCount++
+    }
+  })
+  
+  if (assignedCount > 0) {
+    saveReleases(releases)
+  }
+  
+  return assignedCount
 }
 
 // Reports functions
@@ -570,50 +641,9 @@ export function updateReportPaidStatus(reportId: string, isPaid: boolean): boole
   return true
 }
 
-// Функция для поиска артиста по имени
-// Нормализует имя артиста для сравнения (убирает пробелы, приводит к нижнему регистру)
-export function normalizeArtistName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ') // Множественные пробелы в один
-    .replace(/[^\w\s]/g, '') // Убираем спецсимволы
-}
-
-export function findArtistByName(artistName: string): User | null {
-  const users = loadUsers()
-  const normalizedSearch = normalizeArtistName(artistName)
-  
-  // Ищем по name и username с нормализацией - ТОЛЬКО точное совпадение
-  return users.find(user => {
-    if (user.role !== 'artist') return false
-    
-    const normalizedName = normalizeArtistName(user.name || '')
-    const normalizedUsername = normalizeArtistName(user.username || '')
-    
-    // Только точное совпадение - никаких частичных!
-    return normalizedName === normalizedSearch || normalizedUsername === normalizedSearch
-  }) || null
-}
-
 // Функция для назначения отчетов артисту (алиас для совместимости)
 export function assignReportsToArtist(artistId: string, artistName: string): void {
-  // Эта функция автоматически назначает незарегистрированные отчеты артисту
-  const reports = loadReports()
-  let updated = false
-  
-  reports.forEach(report => {
-    // Если отчет был без артиста или с таким же именем
-    if (!report.artistId || report.artistName.toLowerCase() === artistName.toLowerCase()) {
-      report.artistId = artistId
-      report.artistName = artistName
-      updated = true
-    }
-  })
-  
-  if (updated) {
-    saveReports(reports)
-  }
+  assignReportsToNewArtist(artistId, artistName)
 }
 
 // Функция для добавления отчета (если нужна)

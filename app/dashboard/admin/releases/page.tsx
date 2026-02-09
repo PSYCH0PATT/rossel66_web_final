@@ -242,14 +242,18 @@ export default function AdminReleasesPage() {
   return (
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">Релизы ({filteredReleases.length} из {releases.length})</h1>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-white whitespace-nowrap">
+            Релизы <span className="text-slate-400 text-base sm:text-lg font-normal">({filteredReleases.length}/{releases.length})</span>
+          </h1>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {/* Zvonko Parser */}
             <Link href="/dashboard/admin/releases/zvonko-parser">
               <Button
                 variant="outline"
+                size="sm"
+                className="text-xs sm:text-sm"
                 style={{
                   borderColor: '#3b82f6',
                   color: '#3b82f6',
@@ -264,8 +268,8 @@ export default function AdminReleasesPage() {
                   e.currentTarget.style.color = '#3b82f6'
                 }}
               >
-                <Download className="h-4 w-4 mr-2" />
-                Zvonko Parser
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Zvonko Parser</span>
               </Button>
             </Link>
             
@@ -273,6 +277,8 @@ export default function AdminReleasesPage() {
             <Link href="/dashboard/admin/releases/koala-parser">
               <Button
                 variant="outline"
+                size="sm"
+                className="text-xs sm:text-sm"
                 style={{
                   borderColor: '#10b981',
                   color: '#10b981',
@@ -287,8 +293,8 @@ export default function AdminReleasesPage() {
                   e.currentTarget.style.color = '#10b981'
                 }}
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Koala Parser
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Koala Parser</span>
               </Button>
             </Link>
             
@@ -519,8 +525,8 @@ export default function AdminReleasesPage() {
             </Link>
           </div>
         ) : (
-          <div className="bg-transparent border border-slate-600/30 rounded-xl overflow-hidden">
-            <Table>
+          <div className="bg-transparent border border-slate-600/30 rounded-xl overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow className="border-slate-600/30 hover:bg-slate-700/20">
                   <TableHead className="text-slate-300">Обложка</TableHead>

@@ -119,6 +119,11 @@ main {
     @apply border-primary/50;
   }
 
+  /* Контейнер для резиновых cqw на карточках артистов */
+  .artist-card-container {
+    container-type: inline-size;
+  }
+
   .nav-transparent {
     @apply bg-transparent;
   }
@@ -134,6 +139,59 @@ main {
   .nav-dark {
     @apply bg-black/90 backdrop-blur-md;
   }
+}
+
+/* Резиновый текст и высота поля пароля на карточках артистов — вне @layer, чтобы не перезаписывалось */
+.artist-card-container .artist-card-name {
+  font-size: clamp(10px, 1.2vw, 18px) !important;
+  line-height: 1.25;
+}
+.artist-card-container .artist-card-username {
+  font-size: clamp(8px, 1vw, 14px) !important;
+  line-height: 1.25;
+}
+.artist-card-container .artist-card-meta {
+  font-size: clamp(7px, 0.8vw, 12px) !important;
+  line-height: 1.25;
+}
+.artist-card-container .artist-card-password-bar {
+  min-height: max(28px, 2.5vw) !important;
+  padding: max(6px, 0.6vw) max(8px, 0.7vw) !important;
+  gap: max(4px, 0.5vw) !important;
+}
+.artist-card-container .artist-card-password-text {
+  font-size: clamp(8px, 0.75vw, 13px) !important;
+  line-height: 1.2;
+}
+
+/* Запасной вариант: размеры по брейкпоинтам, если vw не срабатывает */
+@media (max-width: 520px) {
+  .artist-card-container .artist-card-name { font-size: 10px !important; }
+  .artist-card-container .artist-card-username { font-size: 8px !important; }
+  .artist-card-container .artist-card-meta { font-size: 7px !important; }
+  .artist-card-container .artist-card-password-text { font-size: 8px !important; }
+  .artist-card-container .artist-card-password-bar { min-height: 26px !important; padding: 5px 6px !important; }
+}
+@media (min-width: 521px) and (max-width: 900px) {
+  .artist-card-container .artist-card-name { font-size: 12px !important; }
+  .artist-card-container .artist-card-username { font-size: 10px !important; }
+  .artist-card-container .artist-card-meta { font-size: 9px !important; }
+  .artist-card-container .artist-card-password-text { font-size: 9px !important; }
+  .artist-card-container .artist-card-password-bar { min-height: 30px !important; padding: 6px 8px !important; }
+}
+@media (min-width: 901px) and (max-width: 1400px) {
+  .artist-card-container .artist-card-name { font-size: 14px !important; }
+  .artist-card-container .artist-card-username { font-size: 11px !important; }
+  .artist-card-container .artist-card-meta { font-size: 10px !important; }
+  .artist-card-container .artist-card-password-text { font-size: 10px !important; }
+  .artist-card-container .artist-card-password-bar { min-height: 32px !important; padding: 7px 9px !important; }
+}
+@media (min-width: 1401px) {
+  .artist-card-container .artist-card-name { font-size: 17px !important; }
+  .artist-card-container .artist-card-username { font-size: 13px !important; }
+  .artist-card-container .artist-card-meta { font-size: 11px !important; }
+  .artist-card-container .artist-card-password-text { font-size: 12px !important; }
+  .artist-card-container .artist-card-password-bar { min-height: 38px !important; padding: 9px 11px !important; }
 }
 
 @keyframes float {

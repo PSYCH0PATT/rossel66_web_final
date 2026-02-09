@@ -42,13 +42,22 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   artist_added: 'Артист добавлен',
   artist_removed: 'Артист удалён',
   release_status_updated: 'Статус релиза обновлён',
+  parser_started: 'Парсер запущен',
+  parser_completed: 'Парсер завершён',
+  parser_error: 'Ошибка парсера',
+  parser_release_found: 'Парсер: релиз найден',
+  parser_release_updated: 'Парсер: релиз обновлён',
+  parser_playlist_found: 'Парсер: плейлист найден',
 }
 
 function getActivityIcon(type: ActivityType) {
   switch (type) {
     case 'release_added':
+    case 'parser_release_found':
+    case 'parser_release_updated':
       return <Music className="h-4 w-4 text-category-blue" />
     case 'playlist_found':
+    case 'parser_playlist_found':
       return <ListMusic className="h-4 w-4 text-category-red" />
     case 'report_received':
     case 'reports_generated':
@@ -63,6 +72,12 @@ function getActivityIcon(type: ActivityType) {
       return <UserMinus className="h-4 w-4 text-category-red" />
     case 'release_status_updated':
       return <CheckCircle className="h-4 w-4 text-category-blue" />
+    case 'parser_started':
+      return <RefreshCw className="h-4 w-4 text-blue-400" />
+    case 'parser_completed':
+      return <CheckCircle className="h-4 w-4 text-green-400" />
+    case 'parser_error':
+      return <Activity className="h-4 w-4 text-red-400" />
     default:
       return <FileText className="h-4 w-4 text-gray-400" />
   }
@@ -263,30 +278,32 @@ export default function AdminActivityPage() {
               <div className="text-slate-400 py-8 text-center">Нет записей</div>
             ) : (
               <>
-                <div className="rounded-lg border border-slate-600/50 overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="rounded-lg border border-slate-600/50 overflow-x-auto">
+                  <table className="w-full text-sm min-w-[800px]">
                     <thead className="bg-slate-800/50 text-slate-400">
                       <tr>
-                        <th className="text-left p-3">Дата / время</th>
-                        <th className="text-left p-3">Тип</th>
-                        <th className="text-left p-3">Заголовок</th>
-                        <th className="text-left p-3">Описание</th>
-                        <th className="text-left p-3">Кто</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Дата / время</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Тип</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Заголовок</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Описание</th>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Кто</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-600/50">
                       {activities.map(item => (
                         <tr key={item.id} className="hover:bg-slate-800/30">
-                          <td className="p-3 text-slate-300 whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
+                          <td className="p-2 sm:p-3 text-slate-300 whitespace-nowrap text-xs sm:text-sm">{formatDateTime(item.createdAt)}</td>
+                          <td className="p-2 sm:p-3">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <span className="flex-shrink-0">{getActivityIcon(item.type)}</span>
-                              <span className="text-slate-300">{TYPE_LABELS[item.type] || item.type}</span>
+                              <span className="text-slate-300 text-xs sm:text-sm whitespace-nowrap">{TYPE_LABELS[item.type] || item.type}</span>
                             </div>
                           </td>
-                          <td className="p-3 font-medium text-white">{item.title}</td>
-                          <td className="p-3 text-slate-400 max-w-xs truncate">{item.description}</td>
-                          <td className="p-3 text-slate-300">{whoLabel(item)}</td>
+                          <td className="p-2 sm:p-3 font-medium text-white text-xs sm:text-sm">{item.title}</td>
+                          <td className="p-2 sm:p-3 text-slate-400 text-xs sm:text-sm min-w-[200px]">
+                            <div className="whitespace-normal break-words">{item.description}</div>
+                          </td>
+                          <td className="p-2 sm:p-3 text-slate-300 text-xs sm:text-sm whitespace-nowrap">{whoLabel(item)}</td>
                         </tr>
                       ))}
                     </tbody>

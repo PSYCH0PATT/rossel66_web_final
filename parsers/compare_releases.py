@@ -6,6 +6,8 @@
 
 import json
 import logging
+import os
+from pathlib import Path
 
 # Настройка логирования
 logging.basicConfig(
@@ -14,10 +16,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Определяем базовую директорию проекта
+BASE_DIR = Path(__file__).resolve().parent.parent
+PARSERS_DIR = BASE_DIR / 'parsers'
+DATA_DIR = BASE_DIR / 'data'
+
+# Создаём директории если их нет
+PARSERS_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(exist_ok=True)
+
 def load_zvonko_releases():
     """Загружает релизы из Zvonko"""
     try:
-        with open('/Users/macbook/proga/rossel-music/parsers/zvonko_all_releases_full.json', 'r', encoding='utf-8') as f:
+        zvonko_file = PARSERS_DIR / 'zvonko_all_releases_full.json'
+        if not zvonko_file.exists():
+            logger.warning(f"Файл {zvonko_file} не найден, создаём пустой")
+            zvonko_file.write_text('[]', encoding='utf-8')
+            return []
+        with open(zvonko_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Ошибка загрузки Zvonko релизов: {e}")
@@ -26,7 +42,12 @@ def load_zvonko_releases():
 def load_system_releases():
     """Загружает релизы из системы"""
     try:
-        with open('/Users/macbook/proga/rossel-music/data/releases.json', 'r', encoding='utf-8') as f:
+        releases_file = DATA_DIR / 'releases.json'
+        if not releases_file.exists():
+            logger.warning(f"Файл {releases_file} не найден, создаём пустой")
+            releases_file.write_text('[]', encoding='utf-8')
+            return []
+        with open(releases_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Ошибка загрузки системных релизов: {e}")
@@ -142,7 +163,8 @@ def compare_releases():
         'duplicates_in_zvonko': duplicates_in_zvonko
     }
     
-    with open('/Users/macbook/proga/rossel-music/parsers/comparison_results.json', 'w', encoding='utf-8') as f:
+    results_file = PARSERS_DIR / 'comparison_results.json'
+    with open(results_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     
     logger.info("📄 Результаты сохранены в comparison_results.json")

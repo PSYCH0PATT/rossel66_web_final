@@ -564,5 +564,14 @@
     "percentage": 70,
     "createdAt": "2026-01-15T14:29:49.087100",
     "updatedAt": "2026-01-15T14:46:04.916365"
+  },
+  {
+    "username": "rompy",
+    "password": "$2b$10$0iZ7IQY2ThH9NQIaHDC2tuNy8EW7QOnWF8Mc56YA/9bd00uaT5iLy",
+    "role": "artist",
+    "name": "rompy",
+    "email": "",
+    "id": "1770233945784",
+    "createdAt": "2026-02-04T19:39:05.784Z"
   }
 ]

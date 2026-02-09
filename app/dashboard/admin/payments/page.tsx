@@ -210,56 +210,66 @@ export default function AdminPaymentsPage() {
                 <div className="space-y-3">
                   {paymentsByYear[year].map((payment) => (
                     <Card key={payment.id} className="bg-transparent border-slate-600/30 hover:border-slate-500/50 transition-colors text-white rounded-xl">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-slate-700/30">
-                              <FileText className="h-5 w-5 text-green-400" />
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className="p-2 rounded-full bg-slate-700/30 flex-shrink-0">
+                              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
                             </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium text-white">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-white text-sm sm:text-base">
                                 Выплата за {payment.quarter} {payment.year}
                               </h4>
-                              <p className="text-sm text-slate-400">Артист: {payment.artistName}</p>
-                              <div className="flex items-center gap-4 mt-2">
+                              <p className="text-xs sm:text-sm text-slate-400 truncate">Артист: {payment.artistName}</p>
+                              <div className="flex items-center flex-wrap gap-2 sm:gap-4 mt-2">
                                 <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4 text-slate-400" />
+                                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
                                   <span className="text-xs text-slate-400">
                                     {new Date(payment.date).toLocaleDateString('ru-RU')}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   {payment.isSigned ? (
-                                    <CheckCircle className="h-4 w-4 text-green-400" />
+                                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                                   ) : (
-                                    <XCircle className="h-4 w-4 text-red-400" />
+                                    <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 flex-shrink-0" />
                                   )}
                                   <span className="text-xs text-slate-400">
                                     {payment.isSigned ? "Подписан" : "Не подписан"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 sm:hidden">
+                                  {payment.isPaid ? (
+                                    <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
+                                  ) : (
+                                    <XCircle className="h-3 w-3 text-red-400 flex-shrink-0" />
+                                  )}
+                                  <span className="text-xs text-slate-400">
+                                    {payment.isPaid ? "Выплачено" : "Не выплачено"}
                                   </span>
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-white">
+                          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                            <div className="text-left sm:text-right">
+                              <div className="text-lg sm:text-xl font-bold text-white">
                                 {Math.floor(payment.amount).toLocaleString()} ₽
                               </div>
-                              <div className="text-xs text-slate-400">
+                              <div className="text-xs text-slate-400 hidden sm:block">
                                 {payment.isPaid ? "Выплачено" : "Не выплачено"}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="hidden sm:flex items-center gap-2">
                                 {payment.isPaid ? (
                                   <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
                                 ) : (
                                   <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
                                 )}
-                                <Label htmlFor={`paid-${payment.id}`} className="text-slate-300 whitespace-nowrap">
+                                <Label htmlFor={`paid-${payment.id}`} className="text-slate-300 whitespace-nowrap text-sm">
                                   Выплачено
                                 </Label>
                               </div>

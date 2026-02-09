@@ -175,20 +175,20 @@ export default function AdminDashboard() {
           <CardContent>
             <ActivityFeed role="admin" limit={10} />
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/dashboard/admin/artists"
-                className="flex items-center justify-center gap-2 p-2 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors"
+                className="flex items-center justify-center gap-2 p-3 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors flex-1 whitespace-nowrap"
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-4 w-4 flex-shrink-0" />
                 <span>Управление артистами</span>
               </Link>
 
               <Link
                 href="/dashboard/admin/reports"
-                className="flex items-center justify-center gap-2 p-2 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors"
+                className="flex items-center justify-center gap-2 p-3 text-sm bg-slate-800/50 hover:bg-slate-700/60 rounded-xl transition-colors flex-1 whitespace-nowrap"
               >
-                <TrendingUp className="h-4 w-4" />
+                <TrendingUp className="h-4 w-4 flex-shrink-0" />
                 <span>Загрузить отчеты</span>
               </Link>
             </div>

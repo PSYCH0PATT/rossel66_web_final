@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import { releases, users } from "@/lib/data"
 import { Music, Calendar, Barcode, Plus, Edit, Trash, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -19,37 +18,42 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  // Загрузка данных артиста и его релизов
   useEffect(() => {
-    // Проверяем статичных артистов
-    const staticArtist = users.find((user) => user.id === artistId && user.role === "artist")
+    let cancelled = false
 
-    if (staticArtist) {
-      setArtist(staticArtist)
-      // Получаем релизы артиста из статичных данных
-      const artistReleases = releases.filter((release) => release.artistId === artistId)
-      setArtistReleases(artistReleases)
-      setLoading(false)
-      return
+    const fetchArtistAndReleases = async () => {
+      try {
+        const artistsRes = await fetch("/api/artists")
+        const artistsData = await artistsRes.json()
+        if (!artistsData.success || cancelled) return
+
+        const foundArtist = artistsData.artists.find((a: any) => a.id === artistId && a.role === "artist")
+        if (!foundArtist) {
+          setError("Артист не найден")
+          return
+        }
+
+        setArtist(foundArtist)
+
+        const releasesRes = await fetch(`/api/releases/artist/${artistId}`)
+        const releasesData = await releasesRes.json()
+        if (cancelled) return
+        if (releasesData.success && Array.isArray(releasesData.releases)) {
+          setArtistReleases(releasesData.releases)
+        } else {
+          setArtistReleases([])
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError("Ошибка загрузки данных")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
-    // Проверяем динамически добавленных артистов
-    const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-    const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-    const dynamicArtist = dynamicUsers.find((user: any) => user.id === artistId && user.role === "artist")
-
-    if (dynamicArtist) {
-      setArtist(dynamicArtist)
-
-      // Получаем релизы артиста из localStorage
-      const dynamicReleasesStr = localStorage.getItem(`releases_${artistId}`)
-      const dynamicReleases = dynamicReleasesStr ? JSON.parse(dynamicReleasesStr) : []
-      setArtistReleases(dynamicReleases)
-    } else {
-      setError("Артист не найден")
-    }
-
-    setLoading(false)
+    fetchArtistAndReleases()
+    return () => { cancelled = true }
   }, [artistId])
 
   // Status badge colors
@@ -166,7 +170,7 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
 
                     <div className="flex items-center gap-2">
                       <Music className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-300">Треков: {release.tracks.length}</span>
+                      <span className="text-gray-300">Треков: {release.tracks?.length ?? 0}</span>
                     </div>
                   </div>
 

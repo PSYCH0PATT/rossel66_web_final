@@ -107,7 +107,8 @@ export default function TopNav({ role, username }: TopNavProps) {
 
   return (
     <nav className="px-3 sm:px-6 flex items-center justify-between bg-card border-b border-gray-700 h-full relative">
-      <div className="font-medium text-sm hidden sm:flex items-center space-x-1 truncate max-w-[300px]">
+      {/* Breadcrumbs - скрыты на мобильных когда есть гамбургер меню */}
+      <div className="font-medium text-sm hidden lg:flex items-center space-x-1 truncate max-w-[300px]">
         {breadcrumbs.map((item, index) => (
           <div key={item.label} className="flex items-center">
             {index > 0 && <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />}
@@ -122,14 +123,15 @@ export default function TopNav({ role, username }: TopNavProps) {
         ))}
       </div>
 
-      {/* Логотип по центру (только на мобилке) */}
-      {isMobile && (
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none lg:hidden">
-          <Image src="/images/logo.png" alt="ROSSEL 66" width={42} height={42} className="flex-shrink-0" />
-        </div>
-      )}
+      {/* Пустой div для выравнивания на мобильных (слева от логотипа) */}
+      <div className="lg:hidden w-10" />
 
-      <div className="flex items-center gap-2 sm:gap-4 ml-auto sm:ml-0">
+      {/* Логотип по центру (только на мобилке) */}
+      <div className="absolute left-1/2 -translate-x-1/2 lg:hidden">
+        <Image src="/images/logo.png" alt="ROSSEL 66" width={42} height={42} className="flex-shrink-0" />
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-4 ml-auto">
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
             <div className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded-xl transition-colors">

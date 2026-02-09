@@ -1,6 +1,36 @@
 [
   {
     "type": "release_added",
+    "userId": "1770233945784",
+    "userRole": "artist",
+    "title": "Релизы привязаны к артисту",
+    "description": "Вручную привязано 1 релиз(ов) к артисту \"rompy\"",
+    "metadata": {
+      "artistId": "1770233945784",
+      "count": 1,
+      "manual": true
+    },
+    "id": "1770234736751",
+    "createdAt": "2026-02-04T19:52:16.751Z"
+  },
+  {
+    "type": "artist_added",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Добавлен артист",
+    "description": "Артист \"rompy\" создан",
+    "metadata": {
+      "artistId": "1770233945784",
+      "artistName": "rompy",
+      "assignedReports": 0,
+      "assignedReleases": 0,
+      "assignedPlaylists": 0
+    },
+    "id": "1770233945857",
+    "createdAt": "2026-02-04T19:39:05.857Z"
+  },
+  {
+    "type": "release_added",
     "userId": "user_1759096825583",
     "userRole": "artist",
     "title": "Новый релиз добавлен",
@@ -131,88 +161,5 @@
     },
     "id": "1769096782165",
     "createdAt": "2026-01-22T15:46:22.165Z"
-  },
-  {
-    "type": "user_data_updated",
-    "userId": "2",
-    "userRole": "admin",
-    "title": "Данные артиста обновлены",
-    "description": "Профиль артиста \"Администратор\" был обновлен",
-    "metadata": {
-      "artistId": "2",
-      "artistName": "Администратор"
-    },
-    "id": "1760061469237",
-    "createdAt": "2025-10-10T01:57:49.237Z"
-  },
-  {
-    "type": "user_data_updated",
-    "userId": "1760059101057",
-    "userRole": "admin",
-    "title": "Данные артиста обновлены",
-    "description": "Профиль артиста \"test\" был обновлен",
-    "metadata": {
-      "artistId": "1760059101057",
-      "artistName": "test"
-    },
-    "id": "1760061341682",
-    "createdAt": "2025-10-10T01:55:41.682Z"
-  },
-  {
-    "id": "1738445200000",
-    "type": "playlist_found",
-    "userId": "user_1759011689584",
-    "userRole": "artist",
-    "title": "Найдены новые плейлисты",
-    "description": "Найдено 2 плейлиста на Яндекс Музыка, МТС Музыка: \"Вечеринка под парусом\" (stars), \"Нэйм: Электроника\" (i can't never let u go)",
-    "metadata": {
-      "platforms": [
-        "Яндекс Музыка",
-        "МТС Музыка"
-      ],
-      "count": 2,
-      "playlists": [
-        {
-          "name": "Вечеринка под парусом",
-          "platform": "Яндекс Музыка",
-          "tracks": "stars",
-          "url": "https://music.yandex.ru/users/playlist/1"
-        },
-        {
-          "name": "Нэйм: Электроника",
-          "platform": "МТС Музыка",
-          "tracks": "i can't never let u go",
-          "url": "https://music.mts.ru/playlist/2"
-        }
-      ]
-    },
-    "createdAt": "2025-10-07T10:30:00.000Z"
-  },
-  {
-    "id": "1727539200000",
-    "type": "release_added",
-    "userId": "user_1759011689584",
-    "userRole": "artist",
-    "title": "Добавлен новый релиз",
-    "description": "Релиз \"SOMEDAY\" успешно добавлен",
-    "metadata": {
-      "releaseId": "release_123",
-      "releaseTitle": "SOMEDAY"
-    },
-    "createdAt": "2024-05-16T08:00:00.000Z"
-  },
-  {
-    "id": "1727539100000",
-    "type": "report_received",
-    "userId": "user_1759011689584",
-    "userRole": "artist",
-    "title": "Получен новый отчет",
-    "description": "Q3 2025 - 22 378 ₽",
-    "metadata": {
-      "quarter": "Q3",
-      "year": "2025",
-      "amount": 22378
-    },
-    "createdAt": "2025-09-28T12:00:00.000Z"
   }
 ]

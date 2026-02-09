@@ -19,7 +19,7 @@ export default function LoginPage() {
         <div className="relative w-full max-w-md">
         {/* Лого с свечением */}
         <div className="flex flex-col items-center justify-center mb-8 sm:mb-10 animate-fade-in-down">
-          <div className="relative mb-6 sm:mb-8 w-[180px] animate-float">
+          <div className="relative mb-6 sm:mb-8 w-[120px] sm:w-[180px] max-w-[40vw] animate-float">
             {/* Зеленое свечение */}
             <div className="absolute inset-0 blur-3xl opacity-50" style={{ backgroundColor: 'rgba(0, 201, 87, 0.4)' }} />
             {/* Белое свечение по контуру */}

@@ -106,7 +106,7 @@ export default function PlaylistHistoryPage() {
   }
 
   return (
-    <Layout>
+    <Layout role="admin" requiredRole="admin">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -210,55 +210,55 @@ export default function PlaylistHistoryPage() {
                 Нет записей в истории
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <table className="w-full border-collapse min-w-[700px]">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-3 font-semibold">Дата</th>
-                      <th className="text-left p-3 font-semibold">Тип</th>
-                      <th className="text-left p-3 font-semibold">Плейлист</th>
-                      <th className="text-left p-3 font-semibold">Платформа</th>
-                      <th className="text-left p-3 font-semibold">Артист</th>
-                      <th className="text-left p-3 font-semibold">Трек</th>
-                      <th className="text-left p-3 font-semibold">Позиция</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm whitespace-nowrap">Дата</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm whitespace-nowrap">Тип</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm">Плейлист</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm whitespace-nowrap">Платформа</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm whitespace-nowrap">Артист</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm">Трек</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm whitespace-nowrap">Позиция</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.map((record) => (
                       <tr key={record.id} className="border-b hover:bg-muted/50">
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
+                        <td className="p-2 sm:p-3">
+                          <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm">
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
                             {formatDateTime(record.change_date)}
                           </div>
                         </td>
-                        <td className="p-3">
-                          <Badge className={getChangeTypeColor(record.change_type)}>
+                        <td className="p-2 sm:p-3">
+                          <Badge className={`${getChangeTypeColor(record.change_type)} text-xs`}>
                             {getChangeTypeLabel(record.change_type)}
                           </Badge>
                         </td>
-                        <td className="p-3">
-                          <div className="max-w-xs truncate" title={record.playlist_name}>
+                        <td className="p-2 sm:p-3">
+                          <div className="max-w-[120px] sm:max-w-xs truncate text-xs sm:text-sm" title={record.playlist_name}>
                             {record.playlist_name}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate max-w-xs" title={record.playlist_url}>
+                          <div className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-xs" title={record.playlist_url}>
                             {record.playlist_url}
                           </div>
                         </td>
-                        <td className="p-3">{record.platform}</td>
-                        <td className="p-3">{record.artist_name || '-'}</td>
-                        <td className="p-3">
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm">{record.platform}</td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm">{record.artist_name || '-'}</td>
+                        <td className="p-2 sm:p-3">
                           {record.track_title ? (
-                            <div className="max-w-xs truncate" title={record.track_title}>
+                            <div className="max-w-[100px] sm:max-w-xs truncate text-xs sm:text-sm" title={record.track_title}>
                               {record.track_title}
                             </div>
                           ) : (
                             '-'
                           )}
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm">
                           {record.change_type === 'position_changed' && record.old_position !== null && record.new_position !== null ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <span className="text-muted-foreground">{record.old_position}</span>
                               <span>→</span>
                               <span className="font-semibold">{record.new_position}</span>

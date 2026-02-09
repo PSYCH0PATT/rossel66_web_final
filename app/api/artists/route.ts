@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { addUser, getUserByUsername, loadUsers, assignReportsToNewArtist, updateUser, deleteUser, addActivity } from "@/lib/storage"
+import { addUser, getUserByUsername, loadUsers, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity } from "@/lib/storage"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -76,17 +76,70 @@ export async function POST(request: Request) {
       spotifyUrl,
     })
 
-    // Assign any existing unregistered reports to this artist
-    assignReportsToNewArtist(newUser.id, name)
+    // Auto-assign existing data to this artist by name matching
+    const assignedReports = assignReportsToNewArtist(newUser.id, name)
+    const assignedReleases = assignReleasesToNewArtist(newUser.id, name, username)
+    
+    // Try to assign playlists from SFTP database
+    let assignedPlaylists = 0
+    try {
+      const { assignPlaylistsToArtist } = await import('@/lib/sftp-playlist-storage')
+      assignedPlaylists = await assignPlaylistsToArtist(newUser.id, name, username)
+    } catch (error) {
+      console.error('Error assigning playlists:', error)
+    }
 
+    // Log artist creation
     addActivity({
       type: 'artist_added',
       userId: 'system',
       userRole: 'admin',
       title: 'Добавлен артист',
       description: `Артист "${newUser.name}" создан`,
-      metadata: { artistId: newUser.id, artistName: newUser.name }
+      metadata: { 
+        artistId: newUser.id, 
+        artistName: newUser.name,
+        assignedReports,
+        assignedReleases,
+        assignedPlaylists
+      }
     })
+    
+    // Log each assigned report
+    if (assignedReports > 0) {
+      addActivity({
+        type: 'report_received',
+        userId: newUser.id,
+        userRole: 'artist',
+        title: 'Отчёты привязаны к артисту',
+        description: `Автоматически привязано ${assignedReports} отчёт(ов) к артисту "${newUser.name}"`,
+        metadata: { artistId: newUser.id, count: assignedReports }
+      })
+    }
+    
+    // Log each assigned release
+    if (assignedReleases > 0) {
+      addActivity({
+        type: 'release_added',
+        userId: newUser.id,
+        userRole: 'artist',
+        title: 'Релизы привязаны к артисту',
+        description: `Автоматически привязано ${assignedReleases} релиз(ов) к артисту "${newUser.name}"`,
+        metadata: { artistId: newUser.id, count: assignedReleases }
+      })
+    }
+    
+    // Log each assigned playlist
+    if (assignedPlaylists > 0) {
+      addActivity({
+        type: 'playlist_found',
+        userId: newUser.id,
+        userRole: 'artist',
+        title: 'Плейлисты привязаны к артисту',
+        description: `Автоматически привязано ${assignedPlaylists} плейлист(ов) к артисту "${newUser.name}"`,
+        metadata: { artistId: newUser.id, count: assignedPlaylists }
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -118,7 +171,7 @@ export async function GET() {
       artists: artists.map(artist => ({
         id: artist.id,
         username: artist.username,
-        // password НЕ возвращаем - используйте /api/auth/login для аутентификации
+        password: artist.password,
         name: artist.name,
         email: artist.email,
         avatarUrl: artist.avatarUrl,

@@ -5,7 +5,6 @@ import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react"
-import { users, getArtistPlaylists } from "@/lib/data"
 import { VkParserForm } from "@/components/vk-parser-form"
 import Image from "next/image"
 import Link from "next/link"
@@ -14,45 +13,60 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
   const [artist, setArtist] = useState<any>(null)
   const [playlists, setPlaylists] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    // Находим артиста по ID
-    const foundArtist = users.find((user) => user.id === params.id && user.role === "artist")
+    let cancelled = false
 
-    if (foundArtist) {
-      setArtist(foundArtist)
+    const fetchArtistAndPlaylists = async () => {
+      try {
+        const artistsRes = await fetch("/api/artists")
+        const artistsData = await artistsRes.json()
+        if (!artistsData.success || cancelled) return
 
-      // Загружаем плейлисты артиста
-      const artistPlaylists = getArtistPlaylists(params.id)
-      setPlaylists(artistPlaylists)
+        const foundArtist = artistsData.artists.find((a: any) => a.id === params.id && a.role === "artist")
+        if (!foundArtist) {
+          setError("Артист не найден")
+          setLoading(false)
+          return
+        }
+
+        setArtist(foundArtist)
+
+        const playlistsRes = await fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(params.id)}`)
+        const playlistsData = await playlistsRes.json()
+        if (cancelled) return
+        if (playlistsData.success && Array.isArray(playlistsData.results)) {
+          setPlaylists(playlistsData.results)
+        } else {
+          setPlaylists([])
+        }
+      } catch (e) {
+        if (!cancelled) setError("Ошибка загрузки данных")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
 
-    setLoading(false)
+    fetchArtistAndPlaylists()
+    return () => { cancelled = true }
   }, [params.id])
 
-  // Функция для удаления плейлиста
-  const handleDeletePlaylist = (playlistId: string) => {
-    // В реальном приложении здесь был бы код для удаления плейлиста из базы данных
-    // Для демонстрации мы просто удалим его из локального состояния
-
-    const updatedPlaylists = playlists.filter((playlist) => playlist.id !== playlistId)
-    setPlaylists(updatedPlaylists)
-
-    // Если плейлист был добавлен динамически, удаляем его из localStorage
-    try {
-      const playlistsStr = localStorage.getItem("playlists")
-      if (playlistsStr) {
-        const storedPlaylists = JSON.parse(playlistsStr)
-        const updatedStoredPlaylists = storedPlaylists.filter((p: any) => p.id !== playlistId)
-        localStorage.setItem("playlists", JSON.stringify(updatedStoredPlaylists))
-      }
-    } catch (error) {
-      console.error("Error updating playlists in localStorage:", error)
-    }
+  const handleDeletePlaylist = (playlistId: number) => {
+    setPlaylists((prev) => prev.filter((p: any) => p.id !== playlistId))
   }
 
-  // Если артист не найден
-  if (!loading && !artist) {
+  if (loading) {
+    return (
+      <Layout role="admin" requiredRole="admin">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+        </div>
+      </Layout>
+    )
+  }
+
+  if (error || !artist) {
     return (
       <Layout role="admin" requiredRole="admin">
         <div className="space-y-6">
@@ -65,9 +79,8 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
               <span>Назад к списку артистов</span>
             </Link>
           </div>
-
           <div className="text-center py-8 text-gray-400">
-            <p>Артист не найден</p>
+            <p>{error || "Артист не найден"}</p>
           </div>
         </div>
       </Layout>
@@ -98,7 +111,7 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
               <CardContent>
                 {playlists.length > 0 ? (
                   <div className="space-y-4">
-                    {playlists.map((playlist) => (
+                    {playlists.map((playlist: any) => (
                       <div key={playlist.id} className="bg-accent/30 rounded-lg p-4 relative group">
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
@@ -114,21 +127,29 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
                         <div className="flex gap-4">
                           <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
                             <Image
-                              src={playlist.imageUrl || "/placeholder.svg"}
-                              alt={playlist.name}
+                              src={playlist.playlist_cover_url || "/placeholder.svg"}
+                              alt={playlist.playlist_name || ""}
                               fill
                               className="object-cover"
                             />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-white truncate">{playlist.name}</h3>
+                            <h3 className="font-medium text-white truncate">{playlist.playlist_name}</h3>
                             <p className="text-sm text-gray-400 mb-1">{playlist.platform}</p>
-                            <p className="text-xs text-gray-500 mb-2">Добавлен: {playlist.addedDate}</p>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Треков: {playlist.tracks_count ?? 0}
+                              {playlist.track_position != null && !isNaN(playlist.track_position) && (
+                                <> · Позиция: {playlist.track_position}</>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Добавлен: {playlist.added_at || playlist.parsed_at || "—"}
+                            </p>
 
-                            {playlist.externalUrl && (
+                            {playlist.playlist_url && (
                               <a
-                                href={playlist.externalUrl}
+                                href={playlist.playlist_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300"

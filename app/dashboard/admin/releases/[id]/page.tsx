@@ -43,11 +43,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
         setRelease(data.release)
         setArtistName(data.release.artistName || "")
       }
-      // load users for artist select
+      // load artists for artist select (same source as artist profile / list)
       try {
-        const ures = await fetch('/api/users')
-        const udata = await ures.json()
-        if (udata?.success) setUsers(udata.users.filter((u: any) => u.role === 'artist'))
+        const ares = await fetch('/api/artists')
+        const adata = await ares.json()
+        if (adata?.success && Array.isArray(adata.artists)) setUsers(adata.artists)
       } catch {}
     } finally {
       setLoading(false)

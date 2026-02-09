@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Upload, Check, AlertCircle, ArrowLeft, Eye, EyeOff, Music, LinkIcon, Settings, FileText, DollarSign, Plus, Edit, Trash } from "lucide-react"
+import { User, Upload, Check, AlertCircle, ArrowLeft, Music, LinkIcon, Settings, FileText, DollarSign, Plus, Edit, Trash } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
@@ -21,7 +21,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [vkMusicUrl, setVkMusicUrl] = useState("")
@@ -33,8 +32,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [artistNotFound, setArtistNotFound] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  
   // Новые поля для артиста
   const [fio, setFio] = useState("")
   const [fioShort, setFioShort] = useState("")
@@ -73,7 +70,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
             setYandexMusicUrl(artist.yandexMusicUrl || "")
             setSpotifyUrl(artist.spotifyUrl || "")
             setAvatarPreview(artist.avatarUrl || null)
-            setCurrentPassword(artist.password)
             
             // Новые поля
             setFio(artist.fio || "")
@@ -228,11 +224,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
       // Показываем сообщение об успехе
       setSuccess(true)
 
-      // Если пароль был изменен, обновляем текущий пароль
-      if (password) {
-        setCurrentPassword(password)
-      }
-
       // Сбрасываем пароль
       setPassword("")
     } catch (err) {
@@ -240,10 +231,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword)
   }
 
   if (artistNotFound) {
@@ -304,22 +291,22 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
         )}
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span>Профиль</span>
+          <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
+            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Профиль</span>
             </TabsTrigger>
-            <TabsTrigger value="releases" className="flex items-center gap-2">
-              <Music className="h-4 w-4" />
-              <span>Релизы</span>
+            <TabsTrigger value="releases" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <Music className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Релизы</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span>Отчеты</span>
+            <TabsTrigger value="reports" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <FileText className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Отчеты</span>
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              <span>Выплаты</span>
+            <TabsTrigger value="payments" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Выплаты</span>
             </TabsTrigger>
           </TabsList>
 
@@ -363,21 +350,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       placeholder="Оставьте пустым, чтобы не менять"
                     />
                     <p className="text-xs text-muted-foreground">Оставьте пустым, если не хотите менять пароль</p>
-                    <div className="mt-2 p-2 bg-emerald/10 border border-emerald/30 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-emerald flex items-center">
-                          <Check className="h-3 w-3 mr-1" /> Текущий пароль:
-                          <span className="font-mono ml-1">{showPassword ? currentPassword : "••••••••"}</span>
-                        </p>
-                        <button
-                          type="button"
-                          onClick={togglePasswordVisibility}
-                          className="text-emerald hover:text-emerald/80"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="space-y-2">
