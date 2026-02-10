@@ -27,8 +27,10 @@ export async function ensureSftpPlaylistDatabase(): Promise<void> {
           return;
         }
         
-        // Если таблица существует и имеет старый constraint, пересоздаем
-        if (row && row.sql && row.sql.includes('UNIQUE(playlist_url, playlist_name)') && !row.sql.includes('artist_name')) {
+        // Если таблица существует и имеет старый constraint (без artist_name в UNIQUE), пересоздаем
+        const hasOldUnique = row?.sql?.includes('UNIQUE(playlist_url, playlist_name)') === true;
+        const hasNewUnique = row?.sql?.includes('UNIQUE(playlist_url, playlist_name, artist_name)') === true;
+        if (row && row.sql && hasOldUnique && !hasNewUnique) {
           console.log('🔄 Обновляю схему таблицы sftp_playlists...');
           
           // Создаем временную таблицу с новой схемой

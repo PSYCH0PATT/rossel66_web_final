@@ -8,29 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Play } from 'lucide-react'
 import Image from 'next/image'
 
-interface VKPlaylist {
+interface SftpPlaylist {
   id: number
-  artist_url: string
-  artist_name: string
   playlist_name: string
   playlist_url: string
   playlist_cover_url: string
-  playlist_id: string
-  owner_id: string
-  parsed_at: string
-}
-
-interface BandlinkPlaylist {
-  id: number
-  artist_name: string
-  playlist_name: string
-  playlist_artist: string
-  track_names: string
-  likes_count: string
   platform: string
-  playlist_cover_url: string
-  playlist_url: string
-  parsed_at: string
+  tracks_count?: number
+  track_position?: number
+  parsed_at?: string
+  added_at?: string
+  tracks_info?: Array<{ title?: string; releaseName?: string }>
 }
 
 interface Artist {
@@ -39,17 +27,14 @@ interface Artist {
   username: string
 }
 
-type Playlist = (VKPlaylist | BandlinkPlaylist) & { type: 'vk' | 'bandlink' }
-
 export default function ArtistPlaylistsPage() {
   const router = useRouter()
   const [artist, setArtist] = useState<Artist | null>(null)
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  const [playlists, setPlaylists] = useState<SftpPlaylist[]>([])
   const [loading, setLoading] = useState(true)
   const [windowWidth, setWindowWidth] = useState(0)
 
   useEffect(() => {
-    // Получаем текущего пользователя из localStorage
     const userStr = localStorage.getItem('user')
     if (!userStr) {
       router.push('/login')
@@ -57,13 +42,13 @@ export default function ArtistPlaylistsPage() {
     }
 
     const user = JSON.parse(userStr)
-    if (user.role !== 'artist') {
+    if (user.role !== 'artist' || !user.id) {
       router.push('/login')
       return
     }
 
     setArtist(user)
-    loadPlaylists(user.name)
+    loadPlaylists(user.id)
   }, [router])
 
   // Отслеживание ширины окна
@@ -82,35 +67,32 @@ export default function ArtistPlaylistsPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const loadPlaylists = async (artistName: string) => {
+  const loadPlaylists = async (artistId: string) => {
     try {
       setLoading(true)
-      
-      // Загружаем VK плейлисты
-      const vkResponse = await fetch('/api/parsers/vk')
-      const vkData = await vkResponse.json()
-      
-      // Загружаем Bandlink плейлисты
-      const bandlinkResponse = await fetch('/api/parsers/bandlink')
-      const bandlinkData = await bandlinkResponse.json()
-      
-      // Фильтруем по имени артиста
-      const vkPlaylists = (vkData.results || [])
-        .filter((p: VKPlaylist) => p.artist_name === artistName)
-        .map((p: VKPlaylist) => ({ ...p, type: 'vk' as const }))
-      
-      const bandlinkPlaylists = (bandlinkData.results || [])
-        .filter((p: BandlinkPlaylist) => p.artist_name === artistName)
-        .map((p: BandlinkPlaylist) => ({ ...p, type: 'bandlink' as const }))
-      
-      // Объединяем и сортируем по дате
-      const allPlaylists = [...vkPlaylists, ...bandlinkPlaylists].sort((a, b) => {
-        return new Date(b.parsed_at).getTime() - new Date(a.parsed_at).getTime()
+      const res = await fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(artistId)}`)
+      const data = await res.json()
+      if (!data.success || !Array.isArray(data.results)) {
+        setPlaylists([])
+        return
+      }
+      const list: SftpPlaylist[] = data.results
+      const seen = new Set<string>()
+      const unique = list.filter((p) => {
+        const key = `${p.playlist_url ?? ''}|${p.playlist_name ?? ''}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
       })
-      
-      setPlaylists(allPlaylists)
+      unique.sort((a, b) => {
+        const dateA = a.parsed_at || a.added_at || ''
+        const dateB = b.parsed_at || b.added_at || ''
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
+      })
+      setPlaylists(unique)
     } catch (error) {
       console.error('Ошибка загрузки плейлистов:', error)
+      setPlaylists([])
     } finally {
       setLoading(false)
     }
@@ -129,25 +111,34 @@ export default function ArtistPlaylistsPage() {
 
   const currentColumns = getColumnsCount(windowWidth)
 
-  const PlaylistCard = ({ playlist }: { playlist: Playlist }) => {
-    const isVK = playlist.type === 'vk'
-    const vkPlaylist = playlist as VKPlaylist
-    const bandlinkPlaylist = playlist as BandlinkPlaylist
+  const getPlatformStyle = (platform: string) => {
+    const p = (platform || '').trim()
+    if (p === 'VK Музыка') return { bg: '#0077FF', color: '#FFFFFF' }
+    if (p === 'Яндекс Музыка') return { bg: '#FFCC00', color: '#000000' }
+    if (p === 'МТС Музыка' || p === 'MTS Music') return { bg: '#E30611', color: '#FFFFFF' }
+    if (p === 'Сбер Музыка' || p === 'Sber Music') return { bg: '#21A038', color: '#FFFFFF' }
+    return { bg: '#6b7280', color: '#FFFFFF' }
+  }
+
+  const PlaylistCard = ({ playlist }: { playlist: SftpPlaylist }) => {
+    const style = getPlatformStyle(playlist.platform)
+    const trackLabel = playlist.tracks_info?.[0]
+      ? `${playlist.tracks_info[0].releaseName || playlist.tracks_info[0].title || ''}`.trim()
+      : playlist.tracks_count != null ? `Треков: ${playlist.tracks_count}` : null
 
     return (
       <Card className="group hover:shadow-lg transition-all duration-200">
         <CardContent className="p-3">
           <div className="flex flex-col space-y-2">
-            {/* Обложка - кликабельная */}
             <a
-              href={isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url}
+              href={playlist.playlist_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted block cursor-pointer"
             >
               <Image
-                src={isVK ? (vkPlaylist.playlist_cover_url || "/placeholder.svg") : (bandlinkPlaylist.playlist_cover_url || "/placeholder.svg")}
-                alt={isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
+                src={playlist.playlist_cover_url || '/placeholder.svg'}
+                alt={playlist.playlist_name || ''}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -157,34 +148,17 @@ export default function ArtistPlaylistsPage() {
               </div>
             </a>
 
-            {/* Информация о плейлисте */}
             <div className="space-y-2">
               <h3 className="font-semibold text-sm line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                {isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
+                {playlist.playlist_name}
               </h3>
-              
-              <Badge 
-                className="text-xs font-medium border-0"
-                style={{
-                  backgroundColor: isVK 
-                    ? "#0077FF" 
-                    : bandlinkPlaylist.platform === "Яндекс Музыка" 
-                      ? "#FFCC00" 
-                      : "#E30611",
-                  color: isVK 
-                    ? "#FFFFFF" 
-                    : bandlinkPlaylist.platform === "Яндекс Музыка" 
-                      ? "#000000" 
-                      : "#FFFFFF"
-                }}
-              >
-                {isVK ? "VK Музыка" : bandlinkPlaylist.platform}
+
+              <Badge className="text-xs font-medium border-0" style={{ backgroundColor: style.bg, color: style.color }}>
+                {playlist.platform}
               </Badge>
 
-              {!isVK && bandlinkPlaylist.track_names && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {bandlinkPlaylist.track_names}
-                </p>
+              {trackLabel && (
+                <p className="text-xs text-muted-foreground line-clamp-2">{trackLabel}</p>
               )}
             </div>
           </div>
@@ -225,7 +199,7 @@ export default function ArtistPlaylistsPage() {
                 Пока нет плейлистов с вашими треками
               </p>
               <p className="text-sm text-muted-foreground">
-                Плейлисты появятся после парсинга администратором
+                Плейлисты подгружаются из отчётов SFTP после синхронизации
               </p>
             </CardContent>
           </Card>
@@ -234,8 +208,8 @@ export default function ArtistPlaylistsPage() {
             className="grid gap-3" 
             style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
           >
-            {playlists.map((playlist, index) => (
-              <PlaylistCard key={`${playlist.type}-${playlist.id}`} playlist={playlist} />
+            {playlists.map((playlist) => (
+              <PlaylistCard key={`${playlist.playlist_url ?? ''}-${playlist.playlist_name ?? ''}-${playlist.id}`} playlist={playlist} />
             ))}
           </div>
         )}
