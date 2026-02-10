@@ -120,11 +120,25 @@ export async function GET(request: NextRequest) {
       
       return result;
     });
-    
+
+    // Для artistId убираем дубликаты по одному и тому же плейлисту (url + название)
+    let results = formattedPlaylists;
+    if (artistId) {
+      const seen = new Set<string>();
+      results = formattedPlaylists.filter((p: any) => {
+        const url = (p.playlist_url ?? '').trim().replace(/\/+$/, '');
+        const name = (p.playlist_name ?? '').trim().toLowerCase();
+        const key = `${url}|${name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      results: formattedPlaylists,
-      count: formattedPlaylists.length
+      results,
+      count: results.length
     });
     
   } catch (error) {

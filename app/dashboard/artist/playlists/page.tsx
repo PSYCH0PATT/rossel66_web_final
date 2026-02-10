@@ -77,9 +77,14 @@ export default function ArtistPlaylistsPage() {
         return
       }
       const list: SftpPlaylist[] = data.results
+      const normalizeKey = (p: SftpPlaylist) => {
+        const url = (p.playlist_url ?? '').trim().replace(/\/+$/, '')
+        const name = (p.playlist_name ?? '').trim().toLowerCase()
+        return `${url}|${name}`
+      }
       const seen = new Set<string>()
       const unique = list.filter((p) => {
-        const key = `${p.playlist_url ?? ''}|${p.playlist_name ?? ''}`
+        const key = normalizeKey(p)
         if (seen.has(key)) return false
         seen.add(key)
         return true
