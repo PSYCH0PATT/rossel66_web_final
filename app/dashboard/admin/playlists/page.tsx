@@ -145,54 +145,39 @@ export default function PlaylistsPage() {
 
   const loadResults = async () => {
     try {
-      const [vkResponse, bandlinkResponse] = await Promise.all([
-        fetch('/api/parsers/vk'),
-        fetch('/api/parsers/bandlink')
-      ])
+      // Загружаем только SFTP плейлисты из Supabase
+      const response = await fetch('/api/playlists/sftp')
+      const data = await response.json()
       
-      const vkData = await vkResponse.json()
-      const bandlinkData = await bandlinkResponse.json()
+      if (!data.success) {
+        console.error('Ошибка загрузки SFTP плейлистов:', data.error)
+        return
+      }
       
-      // Преобразуем данные из SFTP формата в формат для отображения
-      if (vkData.success) {
-        const vkResultsFormatted = (vkData.results || []).map((p: any) => {
-          // Формируем список названий релизов для VK - ТОЛЬКО для этого артиста
-          const currentArtistName = p.artist_name || '';
-          let trackNames = '';
-          
-          if (p.tracks_info && p.tracks_info.length > 0) {
-            // Фильтруем релизы только для текущего артиста
-            const artistReleases = p.tracks_info
-              .filter((t: any) => {
-                // Проверяем, что релиз принадлежит текущему артисту
-                const releaseName = t.releaseName || t.title || '';
-                // Если релиз начинается с имени артиста, проверяем совпадение
-                const artistMatch = releaseName.match(/^([^-]+?)\s*-\s*/);
-                if (artistMatch) {
-                  const releaseArtist = artistMatch[1].trim().toLowerCase();
-                  return releaseArtist === currentArtistName.toLowerCase();
-                }
-                // Если нет дефиса, считаем что это релиз этого артиста (если tracks_info уже отфильтрован)
-                return true;
-              })
-              .map((t: any) => t.releaseName || t.title)
-              .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
-            
-            trackNames = artistReleases.join(', ');
-          } else if (p.release_names && p.release_names.length > 0) {
-            // Фильтруем release_names по артисту
-            const filteredReleases = p.release_names.filter((name: string) => {
-              const artistMatch = name.match(/^([^-]+?)\s*-\s*/);
-              if (artistMatch) {
-                const releaseArtist = artistMatch[1].trim().toLowerCase();
-                return releaseArtist === currentArtistName.toLowerCase();
-              }
-              return true;
-            });
-            trackNames = filteredReleases.join(', ');
-          }
-          
-          return {
+      const allPlaylists = data.results || []
+      
+      // Разделяем по платформам: VK -> vkResults, остальные -> bandlinkResults
+      const vkFormatted: VKPlaylist[] = []
+      const bandlinkFormatted: BandlinkPlaylist[] = []
+      
+      for (const p of allPlaylists) {
+        const currentArtistName = p.artist_name || ''
+        
+        // Формируем названия релизов
+        let trackNames = ''
+        if (p.tracks_info && p.tracks_info.length > 0) {
+          const artistReleases = p.tracks_info
+            .map((t: any) => t.releaseName || t.title)
+            .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index)
+          trackNames = artistReleases.join(', ')
+        } else if (p.release_names && p.release_names.length > 0) {
+          trackNames = p.release_names.join(', ')
+        }
+        
+        const platform = (p.platform || '').trim()
+        
+        if (platform === 'VK Музыка') {
+          vkFormatted.push({
             id: p.id,
             artist_url: '',
             artist_name: currentArtistName,
@@ -208,78 +193,32 @@ export default function PlaylistsPage() {
             track_position: p.track_position,
             track_names: trackNames,
             tracks_info: p.tracks_info || []
-          };
-        })
-        setVkResults(vkResultsFormatted)
-      }
-      
-      if (bandlinkData.success) {
-        const bandlinkResultsFormatted = (bandlinkData.results || []).map((p: any) => {
-          // Формируем список названий релизов из tracks_info или release_names - ТОЛЬКО для этого артиста
-          const currentArtistName = p.artist_name || '';
-          let trackNames = '';
-          
-          if (p.tracks_info && p.tracks_info.length > 0) {
-            // Фильтруем релизы только для текущего артиста
-            const artistReleases = p.tracks_info
-              .filter((t: any) => {
-                // Проверяем, что релиз принадлежит текущему артисту
-                const releaseName = t.releaseName || t.title || '';
-                const artistMatch = releaseName.match(/^([^-]+?)\s*-\s*/);
-                if (artistMatch) {
-                  const releaseArtist = artistMatch[1].trim().toLowerCase();
-                  return releaseArtist === currentArtistName.toLowerCase();
-                }
-                return true; // Если tracks_info уже отфильтрован по артисту
-              })
-              .map((t: any) => t.releaseName || t.title)
-              .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
-            
-            trackNames = artistReleases.join(', ');
-          } else if (p.release_names && p.release_names.length > 0) {
-            // Фильтруем release_names по артисту
-            const filteredReleases = p.release_names.filter((name: string) => {
-              const artistMatch = name.match(/^([^-]+?)\s*-\s*/);
-              if (artistMatch) {
-                const releaseArtist = artistMatch[1].trim().toLowerCase();
-                return releaseArtist === currentArtistName.toLowerCase();
-              }
-              return true;
-            });
-            trackNames = filteredReleases.join(', ');
-          }
-          
-          // Получаем позицию трека
-          let trackPosition = p.track_position;
-          if (!trackPosition && p.tracks_info && p.tracks_info.length > 0) {
-            const positions = p.tracks_info.map((t: any) => t.position).filter((pos: number) => pos != null && !isNaN(pos));
-            if (positions.length > 0) {
-              trackPosition = Math.min(...positions);
-            }
-          }
-          
-          return {
+          })
+        } else {
+          bandlinkFormatted.push({
             id: p.id,
-            artist_name: p.artist_name || '',
+            artist_name: currentArtistName,
             playlist_name: p.playlist_name,
-            playlist_artist: p.artist_name || '',
+            playlist_artist: currentArtistName,
             track_names: trackNames,
             likes_count: '',
-            platform: p.platform,
+            platform: platform,
             playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
             playlist_url: p.playlist_url,
             added_at: p.added_at || p.parsed_at,
             parsed_at: p.parsed_at || p.added_at,
             tracks_count: p.tracks_count || 0,
             multiple_tracks: p.multiple_tracks || false,
-            track_position: trackPosition,
+            track_position: p.track_position,
             tracks_info: p.tracks_info || []
-          };
-        });
-        setBandlinkResults(bandlinkResultsFormatted);
+          })
+        }
       }
+      
+      setVkResults(vkFormatted)
+      setBandlinkResults(bandlinkFormatted)
     } catch (error) {
-      console.error('Ошибка загрузки результатов парсинга:', error)
+      console.error('Ошибка загрузки плейлистов:', error)
     }
   }
   
