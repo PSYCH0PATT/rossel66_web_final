@@ -18,11 +18,13 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
   added: number;
   updated: number;
   unchanged: number;
+  errors: string[];
 }> {
   const stats = {
     added: 0,
     updated: 0,
-    unchanged: 0
+    unchanged: 0,
+    errors: [] as string[]
   };
   
   for (const playlist of playlists) {
@@ -124,7 +126,9 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
         }
       }
     } catch (error) {
-      console.error(`❌ Ошибка сохранения плейлиста ${playlist.playlistName}:`, error);
+      const errorMsg = `Ошибка сохранения плейлиста ${playlist.playlistName}: ${error}`;
+      console.error(`❌ ${errorMsg}`);
+      stats.errors.push(errorMsg);
     }
   }
   
