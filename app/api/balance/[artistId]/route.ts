@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const balance = getArtistBalance(artistId)
+    const balance = await getArtistBalance(artistId)
     
     return NextResponse.json({
       success: true,

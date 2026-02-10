@@ -25,11 +25,11 @@ export async function POST(request: Request) {
     }
 
     // Get artist info for logging
-    const artist = getUserById(artistId)
+    const artist = await getUserById(artistId)
     
     // Log activity
     if (artist) {
-      addActivity({
+      await addActivity({
         type: 'playlist_found',
         userId: artistId,
         userRole: 'artist',

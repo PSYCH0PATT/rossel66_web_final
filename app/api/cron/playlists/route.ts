@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     console.log(`📅 Время запуска: ${new Date().toISOString()}`);
     
     // Находим артистов с недавними релизами
-    const artistsToScan = getArtistsWithRecentReleases();
+    const artistsToScan = await getArtistsWithRecentReleases();
     
     if (artistsToScan.length === 0) {
       console.log('📭 Нет артистов с недавними релизами для сканирования');
@@ -203,14 +203,14 @@ export async function GET(request: NextRequest) {
  * Находит артистов с релизами за последние 7 дней
  * Релизы выходят в ночь с четверга на пятницу (00:00 пятницы)
  */
-function getArtistsWithRecentReleases(): Array<{
+async function getArtistsWithRecentReleases(): Promise<Array<{
   id: string;
   username: string;
   name: string;
   recentRelease: string;
-}> {
-  const releases = loadReleases();
-  const users = loadUsers();
+}>> {
+  const releases = await loadReleases();
+  const users = await loadUsers();
   
   // Текущая дата
   const now = new Date();

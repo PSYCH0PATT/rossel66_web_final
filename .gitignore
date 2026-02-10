@@ -44,3 +44,10 @@ __pycache__/
 *.pyc
 *.db
 temp_*_config.json
+
+/generated/prisma
+
+# data directory (migrated to Supabase)
+data/
+!data/.gitkeep
+data_backup_*/

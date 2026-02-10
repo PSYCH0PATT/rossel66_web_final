@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const finalPlays = totalPlays ? parseInt(totalPlays) : calculatedPlays
 
     // Проверяем, зарегистрирован ли артист
-    const users = loadUsers()
+    const users = await loadUsers()
     const registeredArtist = users.find(user => 
       user.role === 'artist' && 
       (user.name.toLowerCase() === artistName.toLowerCase() || 
@@ -67,28 +67,27 @@ export async function POST(request: NextRequest) {
     )
 
     // Создаем отчет
-    const reports = loadReports()
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
-    const newReport = {
-      id: reportId,
-      artistId: registeredArtist?.id || `unregistered_${Date.now()}`,
-      artistName: artistName,
-      quarter: quarter,
-      year: parseInt(year),
-      fileName: file.name,
-      filePath: `uploads/${reportId}_${file.name}`, // Путь к файлу
-      uploadDate: new Date().toISOString(),
-      status: 'processed' as const, // Статус обработки
-      totalPlays: finalPlays,
-      totalAmount: finalAmount,
-      isRegistered: !!registeredArtist,
-      isSigned: false,
-      isPaid: false,
-    }
-
-    reports.push(newReport)
-    saveReports(reports)
+    const newReport = await prisma.report.create({
+      data: {
+        id: reportId,
+        artistId: registeredArtist?.id || null,
+        artistName: artistName,
+        quarter: quarter,
+        year: parseInt(year),
+        fileName: file.name,
+        filePath: `uploads/${reportId}_${file.name}`, // Путь к файлу
+        uploadDate: new Date().toISOString(),
+        status: 'processed', // Статус обработки
+        totalPlays: finalPlays,
+        totalAmount: finalAmount,
+        isRegistered: !!registeredArtist,
+        isSigned: false,
+        isPaid: false,
+        processed: true
+      }
+    })
 
     console.log('Создан новый отчет:', newReport)
 

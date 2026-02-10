@@ -161,71 +161,60 @@ async function runKoalaParser() {
 async function processKoalaResults(releases: any[]) {
   try {
     const { 
-      loadReleases, 
-      saveReleases, 
+      updateRelease,
+      addRelease,
       findArtistByName,
       getReleaseByKoalaId,
       addActivity 
     } = await import('@/lib/storage');
     
-    const allReleases = loadReleases();
     let added = 0;
     let updated = 0;
     
     for (const koalaRelease of releases) {
-      const artist = findArtistByName(koalaRelease.artist);
+      const artist = await findArtistByName(koalaRelease.artist);
       
       if (!artist) {
         continue;
       }
       
-      const existing = getReleaseByKoalaId(koalaRelease.koala_id);
+      const existing = await getReleaseByKoalaId(koalaRelease.koala_id);
       
       if (existing) {
-        const index = allReleases.findIndex(r => r.id === existing.id);
-        if (index !== -1) {
-          allReleases[index].status = koalaRelease.status;
-          if (koalaRelease.upc) {
-            allReleases[index].upc = koalaRelease.upc;
-          }
-          if (koalaRelease.bandlink_url) {
-            allReleases[index].bandlinkUrl = koalaRelease.bandlink_url;
-          }
-          allReleases[index].updatedAt = new Date().toISOString();
-          updated++;
-        }
+        await updateRelease(existing.id, {
+          status: koalaRelease.status,
+          upc: koalaRelease.upc || existing.upc,
+          bandlinkUrl: koalaRelease.bandlink_url || existing.bandlinkUrl,
+          updatedAt: new Date().toISOString()
+        });
+        updated++;
       } else {
         const newRelease = {
-          id: `release_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           title: koalaRelease.title,
           artistId: artist.id,
           releaseDate: koalaRelease.release_date || new Date().toISOString().split('T')[0],
           type: 'single' as const,
           coverUrl: koalaRelease.cover_url || '',
           tracks: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
           status: koalaRelease.status,
           koalaId: koalaRelease.koala_id,
           bandlinkUrl: koalaRelease.bandlink_url,
           upc: koalaRelease.upc
         };
         
-        allReleases.push(newRelease);
+        const created = await addRelease(newRelease);
         added++;
         
-        addActivity({
+        await addActivity({
           type: 'release_added',
           userId: artist.id,
           userRole: 'artist',
           title: 'Новый релиз добавлен',
           description: `Релиз "${koalaRelease.title}" добавлен из Koala Music`,
-          metadata: { releaseId: newRelease.id, koalaId: koalaRelease.koala_id }
+          metadata: { releaseId: created.id, koalaId: koalaRelease.koala_id }
         });
       }
     }
-    
-    saveReleases(allReleases);
     
     console.log(`📊 Results: added ${added}, updated ${updated}`);
     
@@ -276,7 +265,7 @@ async function runPlaylistParsers() {
     const { loadReleases, loadUsers, addActivity } = await import('@/lib/storage');
     
     // Находим артистов с недавними релизами
-    const artistsToScan = getArtistsWithRecentReleases(loadReleases, loadUsers);
+    const artistsToScan = await getArtistsWithRecentReleases(loadReleases, loadUsers);
     
     if (artistsToScan.length === 0) {
       console.log('📭 Нет артистов с недавними релизами для сканирования');
@@ -353,7 +342,7 @@ async function runPlaylistParsers() {
     const duration = Date.now() - startTime;
     
     // Логируем активность
-    addActivity({
+    await addActivity({
       type: 'playlist_found',
       userId: 'system',
       userRole: 'admin',
@@ -381,12 +370,12 @@ async function runPlaylistParsers() {
 /**
  * Находит артистов с релизами за последние 7 дней
  */
-function getArtistsWithRecentReleases(
-  loadReleases: () => any[],
-  loadUsers: () => any[]
-): Array<{ id: string; username: string; name: string; recentRelease: string }> {
-  const releases = loadReleases();
-  const users = loadUsers();
+async function getArtistsWithRecentReleases(
+  loadReleases: () => Promise<any[]>,
+  loadUsers: () => Promise<any[]>
+): Promise<Array<{ id: string; username: string; name: string; recentRelease: string }>> {
+  const releases = await loadReleases();
+  const users = await loadUsers();
   
   const now = new Date();
   const weekAgo = new Date(now);

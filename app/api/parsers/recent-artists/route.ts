@@ -3,8 +3,8 @@ import { loadReleases, loadUsers } from '@/lib/storage';
 
 export async function GET() {
   try {
-    const releases = loadReleases();
-    const users = loadUsers();
+    const releases = await loadReleases();
+    const users = await loadUsers();
     
     // Получаем дату 2 недели назад
     const twoWeeksAgo = new Date();

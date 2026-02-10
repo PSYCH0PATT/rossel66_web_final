@@ -4,8 +4,8 @@ import { loadReleases, updateRelease, deleteRelease, loadUsers } from "@/lib/sto
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    const releases = loadReleases()
-    const users = loadUsers()
+    const releases = await loadReleases()
+    const users = await loadUsers()
     
     const release = releases.find(r => r.id === id)
     
@@ -32,9 +32,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const { id } = params
     const updates = await request.json()
     
-    const success = updateRelease(id, updates)
+    const updatedRelease = await updateRelease(id, updates)
     
-    if (success) {
+    if (updatedRelease) {
       return NextResponse.json({ success: true, message: 'Release updated successfully' })
     } else {
       return NextResponse.json({ success: false, error: 'Release not found' }, { status: 404 })
@@ -49,7 +49,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const { id } = params
     
-    const success = deleteRelease(id)
+    const success = await deleteRelease(id)
     
     if (success) {
       return NextResponse.json({ success: true, message: 'Release deleted successfully' })

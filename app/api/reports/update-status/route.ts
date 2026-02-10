@@ -19,15 +19,15 @@ export async function PUT(request: Request) {
     
     if (statusType === 'signed') {
       console.log(`API: Обновляем статус подписи для отчета ${reportId}`)
-      success = updateReportSignedStatus(reportId, value)
+      success = await updateReportSignedStatus(reportId, value)
     } else if (statusType === 'paid') {
       console.log(`API: Обновляем статус выплаты для отчета ${reportId}`)
-      success = updateReportPaidStatus(reportId, value)
+      success = await updateReportPaidStatus(reportId, value)
       if (success && value === true) {
-        const reports = loadReports()
+        const reports = await loadReports()
         const report = reports.find(r => r.id === reportId)
         if (report?.artistId) {
-          addActivity({
+          await addActivity({
             type: 'payment_sent',
             userId: report.artistId,
             userRole: 'artist',

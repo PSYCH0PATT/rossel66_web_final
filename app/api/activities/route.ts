@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       ...(dateTo && { dateTo })
     }
 
-    const { activities, total } = getActivitiesFiltered(filters, limit, offset)
+    const { activities, total } = await getActivitiesFiltered(filters, limit, offset)
     return NextResponse.json({ success: true, activities, total })
   } catch (error) {
     console.error('Error getting activities:', error)
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const activity = addActivity({
+    const activity = await addActivity({
       type,
       userId,
       userRole,

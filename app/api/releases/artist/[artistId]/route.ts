@@ -4,8 +4,8 @@ import { getReleasesByArtist, loadUsers } from "@/lib/storage"
 export async function GET(request: Request, { params }: { params: { artistId: string } }) {
   try {
     const { artistId } = params
-    const releases = getReleasesByArtist(artistId)
-    const users = loadUsers()
+    const releases = await getReleasesByArtist(artistId)
+    const users = await loadUsers()
     
     // Добавляем информацию об артисте к каждому релизу
     const artist = users.find(user => user.id === artistId)

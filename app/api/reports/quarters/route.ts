@@ -3,7 +3,7 @@ import { loadReports } from "@/lib/storage"
 
 export async function GET() {
   try {
-    const reports = loadReports()
+    const reports = await loadReports()
     
     // Получаем уникальные кварталы из отчетов
     const quarterSet = new Set<string>()

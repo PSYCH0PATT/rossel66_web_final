@@ -3,7 +3,7 @@ import { loadReports } from "@/lib/storage"
 
 export async function GET() {
   try {
-    const allReports = loadReports()
+    const allReports = await loadReports()
     const unregisteredReports = allReports.filter(report => !report.isRegistered)
     
     

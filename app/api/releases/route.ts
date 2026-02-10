@@ -3,7 +3,7 @@ import { loadReleases, addRelease, loadUsers, addActivity, getUserById } from "@
 
 export async function GET() {
   try {
-    const releases = loadReleases()
+    const releases = await loadReleases()
     
     return NextResponse.json({ success: true, releases })
   } catch (error) {
@@ -41,29 +41,24 @@ export async function POST(request: Request) {
     
     console.log('Создаем релиз с данными:', newRelease)
     
-    const success = addRelease(newRelease)
+    const createdRelease = await addRelease(newRelease)
     
-    if (success) {
-      console.log('Релиз успешно сохранен')
-      
-      // Создаем активность для артиста
-      const artist = getUserById(releaseData.artistId)
-      if (artist) {
-        addActivity({
-          type: 'release_added',
-          userId: artist.id,
-          userRole: 'artist',
-          title: 'Добавлен новый релиз',
-          description: `Релиз "${newRelease.title}" успешно добавлен`,
-          metadata: { releaseId: newRelease.id, releaseTitle: newRelease.title }
-        })
-      }
-      
-      return NextResponse.json({ success: true, release: newRelease })
-    } else {
-      console.log('Ошибка при сохранении релиза')
-      return NextResponse.json({ success: false, error: 'Failed to add release' }, { status: 500 })
+    console.log('Релиз успешно сохранен')
+    
+    // Создаем активность для артиста
+    const artist = await getUserById(releaseData.artistId)
+    if (artist) {
+      await addActivity({
+        type: 'release_added',
+        userId: artist.id,
+        userRole: 'artist',
+        title: 'Добавлен новый релиз',
+        description: `Релиз "${createdRelease.title}" успешно добавлен`,
+        metadata: { releaseId: createdRelease.id, releaseTitle: createdRelease.title }
+      })
     }
+    
+    return NextResponse.json({ success: true, release: createdRelease })
   } catch (error) {
     console.error('Ошибка при создании релиза:', error)
     return NextResponse.json({ success: false, error: 'Failed to create release' }, { status: 500 })

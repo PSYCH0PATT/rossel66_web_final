@@ -4,7 +4,7 @@ import { loadReports } from "@/lib/storage"
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
     const quarter = params.quarter
-    const allReports = loadReports()
+    const allReports = await loadReports()
     
     // Получаем только зарегистрированные отчеты для выбранного квартала
     const registeredReports = allReports.filter(report => 

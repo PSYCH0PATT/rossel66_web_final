@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server"
-import { loadReports, saveReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
 import * as fs from "fs"
 import * as path from "path"
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const reports = loadReports()
-    const reportIndex = reports.findIndex(r => r.id === params.id)
+    const report = await prisma.report.findUnique({ where: { id: params.id } })
     
-    if (reportIndex === -1) {
+    if (!report) {
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })
     }
-
-    const report = reports[reportIndex]
     
     // Удаляем файл если он существует
     if (report.filePath) {
@@ -23,9 +20,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       }
     }
 
-    // Удаляем запись из массива
-    reports.splice(reportIndex, 1)
-    saveReports(reports)
+    // Удаляем запись из БД
+    await prisma.report.delete({ where: { id: params.id } })
 
     console.log(`Удален отчет: ${report.artistName} (${report.quarter} ${report.year})`)
 

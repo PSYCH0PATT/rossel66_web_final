@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     // Check if username already exists
-    const existingUser = getUserByUsername(username)
+    const existingUser = await getUserByUsername(username)
     if (existingUser) {
       return NextResponse.json({ error: "Username already exists" }, { status: 400 })
     }
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     fs.mkdirSync(reportsDir, { recursive: true })
 
     // Add user to database
-    const newUser = addUser({
+    const newUser = await addUser({
       username,
       password,
       role: "artist",
@@ -77,8 +77,8 @@ export async function POST(request: Request) {
     })
 
     // Auto-assign existing data to this artist by name matching
-    const assignedReports = assignReportsToNewArtist(newUser.id, name)
-    const assignedReleases = assignReleasesToNewArtist(newUser.id, name, username)
+    const assignedReports = await assignReportsToNewArtist(newUser.id, name)
+    const assignedReleases = await assignReleasesToNewArtist(newUser.id, name, username)
     
     // Try to assign playlists from SFTP database
     let assignedPlaylists = 0
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     }
 
     // Log artist creation
-    addActivity({
+    await addActivity({
       type: 'artist_added',
       userId: 'system',
       userRole: 'admin',
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     
     // Log each assigned report
     if (assignedReports > 0) {
-      addActivity({
+      await addActivity({
         type: 'report_received',
         userId: newUser.id,
         userRole: 'artist',
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     
     // Log each assigned release
     if (assignedReleases > 0) {
-      addActivity({
+      await addActivity({
         type: 'release_added',
         userId: newUser.id,
         userRole: 'artist',
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     
     // Log each assigned playlist
     if (assignedPlaylists > 0) {
-      addActivity({
+      await addActivity({
         type: 'playlist_found',
         userId: newUser.id,
         userRole: 'artist',
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const users = loadUsers()
+    const users = await loadUsers()
     const artists = users.filter(user => user.role === 'artist')
     
     return NextResponse.json({
@@ -204,7 +204,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 })
     }
 
-    const users = loadUsers()
+    const users = await loadUsers()
     
     // Check if username already exists (excluding current user) - only if username is being updated
     if (username) {
@@ -231,13 +231,13 @@ export async function PUT(request: Request) {
     if (contract !== undefined) updateData.contract = contract
     if (percentage !== undefined) updateData.percentage = percentage
 
-    const updatedUser = updateUser(id, updateData)
+    const updatedUser = await updateUser(id, updateData)
 
     if (!updatedUser) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }
 
-    addActivity({
+    await addActivity({
       type: 'user_data_updated',
       userId: 'system',
       userRole: 'admin',
@@ -284,7 +284,7 @@ export async function DELETE(request: Request) {
     }
 
     // Проверяем, существует ли артист
-    const users = loadUsers()
+    const users = await loadUsers()
     const artist = users.find(user => user.id === artistId && user.role === 'artist')
     
     if (!artist) {
@@ -292,9 +292,9 @@ export async function DELETE(request: Request) {
     }
 
     // Удаляем артиста
-    deleteUser(artistId)
+    await deleteUser(artistId)
 
-    addActivity({
+    await addActivity({
       type: 'artist_removed',
       userId: 'system',
       userRole: 'admin',

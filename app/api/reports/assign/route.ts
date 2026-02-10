@@ -9,10 +9,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Не указаны ID отчета или артиста" }, { status: 400 })
     }
 
-    const success = moveReportToArtist(reportId, artistId)
+    const success = await moveReportToArtist(reportId, artistId)
 
     if (success) {
-      addActivity({
+      await addActivity({
         type: 'report_received',
         userId: artistId,
         userRole: 'artist',

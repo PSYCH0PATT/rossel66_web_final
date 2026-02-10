@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const users = loadUsers()
+    const users = await loadUsers()
     const user = users.find(u => u.username === username)
 
     if (!user) {

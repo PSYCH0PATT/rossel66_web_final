@@ -3,7 +3,7 @@ import { loadUsers } from "@/lib/storage"
 
 export async function GET() {
   try {
-    const users = loadUsers()
+    const users = await loadUsers()
     
     return NextResponse.json({
       success: true,

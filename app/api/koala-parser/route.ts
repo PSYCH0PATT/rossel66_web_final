@@ -3,12 +3,11 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { 
-  loadReleases, 
-  saveReleases, 
-  loadUsers, 
   getReleaseByKoalaId,
   findArtistByName,
-  addActivity 
+  addActivity,
+  updateRelease,
+  addRelease
 } from '@/lib/storage';
 
 // Интерфейс для результата парсинга
@@ -247,9 +246,6 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
     errors: []
   };
   
-  const releases = loadReleases();
-  const users = loadUsers();
-  
   for (const koalaRelease of koalaReleases) {
     try {
       // Парсим список артистов из строки
@@ -259,49 +255,48 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         .filter(name => name.length > 0);
       
       // Ищем артистов в системе
-      const matchedArtists = artistNames
-        .map(name => findArtistByName(name))
-        .filter((artist): artist is NonNullable<typeof artist> => artist !== null);
+      const matchedArtists = await Promise.all(
+        artistNames.map(name => findArtistByName(name))
+      );
+      const validArtists = matchedArtists.filter((artist): artist is NonNullable<typeof artist> => artist !== null);
       
-      if (matchedArtists.length === 0) {
+      if (validArtists.length === 0) {
         console.log(`⏭️ Пропускаем "${koalaRelease.title}" - артисты не найдены в системе`);
         stats.skipped++;
         continue;
       }
       
       // Проверяем, существует ли релиз с таким koalaId
-      const existingRelease = getReleaseByKoalaId(koalaRelease.koala_id);
+      const existingRelease = await getReleaseByKoalaId(koalaRelease.koala_id);
       
       if (existingRelease) {
         // Обновляем существующий релиз
-        const releaseIndex = releases.findIndex(r => r.id === existingRelease.id);
-        if (releaseIndex !== -1) {
-          // Обновляем статус (нормализуем)
-          releases[releaseIndex].status = normalizeStatus(koalaRelease.status);
-          
-          // Добавляем UPC если статус "Доставлен" и UPC есть
-          if (koalaRelease.status === 'Доставлен' && koalaRelease.upc) {
-            releases[releaseIndex].upc = koalaRelease.upc;
-          }
-          
-          // Обновляем BandLink если есть
-          if (koalaRelease.bandlink_url) {
-            releases[releaseIndex].bandlinkUrl = koalaRelease.bandlink_url;
-          }
-          
-          // Обновляем artistName из парсера (если есть)
-          if (koalaRelease.artist) {
-            releases[releaseIndex].artistName = koalaRelease.artist;
-          }
-          
-          releases[releaseIndex].updatedAt = new Date().toISOString();
-          
-          console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
-          stats.updated++;
+        const updates: any = {
+          status: normalizeStatus(koalaRelease.status),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Добавляем UPC если статус "Доставлен" и UPC есть
+        if (koalaRelease.status === 'Доставлен' && koalaRelease.upc) {
+          updates.upc = koalaRelease.upc;
         }
+        
+        // Обновляем BandLink если есть
+        if (koalaRelease.bandlink_url) {
+          updates.bandlinkUrl = koalaRelease.bandlink_url;
+        }
+        
+        // Обновляем artistName из парсера (если есть)
+        if (koalaRelease.artist) {
+          updates.artistName = koalaRelease.artist;
+        }
+        
+        await updateRelease(existingRelease.id, updates);
+        console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
+        stats.updated++;
       } else {
         // Создаем новый релиз для каждого найденного артиста
-        for (const artist of matchedArtists) {
+        for (const artist of validArtists) {
           // Парсим дату релиза
           let releaseDate = new Date().toISOString().split('T')[0];
           if (koalaRelease.release_date) {
@@ -333,34 +328,31 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
           // Нормализуем статус
           const normalizedStatus = normalizeStatus(koalaRelease.status);
           
-          const newRelease = {
-            id: `release_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          const newReleaseData: any = {
             title: koalaRelease.title,
             artistId: artist.id,
-            artistName: koalaRelease.artist, // ВАЖНО: artistName всегда из парсера, даже если артист не найден
+            artistName: koalaRelease.artist, // ВАЖНО: artistName всегда из парсера
             releaseDate,
             type: tracks.length > 1 ? 'album' : 'single' as 'single' | 'album' | 'ep',
             coverUrl: koalaRelease.cover_url || '',
             tracks,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
             status: normalizedStatus,
             koalaId: koalaRelease.koala_id,
             bandlinkUrl: koalaRelease.bandlink_url || undefined,
             upc: koalaRelease.upc || undefined
           };
           
-          releases.push(newRelease);
+          const createdRelease = await addRelease(newReleaseData);
           
           // Создаем активность
-          addActivity({
+          await addActivity({
             type: 'release_added',
             userId: artist.id,
             userRole: 'artist',
             title: 'Новый релиз добавлен',
             description: `Релиз "${koalaRelease.title}" добавлен из Koala Music`,
             metadata: { 
-              releaseId: newRelease.id, 
+              releaseId: createdRelease.id, 
               koalaId: koalaRelease.koala_id,
               status: koalaRelease.status
             }
@@ -377,9 +369,6 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
       stats.errors.push(`${koalaRelease.title}: ${String(error)}`);
     }
   }
-  
-  // Сохраняем обновленные релизы
-  saveReleases(releases);
   
   return stats;
 }

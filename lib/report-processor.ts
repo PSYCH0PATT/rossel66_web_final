@@ -88,8 +88,8 @@ function calculateArtistShare(
 }
 
 // Функция для загрузки данных артистов
-function getArtistsData(): ArtistData {
-  const users = loadUsers()
+async function getArtistsData(): Promise<ArtistData> {
+  const users = await loadUsers()
   const artistsData: ArtistData = {}
   
   users.forEach(user => {
@@ -140,7 +140,7 @@ export async function processReportFile(
     console.log("Файл загружен, первые строки:", jsonData.slice(0, 3))
 
     // Получаем данные артистов и доли роялти
-    const artistsData = getArtistsData()
+    const artistsData = await getArtistsData()
     const royaltyShares = getRoyaltyShares()
     
     // Создаем структуру для хранения данных по артистам и трекам

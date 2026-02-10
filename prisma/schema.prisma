@@ -1,0 +1,89 @@
+// Prisma schema для проекта rossel-music
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String   @id
+  username   String   @unique
+  name       String
+  email      String   @default("")
+  role       String
+  password   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  avatarUrl  String?
+  vkMusicUrl String?
+  yandexMusicUrl String?
+  spotifyUrl String?
+  fio        String?
+  fioShort   String?
+  contract   String?
+  percentage Int?
+
+}
+
+model Release {
+  id                String   @id
+  title             String
+  artistId          String?
+  releaseDate       String
+  type              String?
+  coverUrl          String?
+  upc               String?
+  status            String?
+  koalaId           String?
+  bandlinkUrl       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  tracks            Json     @default("[]")
+  featuredArtistIds String[] @default([])
+  featuredArtistNames String[] @default([])
+  metadata          Json?
+
+  @@index([artistId])
+  @@index([koalaId])
+}
+
+model Report {
+  id           String   @id
+  quarter      String
+  artistId     String?
+  artistName   String
+  fileName     String
+  filePath     String
+  uploadedAt   DateTime @default(now())
+  processed    Boolean  @default(true)
+  year         Int?
+  totalPlays   Int?
+  totalAmount  Float?
+  isPaid       Boolean?
+  isSigned     Boolean?
+  isRegistered Boolean?
+  status       String?
+  uploadDate   String?
+  fileUrl      String?
+
+  @@index([artistId])
+  @@index([quarter])
+}
+
+model Activity {
+  id          String   @id
+  type        String
+  userId      String?
+  userRole    String
+  title       String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userRole])
+  @@index([createdAt])
+}

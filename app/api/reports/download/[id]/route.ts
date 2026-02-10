@@ -5,8 +5,8 @@ import * as path from "path"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    // Ищем отчет в reports.json
-    const reports = loadReports()
+    // Ищем отчет в БД
+    const reports = await loadReports()
     const report = reports.find(r => r.id === params.id)
     
     if (!report) {

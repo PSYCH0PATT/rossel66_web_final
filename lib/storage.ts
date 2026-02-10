@@ -1,6 +1,17 @@
 import fs from 'fs'
 import path from 'path'
 import bcrypt from 'bcryptjs'
+import { prisma } from './prisma'
+import { 
+  userFromPrisma, 
+  releaseFromPrisma, 
+  reportFromPrisma, 
+  activityFromPrisma,
+  userToPrismaCreate,
+  releaseToPrismaCreate,
+  reportToPrismaCreate,
+  activityToPrismaCreate
+} from './storage-adapters'
 
 export interface User {
   id: string
@@ -144,160 +155,199 @@ if (!fs.existsSync(ACTIVITIES_FILE)) {
   fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify([], null, 2))
 }
 
-export function loadUsers(): User[] {
+export async function loadUsers(): Promise<User[]> {
   try {
-    const data = fs.readFileSync(USERS_FILE, 'utf8')
-    return JSON.parse(data)
+    const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' } })
+    return users.map(userFromPrisma)
   } catch (error) {
     console.error('Error loading users:', error)
     return []
   }
 }
 
-export function saveUsers(users: User[]): void {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2))
-  } catch (error) {
-    console.error('Error saving users:', error)
-  }
+// saveUsers больше не нужна - используйте updateUser для изменений
+export async function saveUsers(users: User[]): Promise<void> {
+  console.warn('saveUsers() deprecated - use updateUser() instead')
 }
 
-export function loadReleases(): Release[] {
+export async function loadReleases(): Promise<Release[]> {
   try {
-    const data = fs.readFileSync(RELEASES_FILE, 'utf8')
-    return JSON.parse(data)
+    const releases = await prisma.release.findMany({ orderBy: { createdAt: 'desc' } })
+    return releases.map(releaseFromPrisma)
   } catch (error) {
     console.error('Error loading releases:', error)
     return []
   }
 }
 
-export function saveReleases(releases: Release[]): void {
-  try {
-    fs.writeFileSync(RELEASES_FILE, JSON.stringify(releases, null, 2))
-  } catch (error) {
-    console.error('Error saving releases:', error)
-  }
+// saveReleases больше не нужна - используйте updateRelease для изменений
+export async function saveReleases(releases: Release[]): Promise<void> {
+  console.warn('saveReleases() deprecated - use updateRelease() or direct prisma calls')
 }
 
-export function addUser(user: Omit<User, 'id' | 'createdAt'>): User {
-  const users = loadUsers()
-  
+export async function addUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
   // Хешируем пароль если он ещё не захеширован
   let hashedPassword = user.password
   if (user.password && !user.password.startsWith('$2')) {
     hashedPassword = bcrypt.hashSync(user.password, 10)
   }
   
-  const newUser: User = {
-    ...user,
-    password: hashedPassword,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString()
+  const data = userToPrismaCreate({ ...user, password: hashedPassword })
+  const prismaUser = await prisma.user.create({
+    data: {
+      ...data,
+      id: Date.now().toString(),
+    }
+  })
+  
+  return userFromPrisma(prismaUser)
+}
+
+export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+  try {
+    // Хешируем пароль если он обновляется и ещё не захеширован
+    let updateData: any = { ...updates }
+    if (updates.password && !updates.password.startsWith('$2')) {
+      updateData.password = bcrypt.hashSync(updates.password, 10)
+    }
+    
+    // Удаляем поля которых нет в схеме Prisma
+    delete updateData.id
+    delete updateData.createdAt
+    
+    const prismaUser = await prisma.user.update({
+      where: { id },
+      data: updateData
+    })
+    
+    return userFromPrisma(prismaUser)
+  } catch (error) {
+    console.error('Error updating user:', error)
+    return null
   }
-  users.push(newUser)
-  saveUsers(users)
-  return newUser
 }
 
-export function updateUser(id: string, updates: Partial<User>): User | null {
-  const users = loadUsers()
-  const index = users.findIndex(user => user.id === id)
-  if (index === -1) return null
-  
-  // Хешируем пароль если он обновляется и ещё не захеширован
-  if (updates.password && !updates.password.startsWith('$2')) {
-    updates.password = bcrypt.hashSync(updates.password, 10)
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    await prisma.user.delete({ where: { id } })
+    return true
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return false
   }
-  
-  users[index] = { ...users[index], ...updates }
-  saveUsers(users)
-  return users[index]
 }
 
-export function deleteUser(id: string): boolean {
-  const users = loadUsers()
-  const index = users.findIndex(user => user.id === id)
-  if (index === -1) return false
-  
-  users.splice(index, 1)
-  saveUsers(users)
-  return true
-}
-
-export function getUserById(id: string): User | null {
-  const users = loadUsers()
-  return users.find(user => user.id === id) || null
-}
-
-export function getUserByUsername(username: string): User | null {
-  const users = loadUsers()
-  return users.find(user => user.username === username) || null
-}
-
-export function getUserByEmail(email: string): User | null {
-  const users = loadUsers()
-  return users.find(user => user.email === email) || null
-}
-
-export function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'updatedAt'>): Release {
-  const releases = loadReleases()
-  const newRelease: Release = {
-    ...release,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const user = await prisma.user.findUnique({ where: { id } })
+    return user ? userFromPrisma(user) : null
+  } catch (error) {
+    console.error('Error getting user by id:', error)
+    return null
   }
-  releases.push(newRelease)
-  saveReleases(releases)
-  return newRelease
 }
 
-export function updateRelease(id: string, updates: Partial<Release>): Release | null {
-  const releases = loadReleases()
-  const index = releases.findIndex(release => release.id === id)
-  if (index === -1) return null
-  
-  releases[index] = { 
-    ...releases[index], 
-    ...updates,
-    updatedAt: new Date().toISOString()
+export async function getUserByUsername(username: string): Promise<User | null> {
+  try {
+    const user = await prisma.user.findUnique({ where: { username } })
+    return user ? userFromPrisma(user) : null
+  } catch (error) {
+    console.error('Error getting user by username:', error)
+    return null
   }
-  saveReleases(releases)
-  return releases[index]
 }
 
-export function deleteRelease(id: string): boolean {
-  const releases = loadReleases()
-  const index = releases.findIndex(release => release.id === id)
-  if (index === -1) return false
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    const user = await prisma.user.findFirst({ where: { email } })
+    return user ? userFromPrisma(user) : null
+  } catch (error) {
+    console.error('Error getting user by email:', error)
+    return null
+  }
+}
+
+export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'updatedAt'>): Promise<Release> {
+  const data = releaseToPrismaCreate(release)
+  const prismaRelease = await prisma.release.create({
+    data: {
+      ...data,
+      id: Date.now().toString(),
+    }
+  })
   
-  releases.splice(index, 1)
-  saveReleases(releases)
-  return true
+  return releaseFromPrisma(prismaRelease)
 }
 
-export function getReleaseById(id: string): Release | null {
-  const releases = loadReleases()
-  return releases.find(release => release.id === id) || null
+export async function updateRelease(id: string, updates: Partial<Release>): Promise<Release | null> {
+  try {
+    let updateData: any = { ...updates }
+    
+    // Удаляем поля которых нет в схеме или которые не должны обновляться
+    delete updateData.id
+    delete updateData.createdAt
+    
+    // Если есть tracks, преобразуем в JSON
+    if (updateData.tracks) {
+      updateData.tracks = updateData.tracks as any
+    }
+    
+    const prismaRelease = await prisma.release.update({
+      where: { id },
+      data: updateData
+    })
+    
+    return releaseFromPrisma(prismaRelease)
+  } catch (error) {
+    console.error('Error updating release:', error)
+    return null
+  }
 }
 
-export function getReleasesByArtistId(artistId: string): Release[] {
-  const releases = loadReleases()
-  return releases.filter(release => release.artistId === artistId)
+export async function deleteRelease(id: string): Promise<boolean> {
+  try {
+    await prisma.release.delete({ where: { id } })
+    return true
+  } catch (error) {
+    console.error('Error deleting release:', error)
+    return false
+  }
 }
 
-export function getAllReleases(): Release[] {
+export async function getReleaseById(id: string): Promise<Release | null> {
+  try {
+    const release = await prisma.release.findUnique({ where: { id } })
+    return release ? releaseFromPrisma(release) : null
+  } catch (error) {
+    console.error('Error getting release by id:', error)
+    return null
+  }
+}
+
+export async function getReleasesByArtistId(artistId: string): Promise<Release[]> {
+  try {
+    const releases = await prisma.release.findMany({ 
+      where: { artistId },
+      orderBy: { createdAt: 'desc' }
+    })
+    return releases.map(releaseFromPrisma)
+  } catch (error) {
+    console.error('Error getting releases by artist id:', error)
+    return []
+  }
+}
+
+export async function getAllReleases(): Promise<Release[]> {
   return loadReleases()
 }
 
-export function getAllUsers(): User[] {
+export async function getAllUsers(): Promise<User[]> {
   return loadUsers()
 }
 
 // Helper function to get artist releases including featured releases
-export function getArtistReleases(artistId: string): Release[] {
-  const releases = loadReleases()
+export async function getArtistReleases(artistId: string): Promise<Release[]> {
+  const releases = await loadReleases()
   return releases.filter(release => {
     // Check if artist is main artist
     if (release.artistId === artistId) return true
@@ -313,8 +363,8 @@ export function getArtistReleases(artistId: string): Release[] {
 }
 
 // Helper function to get releases where artist is featured
-export function getFeaturedReleases(artistId: string): Release[] {
-  const releases = loadReleases()
+export async function getFeaturedReleases(artistId: string): Promise<Release[]> {
+  const releases = await loadReleases()
   return releases.filter(release => {
     // Check if artist is featured in the release (but not main artist)
     if (release.artistId !== artistId && release.featuredArtistIds?.includes(artistId)) {
@@ -329,9 +379,9 @@ export function getFeaturedReleases(artistId: string): Release[] {
 }
 
 // Helper function to get all releases with their artist info
-export function getReleasesWithArtists(): (Release & { artist: User | null })[] {
-  const releases = loadReleases()
-  const users = loadUsers()
+export async function getReleasesWithArtists(): Promise<(Release & { artist: User | null })[]> {
+  const releases = await loadReleases()
+  const users = await loadUsers()
   
   return releases.map(release => ({
     ...release,
@@ -346,8 +396,8 @@ export function normalizeArtistName(name: string): string {
 }
 
 // Find artist by name or username (case-insensitive)
-export function findArtistByName(name: string): User | null {
-  const users = loadUsers()
+export async function findArtistByName(name: string): Promise<User | null> {
+  const users = await loadUsers()
   const normalized = normalizeArtistName(name)
   return users.find(u => {
     if (u.role !== 'artist') return false
@@ -358,117 +408,118 @@ export function findArtistByName(name: string): User | null {
 }
 
 // Assign existing unassigned reports to new artist by name matching
-export function assignReportsToNewArtist(artistId: string, artistName: string): number {
-  const reports = loadReports()
-  let assignedCount = 0
-  
+export async function assignReportsToNewArtist(artistId: string, artistName: string): Promise<number> {
+  const reports = await loadReports()
   const normalizedName = normalizeArtistName(artistName)
+  const toUpdate = reports.filter(r =>
+    !r.artistId && r.artistName && normalizeArtistName(r.artistName) === normalizedName
+  )
   
-  reports.forEach(report => {
-    // Match by artist name (case-insensitive)
-    if (!report.artistId && report.artistName && 
-        normalizeArtistName(report.artistName) === normalizedName) {
-      report.artistId = artistId
-      report.isRegistered = true
-      assignedCount++
-    }
-  })
+  if (toUpdate.length === 0) return 0
   
-  if (assignedCount > 0) {
-    saveReports(reports)
-  }
+  // Обновляем каждый отчёт
+  await Promise.all(
+    toUpdate.map(r =>
+      prisma.report.update({
+        where: { id: r.id },
+        data: { artistId, isRegistered: true }
+      })
+    )
+  )
   
-  return assignedCount
+  return toUpdate.length
 }
 
 // Assign existing releases to new artist by name matching
-export function assignReleasesToNewArtist(artistId: string, artistName: string, username: string): number {
-  const releases = loadReleases()
-  let assignedCount = 0
-  
+export async function assignReleasesToNewArtist(artistId: string, artistName: string, username: string): Promise<number> {
+  const releases = await loadReleases()
   const normalizedName = normalizeArtistName(artistName)
   const normalizedUsername = normalizeArtistName(username)
   
-  releases.forEach(release => {
-    // Skip if already has artistId
-    if (release.artistId) return
-    
-    // Match by artist name or username from release metadata
+  const toUpdate = releases.filter(release => {
+    if (release.artistId) return false
     const releaseArtistName = (release as any).artistName || ''
-    if (normalizeArtistName(releaseArtistName) === normalizedName ||
-        normalizeArtistName(releaseArtistName) === normalizedUsername) {
-      release.artistId = artistId
-      assignedCount++
-    }
+    return normalizeArtistName(releaseArtistName) === normalizedName ||
+           normalizeArtistName(releaseArtistName) === normalizedUsername
   })
   
-  if (assignedCount > 0) {
-    saveReleases(releases)
-  }
+  if (toUpdate.length === 0) return 0
   
-  return assignedCount
+  // Обновляем каждый релиз
+  await Promise.all(
+    toUpdate.map(r =>
+      prisma.release.update({
+        where: { id: r.id },
+        data: { artistId }
+      })
+    )
+  )
+  
+  return toUpdate.length
 }
 
 // Reports functions
-export function loadReports(): Report[] {
+export async function loadReports(): Promise<Report[]> {
   try {
-    const data = fs.readFileSync(REPORTS_FILE, 'utf8')
-    return JSON.parse(data)
+    const reports = await prisma.report.findMany({ orderBy: { uploadedAt: 'desc' } })
+    return reports.map(reportFromPrisma)
   } catch (error) {
     console.error('Error loading reports:', error)
     return []
   }
 }
 
-export function saveReports(reports: Report[]): void {
-  try {
-    fs.writeFileSync(REPORTS_FILE, JSON.stringify(reports, null, 2))
-  } catch (error) {
-    console.error('Error saving reports:', error)
-  }
+// saveReports больше не нужна - используйте прямые update через prisma
+export async function saveReports(reports: Report[]): Promise<void> {
+  console.warn('saveReports() deprecated - use direct prisma updates')
 }
 
 // Activities functions
-export function loadActivities(): Activity[] {
+export async function loadActivities(): Promise<Activity[]> {
   try {
-    const data = fs.readFileSync(ACTIVITIES_FILE, 'utf8')
-    return JSON.parse(data)
+    const activities = await prisma.activity.findMany({ orderBy: { createdAt: 'desc' } })
+    return activities.map(activityFromPrisma)
   } catch (error) {
     console.error('Error loading activities:', error)
     return []
   }
 }
 
-export function saveActivities(activities: Activity[]): void {
-  try {
-    fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify(activities, null, 2))
-  } catch (error) {
-    console.error('Error saving activities:', error)
-  }
+// saveActivities больше не нужна
+export async function saveActivities(activities: Activity[]): Promise<void> {
+  console.warn('saveActivities() deprecated - use direct prisma updates')
 }
 
-export function trimActivitiesOlderThanDays(days: number): void {
-  const activities = loadActivities()
+export async function trimActivitiesOlderThanDays(days: number): Promise<void> {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
-  const cutoffIso = cutoff.toISOString()
-  const trimmed = activities.filter(a => a.createdAt >= cutoffIso)
-  if (trimmed.length !== activities.length) {
-    saveActivities(trimmed)
+  
+  try {
+    await prisma.activity.deleteMany({
+      where: {
+        createdAt: {
+          lt: cutoff
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error trimming activities:', error)
   }
 }
 
-export function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>): Activity {
-  const activities = loadActivities()
-  const newActivity: Activity = {
-    ...activity,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString()
-  }
-  activities.unshift(newActivity) // Add to beginning for chronological order
-  saveActivities(activities)
-  trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
-  return newActivity
+export async function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> {
+  const data = activityToPrismaCreate(activity)
+  const prismaActivity = await prisma.activity.create({
+    data: {
+      ...data,
+      id: Date.now().toString(),
+    }
+  })
+  
+  // Trim old activities
+  await trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
+  
+  return activityFromPrisma(prismaActivity)
 }
 
 export interface ActivityFilters {
@@ -479,52 +530,68 @@ export interface ActivityFilters {
   dateTo?: string
 }
 
-export function getActivitiesFiltered(
+export async function getActivitiesFiltered(
   filters: ActivityFilters,
   limit: number = 50,
   offset: number = 0
-): { activities: Activity[]; total: number } {
-  let activities = loadActivities()
-
+): Promise<{ activities: Activity[]; total: number }> {
+  const where: any = {}
+  
   if (filters.userId) {
-    activities = activities.filter(a => a.userId === filters.userId)
+    where.userId = filters.userId
   }
   if (filters.role) {
-    activities = activities.filter(a => a.userRole === filters.role)
+    where.userRole = filters.role
   }
   if (filters.types?.length) {
-    const set = new Set(filters.types)
-    activities = activities.filter(a => set.has(a.type))
+    where.type = { in: filters.types }
   }
-  if (filters.dateFrom) {
-    activities = activities.filter(a => a.createdAt >= filters.dateFrom!)
+  if (filters.dateFrom || filters.dateTo) {
+    where.createdAt = {}
+    if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom)
+    if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo)
   }
-  if (filters.dateTo) {
-    activities = activities.filter(a => a.createdAt <= filters.dateTo!)
+  
+  const [activities, total] = await Promise.all([
+    prisma.activity.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit
+    }),
+    prisma.activity.count({ where })
+  ])
+  
+  return { 
+    activities: activities.map(activityFromPrisma), 
+    total 
   }
-
-  const total = activities.length
-  const paginated = activities.slice(offset, offset + limit)
-  return { activities: paginated, total }
 }
 
-export function getActivitiesByUserId(userId: string, limit: number = 10): Activity[] {
-  const activities = loadActivities()
-  return activities
-    .filter(activity => activity.userId === userId)
-    .slice(0, limit)
+export async function getActivitiesByUserId(userId: string, limit: number = 10): Promise<Activity[]> {
+  const activities = await prisma.activity.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: limit
+  })
+  return activities.map(activityFromPrisma)
 }
 
-export function getActivitiesByRole(role: 'artist' | 'admin', limit: number = 10): Activity[] {
-  const activities = loadActivities()
-  return activities
-    .filter(activity => activity.userRole === role)
-    .slice(0, limit)
+export async function getActivitiesByRole(role: 'artist' | 'admin', limit: number = 10): Promise<Activity[]> {
+  const activities = await prisma.activity.findMany({
+    where: { userRole: role },
+    orderBy: { createdAt: 'desc' },
+    take: limit
+  })
+  return activities.map(activityFromPrisma)
 }
 
-export function getAllActivities(limit: number = 50): Activity[] {
-  const activities = loadActivities()
-  return activities.slice(0, limit)
+export async function getAllActivities(limit: number = 50): Promise<Activity[]> {
+  const activities = await prisma.activity.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: limit
+  })
+  return activities.map(activityFromPrisma)
 }
 
 // ============================================================
@@ -552,8 +619,8 @@ export interface ReportData extends Report {
 }
 
 // Функция для получения баланса артиста
-export function getArtistBalance(artistId: string): ArtistBalance {
-  const reports = loadReports().filter(r => r.artistId === artistId)
+export async function getArtistBalance(artistId: string): Promise<ArtistBalance> {
+  const reports = (await loadReports()).filter(r => r.artistId === artistId)
   
   // Считаем общий баланс из всех отчетов
   const totalBalance = reports.reduce((sum, report) => {
@@ -583,81 +650,72 @@ export function getArtistBalance(artistId: string): ArtistBalance {
 }
 
 // Алиас для getReleasesByArtistId (для совместимости)
-export function getReleasesByArtist(artistId: string): Release[] {
+export async function getReleasesByArtist(artistId: string): Promise<Release[]> {
   return getReleasesByArtistId(artistId)
 }
 
 // Функция для перемещения отчета к артисту
-export function moveReportToArtist(reportId: string, artistId: string): boolean {
-  const reports = loadReports()
-  const reportIndex = reports.findIndex(r => r.id === reportId)
-  
-  if (reportIndex === -1) {
+export async function moveReportToArtist(reportId: string, artistId: string): Promise<boolean> {
+  try {
+    const artist = await getUserById(artistId)
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { 
+        artistId,
+        artistName: artist?.name || ''
+      }
+    })
+    return true
+  } catch (error) {
+    console.error('Error moving report to artist:', error)
     return false
   }
-  
-  // Обновляем artistId отчета
-  reports[reportIndex].artistId = artistId
-  
-  // Находим имя артиста для обновления
-  const artist = getUserById(artistId)
-  if (artist) {
-    reports[reportIndex].artistName = artist.name
-  }
-  
-  saveReports(reports)
-  return true
 }
 
 // Функция для обновления статуса подписи отчета
-export function updateReportSignedStatus(reportId: string, isSigned: boolean): boolean {
-  const reports = loadReports()
-  const reportIndex = reports.findIndex(r => r.id === reportId)
-  
-  if (reportIndex === -1) {
+export async function updateReportSignedStatus(reportId: string, isSigned: boolean): Promise<boolean> {
+  try {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { isSigned }
+    })
+    return true
+  } catch (error) {
+    console.error('Error updating report signed status:', error)
     return false
   }
-  
-  // Добавляем или обновляем поле isSigned
-  (reports[reportIndex] as any).isSigned = isSigned
-  
-  saveReports(reports)
-  return true
 }
 
 // Функция для обновления статуса оплаты отчета
-export function updateReportPaidStatus(reportId: string, isPaid: boolean): boolean {
-  const reports = loadReports()
-  const reportIndex = reports.findIndex(r => r.id === reportId)
-  
-  if (reportIndex === -1) {
+export async function updateReportPaidStatus(reportId: string, isPaid: boolean): Promise<boolean> {
+  try {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { isPaid }
+    })
+    return true
+  } catch (error) {
+    console.error('Error updating report paid status:', error)
     return false
   }
-  
-  // Добавляем или обновляем поле isPaid
-  (reports[reportIndex] as any).isPaid = isPaid
-  
-  saveReports(reports)
-  return true
 }
 
 // Функция для назначения отчетов артисту (алиас для совместимости)
-export function assignReportsToArtist(artistId: string, artistName: string): void {
-  assignReportsToNewArtist(artistId, artistName)
+export async function assignReportsToArtist(artistId: string, artistName: string): Promise<void> {
+  await assignReportsToNewArtist(artistId, artistName)
 }
 
 // Функция для добавления отчета (если нужна)
-export function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): ReportData {
-  const reports = loadReports()
-  const newReport: ReportData = {
-    ...report,
-    id: Date.now().toString(),
-    uploadedAt: new Date().toISOString(),
-    processed: report.processed !== undefined ? report.processed : true
-  }
-  reports.push(newReport as Report)
-  saveReports(reports)
-  return newReport
+export async function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): Promise<ReportData> {
+  const data = reportToPrismaCreate(report)
+  const prismaReport = await prisma.report.create({
+    data: {
+      ...data,
+      id: Date.now().toString(),
+    }
+  })
+  
+  return reportFromPrisma(prismaReport) as ReportData
 }
 
 // ============================================================
@@ -665,14 +723,19 @@ export function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): Report
 // ============================================================
 
 // Функция для поиска релиза по Koala ID
-export function getReleaseByKoalaId(koalaId: string): Release | null {
-  const releases = loadReleases()
-  return releases.find(release => release.koalaId === koalaId) || null
+export async function getReleaseByKoalaId(koalaId: string): Promise<Release | null> {
+  try {
+    const release = await prisma.release.findUnique({ where: { koalaId } })
+    return release ? releaseFromPrisma(release) : null
+  } catch (error) {
+    console.error('Error getting release by koala id:', error)
+    return null
+  }
 }
 
 // Функция для поиска артистов по именам
-export function findArtistsByNames(artistNames: string[]): User[] {
-  const users = loadUsers()
+export async function findArtistsByNames(artistNames: string[]): Promise<User[]> {
+  const users = await loadUsers()
   return artistNames
     .map(name => users.find(u => 
       u.role === 'artist' && 
@@ -682,8 +745,8 @@ export function findArtistsByNames(artistNames: string[]): User[] {
 }
 
 // Функция для поиска всех артистов по имени (частичное совпадение)
-export function findArtistsByPartialName(partialName: string): User[] {
-  const users = loadUsers()
+export async function findArtistsByPartialName(partialName: string): Promise<User[]> {
+  const users = await loadUsers()
   const searchName = partialName.toLowerCase()
   return users.filter(u => 
     u.role === 'artist' && 

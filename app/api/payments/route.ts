@@ -3,8 +3,8 @@ import { loadReports, loadUsers } from "@/lib/storage"
 
 export async function GET() {
   try {
-    const reports = loadReports()
-    const users = loadUsers()
+    const reports = await loadReports()
+    const users = await loadUsers()
     
     // Создаем выплаты на основе отчетов
     const payments = reports
