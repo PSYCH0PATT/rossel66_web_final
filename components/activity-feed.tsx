@@ -65,6 +65,29 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false }: Activ
     }
   }
 
+  /** Упрощённый текст уведомления для артистов: без источника (Koala/Zvonko) и без «вручную» */
+  const descriptionForDisplay = (activity: Activity): string => {
+    if (role !== 'artist') return activity.description
+    let d = activity.description
+    // Релиз "X" добавлен из Koala Music / из Zvonko → Добавлен релиз "X"
+    d = d.replace(/^Релиз\s+"([^"]+)"\s+добавлен из Koala Music$/i, 'Добавлен релиз "$1"')
+    d = d.replace(/^Релиз\s+"([^"]+)"\s+добавлен из Zvonko(\s+Digital)?$/i, 'Добавлен релиз "$1"')
+    d = d.replace(/\s+добавлен из Koala Music/i, '')
+    d = d.replace(/\s+добавлен из Zvonko(\s+Digital)?/i, '')
+    // Вручную привязано N релиз(ов) / отчёт(ов) / плейлист(ов) к артисту "X" → коротко
+    d = d.replace(/^Вручную привязано\s+(\d+)\s+релиз\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Добавлено $1 релиз(ов)')
+    d = d.replace(/^Вручную привязано\s+(\d+)\s+отчёт\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Вам назначено $1 отчёт(ов)')
+    d = d.replace(/^Вручную привязано\s+(\d+)\s+плейлист\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Добавлено $1 плейлист(ов)')
+    d = d.replace(/^Плейлист вручную привязан к артисту\s+"[^"]*"$/i, 'Плейлист добавлен в ваш профиль')
+    // Автоматически привязано ... — для артиста тоже коротко
+    d = d.replace(/^Автоматически привязано\s+(\d+)\s+релиз\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Добавлено $1 релиз(ов)')
+    d = d.replace(/^Автоматически привязано\s+(\d+)\s+отчёт\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Вам назначено $1 отчёт(ов)')
+    d = d.replace(/^Автоматически привязано\s+(\d+)\s+плейлист\(ов\)\s+к артисту\s+"[^"]*"$/i, 'Добавлено $1 плейлист(ов)')
+    // Релиз "X" успешно добавлен → единообразно
+    d = d.replace(/^Релиз\s+"([^"]+)"\s+успешно добавлен$/i, 'Добавлен релиз "$1"')
+    return d
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -117,7 +140,7 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false }: Activ
               {activity.title}
             </p>
             <p className={`text-muted-foreground ${compact ? 'text-xs' : 'text-sm'} line-clamp-2`}>
-              {activity.description}
+              {descriptionForDisplay(activity)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {formatDate(activity.createdAt)}

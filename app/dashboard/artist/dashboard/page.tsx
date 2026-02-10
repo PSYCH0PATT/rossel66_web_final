@@ -11,13 +11,13 @@ import {
   getArtistReleases,
   getArtistReports,
   getArtistPayments,
-  getArtistPlaylists,
   getTotalEarnings,
 } from "@/lib/data"
 
 export default function ArtistDashboard() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [playlistCount, setPlaylistCount] = useState<number>(0)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -38,13 +38,24 @@ export default function ArtistDashboard() {
     }
   }, [router])
 
-  // In a real app, you would get the artist ID from the session
+  useEffect(() => {
+    if (!currentUser?.id) return
+    let cancelled = false
+    fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(currentUser.id)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data.success || !Array.isArray(data.results)) return
+        setPlaylistCount(data.results.length)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [currentUser?.id])
+
   const artistId = currentUser?.id || "1"
 
   const releases = getArtistReleases(artistId)
   const reports = getArtistReports(artistId)
   const payments = getArtistPayments(artistId)
-  const playlists = getArtistPlaylists(artistId)
   const totalEarnings = getTotalEarnings(artistId)
 
   const releasedCount = releases.filter((r) => r.status === "released").length
@@ -109,7 +120,7 @@ export default function ArtistDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{playlists.length}</div>
+              <div className="text-2xl font-bold">{playlistCount}</div>
               <p className="text-xs text-muted-foreground mt-1">Промо-плейлисты</p>
             </CardContent>
           </Card>

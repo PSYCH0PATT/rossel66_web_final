@@ -113,34 +113,15 @@ export default function ArtistDashboard({ params }: { params: { username: string
             setReleases([])
           }
           
-          // Загружаем плейлисты
+          // Загружаем плейлисты из SFTP (один источник, с дедупликацией на API)
           try {
-            const [vkResponse, bandlinkResponse] = await Promise.all([
-              fetch('/api/parsers/vk'),
-              fetch('/api/parsers/bandlink')
-            ])
-            
-            const [vkData, bandlinkData] = await Promise.all([
-              vkResponse.json(),
-              bandlinkResponse.json()
-            ])
-            
-            const allPlaylists = []
-            
-            // Фильтруем VK плейлисты по имени артиста
-            if (vkData.results && Array.isArray(vkData.results)) {
-              const vkPlaylists = vkData.results.filter((p: any) => p.artist_name === foundArtist.name)
-              allPlaylists.push(...vkPlaylists)
+            const playlistsRes = await fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(foundArtist.id)}`)
+            const playlistsData = await playlistsRes.json()
+            if (playlistsData.success && Array.isArray(playlistsData.results)) {
+              setPlaylists(playlistsData.results)
+            } else {
+              setPlaylists([])
             }
-            
-            // Фильтруем Bandlink плейлисты по имени артиста
-            if (bandlinkData.results && Array.isArray(bandlinkData.results)) {
-              const bandlinkPlaylists = bandlinkData.results.filter((p: any) => p.artist_name === foundArtist.name)
-              allPlaylists.push(...bandlinkPlaylists)
-            }
-            
-            setPlaylists(allPlaylists)
-            console.log('Загружено плейлистов для артиста:', allPlaylists.length)
           } catch (error) {
             console.error('Ошибка загрузки плейлистов:', error)
             setPlaylists([])
