@@ -87,3 +87,21 @@ model Activity {
   @@index([userRole])
   @@index([createdAt])
 }
+
+model Playlist {
+  id              String   @id
+  playlistUrl     String
+  playlistName    String
+  platform        String
+  artistName      String
+  artistId        String?
+  trackData       Json     @default("[]")
+  firstSeenDate   String?
+  lastSeenDate    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([playlistUrl, playlistName, artistName])
+  @@index([artistId])
+  @@index([platform])
+}

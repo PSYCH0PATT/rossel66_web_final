@@ -1,5 +1,108 @@
 [
   {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Синхронизация плейлистов с SFTP",
+    "description": "Скачано: 0, Добавлено: 0, Обновлено: 7, Удалено: 0",
+    "metadata": {
+      "downloaded": 0,
+      "added": 0,
+      "updated": 7,
+      "removed": 0,
+      "duration": "2154ms"
+    },
+    "id": "1770728402554",
+    "createdAt": "2026-02-10T13:00:02.554Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "1770233945784",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"//RAC1DAT1ON\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1770723609370_n1sbq40hv",
+      "koalaId": "45086",
+      "status": "Доставлен"
+    },
+    "id": "1770723609370",
+    "createdAt": "2026-02-10T11:40:09.370Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "9318e666-493b-4fe7-a445-248aa1b80f32",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"EXIST\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1770723609342_kqfbk8p18",
+      "koalaId": "45748",
+      "status": "Доставлен"
+    },
+    "id": "1770723609343",
+    "createdAt": "2026-02-10T11:40:09.343Z"
+  },
+  {
+    "type": "release_added",
+    "userId": "1770233945784",
+    "userRole": "artist",
+    "title": "Новый релиз добавлен",
+    "description": "Релиз \"никакойромантики\" добавлен из Koala Music",
+    "metadata": {
+      "releaseId": "release_1770723609334_798huzboj",
+      "koalaId": "45820",
+      "status": "Доставлен"
+    },
+    "id": "1770723609335",
+    "createdAt": "2026-02-10T11:40:09.335Z"
+  },
+  {
+    "type": "user_data_updated",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Данные артиста обновлены",
+    "description": "Профиль артиста \"rompy\" был обновлен",
+    "metadata": {
+      "artistId": "1770233945784",
+      "artistName": "rompy"
+    },
+    "id": "1770722956224",
+    "createdAt": "2026-02-10T11:29:16.224Z"
+  },
+  {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Синхронизация плейлистов с SFTP",
+    "description": "Скачано: 0, Добавлено: 5, Обновлено: 2, Удалено: 0",
+    "metadata": {
+      "downloaded": 0,
+      "added": 5,
+      "updated": 2,
+      "removed": 0,
+      "duration": "6918ms"
+    },
+    "id": "1770722761127",
+    "createdAt": "2026-02-10T11:26:01.127Z"
+  },
+  {
+    "type": "playlist_found",
+    "userId": "system",
+    "userRole": "admin",
+    "title": "Синхронизация плейлистов с SFTP",
+    "description": "Скачано: 19, Добавлено: 0, Обновлено: 0, Удалено: 2",
+    "metadata": {
+      "downloaded": 19,
+      "added": 0,
+      "updated": 0,
+      "removed": 2,
+      "duration": "19680ms"
+    },
+    "id": "1770722326800",
+    "createdAt": "2026-02-10T11:18:46.800Z"
+  },
+  {
     "type": "release_added",
     "userId": "1770233945784",
     "userRole": "artist",

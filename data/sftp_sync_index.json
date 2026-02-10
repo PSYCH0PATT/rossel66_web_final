@@ -1,5 +1,5 @@
 {
-  "lastSync": "2026-01-22T15:44:50.307Z",
+  "lastSync": "2026-02-10T11:18:41.726Z",
   "downloadedFiles": [
     {
       "filename": "rossel_playlist_2025_12_05.csv",
@@ -293,6 +293,120 @@
       "filename": "rossel_playlist_2026_01_22.csv",
       "date": "2026-01-22",
       "downloadedAt": "2026-01-22T15:44:50.307Z",
+      "processed": true
+    },
+    {
+      "filename": "rossel_playlist_2026_01_23.csv",
+      "date": "2026-01-23",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_24.csv",
+      "date": "2026-01-24",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_25.csv",
+      "date": "2026-01-25",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_26.csv",
+      "date": "2026-01-26",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_27.csv",
+      "date": "2026-01-27",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_28.csv",
+      "date": "2026-01-28",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_29.csv",
+      "date": "2026-01-29",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_30.csv",
+      "date": "2026-01-30",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_01_31.csv",
+      "date": "2026-01-31",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_01.csv",
+      "date": "2026-02-01",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_02.csv",
+      "date": "2026-02-02",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_03.csv",
+      "date": "2026-02-03",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_04.csv",
+      "date": "2026-02-04",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_05.csv",
+      "date": "2026-02-05",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_06.csv",
+      "date": "2026-02-06",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_07.csv",
+      "date": "2026-02-07",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_08.csv",
+      "date": "2026-02-08",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_09.csv",
+      "date": "2026-02-09",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
+      "processed": false
+    },
+    {
+      "filename": "rossel_playlist_2026_02_10.csv",
+      "date": "2026-02-10",
+      "downloadedAt": "2026-02-10T11:18:41.726Z",
       "processed": true
     }
   ]

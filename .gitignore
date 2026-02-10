@@ -51,3 +51,9 @@ temp_*_config.json
 data/
 !data/.gitkeep
 data_backup_*/
+
+# SQLite databases (migrated to Supabase)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
