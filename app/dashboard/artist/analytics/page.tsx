@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,16 +10,16 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { BarChart3, TrendingUp, CalendarIcon, Loader2 } from "lucide-react"
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, BarChart, Bar, Cell,
-} from "recharts"
 
-// Цвета для линий площадок
-const DSP_COLORS = [
-  "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
-]
+const DspLineChart = dynamic(
+  () => import("@/components/analytics-charts").then(mod => ({ default: mod.DspLineChart })),
+  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div> }
+)
+
+const TotalStreamsChart = dynamic(
+  () => import("@/components/analytics-charts").then(mod => ({ default: mod.TotalStreamsChart })),
+  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div> }
+)
 
 const PERIOD_OPTIONS = [
   { value: "7d", label: "Неделя" },
@@ -88,11 +89,6 @@ export default function ArtistAnalyticsPage() {
   const [customStart, setCustomStart] = useState<Date | undefined>()
   const [customEnd, setCustomEnd] = useState<Date | undefined>()
   const [data, setData] = useState<AnalyticsData | null>(null)
-  const [chartMounted, setChartMounted] = useState(false)
-
-  useEffect(() => {
-    setChartMounted(true)
-  }, [])
 
   // Auth
   useEffect(() => {
@@ -299,42 +295,7 @@ export default function ArtistAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[380px] sm:h-[340px] lg:h-[300px]">
-                  {chartMounted ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.streamsByDspDay} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={formatDate} />
-                      <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} width={40} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
-                        labelStyle={{ color: "#d1d5db" }}
-                        labelFormatter={formatDate}
-                      />
-                      <Legend 
-                        wrapperStyle={{ 
-                          fontSize: 'clamp(9px, 2.5vw, 12px)', 
-                          paddingTop: '12px', 
-                          paddingBottom: '4px',
-                          lineHeight: '1.4'
-                        }} 
-                        iconSize={10}
-                      />
-                      {data.dsps.map((dsp, i) => (
-                        <Line
-                          key={dsp}
-                          type="monotone"
-                          dataKey={dsp}
-                          stroke={DSP_COLORS[i % DSP_COLORS.length]}
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 4 }}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div>
-                  )}
+                  <DspLineChart data={data.streamsByDspDay} dsps={data.dsps} formatDate={formatDate} />
                 </div>
               </CardContent>
             </Card>
@@ -387,31 +348,7 @@ export default function ArtistAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  {chartMounted ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.streamsByDay} margin={{ top: 10, right: 10, left: 40, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 12 }} tickFormatter={formatDate} />
-                      <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} width={40} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
-                        labelStyle={{ color: "#d1d5db" }}
-                        labelFormatter={formatDate}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="streams"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 4 }}
-                        name="Стримы"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div>
-                  )}
+                  <TotalStreamsChart data={data.streamsByDay} formatDate={formatDate} />
                 </div>
               </CardContent>
             </Card>
