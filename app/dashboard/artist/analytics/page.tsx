@@ -11,15 +11,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { BarChart3, TrendingUp, CalendarIcon, Loader2 } from "lucide-react"
 
-const DspLineChart = dynamic(
-  () => import("@/components/analytics-charts").then(mod => ({ default: mod.DspLineChart })),
-  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div> }
-)
-
-const TotalStreamsChart = dynamic(
-  () => import("@/components/analytics-charts").then(mod => ({ default: mod.TotalStreamsChart })),
-  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div> }
-)
+const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
+const TotalStreamChart = dynamic(() => import("@/components/charts/TotalStreamChart"), { ssr: false })
 
 const PERIOD_OPTIONS = [
   { value: "7d", label: "Неделя" },
@@ -89,6 +82,11 @@ export default function ArtistAnalyticsPage() {
   const [customStart, setCustomStart] = useState<Date | undefined>()
   const [customEnd, setCustomEnd] = useState<Date | undefined>()
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [chartMounted, setChartMounted] = useState(false)
+
+  useEffect(() => {
+    setChartMounted(true)
+  }, [])
 
   // Auth
   useEffect(() => {
@@ -295,7 +293,11 @@ export default function ArtistAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[380px] sm:h-[340px] lg:h-[300px]">
-                  <DspLineChart data={data.streamsByDspDay} dsps={data.dsps} formatDate={formatDate} />
+                  {chartMounted ? (
+                    <DspStreamChart data={data.streamsByDspDay} dsps={data.dsps} formatDate={formatDate} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -348,7 +350,11 @@ export default function ArtistAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <TotalStreamsChart data={data.streamsByDay} formatDate={formatDate} />
+                  {chartMounted ? (
+                    <TotalStreamChart data={data.streamsByDay} formatDate={formatDate} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div>
+                  )}
                 </div>
               </CardContent>
             </Card>

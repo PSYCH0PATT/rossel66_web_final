@@ -11,6 +11,8 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
+  // Transpile recharts для корректной работы в production
+  transpilePackages: ['recharts'],
   webpack: (config) => { // Убираем неиспользуемые параметры
     config.resolve.alias['@'] = path.resolve(__dirname);
     return config;
