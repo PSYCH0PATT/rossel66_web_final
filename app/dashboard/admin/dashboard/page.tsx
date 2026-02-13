@@ -140,7 +140,13 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{metrics.releaseCount}</div>
-              <p className="text-xs text-slate-400 mt-1">{metrics.pendingReleases} ожидают обработки</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {metrics.pendingReleases > 0 
+                  ? `${metrics.pendingReleases} ожидают обработки` 
+                  : metrics.latestRelease 
+                    ? `Последний: ${metrics.latestRelease.title}` 
+                    : 'Нет релизов'}
+              </p>
             </CardContent>
           </Card>
 

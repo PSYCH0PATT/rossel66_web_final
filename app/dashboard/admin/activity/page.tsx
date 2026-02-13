@@ -48,6 +48,8 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   parser_release_found: 'Парсер: релиз найден',
   parser_release_updated: 'Парсер: релиз обновлён',
   parser_playlist_found: 'Парсер: плейлист найден',
+  analytics_import: 'Импорт аналитики',
+  analytics_cleanup: 'Очистка аналитики',
 }
 
 function getActivityIcon(type: ActivityType) {
@@ -78,6 +80,9 @@ function getActivityIcon(type: ActivityType) {
       return <CheckCircle className="h-4 w-4 text-green-400" />
     case 'parser_error':
       return <Activity className="h-4 w-4 text-red-400" />
+    case 'analytics_import':
+    case 'analytics_cleanup':
+      return <Activity className="h-4 w-4 text-category-amber" />
     default:
       return <FileText className="h-4 w-4 text-gray-400" />
   }

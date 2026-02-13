@@ -95,6 +95,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
     { href: `${artistBasePath}/reports`, icon: FileText, label: "Отчеты", color: "purple" },
     { href: `${artistBasePath}/payments`, icon: DollarSign, label: "Выплаты", color: "amber" },
     { href: `/dashboard/artist/playlists`, icon: ListMusic, label: "Плейлисты", color: "red" },
+    { href: `/dashboard/artist/analytics`, icon: BarChart, label: "Аналитика", color: "purple" },
   ]
 
   const adminNavItems = [
@@ -108,6 +109,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
     // Объединенная страница плейлистов с парсерами
     { href: "/dashboard/admin/playlists", icon: Search, label: "Плейлисты", color: "blue" },
     { href: "/dashboard/admin/playlists/history", icon: Clock, label: "История плейлистов", color: "purple" },
+    { href: "/dashboard/admin/analytics", icon: BarChart, label: "Аналитика", color: "amber" },
     { href: "/dashboard/admin/activity", icon: Activity, label: "Активность", color: "emerald" },
   ]
 

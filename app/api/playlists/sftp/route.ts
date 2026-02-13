@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllPlaylists, getPlaylistsByArtist, getPlaylistsByArtistId } from '@/lib/sftp-playlist-storage';
 import { getPlaylistCoverUrl } from '@/lib/playlist-cover';
+import { extractTrackTitle } from '@/lib/sftp-playlist-parser';
 
 /**
  * GET /api/playlists/sftp
@@ -73,20 +74,21 @@ export async function GET(request: NextRequest) {
       
       // Находим треки этого артиста для определения позиции
       const artistTracks = tracks.filter((t: any) => t.artistName === mainArtistName);
-      
-      // Если несколько треков одного артиста, добавляем информацию
+
+      // Название трека: из поля trackTitle или извлекаем из title_artist (для старых записей в БД)
+      const getTrackDisplayName = (t: any) => t.trackTitle ?? (t.titleArtist ? extractTrackTitle(t.titleArtist) : null) ?? t.titleArtist;
+
       if (maxTracks > 1) {
         result.tracks_info = artistTracks.map((t: any) => ({
-          title: t.titleArtist, // Название трека
-          releaseName: t.albumTitle || t.titleArtist, // Название релиза (альбома)
-          position: t.position, // Позиция в плейлисте
+          title: getTrackDisplayName(t),
+          releaseName: t.albumTitle || getTrackDisplayName(t) || t.titleArtist,
+          position: t.position,
           isrc: t.isrc
         }));
       } else if (artistTracks.length > 0) {
-        // Даже если один трек, добавляем информацию о позиции
         result.tracks_info = artistTracks.map((t: any) => ({
-          title: t.titleArtist,
-          releaseName: t.albumTitle || t.titleArtist,
+          title: getTrackDisplayName(t),
+          releaseName: t.albumTitle || getTrackDisplayName(t) || t.titleArtist,
           position: t.position,
           isrc: t.isrc
         }));
@@ -100,12 +102,11 @@ export async function GET(request: NextRequest) {
         }
       }
       
-      // Добавляем список названий релизов ТОЛЬКО для этого артиста
+      // Список названий треков для блока «Релизы» (как в Yandex Lens — извлечённое название трека)
       const uniqueReleases = new Set<string>();
       artistTracks.forEach((t: any) => {
-        if (t.albumTitle) {
-          uniqueReleases.add(t.albumTitle);
-        }
+        const name = getTrackDisplayName(t);
+        if (name) uniqueReleases.add(name);
       });
       result.release_names = Array.from(uniqueReleases);
       

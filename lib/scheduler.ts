@@ -33,6 +33,8 @@ export function initScheduler() {
   console.log('🔄 SFTP Playlist Sync:');
   console.log('   • 16:00 MSK ежедневно');
   console.log('   • 00:30 MSK ежедневно');
+  console.log('📊 Analytics Flash Import: 20:00 MSK ежедневно');
+  console.log('🧹 Analytics Cleanup: 1 января 00:00 MSK');
   console.log('═══════════════════════════════════════════════════');
   console.log('');
   
@@ -74,6 +76,30 @@ export function initScheduler() {
     console.log('');
     console.log('🔄 [00:30 MSK] SFTP Playlist Sync...');
     await runSftpPlaylistSync();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  
+  // ============================================================
+  // ANALYTICS FLASH IMPORT - 20:00 ежедневно по Москве
+  // ============================================================
+  
+  cron.schedule('0 20 * * *', async () => {
+    console.log('');
+    console.log('📊 [20:00 MSK] Analytics Flash Import...');
+    await runAnalyticsFlashImport();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  
+  // ============================================================
+  // ANALYTICS YEARLY CLEANUP - 1 января в 00:00 по Москве
+  // ============================================================
+  
+  cron.schedule('0 0 1 1 *', async () => {
+    console.log('');
+    console.log('🧹 [Jan 1, 00:00 MSK] Analytics Yearly Cleanup...');
+    await runAnalyticsCleanup();
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -364,6 +390,50 @@ async function runPlaylistParsers() {
     
   } catch (error) {
     console.error('❌ Playlist parsers error:', error);
+  }
+}
+
+/**
+ * Запускает импорт аналитики из rossel_flash по SFTP
+ */
+async function runAnalyticsFlashImport() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    
+    const response = await fetch(`${baseUrl}/api/cron/analytics-flash?secret=${cronSecret}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`✅ Analytics Flash Import завершен: добавлено ${result.stats?.added || 0}, пропущено ${result.stats?.skipped || 0}`);
+    } else {
+      console.error(`❌ Analytics Flash Import ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка запуска Analytics Flash Import:', error);
+  }
+}
+
+/**
+ * Запускает годовую очистку аналитики
+ */
+async function runAnalyticsCleanup() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    
+    const response = await fetch(`${baseUrl}/api/cron/analytics-cleanup?secret=${cronSecret}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`✅ Analytics Cleanup завершен: ${result.stats?.aggregated || 0} агрегатов, ${result.stats?.deleted || 0} удалено`);
+    } else {
+      console.error(`❌ Analytics Cleanup ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка запуска Analytics Cleanup:', error);
   }
 }
 

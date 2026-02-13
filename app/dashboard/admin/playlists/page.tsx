@@ -163,11 +163,11 @@ export default function PlaylistsPage() {
       for (const p of allPlaylists) {
         const currentArtistName = p.artist_name || ''
         
-        // Формируем названия релизов
+        // Формируем названия треков для блока «Релизы» (title = название трека, как в Yandex Lens)
         let trackNames = ''
         if (p.tracks_info && p.tracks_info.length > 0) {
           const artistReleases = p.tracks_info
-            .map((t: any) => t.releaseName || t.title)
+            .map((t: any) => t.title || t.releaseName)
             .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index)
           trackNames = artistReleases.join(', ')
         } else if (p.release_names && p.release_names.length > 0) {
@@ -806,20 +806,11 @@ export default function PlaylistsPage() {
 
               {/* Названия релизов - только для этого артиста */}
               {(() => {
-                const currentArtistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name;
                 const tracksInfo = isVK ? (vkPlaylist.tracks_info || []) : (bandlinkPlaylist.tracks_info || []);
                 
-                // Фильтруем релизы только для текущего артиста
+                // Названия треков для блока «Релизы» (title = название трека)
                 const artistReleases = tracksInfo
-                  .filter((t: any) => {
-                    // Проверяем, что трек принадлежит текущему артисту
-                    // Извлекаем имя артиста из title или releaseName
-                    const trackTitle = t.title || t.releaseName || '';
-                    const trackArtistMatch = trackTitle.match(/^([^-]+?)\s*-\s*/);
-                    const trackArtist = trackArtistMatch ? trackArtistMatch[1].trim() : '';
-                    return !trackArtist || trackArtist.toLowerCase() === currentArtistName.toLowerCase();
-                  })
-                  .map((t: any) => t.releaseName || t.title)
+                  .map((t: any) => t.title || t.releaseName)
                   .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
                 
                 const releaseNames = isVK 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     })
 
     return new Promise<Response>((resolve) => {
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', async (code) => {
         // Удаляем временные файлы
         try {
           fs.unlinkSync(tempFilePath)
@@ -59,6 +60,55 @@ export async function POST(request: NextRequest) {
 
         if (code === 0) {
           console.log('Python скрипт выполнен успешно')
+          
+          // Читаем метаданные созданных отчётов из reports.json
+          try {
+            const reportsJsonPath = path.join(process.cwd(), 'data', 'reports.json')
+            if (fs.existsSync(reportsJsonPath)) {
+              const reportsData = JSON.parse(fs.readFileSync(reportsJsonPath, 'utf-8'))
+              
+              // Фильтруем отчёты по текущему кварталу и году
+              const currentReports = reportsData.filter((r: any) => 
+                r.quarter === quarter && r.year === year
+              )
+              
+              // Добавляем новые отчёты в БД
+              for (const report of currentReports) {
+                // Проверяем, существует ли уже такой отчёт
+                const existing = await prisma.report.findUnique({
+                  where: { id: report.id }
+                })
+                
+                if (!existing) {
+                  await prisma.report.create({
+                    data: {
+                      id: report.id,
+                      artistId: report.artistId || null,
+                      artistName: report.artistName || report.artistId,
+                      quarter: report.quarter,
+                      year: report.year,
+                      fileName: report.fileName,
+                      filePath: report.filePath,
+                      uploadDate: report.uploadDate || new Date().toISOString(),
+                      status: report.status || 'processed',
+                      totalPlays: report.totalPlays || 0,
+                      totalAmount: report.totalAmount || 0,
+                      isRegistered: report.isRegistered ?? true,
+                      isSigned: false,
+                      isPaid: false,
+                      processed: true,
+                    }
+                  })
+                  console.log(`Добавлен отчёт в БД: ${report.id}`)
+                }
+              }
+              
+              console.log(`Сохранено ${currentReports.length} отчётов в БД`)
+            }
+          } catch (error) {
+            console.error('Ошибка при сохранении отчётов в БД:', error)
+          }
+          
           resolve(NextResponse.json({
             success: true,
             message: 'Отчеты успешно созданы',

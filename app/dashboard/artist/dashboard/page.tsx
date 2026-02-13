@@ -9,7 +9,6 @@ import Link from "next/link"
 import { ActivityFeed } from "@/components/activity-feed"
 import {
   getArtistReleases,
-  getArtistReports,
   getArtistPayments,
   getTotalEarnings,
 } from "@/lib/data"
@@ -18,6 +17,9 @@ export default function ArtistDashboard() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [playlistCount, setPlaylistCount] = useState<number>(0)
+  const [reports, setReports] = useState<any[]>([])
+  const [releases, setReleases] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -41,26 +43,72 @@ export default function ArtistDashboard() {
   useEffect(() => {
     if (!currentUser?.id) return
     let cancelled = false
-    fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(currentUser.id)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled || !data.success || !Array.isArray(data.results)) return
-        setPlaylistCount(data.results.length)
-      })
-      .catch(() => {})
+    
+    const loadData = async () => {
+      try {
+        // Загружаем плейлисты
+        const playlistsRes = await fetch(`/api/playlists/sftp?artistId=${encodeURIComponent(currentUser.id)}`)
+        const playlistsData = await playlistsRes.json()
+        if (!cancelled && playlistsData.success && Array.isArray(playlistsData.results)) {
+          setPlaylistCount(playlistsData.results.length)
+        }
+
+        // Загружаем отчёты через API
+        const quartersRes = await fetch('/api/reports/quarters')
+        const quartersData = await quartersRes.json()
+        
+        if (!cancelled && quartersData.quarters) {
+          const allReports: any[] = []
+          for (const quarter of quartersData.quarters) {
+            const reportsRes = await fetch(`/api/reports/list/${quarter}`)
+            const reportsData = await reportsRes.json()
+            if (reportsData.reports) {
+              const artistReports = reportsData.reports.filter(
+                (report: any) => report.artistId === currentUser.id
+              )
+              allReports.push(...artistReports)
+            }
+          }
+          if (!cancelled) {
+            setReports(allReports)
+          }
+        }
+
+        // Загружаем релизы через API
+        const releasesRes = await fetch('/api/releases')
+        const releasesData = await releasesRes.json()
+        if (!cancelled && releasesData?.success && Array.isArray(releasesData.releases)) {
+          const artistReleases = releasesData.releases.filter(
+            (release: any) => release.artistId === currentUser.id
+          )
+          setReleases(artistReleases)
+        }
+
+        setLoading(false)
+      } catch (error) {
+        console.error('Ошибка загрузки данных:', error)
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadData()
     return () => { cancelled = true }
   }, [currentUser?.id])
 
   const artistId = currentUser?.id || "1"
-
-  const releases = getArtistReleases(artistId)
-  const reports = getArtistReports(artistId)
   const payments = getArtistPayments(artistId)
   const totalEarnings = getTotalEarnings(artistId)
 
   const releasedCount = releases.filter((r) => r.status === "released").length
   const pendingCount = releases.filter((r) => r.status !== "released").length
-  const latestReport = reports.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())[0]
+  const latestReport = reports.length > 0 
+    ? reports.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime())[0]
+    : null
+  const latestRelease = releases.length > 0
+    ? [...releases].sort((a, b) => new Date(b.createdAt || b.releaseDate).getTime() - new Date(a.createdAt || a.releaseDate).getTime())[0]
+    : null
 
   return (
     <Layout role="artist" requiredRole="artist">
@@ -79,7 +127,11 @@ export default function ArtistDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{releases.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {releasedCount} выпущено, {pendingCount} в процессе
+                {pendingCount > 0
+                  ? `${releasedCount} выпущено, ${pendingCount} в процессе`
+                  : latestRelease
+                    ? `Последний: ${latestRelease.title}`
+                    : 'Нет релизов'}
               </p>
             </CardContent>
           </Card>
@@ -94,7 +146,7 @@ export default function ArtistDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{reports.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Последний: {latestReport?.quarter} {latestReport?.year}
+                {latestReport ? `Последний: ${latestReport.quarter} ${latestReport.year}` : "Нет отчетов"}
               </p>
             </CardContent>
           </Card>

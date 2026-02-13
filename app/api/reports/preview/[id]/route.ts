@@ -2,21 +2,26 @@ import { NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
 import * as XLSX from "xlsx"
-import { reports } from "@/lib/data"
+import { loadReports } from "@/lib/storage"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const reportId = params.id
 
-    // Находим отчет по ID
+    // Находим отчет по ID в БД
+    const reports = await loadReports()
     const report = reports.find((r) => r.id === reportId)
 
     if (!report) {
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })
     }
 
+    if (!report.filePath) {
+      return NextResponse.json({ error: "Путь к файлу не указан" }, { status: 404 })
+    }
+
     // Формируем полный путь к файлу
-    const filePath = path.join(process.cwd(), "reports", report.quarter, report.fileName)
+    const filePath = path.join(process.cwd(), report.filePath)
 
     // Проверяем существование файла
     if (!fs.existsSync(filePath)) {

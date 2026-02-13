@@ -1,23 +1,42 @@
 import { NextResponse } from "next/server"
-import { reports } from "@/lib/data"
+import { prisma } from "@/lib/prisma"
+import * as fs from "fs"
+import * as path from "path"
 
 export async function GET() {
   try {
-    // Находим индексы фейковых отчетов
-    const fakeReportIndices = reports
-      .map((report, index) => (report.isRegistered === false ? index : -1))
-      .filter((index) => index !== -1)
-      .sort((a, b) => b - a) // Сортируем в обратном порядке, чтобы удалять с конца
-
-    // Удаляем фейковые отчеты
-    fakeReportIndices.forEach((index) => {
-      reports.splice(index, 1)
+    // Находим фейковые отчеты (незарегистрированные артисты)
+    const fakeReports = await prisma.report.findMany({
+      where: {
+        isRegistered: false
+      }
     })
+
+    let deletedCount = 0
+    
+    // Удаляем фейковые отчеты и их файлы
+    for (const report of fakeReports) {
+      // Удаляем файл если существует
+      if (report.filePath) {
+        const filePath = path.join(process.cwd(), report.filePath)
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+          console.log(`Удален файл: ${filePath}`)
+        }
+      }
+      
+      // Удаляем запись из БД
+      await prisma.report.delete({ where: { id: report.id } })
+      deletedCount++
+    }
+
+    // Считаем оставшиеся отчеты
+    const remainingCount = await prisma.report.count()
 
     return NextResponse.json({
       success: true,
-      message: `Удалено ${fakeReportIndices.length} фейковых отчетов`,
-      remainingReports: reports.length,
+      message: `Удалено ${deletedCount} фейковых отчетов`,
+      remainingReports: remainingCount,
     })
   } catch (error) {
     console.error("Ошибка при удалении фейковых отчетов:", error)

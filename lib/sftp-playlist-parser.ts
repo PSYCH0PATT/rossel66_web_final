@@ -18,7 +18,10 @@ export interface CsvRecord {
 }
 
 export interface ParsedTrack {
+  /** Полная строка из CSV: "Артист - Трек" */
   titleArtist: string;
+  /** Название трека без артиста (извлечено из title_artist) */
+  trackTitle: string;
   artistName: string;
   artistId: string | null;
   position: number;
@@ -61,13 +64,26 @@ function validateCsvHeaders(headers: string[]): { valid: boolean; missing?: stri
 }
 
 /**
- * Извлекает имя артиста из title_artist
+ * Извлекает имя артиста из title_artist (формат "Артист - Трек")
  * "PLVT - stars" -> "PLVT"
  * "sadaround - Not Broken" -> "sadaround"
+ * "MEELBRN & keroms - ROTTEN" -> "MEELBRN & keroms"
  */
 export function extractArtistName(titleArtist: string): string {
   const match = titleArtist.match(/^([^-]+?)\s*-\s*/);
   return match ? match[1].trim() : titleArtist;
+}
+
+/**
+ * Извлекает название трека из title_artist (формат "Артист - Трек")
+ * "rompy - //M1NVT3" -> "//M1NVT3"
+ * "sadaround - Not Broken" -> "Not Broken"
+ * "MEELBRN & keroms - ROTTEN" -> "ROTTEN"
+ */
+export function extractTrackTitle(titleArtist: string): string {
+  const sep = ' - ';
+  const idx = titleArtist.indexOf(sep);
+  return idx >= 0 ? titleArtist.slice(idx + sep.length).trim() : titleArtist;
 }
 
 /**
@@ -186,6 +202,7 @@ export function groupByPlaylist(records: CsvRecord[]): Map<string, ParsedPlaylis
     
     playlist.tracks.push({
       titleArtist: record.title_artist,
+      trackTitle: extractTrackTitle(record.title_artist),
       artistName,
       artistId: artist?.id || null,
       position: parseInt(record.track_position) || 0,

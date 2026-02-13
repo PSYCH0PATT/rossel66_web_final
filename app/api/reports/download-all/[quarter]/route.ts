@@ -2,24 +2,17 @@ import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
 import * as JSZip from "jszip"
-
-// Директория для сохранения отчетов
-const REPORTS_DIR = path.join(process.cwd(), "reports")
+import { loadReports } from "@/lib/storage"
 
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
     const quarter = params.quarter
-    const quarterDir = path.join(REPORTS_DIR, quarter)
+    
+    // Получаем список отчетов из БД
+    const allReports = await loadReports()
+    const quarterReports = allReports.filter(report => report.quarter === quarter)
 
-    // Проверяем существование директории
-    if (!fs.existsSync(quarterDir)) {
-      return NextResponse.json({ error: "Директория с отчетами не найдена" }, { status: 404 })
-    }
-
-    // Получаем список файлов в директории
-    const files = fs.readdirSync(quarterDir).filter((file) => file.endsWith(".xlsx"))
-
-    if (files.length === 0) {
+    if (quarterReports.length === 0) {
       return NextResponse.json({ error: "Нет отчетов за выбранный квартал" }, { status: 404 })
     }
 
@@ -27,10 +20,21 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     const zip = new JSZip()
 
     // Добавляем файлы в архив
-    for (const file of files) {
-      const filePath = path.join(quarterDir, file)
+    for (const report of quarterReports) {
+      if (!report.filePath) {
+        console.warn(`Отчет ${report.id} не имеет пути к файлу`)
+        continue
+      }
+      
+      const filePath = path.join(process.cwd(), report.filePath)
+      
+      if (!fs.existsSync(filePath)) {
+        console.warn(`Файл не найден: ${filePath}`)
+        continue
+      }
+      
       const fileData = fs.readFileSync(filePath)
-      zip.file(file, fileData)
+      zip.file(report.fileName, fileData)
     }
 
     // Генерируем ZIP-архив

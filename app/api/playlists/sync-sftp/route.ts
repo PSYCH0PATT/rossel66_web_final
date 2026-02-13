@@ -3,7 +3,7 @@ import { syncSftpPlaylists, getLatestCsvFile, markFileAsProcessed } from '@/lib/
 import { processCsvFiles } from '@/lib/sftp-playlist-parser';
 import { savePlaylists } from '@/lib/sftp-playlist-storage';
 import { cleanupRemovedPlaylists } from '@/lib/playlist-history';
-import { addActivity } from '@/lib/storage';
+import { addActivity, loadUsers } from '@/lib/storage';
 import * as path from 'path';
 
 /**
@@ -85,7 +85,53 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - startTime;
 
-    // Логируем активность
+    // Создаём активности для артистов, у которых обновились плейлисты
+    if (saveResult.added > 0 || saveResult.updated > 0) {
+      try {
+        const users = await loadUsers();
+        const artistsMap = new Map<string, any>();
+        
+        // Собираем уникальных артистов из плейлистов
+        playlists.forEach(p => {
+          if (p.artistName) {
+            const artist = users.find(u => 
+              u.role === 'artist' && 
+              (u.name?.toLowerCase() === p.artistName.toLowerCase() || 
+               u.username?.toLowerCase() === p.artistName.toLowerCase())
+            );
+            if (artist && !artistsMap.has(artist.id)) {
+              artistsMap.set(artist.id, artist);
+            }
+          }
+        });
+
+        // Создаём активность для каждого артиста
+        for (const [artistId, artist] of artistsMap) {
+          const artistPlaylists = playlists.filter(p => 
+            p.artistName?.toLowerCase() === artist.name?.toLowerCase() ||
+            p.artistName?.toLowerCase() === artist.username?.toLowerCase()
+          );
+          
+          addActivity({
+            type: 'playlist_found',
+            userId: artistId,
+            userRole: 'artist',
+            title: 'Обновлены плейлисты',
+            description: `Синхронизировано ${artistPlaylists.length} ${artistPlaylists.length === 1 ? 'плейлист' : artistPlaylists.length < 5 ? 'плейлиста' : 'плейлистов'}`,
+            metadata: {
+              playlistCount: artistPlaylists.length,
+              source: 'sftp'
+            }
+          });
+        }
+        
+        console.log(`📢 Создано активностей для артистов: ${artistsMap.size}`);
+      } catch (error) {
+        console.error('⚠️ Ошибка при создании активностей для артистов:', error);
+      }
+    }
+
+    // Логируем общую активность для админа
     addActivity({
       type: 'playlist_found',
       userId: 'system',

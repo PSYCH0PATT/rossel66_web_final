@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
-import { reports, users } from "@/lib/data"
+import { loadUsers } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
 import * as XLSX from "xlsx"
 
 // Директория для сохранения отчетов
-const REPORTS_DIR = path.join(process.cwd(), "reports")
+const REPORTS_DIR = path.join(process.cwd(), "uploads", "reports")
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +31,9 @@ export async function POST(request: Request) {
       fs.mkdirSync(quarterDir, { recursive: true })
     }
 
+    // Загружаем список пользователей из БД
+    const users = await loadUsers()
+    
     // Создаем маппинг отображаемых имен артистов к их ID
     const artistsMap = new Map()
     users.forEach((user) => {
@@ -90,23 +94,29 @@ export async function POST(request: Request) {
         const reportId = `r${Date.now()}-${artistNameFromFile}`
         const artist = users.find((user) => user.id === artistId)
 
-        const newReport = {
-          id: reportId,
-          artistId, // Используем реальный ID артиста
-          quarter,
-          year,
-          fileUrl: `/api/reports/download/${reportId}`,
-          uploadDate: new Date().toISOString(),
-          status: "processed",
-          generatedDate: new Date().toISOString(),
-          fileName,
-          artistName: artist?.name || artistNameFromFile,
-          isRegistered: true,
-          totalPlays,
-          totalAmount,
-        }
-
-        reports.push(newReport)
+        // Относительный путь для БД
+        const relativeFilePath = `uploads/reports/${quarter}/${fileName}`
+        
+        // Сохраняем отчёт в БД
+        await prisma.report.create({
+          data: {
+            id: reportId,
+            artistId: artistId,
+            artistName: artist?.name || artistNameFromFile,
+            quarter: quarter,
+            year: year,
+            fileName: fileName,
+            filePath: relativeFilePath,
+            uploadDate: new Date().toISOString(),
+            status: "processed",
+            totalPlays: totalPlays,
+            totalAmount: totalAmount,
+            isRegistered: true,
+            isSigned: false,
+            isPaid: false,
+            processed: true,
+          }
+        })
 
         processedFiles.push({
           name: fileName,

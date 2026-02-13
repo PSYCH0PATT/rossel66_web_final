@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { processReportFile } from "@/lib/report-processor"
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
   try {
@@ -32,8 +33,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Не все столбцы выбраны" }, { status: 400 })
     }
 
-    // Обрабатываем файл
+    // Обрабатываем файл (создаёт файлы на диск)
     const result = await processReportFile(file, quarter, year, columnMapping)
+
+    // Сохраняем отчёты в БД
+    for (const report of result.reports) {
+      await prisma.report.create({
+        data: {
+          id: report.id,
+          artistId: report.artistId || null,
+          artistName: report.artistName,
+          quarter: quarter,
+          year: year,
+          fileName: report.fileName,
+          filePath: report.filePath,
+          uploadDate: report.uploadDate,
+          status: report.status || 'processed',
+          totalPlays: report.totalPlays || 0,
+          totalAmount: report.totalAmount || 0,
+          isRegistered: report.isRegistered ?? false,
+          isSigned: false,
+          isPaid: false,
+          processed: true,
+        }
+      })
+    }
 
     return NextResponse.json({
       success: true,

@@ -105,3 +105,34 @@ model Playlist {
   @@index([artistId])
   @@index([platform])
 }
+
+model StreamAnalytics {
+  id               String   @id @default(cuid())
+  date             DateTime
+  dsp              String
+  length           String
+  source           String
+  isrc             String
+  trackArtist      String
+  trackName        String
+  albumTitle       String
+  cpline           String?
+  albumReleaseDate String?
+  daysSinceRelease Int?
+  streams          Int
+  artistId         String?
+
+  isMonthlyAggregate Boolean @default(false)
+  month            Int?
+  year             Int?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([date])
+  @@index([artistId])
+  @@index([isrc])
+  @@index([dsp])
+  @@index([isMonthlyAggregate])
+  @@index([year, month])
+}

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
-import { reports } from "@/lib/data"
+import { prisma } from "@/lib/prisma"
 
 // Директория для сохранения отчетов
-const REPORTS_DIR = path.join(process.cwd(), "reports")
+const REPORTS_DIR = path.join(process.cwd(), "uploads", "reports")
 
 export async function POST(request: Request) {
   try {
@@ -62,23 +62,32 @@ export async function POST(request: Request) {
         path: filePath,
       })
 
-      // Добавляем информацию о файле в список отчетов
+      // Добавляем информацию о файле в БД
       const artistId = fileName.split("_")[0]
       const reportId = `r${Date.now()}-${artistId}`
+      const year = new Date().getFullYear()
+      
+      // Относительный путь для БД
+      const relativeFilePath = `uploads/reports/${quarter}/${fileName}`
 
-      reports.push({
-        id: reportId,
-        artistId,
-        quarter,
-        year: new Date().getFullYear(),
-        fileUrl: `/api/reports/download/${reportId}`,
-        uploadDate: new Date().toISOString(),
-        status: "processed",
-        generatedDate: new Date().toISOString(),
-        fileName,
-        isRegistered: true,
-        totalPlays: 0, // Эти данные будут обновлены при запросе отчета
-        totalAmount: 0,
+      await prisma.report.create({
+        data: {
+          id: reportId,
+          artistId: artistId || null,
+          artistName: artistId, // Используем artistId как имя, так как из имени файла сложно получить полное имя
+          quarter: quarter,
+          year: year,
+          fileName: fileName,
+          filePath: relativeFilePath,
+          uploadDate: new Date().toISOString(),
+          status: "processed",
+          totalPlays: 0, // Эти данные будут обновлены при запросе отчета
+          totalAmount: 0,
+          isRegistered: true,
+          isSigned: false,
+          isPaid: false,
+          processed: true,
+        }
       })
     }
 

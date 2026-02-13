@@ -13,7 +13,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const users = await loadUsers()
+    let users
+    try {
+      users = await loadUsers()
+    } catch (err) {
+      console.error("Login: не удалось загрузить пользователей (проверьте DATABASE_URL):", err)
+      return NextResponse.json(
+        { success: false, error: "Ошибка сервера. Проверьте подключение к базе данных." },
+        { status: 500 }
+      )
+    }
+
     const user = users.find(u => u.username === username)
 
     if (!user) {

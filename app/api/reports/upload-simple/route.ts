@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { loadReports, saveReports, loadUsers } from "@/lib/storage"
+import { loadUsers } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
 import * as XLSX from 'xlsx'
+import * as fs from 'fs'
+import * as path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,6 +72,21 @@ export async function POST(request: NextRequest) {
     // Создаем отчет
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
+    // Создаем директорию для файла
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'reports', quarter)
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true })
+    }
+    
+    // Сохраняем файл на диск
+    const fileName = `${reportId}_${file.name}`
+    const filePath = path.join(uploadsDir, fileName)
+    const fileBuffer = Buffer.from(buffer)
+    fs.writeFileSync(filePath, fileBuffer)
+    
+    // Относительный путь для БД
+    const relativeFilePath = `uploads/reports/${quarter}/${fileName}`
+    
     const newReport = await prisma.report.create({
       data: {
         id: reportId,
@@ -77,9 +95,9 @@ export async function POST(request: NextRequest) {
         quarter: quarter,
         year: parseInt(year),
         fileName: file.name,
-        filePath: `uploads/${reportId}_${file.name}`, // Путь к файлу
+        filePath: relativeFilePath,
         uploadDate: new Date().toISOString(),
-        status: 'processed', // Статус обработки
+        status: 'processed',
         totalPlays: finalPlays,
         totalAmount: finalAmount,
         isRegistered: !!registeredArtist,
@@ -90,6 +108,7 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('Создан новый отчет:', newReport)
+    console.log('Файл сохранён:', relativeFilePath)
 
     return NextResponse.json({
       success: true,

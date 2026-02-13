@@ -112,6 +112,8 @@ export type ActivityType =
   | 'parser_error'
   | 'parser_release_found'
   | 'parser_release_updated'
+  | 'analytics_import'
+  | 'analytics_cleanup'
   | 'parser_playlist_found'
 
 export interface Activity {

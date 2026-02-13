@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
-import { reports } from "@/lib/data"
 import { processExcelFile } from "@/lib/report-generator"
+import { prisma } from "@/lib/prisma"
+import * as fs from "fs"
+import * as path from "path"
 
 export async function POST(request: Request) {
   try {
@@ -55,16 +57,64 @@ export async function POST(request: Request) {
 
     console.log(`Обработка завершена. Сгенерировано отчетов: ${result.reports.length}`)
 
-    // Добавляем сгенерированные отчеты в общий список отчетов
-    reports.push(...result.reports)
+    // Создаем директорию для сохранения файлов
+    const uploadsDir = path.join(process.cwd(), "uploads", "reports", quarter)
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true })
+    }
+
+    // Сохраняем файлы и создаём записи в БД
+    const savedReports = []
+    for (let i = 0; i < result.reports.length; i++) {
+      const report = result.reports[i]
+      const reportFile = result.reportFiles[i]
+
+      // Сохраняем файл на диск
+      const filePath = path.join(uploadsDir, report.fileName)
+      const arrayBuffer = await reportFile.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      fs.writeFileSync(filePath, buffer)
+
+      // Относительный путь для БД
+      const relativeFilePath = `uploads/reports/${quarter}/${report.fileName}`
+
+      // Создаём запись в БД
+      await prisma.report.create({
+        data: {
+          id: report.id,
+          artistId: report.artistId || null,
+          artistName: report.artistId, // artistId содержит имя артиста
+          quarter: quarter,
+          year: report.year,
+          fileName: report.fileName,
+          filePath: relativeFilePath,
+          uploadDate: report.uploadDate,
+          status: report.status || "processed",
+          totalPlays: report.totalPlays || 0,
+          totalAmount: report.totalAmount || 0,
+          isRegistered: report.isRegistered ?? true,
+          isSigned: false,
+          isPaid: false,
+          processed: true,
+        }
+      })
+
+      savedReports.push({
+        id: report.id,
+        artistName: report.artistId,
+        fileName: report.fileName,
+        totalPlays: report.totalPlays,
+        totalAmount: report.totalAmount,
+      })
+    }
 
     // Возвращаем успешный ответ
     return NextResponse.json({
       success: true,
-      message: "Отчеты успешно сгенерированы",
-      processedArtists: result.reports.length,
+      message: "Отчеты успешно сгенерированы и сохранены",
+      processedArtists: savedReports.length,
       quarter,
-      reports: result.reports,
+      reports: savedReports,
     })
   } catch (error) {
     console.error("Ошибка при обработке отчетов:", error)

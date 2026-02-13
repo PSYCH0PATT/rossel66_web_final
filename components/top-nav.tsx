@@ -90,6 +90,7 @@ export default function TopNav({ role, username }: TopNavProps) {
         if (lastPath === "artists") label = "Артисты"
         if (lastPath === "settings") label = "Настройки"
         if (lastPath === "upload") label = "Загрузка"
+        if (lastPath === "analytics") label = "Аналитика"
 
         breadcrumbs.push({ label, href: pathname })
       }
