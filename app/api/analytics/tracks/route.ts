@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAvailableTracks } from '@/lib/flash-storage'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/analytics/tracks
  * Возвращает список уникальных треков для фильтра.
