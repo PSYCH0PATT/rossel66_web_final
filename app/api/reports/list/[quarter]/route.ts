@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { loadReports } from "@/lib/storage"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
     const quarter = params.quarter

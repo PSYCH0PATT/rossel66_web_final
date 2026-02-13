@@ -4,7 +4,7 @@ import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Music, FileText, DollarSign, TrendingUp } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ActivityFeed } from "@/components/activity-feed"
 
 interface Release {
@@ -37,19 +37,8 @@ export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Get current user
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setCurrentUser(user)
-      } catch (error) {
-        console.error('Error parsing user:', error)
-      }
-    }
-
-    const load = async () => {
+  const load = useCallback(async () => {
+      setError(null)
       try {
         const [uRes, rlsRes, payRes, qRes] = await Promise.all([
           fetch('/api/users'),
@@ -62,9 +51,14 @@ export default function AdminDashboard() {
           uRes.json(), rlsRes.json(), payRes.json(), qRes.json()
         ])
 
-        if (uData?.success) setUsers(uData.users)
-        if (rlsData?.success) setReleases(rlsData.releases)
-        if (payData?.success) setPayments(payData.payments)
+        if (uData?.success) setUsers(uData.users ?? [])
+        else if (uRes.ok === false) setError(prev => prev || 'Не удалось загрузить артистов. Обновите страницу.')
+
+        if (rlsData?.success) setReleases(rlsData.releases ?? [])
+        else if (rlsRes.ok === false) setError(prev => prev || 'Не удалось загрузить релизы. Обновите страницу.')
+
+        if (payData?.success) setPayments(payData.payments ?? [])
+        else if (payRes.ok === false) setError(prev => prev || 'Не удалось загрузить выплаты. Обновите страницу.')
 
         // Загружаем отчеты по кварталам, чтобы получить количество
         if (qData?.quarters?.length) {
@@ -75,16 +69,29 @@ export default function AdminDashboard() {
             if (rqData?.reports) allReports.push(...rqData.reports)
           }
           setReports(allReports)
+        } else if (qRes.ok === false) {
+          setError(prev => prev || 'Не удалось загрузить отчёты. Обновите страницу.')
         }
       } catch (e) {
         console.error('Ошибка загрузки данных для дашборда админа:', e)
-        setError('Не удалось загрузить данные. Пожалуйста, обновите страницу.')
+        setError('Не удалось загрузить данные. Проверьте подключение и обновите страницу.')
       } finally {
         setIsLoading(false)
       }
+    }, [])
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        setCurrentUser(user)
+      } catch (error) {
+        console.error('Error parsing user:', error)
+      }
     }
     load()
-  }, [])
+  }, [load])
 
   const metrics = useMemo(() => {
     const artistCount = users.filter(u => u.role === 'artist').length
@@ -115,8 +122,15 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-white">Главная</h1>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-xl p-4">
-            {error}
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => { setIsLoading(true); load() }}
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
+            >
+              Повторить
+            </button>
           </div>
         )}
 

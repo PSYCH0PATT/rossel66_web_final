@@ -25,9 +25,13 @@ export default function ArtistDashboard({ params }: { params: { username: string
       const usersResult = await usersResponse.json()
       
       if (usersResult.success) {
-        const foundArtist = usersResult.users.find(
-          (a: any) => a.username === params.username && a.role === "artist"
-        )
+        const users = usersResult.users || []
+        if (users.length === 0) {
+          setError("Не удалось загрузить данные пользователей")
+        } else {
+          const foundArtist = users.find(
+            (a: any) => a.username === params.username && a.role === "artist"
+          )
         
         if (foundArtist) {
           setArtist(foundArtist)
@@ -129,6 +133,7 @@ export default function ArtistDashboard({ params }: { params: { username: string
         } else {
           setError('Артист не найден')
         }
+        }
       } else {
         setError('Не удалось загрузить данные пользователей')
       }
@@ -151,12 +156,30 @@ export default function ArtistDashboard({ params }: { params: { username: string
     return () => clearInterval(interval)
   }, [params.username])
 
-  // Если артист не найден
-  if (!loading && !artist) {
+  // 404 только если список пользователей загружен и этого артиста в нём нет (не при ошибке API/БД)
+  if (!loading && !artist && error === "Артист не найден") {
     notFound()
   }
 
-  // Если еще загружается
+  // Ошибка загрузки (API/БД) — показываем сообщение и кнопку «Повторить», а не 404
+  if (!loading && !artist && error) {
+    return (
+      <Layout role="artist" requiredRole="artist" username={params.username}>
+        <div className="flex flex-col items-center justify-center gap-4 p-8">
+          <p className="text-destructive">{error}</p>
+          <button
+            type="button"
+            onClick={() => { setError(null); setLoading(true); fetchArtistData() }}
+            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
+          >
+            Повторить
+          </button>
+        </div>
+      </Layout>
+    )
+  }
+
+  // Ещё загружается или нет данных без явной ошибки
   if (loading || !artist) {
     return (
       <Layout role="artist" requiredRole="artist" username={params.username}>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { loadReleases, addRelease, loadUsers, addActivity, getUserById } from "@/lib/storage"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const releases = await loadReleases()
