@@ -11,10 +11,13 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
-  // Transpile recharts для корректной работы в production
-  transpilePackages: ['recharts'],
-  webpack: (config) => { // Убираем неиспользуемые параметры
+  // Transpile recharts и victory-vendor для корректной работы графиков в production
+  transpilePackages: ['recharts', 'victory-vendor'],
+  webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname);
+    // Фиксим n.scalePoint is not a function и кривые линий: подменяем victory-vendor на d3-пакеты
+    config.resolve.alias['victory-vendor/d3-scale'] = path.resolve(__dirname, 'node_modules/d3-scale');
+    config.resolve.alias['victory-vendor/d3-shape'] = path.resolve(__dirname, 'node_modules/d3-shape');
     return config;
   },
   // Если у вас есть другие специфичные для проекта настройки Next.js,
