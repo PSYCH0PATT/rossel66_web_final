@@ -46,6 +46,7 @@ export default function DspStreamChart({ data, dsps, formatDate }: DspStreamChar
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
+            isAnimationActive={false}
           />
         ))}
       </LineChart>

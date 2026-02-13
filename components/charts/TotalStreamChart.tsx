@@ -30,6 +30,7 @@ export default function TotalStreamChart({ data, formatDate }: TotalStreamChartP
           dot={false}
           activeDot={{ r: 4 }}
           name="Стримы"
+          isAnimationActive={false}
         />
       </LineChart>
     </ResponsiveContainer>
