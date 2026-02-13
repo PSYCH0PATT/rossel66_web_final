@@ -127,8 +127,9 @@ export default function ArtistPlaylistsPage() {
 
   const PlaylistCard = ({ playlist }: { playlist: SftpPlaylist }) => {
     const style = getPlatformStyle(playlist.platform)
+    // Как в админке: показываем трек (title), а не альбом (releaseName)
     const trackLabel = playlist.tracks_info?.[0]
-      ? `${playlist.tracks_info[0].releaseName || playlist.tracks_info[0].title || ''}`.trim()
+      ? `${playlist.tracks_info[0].title || playlist.tracks_info[0].releaseName || ''}`.trim()
       : playlist.tracks_count != null ? `Треков: ${playlist.tracks_count}` : null
 
     return (
