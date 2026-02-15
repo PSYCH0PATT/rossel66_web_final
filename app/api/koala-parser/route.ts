@@ -270,7 +270,7 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
       const existingRelease = await getReleaseByKoalaId(koalaRelease.koala_id);
       
       if (existingRelease) {
-        // Обновляем существующий релиз
+        // Обновляем существующий релиз (без нового уведомления)
         const updates: any = {
           status: normalizeStatus(koalaRelease.status),
           updatedAt: new Date().toISOString()
@@ -295,72 +295,60 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
         stats.updated++;
       } else {
-        // Создаем новый релиз для каждого найденного артиста
-        for (const artist of validArtists) {
-          // Парсим дату релиза
-          let releaseDate = new Date().toISOString().split('T')[0];
-          if (koalaRelease.release_date) {
-            // Конвертируем из ДД.ММ.ГГГГ в YYYY-MM-DD
-            const dateParts = koalaRelease.release_date.split('.');
-            if (dateParts.length === 3) {
-              releaseDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-            }
+        // Один релиз на один koala-релиз (первый артист из списка) — без дублей и двойных уведомлений
+        const artist = validArtists[0];
+        let releaseDate = new Date().toISOString().split('T')[0];
+        if (koalaRelease.release_date) {
+          const dateParts = koalaRelease.release_date.split('.');
+          if (dateParts.length === 3) {
+            releaseDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
           }
-          
-          // Создаем треки из ISRC кодов
-          const tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
-            id: `track_${Date.now()}_${index}`,
-            title: koalaRelease.title, // Используем название релиза для трека
-            duration: '0:00',
-            isrc
-          }));
-          
-          // Если нет ISRC, создаем один трек без него
-          if (tracks.length === 0) {
-            tracks.push({
-              id: `track_${Date.now()}_0`,
-              title: koalaRelease.title,
-              duration: '0:00',
-              isrc: undefined
-            });
-          }
-          
-          // Нормализуем статус
-          const normalizedStatus = normalizeStatus(koalaRelease.status);
-          
-          const newReleaseData: any = {
-            title: koalaRelease.title,
-            artistId: artist.id,
-            artistName: koalaRelease.artist, // ВАЖНО: artistName всегда из парсера
-            releaseDate,
-            type: tracks.length > 1 ? 'album' : 'single' as 'single' | 'album' | 'ep',
-            coverUrl: koalaRelease.cover_url || '',
-            tracks,
-            status: normalizedStatus,
-            koalaId: koalaRelease.koala_id,
-            bandlinkUrl: koalaRelease.bandlink_url || undefined,
-            upc: koalaRelease.upc || undefined
-          };
-          
-          const createdRelease = await addRelease(newReleaseData);
-          
-          // Создаем активность
-          await addActivity({
-            type: 'release_added',
-            userId: artist.id,
-            userRole: 'artist',
-            title: 'Новый релиз добавлен',
-            description: `Релиз "${koalaRelease.title}" добавлен из Koala Music`,
-            metadata: { 
-              releaseId: createdRelease.id, 
-              koalaId: koalaRelease.koala_id,
-              status: koalaRelease.status
-            }
-          });
-          
-          console.log(`✅ Добавлен релиз "${koalaRelease.title}" для артиста ${artist.name}`);
         }
         
+        const tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
+          id: `track_${Date.now()}_${index}`,
+          title: koalaRelease.title,
+          duration: '0:00',
+          isrc
+        }));
+        if (tracks.length === 0) {
+          tracks.push({
+            id: `track_${Date.now()}_0`,
+            title: koalaRelease.title,
+            duration: '0:00',
+            isrc: undefined
+          });
+        }
+        
+        const normalizedStatus = normalizeStatus(koalaRelease.status);
+        const newReleaseData: any = {
+          title: koalaRelease.title,
+          artistId: artist.id,
+          artistName: koalaRelease.artist,
+          releaseDate,
+          type: tracks.length > 1 ? 'album' : 'single' as 'single' | 'album' | 'ep',
+          coverUrl: koalaRelease.cover_url || '',
+          tracks,
+          status: normalizedStatus,
+          koalaId: koalaRelease.koala_id,
+          bandlinkUrl: koalaRelease.bandlink_url || undefined,
+          upc: koalaRelease.upc || undefined
+        };
+        
+        const createdRelease = await addRelease(newReleaseData);
+        await addActivity({
+          type: 'release_added',
+          userId: artist.id,
+          userRole: 'artist',
+          title: 'Новый релиз добавлен',
+          description: `Добавлен релиз "${koalaRelease.title}"`,
+          metadata: {
+            releaseId: createdRelease.id,
+            koalaId: koalaRelease.koala_id,
+            status: koalaRelease.status
+          }
+        });
+        console.log(`✅ Добавлен релиз "${koalaRelease.title}" для артиста ${artist.name}`);
         stats.added++;
       }
       

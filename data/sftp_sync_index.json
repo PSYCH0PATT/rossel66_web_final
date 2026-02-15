@@ -1,5 +1,5 @@
 {
-  "lastSync": "2026-02-12T13:00:05.411Z",
+  "lastSync": "2026-02-13T21:30:05.502Z",
   "downloadedFiles": [
     {
       "filename": "rossel_playlist_2025_12_05.csv",
@@ -419,6 +419,12 @@
       "filename": "rossel_playlist_2026_02_12.csv",
       "date": "2026-02-12",
       "downloadedAt": "2026-02-12T13:00:05.411Z",
+      "processed": true
+    },
+    {
+      "filename": "rossel_playlist_2026_02_13.csv",
+      "date": "2026-02-13",
+      "downloadedAt": "2026-02-13T21:30:05.502Z",
       "processed": true
     }
   ]

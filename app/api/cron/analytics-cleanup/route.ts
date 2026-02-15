@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { aggregateAndCleanup } from '@/lib/flash-storage'
 import { addActivity } from '@/lib/storage'
 
-export const dynamic = 'force-dynamic'
-
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**

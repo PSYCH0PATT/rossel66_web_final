@@ -727,7 +727,7 @@ export async function addReport(report: Omit<ReportData, 'id' | 'uploadedAt'>): 
 // Функция для поиска релиза по Koala ID
 export async function getReleaseByKoalaId(koalaId: string): Promise<Release | null> {
   try {
-    const release = await prisma.release.findUnique({ where: { koalaId } })
+    const release = await prisma.release.findFirst({ where: { koalaId } })
     return release ? releaseFromPrisma(release) : null
   } catch (error) {
     console.error('Error getting release by koala id:', error)
