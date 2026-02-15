@@ -7,8 +7,11 @@ import {
   findArtistByName,
   addActivity,
   updateRelease,
-  addRelease
+  addRelease,
+  addUser,
+  getUserByUsername
 } from '@/lib/storage';
+import { nicknameToUsername } from '@/lib/utils';
 
 // Интерфейс для результата парсинга
 interface KoalaRelease {
@@ -254,16 +257,40 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         .map(name => name.trim())
         .filter(name => name.length > 0);
       
-      // Ищем артистов в системе
-      const matchedArtists = await Promise.all(
-        artistNames.map(name => findArtistByName(name))
-      );
-      const validArtists = matchedArtists.filter((artist): artist is NonNullable<typeof artist> => artist !== null);
-      
-      if (validArtists.length === 0) {
-        console.log(`⏭️ Пропускаем "${koalaRelease.title}" - артисты не найдены в системе`);
-        stats.skipped++;
-        continue;
+      // Ищем артистов в системе, создаём если не найдены
+      const validArtists = [];
+      for (const artistName of artistNames) {
+        let artist = await findArtistByName(artistName);
+        
+        if (!artist) {
+          // Автоматически создаём профиль артиста (неподтвержденный). Логин = ник (транслит)
+          const baseLogin = nicknameToUsername(artistName);
+          let username = baseLogin;
+          if (await getUserByUsername(username)) {
+            username = baseLogin + '_' + Date.now().toString(36);
+          }
+          console.log(`➕ Создаём нового артиста: ${artistName} (логин: ${username})`);
+          const newArtist = await addUser({
+            username,
+            name: artistName,
+            email: '',
+            role: 'artist',
+            password: Math.random().toString(36).slice(-12),
+            verified: false
+          });
+          artist = newArtist;
+          
+          await addActivity({
+            type: 'artist_auto_created',
+            userId: 'system',
+            userRole: 'admin',
+            title: 'Артист создан автоматически',
+            description: `Профиль артиста "${artistName}" создан парсером Koala`,
+            metadata: { artistId: newArtist.id, source: 'koala' }
+          });
+        }
+        
+        validArtists.push(artist);
       }
       
       // Проверяем, существует ли релиз с таким koalaId

@@ -24,6 +24,7 @@ export function userFromPrisma(prismaUser: PrismaUser): User {
     fioShort: prismaUser.fioShort ?? undefined,
     contract: prismaUser.contract ?? undefined,
     percentage: prismaUser.percentage ?? undefined,
+    verified: prismaUser.verified ?? true,
   }
 }
 
@@ -106,6 +107,7 @@ export function userToPrismaCreate(user: Omit<User, 'id' | 'createdAt' | 'update
     fioShort: user.fioShort,
     contract: user.contract,
     percentage: user.percentage,
+    verified: user.verified ?? true,
   }
 }
 

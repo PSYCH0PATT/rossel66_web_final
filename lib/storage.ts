@@ -31,6 +31,7 @@ export interface User {
   contract?: string
   percentage?: number
   updatedAt?: string
+  verified?: boolean
 }
 
 // Статусы релизов из Koala Music

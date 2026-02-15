@@ -12,6 +12,8 @@ export default function ArtistsPage() {
   const [allArtists, setAllArtists] = useState<any[]>([])
   const [gridCols, setGridCols] = useState<number>(2)
   const [isDeleting, setIsDeleting] = useState<Record<string, boolean>>({})
+  const [filter, setFilter] = useState<'all' | 'verified' | 'unverified'>('all')
+  const [isVerifying, setIsVerifying] = useState<Record<string, boolean>>({})
 
   // Функция для расчета адаптивных размеров (обратная логика для маленьких экранов)
   const getAdaptiveSize = (baseSize: number) => {
@@ -25,21 +27,52 @@ export default function ArtistsPage() {
     return Math.round(baseSize * 1.2)                      // Увеличиваем на 20% для 8+ колонок
   }
 
-  useEffect(() => {
-    const fetchArtists = async () => {
-      try {
-        const response = await fetch('/api/artists')
-        const result = await response.json()
-        if (result.success) {
-          setAllArtists(result.artists)
-        }
-      } catch (error) {
-        console.error('Ошибка при загрузке артистов:', error)
-        // Fallback к статичным артистам
-        const staticArtists = users.filter((user) => user.role === "artist")
-        setAllArtists(staticArtists)
+  const fetchArtists = async () => {
+    try {
+      const response = await fetch('/api/artists')
+      const result = await response.json()
+      if (result.success) {
+        setAllArtists(result.artists)
       }
+    } catch (error) {
+      console.error('Ошибка при загрузке артистов:', error)
+      // Fallback к статичным артистам
+      const staticArtists = users.filter((user) => user.role === "artist")
+      setAllArtists(staticArtists)
     }
+  }
+
+  const verifyArtist = async (artistId: string, artistName: string) => {
+    setIsVerifying(prev => ({ ...prev, [artistId]: true }))
+    
+    try {
+      const response = await fetch('/api/artists', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: artistId, verified: true })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Обновляем локальное состояние
+        setAllArtists(prev => prev.map(artist => 
+          artist.id === artistId ? { ...artist, verified: true } : artist
+        ))
+        console.log(`✅ Артист ${artistName} подтвержден`)
+      } else {
+        alert(`Ошибка при подтверждении артиста: ${result.error}`)
+        console.error('Ошибка подтверждения:', result.error)
+      }
+    } catch (error) {
+      console.error('Ошибка при подтверждении артиста:', error)
+      alert('Произошла ошибка при подтверждении артиста')
+    } finally {
+      setIsVerifying(prev => ({ ...prev, [artistId]: false }))
+    }
+  }
+
+  useEffect(() => {
 
     const computeCols = () => {
       if (typeof window === 'undefined') return 2
@@ -64,6 +97,13 @@ export default function ArtistsPage() {
     window.addEventListener('resize', updateCols)
     return () => window.removeEventListener('resize', updateCols)
   }, [])
+
+  // Фильтрация артистов по статусу подтверждения
+  const filteredArtists = allArtists.filter(artist => {
+    if (filter === 'verified') return artist.verified ?? true
+    if (filter === 'unverified') return !(artist.verified ?? true)
+    return true
+  })
 
   const handleDeleteArtist = (id: string) => {
     // Получаем динамически добавленных пользователей
@@ -118,7 +158,11 @@ export default function ArtistsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-white">Артисты</h1>
-            <p className="text-slate-400">Всего: {allArtists.length} артистов</p>
+            <p className="text-slate-400">
+              {filter === 'all' && `Всего: ${allArtists.length} артистов`}
+              {filter === 'verified' && `Подтвержденные: ${filteredArtists.length} из ${allArtists.length}`}
+              {filter === 'unverified' && `Неподтвержденные: ${filteredArtists.length} из ${allArtists.length}`}
+            </p>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -161,18 +205,110 @@ export default function ArtistsPage() {
           </div>
         </div>
 
+        {/* Табы фильтрации */}
+        <div className="flex gap-2 border-b border-slate-700">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 font-medium transition-colors ${
+              filter === 'all' ? 'text-white border-b-2 border-blue-500' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Все ({allArtists.length})
+          </button>
+          <button
+            onClick={() => setFilter('verified')}
+            className={`px-4 py-2 font-medium transition-colors ${
+              filter === 'verified' ? 'text-white border-b-2 border-green-500' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Подтвержденные ({allArtists.filter(a => a.verified ?? true).length})
+          </button>
+          <button
+            onClick={() => setFilter('unverified')}
+            className={`px-4 py-2 font-medium transition-colors ${
+              filter === 'unverified' ? 'text-white border-b-2 border-yellow-500' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Неподтвержденные ({allArtists.filter(a => !(a.verified ?? true)).length})
+          </button>
+        </div>
+
         <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
-          {allArtists.map((artist) => (
+          {filteredArtists.map((artist) => (
             <div key={artist.id} className="relative group">
-              {/* Кнопка удаления */}
-              <button
+              {/* Бейдж неподтвержденного артиста */}
+              {!(artist.verified ?? true) && (
+                <div 
+                  className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: 'rgba(234, 179, 8, 0.9)', color: 'white' }}
+                >
+                  Новый
+                </div>
+              )}
+              
+              {/* Кнопки действий (удаление + подтверждение) */}
+              <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Кнопка подтверждения для неподтвержденных артистов */}
+                {!(artist.verified ?? true) && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      verifyArtist(artist.id, artist.name)
+                    }}
+                    disabled={isVerifying[artist.id]}
+                    className="rounded-full transition-all duration-200"
+                    style={{
+                      backgroundColor: 'rgba(34, 197, 94, 0.9)',
+                      padding: `${getAdaptiveSize(8)}px`,
+                      width: `${getAdaptiveSize(36)}px`,
+                      height: `${getAdaptiveSize(36)}px`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(22, 163, 74, 1)'
+                      e.currentTarget.style.transform = 'scale(1.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.9)'
+                      e.currentTarget.style.transform = 'scale(1)'
+                    }}
+                    title="Подтвердить артиста"
+                  >
+                    {isVerifying[artist.id] ? (
+                      <div 
+                        className="animate-spin rounded-full border-2 border-white border-t-transparent"
+                        style={{
+                          width: `${getAdaptiveSize(16)}px`,
+                          height: `${getAdaptiveSize(16)}px`
+                        }}
+                      />
+                    ) : (
+                      <svg 
+                        className="text-white"
+                        style={{
+                          width: `${getAdaptiveSize(16)}px`,
+                          height: `${getAdaptiveSize(16)}px`
+                        }}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+                
+                {/* Кнопка удаления */}
+                <button
                 onClick={(e) => {
                   e.preventDefault()
-                  e.stopPropagation()
-                  deleteArtist(artist.id, artist.name)
-                }}
-                disabled={isDeleting[artist.id]}
-                className="absolute top-2 right-2 z-10 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100"
+                    e.stopPropagation()
+                    deleteArtist(artist.id, artist.name)
+                  }}
+                  disabled={isDeleting[artist.id]}
+                  className="rounded-full transition-all duration-200"
+                  title="Удалить артиста"
                 style={{
                   backgroundColor: 'rgba(239, 68, 68, 0.9)',
                   padding: `${getAdaptiveSize(8)}px`,
@@ -206,6 +342,7 @@ export default function ArtistsPage() {
                   />
                 )}
               </button>
+            </div>
 
               <Link href={`/dashboard/admin/artists/${artist.id}`} className="block">
                 <div 

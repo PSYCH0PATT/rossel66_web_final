@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
-import { loadReleases, saveReleases, addActivity } from '@/lib/storage'
+import { loadReleases, saveReleases, addActivity, findArtistByName, addUser, updateRelease, getUserByUsername } from '@/lib/storage'
 import type { Release } from '@/lib/storage'
+import { nicknameToUsername } from '@/lib/utils'
 
 interface ParseStats {
   total: number
@@ -458,6 +459,76 @@ export async function POST(request: NextRequest) {
               console.error('Ошибка чтения отчета добавления:', e)
               stats.errors.push('Ошибка чтения отчета добавления')
             }
+          }
+        }
+        
+        // Автоматически создаём артистов для релизов без artistId (после всех скриптов)
+        if (isSuccess && (action === 'parse' || action === 'add')) {
+          try {
+            console.log('🔍 Проверяем релизы без привязанного артиста...')
+            const allReleases = await loadReleases()
+            const releasesWithoutArtist = allReleases.filter(r => 
+              !r.artistId && (r as any).artistName && (r as any).artistName.trim().length > 0
+            )
+            
+            if (releasesWithoutArtist.length > 0) {
+              console.log(`➕ Найдено ${releasesWithoutArtist.length} релизов без привязанного артиста`)
+              
+              const createdArtists = new Map<string, string>() // artistName -> artistId
+              
+              for (const release of releasesWithoutArtist) {
+                const artistName = ((release as any).artistName || '').trim()
+                
+                // Проверяем, не создали ли мы уже артиста с таким именем в этом цикле
+                let artistId = createdArtists.get(artistName)
+                
+                if (!artistId) {
+                  // Проверяем, может артист уже существует в БД
+                  const existingArtist = await findArtistByName(artistName)
+                  
+                  if (existingArtist) {
+                    artistId = existingArtist.id
+                  } else {
+                    // Создаём нового артиста
+                    const baseLogin = nicknameToUsername(artistName)
+                    let username = baseLogin
+                    if (await getUserByUsername(username)) {
+                      username = baseLogin + '_' + Date.now().toString(36)
+                    }
+                    console.log(`  ➕ Создаём артиста: ${artistName} (логин: ${username})`)
+                    const newArtist = await addUser({
+                      username,
+                      name: artistName,
+                      email: '',
+                      role: 'artist',
+                      password: Math.random().toString(36).slice(-12),
+                      verified: false
+                    })
+                    artistId = newArtist.id
+                    createdArtists.set(artistName, artistId)
+                    
+                    await addActivity({
+                      type: 'artist_auto_created',
+                      userId: 'system',
+                      userRole: 'admin',
+                      title: 'Артист создан автоматически',
+                      description: `Профиль артиста "${artistName}" создан парсером Zvonko`,
+                      metadata: { artistId, source: 'zvonko' }
+                    })
+                  }
+                }
+                
+                // Обновляем релиз с привязкой к артисту
+                if (artistId) {
+                  await updateRelease(release.id, { artistId })
+                }
+              }
+              
+              console.log(`✅ Создано ${createdArtists.size} новых артистов, обновлено ${releasesWithoutArtist.length} релизов`)
+            }
+          } catch (error) {
+            console.error('Ошибка автосоздания артистов:', error)
+            // Не останавливаем весь процесс из-за этой ошибки
           }
         }
         

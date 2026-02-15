@@ -25,7 +25,9 @@ model User {
   fioShort   String?
   contract   String?
   percentage Int?
+  verified   Boolean  @default(true)
 
+  @@index([role, verified])
 }
 
 model Release {

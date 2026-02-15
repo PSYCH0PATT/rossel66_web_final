@@ -216,7 +216,7 @@ export default function AdminAnalyticsPage() {
   }
 
   // Синхронизация из SFTP
-  const handleSync = async (mode: 'latest' | 'all') => {
+  const handleSync = async (mode: '7days' | 'latest' | 'all') => {
     setSyncing(true)
     setImportResult(null)
 
@@ -230,11 +230,12 @@ export default function AdminAnalyticsPage() {
 
       if (json.success) {
         const stats = json.stats || {}
-        setImportResult(
-          mode === 'all'
-            ? `Полный импорт: обработано ${stats.filesProcessed || 0} файлов, добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
+        const modeMsg = mode === 'all'
+          ? `Полный импорт: обработано ${stats.filesProcessed || 0} файлов, добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
+          : mode === '7days'
+            ? `Синхронизация (7 дней): обработано ${stats.filesProcessed || 0} файлов, добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
             : `Синхронизация: добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
-        )
+        setImportResult(modeMsg)
         loadData()
         // Обновляем треки и артистов
         fetch("/api/analytics/artists").then(r => r.json()).then(d => { if (d.success) setArtists(d.artists) })
@@ -281,7 +282,7 @@ export default function AdminAnalyticsPage() {
             <Button
               variant="outline"
               className="border-gray-600 text-gray-300 hover:text-white"
-              onClick={() => handleSync('latest')}
+              onClick={() => handleSync('7days')}
               disabled={syncing}
             >
               {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}

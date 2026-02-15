@@ -85,15 +85,26 @@ async function main() {
     }
 
     csvFiles.sort((a, b) => (b.date!).localeCompare(a.date!));
-    // Поддержка: первый аргумент "2" или "предпоследний" — скачать второй по дате
-    const wantSecond = process.argv[2] === '2' || process.argv[2] === 'предпоследний';
-    const index = wantSecond ? 1 : 0;
-    if (wantSecond && csvFiles.length < 2) {
-      console.log('⚠️ Нет предпоследнего файла (только один CSV)');
+    const arg = process.argv[2];
+    // Поддержка: дата YYYY-MM-DD или "11" (день) — скачать файл за эту дату
+    let targetDate: string | null = null;
+    if (arg && /^\d{4}-\d{2}-\d{2}$/.test(arg)) {
+      targetDate = arg;
+    } else if (arg && /^\d{1,2}$/.test(arg)) {
+      const day = arg.padStart(2, '0');
+      const last = csvFiles[0];
+      const m = last.date!.match(/^(\d{4})-(\d{2})-/);
+      targetDate = m ? `${m[1]}-${m[2]}-${day}` : null;
+    }
+    const latest = targetDate
+      ? csvFiles.find((f) => f.date === targetDate) || null
+      : csvFiles[arg === '2' || arg === 'предпоследний' ? 1 : 0];
+    if (!latest) {
+      if (targetDate) console.log(`⚠️ Файл за ${targetDate} не найден на SFTP`);
+      else if (arg === '2' || arg === 'предпоследний') console.log('⚠️ Нет предпоследнего файла');
       await sftp.end();
       process.exit(0);
     }
-    const latest = csvFiles[index];
     console.log(`📄 Файл: ${latest.name} (${latest.date})`);
 
     if (!fs.existsSync(LOCAL_DIR)) {

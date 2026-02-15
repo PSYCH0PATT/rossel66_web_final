@@ -11,16 +11,19 @@ const CRON_SECRET = process.env.CRON_SECRET
 const REMOTE_PATH = 'rossel_flash'
 const DOWNLOADS_DIR = path.join(process.cwd(), 'sftp_downloads')
 
+const DAYS_BACK_DEFAULT = 7
+
 /**
  * GET /api/cron/analytics-flash
  * Cron задача: скачивает CSV из /rossel_flash по SFTP,
- * парсит и сохраняет в StreamAnalytics.
+ * парсит и сохраняет в StreamAnalytics. Дубликаты не создаются — добавляются только новые записи.
  *
  * Query params:
  *   secret — секрет авторизации
- *   mode   — "all" для скачивания ВСЕХ файлов, "latest" (по умолчанию) для последнего
+ *   mode   — "7days" (по умолчанию) за последние 7 дней (площадки часто дополняются с задержкой),
+ *            "latest" только последний файл, "all" все файлы
  *
- * Расписание: 20:00 MSK ежедневно (mode=latest)
+ * Расписание: 20:00 MSK ежедневно (mode=7days)
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const mode = request.nextUrl.searchParams.get('mode') || 'latest'
+    const mode = request.nextUrl.searchParams.get('mode') || '7days'
 
     console.log('')
     console.log('═══════════════════════════════════════════════════')
@@ -93,10 +96,21 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Сортируем по дате (от старого к новому для all, или берём последний)
+      // Сортируем по дате (от старого к новому)
       csvFiles.sort((a, b) => a.date!.localeCompare(b.date!))
 
-      const filesToProcess = mode === 'all' ? csvFiles : [csvFiles[csvFiles.length - 1]]
+      let filesToProcess: typeof csvFiles
+      if (mode === 'all') {
+        filesToProcess = csvFiles
+      } else if (mode === 'latest') {
+        filesToProcess = [csvFiles[csvFiles.length - 1]]
+      } else {
+        // 7days (по умолчанию): все файлы за последние N дней (площадки дополняются с задержкой)
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - DAYS_BACK_DEFAULT)
+        const cutoffStr = cutoff.toISOString().split('T')[0]
+        filesToProcess = csvFiles.filter((f) => f.date! >= cutoffStr)
+      }
       console.log(`📋 Файлов для обработки: ${filesToProcess.length} из ${csvFiles.length}`)
 
       if (!fs.existsSync(DOWNLOADS_DIR)) {
@@ -112,8 +126,9 @@ export async function GET(request: NextRequest) {
         try {
           const localPath = path.join(DOWNLOADS_DIR, file.name)
 
-          // Скачиваем если ещё нет локально
-          if (!fs.existsSync(localPath)) {
+          // В режиме 7days всегда перекачиваем, чтобы подхватить дополненные площадки
+          const forceDownload = mode === '7days'
+          if (forceDownload || !fs.existsSync(localPath)) {
             console.log(`⬇️  Скачиваю: ${file.name}...`)
             await sftp.fastGet(`${REMOTE_PATH}/${file.name}`, localPath)
           } else {
@@ -155,11 +170,12 @@ export async function GET(request: NextRequest) {
       const duration = Date.now() - startTime
 
       // Логируем активность
+      const modeTitle = mode === 'all' ? 'Полный импорт аналитики Flash' : mode === '7days' ? 'Импорт аналитики Flash (7 дней)' : 'Импорт аналитики Flash'
       addActivity({
         type: 'analytics_import',
         userId: 'system',
         userRole: 'admin',
-        title: mode === 'all' ? 'Полный импорт аналитики Flash' : 'Импорт аналитики Flash',
+        title: modeTitle,
         description: `Обработано ${filesToProcess.length} файлов: добавлено ${totalAdded} записей, пропущено ${totalSkipped} дубликатов`,
         metadata: {
           mode,

@@ -6,12 +6,12 @@ import { NextRequest, NextResponse } from 'next/server'
  * Проксирует вызов к /api/cron/analytics-flash с нужным секретом.
  *
  * Body (JSON):
- *   mode — "all" для всех файлов, "latest" для последнего (по умолчанию)
+ *   mode — "7days" (по умолчанию) за последние 7 дней, "latest" для последнего, "all" для всех
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
-    const mode = body.mode || 'latest'
+    const mode = body.mode || '7days'
     const cronSecret = process.env.CRON_SECRET
 
     if (!cronSecret) {

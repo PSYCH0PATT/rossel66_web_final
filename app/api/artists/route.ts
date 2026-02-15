@@ -161,10 +161,19 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const verifiedParam = searchParams.get('verified')
+    
     const users = await loadUsers()
-    const artists = users.filter(user => user.role === 'artist')
+    let artists = users.filter(user => user.role === 'artist')
+    
+    // Фильтр по статусу подтверждения
+    if (verifiedParam !== null) {
+      const isVerified = verifiedParam === 'true'
+      artists = artists.filter(artist => (artist.verified ?? true) === isVerified)
+    }
     
     return NextResponse.json({
       success: true,
@@ -183,6 +192,7 @@ export async function GET() {
         fioShort: artist.fioShort,
         contract: artist.contract,
         percentage: artist.percentage,
+        verified: artist.verified ?? true,
       }))
     })
   } catch (error) {
@@ -197,7 +207,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const data = await request.json()
-    const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl, fio, fioShort, contract, percentage } = data
+    const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl, fio, fioShort, contract, percentage, verified } = data
 
     // Validate required field (only ID is required)
     if (!id) {
@@ -230,6 +240,7 @@ export async function PUT(request: Request) {
     if (fioShort !== undefined) updateData.fioShort = fioShort
     if (contract !== undefined) updateData.contract = contract
     if (percentage !== undefined) updateData.percentage = percentage
+    if (verified !== undefined) updateData.verified = verified
 
     const updatedUser = await updateUser(id, updateData)
 
@@ -263,6 +274,7 @@ export async function PUT(request: Request) {
         fioShort: updatedUser.fioShort,
         contract: updatedUser.contract,
         percentage: updatedUser.percentage,
+        verified: updatedUser.verified,
       },
     })
   } catch (error) {
