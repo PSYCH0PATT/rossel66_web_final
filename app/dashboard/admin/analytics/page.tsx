@@ -12,7 +12,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BarChart3, TrendingUp, CalendarIcon, Loader2, Upload, RefreshCw, Download } from "lucide-react"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
-const TotalStreamChart = dynamic(() => import("@/components/charts/TotalStreamChart"), { ssr: false })
 
 const PERIOD_OPTIONS = [
   { value: "7d", label: "Неделя" },
@@ -51,6 +50,8 @@ interface AnalyticsData {
   streamsByDay: Array<{ date: string; streams: number }>
   paidVsFree: Array<{ name: string; value: number }>
   streamsBySource: Array<{ name: string; value: number }>
+  streamsByTrack?: Array<{ trackName: string; trackArtist: string; isrc: string; value: number }>
+  totalStreams?: number
 }
 
 function getDateRange(period: string): { startDate: string; endDate: string } {
@@ -262,9 +263,10 @@ export default function AdminAnalyticsPage() {
     )
   }
 
-  const totalStreams = data?.streamsByDay.reduce((s, d) => s + d.streams, 0) || 0
+  const totalStreams = data?.totalStreams ?? data?.streamsByDay.reduce((s, d) => s + d.streams, 0) ?? 0
   const totalPaid = data?.paidVsFree.find(p => p.name === "Платные")?.value || 0
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
+  const tracksForChart = (data?.streamsByTrack ?? []).slice()
 
   return (
     <Layout role="admin" requiredRole="admin">
@@ -489,37 +491,57 @@ export default function AdminAnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* LEFT: Total streams by day */}
-            <Card className="bg-card border-gray-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">Общие прослушивания по дням</CardTitle>
+            {/* Streams by track (horizontal, scrollable, 8 visible) */}
+            <Card className="bg-card border-gray-700 flex flex-col">
+              <CardHeader className="pb-1 pt-3 flex-shrink-0">
+                <CardTitle className="text-white text-base">Прослушивания по трекам</CardTitle>
+                <p className="text-xs text-gray-500">Всего: {tracksForChart.length} треков</p>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  {chartMounted ? (
-                    <TotalStreamChart data={data.streamsByDay} formatDate={formatDate} />
+              <CardContent className="pt-2 pb-3 flex-1 min-h-0 flex flex-col">
+                <div className="flex flex-col gap-0 overflow-y-auto min-h-[290px]" style={{ maxHeight: '290px' }}>
+                  {tracksForChart.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-4">Нет данных по трекам</p>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Загрузка графика…</div>
+                    tracksForChart.map((item, idx) => {
+                      const maxVal = tracksForChart[0]?.value || 1
+                      const pct = (item.value / maxVal) * 100
+                      const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
+                      return (
+                        <div key={item.isrc || idx} className="flex items-center gap-2 flex-shrink-0 py-0.5 min-h-[32px]">
+                          <span className="text-xs text-gray-300 truncate shrink-0 w-[140px]" title={label}>{label}</span>
+                          <div className="flex-1 min-w-0 h-6 min-h-[24px] bg-gray-700 rounded overflow-hidden self-center">
+                            <div
+                              className="h-full rounded transition-all duration-500"
+                              style={{
+                                width: `${Math.max(pct, 2)}%`,
+                                backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs text-white font-semibold shrink-0 w-14 text-right">{item.value.toLocaleString('ru-RU')}</span>
+                        </div>
+                      )
+                    })
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* RIGHT: Streams by source */}
+            {/* Streams by source */}
             <Card className="bg-card border-gray-700 flex flex-col">
               <CardHeader className="pb-1 pt-3 flex-shrink-0">
                 <CardTitle className="text-white text-base">Стримы по источникам</CardTitle>
                 <p className="text-xs text-gray-500">За всё время</p>
               </CardHeader>
               <CardContent className="pt-2 pb-3 flex-1 min-h-0 flex flex-col">
-                <div className="flex flex-col flex-1 min-h-[300px] gap-0">
+                <div className="flex flex-col flex-1 min-h-[300px] gap-0" style={{ maxHeight: '300px' }}>
                   {data.streamsBySource.map((item, idx) => {
                     const maxVal = data.streamsBySource[0]?.value || 1
                     const pct = (item.value / maxVal) * 100
                     return (
-                      <div key={item.name} className="flex items-center gap-2 flex-1 min-h-0 py-0.5">
+                      <div key={item.name} className="flex items-center gap-2 flex-shrink-0 py-0.5 min-h-[32px]">
                         <span className="text-xs text-gray-300 truncate shrink-0 w-[120px]">{item.name}</span>
-                        <div className="flex-1 min-w-0 h-full min-h-[14px] bg-gray-700 rounded overflow-hidden">
+                        <div className="flex-1 min-w-0 h-6 min-h-[24px] bg-gray-700 rounded overflow-hidden self-center">
                           <div
                             className="h-full rounded transition-all duration-500"
                             style={{

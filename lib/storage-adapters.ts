@@ -43,13 +43,13 @@ export function releaseFromPrisma(prismaRelease: PrismaRelease): Release {
     createdAt: prismaRelease.createdAt.toISOString(),
     updatedAt: prismaRelease.updatedAt.toISOString(),
     upc: prismaRelease.upc ?? undefined,
-    status: prismaRelease.status ?? undefined,
     featuredArtistIds: prismaRelease.featuredArtistIds,
     featuredArtistNames: prismaRelease.featuredArtistNames,
     koalaId: prismaRelease.koalaId ?? undefined,
     bandlinkUrl: prismaRelease.bandlinkUrl ?? undefined,
-    // Дополнительные поля из metadata (artistName, genre, platforms, zvonko_data и т.д.)
-    ...(metadata || {})
+    // Сначала metadata (artistName, genre, platforms и т.д.), затем явно статус из БД, чтобы не перезаписывался
+    ...(metadata || {}),
+    status: prismaRelease.status ?? (metadata?.status as string | undefined) ?? undefined,
   }
 }
 

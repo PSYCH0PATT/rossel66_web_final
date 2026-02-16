@@ -206,12 +206,31 @@ export async function getStreamAnalytics(filters: StreamFilters) {
     .sort(([, a], [, b]) => b - a)
     .map(([name, value]) => ({ name, value }))
 
+  // 5. По трекам (все треки с общим числом прослушиваний) — для горизонтального графика
+  const trackAgg = await prisma.streamAnalytics.groupBy({
+    by: ['trackName', 'trackArtist', 'isrc'],
+    where: baseWhere,
+    _sum: { streams: true },
+  })
+  const streamsByTrack = trackAgg
+    .map((r) => ({
+      trackName: r.trackName,
+      trackArtist: r.trackArtist,
+      isrc: r.isrc,
+      value: r._sum.streams ?? 0,
+    }))
+    .sort((a, b) => b.value - a.value)
+
+  const totalStreams = streamsByDay.reduce((s, d) => s + d.streams, 0)
+
   return {
     streamsByDspDay,
     dsps: [...allDsps],
     streamsByDay,
     paidVsFree,
     streamsBySource,
+    streamsByTrack,
+    totalStreams,
   }
 }
 

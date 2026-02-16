@@ -18,8 +18,38 @@ interface Release {
   coverUrl: string
   upc: string
   releaseDate: string
-  status: 'released' | 'moderation' | 'delivery' | 'scheduled'
+  status?: string
   tracks: any[]
+}
+
+const statusColors: Record<string, string> = {
+  "Модерируется": "bg-orange-500 hover:bg-orange-600 text-white",
+  "Отклонен": "bg-red-500 hover:bg-red-600 text-white",
+  "В доставке": "bg-purple-500 hover:bg-purple-600 text-white",
+  "Доставлен": "bg-green-500 hover:bg-green-600 text-white",
+  "На модерации": "bg-orange-500 hover:bg-orange-600 text-white",
+  "Одобрен": "bg-blue-500 hover:bg-blue-600 text-white",
+  "Отклонён": "bg-red-500 hover:bg-red-600 text-white",
+  "Снят": "bg-gray-500 hover:bg-gray-600 text-white",
+  released: "bg-green-500 hover:bg-green-600 text-white",
+  moderation: "bg-orange-500 hover:bg-orange-600 text-white",
+  delivery: "bg-blue-500 hover:bg-blue-600 text-white",
+  scheduled: "bg-purple-500 hover:bg-purple-600 text-white",
+}
+
+const statusLabels: Record<string, string> = {
+  "Модерируется": "Модерируется",
+  "Отклонен": "Отклонен",
+  "В доставке": "В доставке",
+  "Доставлен": "Доставлен",
+  "На модерации": "Модерируется",
+  "Одобрен": "Доставлен",
+  "Отклонён": "Отклонен",
+  "Снят": "Отклонен",
+  released: "Доставлен",
+  moderation: "Модерируется",
+  delivery: "В доставке",
+  scheduled: "Модерируется",
 }
 
 export default function ReleasesPage({ params }: { params: { username: string } }) {
@@ -153,6 +183,7 @@ export default function ReleasesPage({ params }: { params: { username: string } 
                   <TableHead className="text-slate-300">Исполнители</TableHead>
                   <TableHead className="text-slate-300">UPC</TableHead>
                   <TableHead className="text-slate-300">Дата релиза</TableHead>
+                  <TableHead className="text-slate-300">Статус</TableHead>
                   <TableHead className="text-slate-300">Треков</TableHead>
                 </TableRow>
               </TableHeader>
@@ -177,10 +208,15 @@ export default function ReleasesPage({ params }: { params: { username: string } 
                     <TableCell className="text-slate-300">{(release as any).artistDisplay || ''}</TableCell>
                     <TableCell className="text-slate-400 font-mono text-sm">{release.upc}</TableCell>
                     <TableCell className="text-slate-300">{new Date(release.releaseDate).toLocaleDateString('ru-RU')}</TableCell>
+                    <TableCell>
+                      <Badge className={`rounded text-xs ${statusColors[release.status || "Доставлен"] ?? "bg-gray-500 text-white"}`}>
+                        {statusLabels[release.status || "Доставлен"] ?? release.status ?? "Доставлен"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-slate-300">
                       <div className="flex items-center gap-1">
                         <Music className="h-4 w-4 text-green-400" />
-                        {release.tracks.length}
+                        {release.tracks?.length ?? 0}
                       </div>
                     </TableCell>
                   </TableRow>

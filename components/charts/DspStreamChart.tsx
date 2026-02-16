@@ -16,6 +16,26 @@ interface DspStreamChartProps {
   formatDate: (dateStr: any) => string
 }
 
+function CustomTooltip({ active, payload, label, formatDate }: any) {
+  if (!active || !payload?.length || !label) return null
+  const total = payload.reduce((s: number, p: any) => s + (Number(p.value) || 0), 0)
+  return (
+    <div style={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px", padding: "10px 12px" }}>
+      <div style={{ color: "#d1d5db", marginBottom: "6px", fontWeight: 600 }}>
+        {formatDate(label)}
+      </div>
+      <div style={{ color: "#fff", marginBottom: "4px" }}>
+        Общее: {total.toLocaleString("ru-RU")}
+      </div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} style={{ color: p.color, fontSize: "12px" }}>
+          {p.name} : {(Number(p.value) || 0).toLocaleString("ru-RU")}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function DspStreamChart({ data, dsps, formatDate }: DspStreamChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -24,9 +44,9 @@ export default function DspStreamChart({ data, dsps, formatDate }: DspStreamChar
         <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={formatDate} />
         <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} width={40} />
         <Tooltip
+          content={<CustomTooltip formatDate={formatDate} />}
           contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
           labelStyle={{ color: "#d1d5db" }}
-          labelFormatter={formatDate}
         />
         <Legend 
           wrapperStyle={{ 

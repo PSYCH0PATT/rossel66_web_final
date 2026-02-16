@@ -1,35 +1,53 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import Layout from "@/components/layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import { getArtistReleases } from "@/lib/data"
-import { Music, Calendar, Barcode } from "lucide-react"
+import { Music, Calendar, Barcode, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 
 export default function ReleasesPage() {
-  // В реальном приложении ID артиста будет получен из сессии
-  const artistId = "1" // Это нужно будет заменить на получение ID из сессии
-  const [releases, setReleases] = useState(getArtistReleases(artistId))
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null)
+  const [releases, setReleases] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Обновляем релизы при изменении localStorage
-    const handleStorageChange = () => {
-      setReleases(getArtistReleases(artistId))
+    const userStr = localStorage.getItem("user")
+    if (!userStr) {
+      router.push("/dashboard/login")
+      return
     }
-
-    // Слушаем изменения в localStorage
-    window.addEventListener('storage', handleStorageChange)
-    
-    // Также проверяем при монтировании компонента
-    handleStorageChange()
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
+    try {
+      const user = JSON.parse(userStr)
+      if (user.role !== "artist") {
+        router.push("/dashboard/admin/releases")
+        return
+      }
+      setCurrentUser(user)
+    } catch {
+      router.push("/dashboard/login")
     }
-  }, [artistId])
+  }, [router])
+
+  useEffect(() => {
+    if (!currentUser?.id) return
+    let cancelled = false
+    setLoading(true)
+    fetch("/api/releases")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !data?.success || !Array.isArray(data.releases)) return
+        const mine = data.releases.filter((r: any) => r.artistId === currentUser.id)
+        setReleases(mine)
+      })
+      .catch(() => { if (!cancelled) setReleases([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [currentUser?.id])
 
   // Цвета для статусов релизов - соответствуют админской панели
   const statusColors: Record<string, string> = {
@@ -67,6 +85,8 @@ export default function ReleasesPage() {
     scheduled: "Модерируется",
   }
 
+  if (!currentUser && !loading) return null
+
   return (
     <Layout role="artist" requiredRole="artist">
       <div className="space-y-6">
@@ -74,7 +94,12 @@ export default function ReleasesPage() {
           <h1 className="text-2xl font-bold text-white">Релизы</h1>
         </div>
 
-        {releases.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            <span className="ml-2 text-gray-400">Загрузка релизов...</span>
+          </div>
+        ) : releases.length > 0 ? (
           <div className="releases-grid">
             {releases.map((release) => (
               <Link href={`/dashboard/artist/releases/${release.id}`} key={release.id}>
@@ -89,7 +114,7 @@ export default function ReleasesPage() {
                     <Badge className={`absolute top-1 right-1 sm:top-2 sm:right-2 rounded-xl text-xs ${statusColors[release.status || 'Доставлен'] || 'bg-gray-500 text-white'}`}>
                       {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
                     </Badge>
-                    {release.tracks.length > 1 && (
+                    {Array.isArray(release.tracks) && release.tracks.length > 1 && (
                       <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black/70 text-white text-xs px-1 sm:px-2 py-1 rounded-lg flex items-center gap-1">
                         <Music className="h-3 w-3" />
                         {release.tracks.length}
