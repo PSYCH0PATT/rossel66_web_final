@@ -9,7 +9,8 @@ import {
   updateRelease,
   addRelease,
   addUser,
-  getUserByUsername
+  getUserByUsername,
+  assignReleasesToNewArtist
 } from '@/lib/storage';
 import { nicknameToUsername } from '@/lib/utils';
 
@@ -288,6 +289,16 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
             description: `Профиль артиста "${artistName}" создан парсером Koala`,
             metadata: { artistId: newArtist.id, source: 'koala' }
           });
+          
+          // Привязываем существующие релизы без артиста к новому артисту
+          try {
+            const assignedCount = await assignReleasesToNewArtist(newArtist.id, artistName, username);
+            if (assignedCount > 0) {
+              console.log(`  ✅ Привязано ${assignedCount} релиз(ов) к артисту ${artistName}`);
+            }
+          } catch (error) {
+            console.error(`  ⚠️ Ошибка привязки релизов к артисту ${artistName}:`, error);
+          }
         }
         
         validArtists.push(artist);

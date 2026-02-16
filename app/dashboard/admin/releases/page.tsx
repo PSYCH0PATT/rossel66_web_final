@@ -41,6 +41,9 @@ export default function AdminReleasesPage() {
   const [filterDateFrom, setFilterDateFrom] = useState("")
   const [filterDateTo, setFilterDateTo] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  
+  // Привязка релизов к артистам
+  const [isAssigning, setIsAssigning] = useState(false)
 
   const fetchReleases = async () => {
     try {
@@ -171,6 +174,31 @@ export default function AdminReleasesPage() {
     setSearchQuery("")
   }
 
+  const handleAssignReleasesToArtists = async () => {
+    if (!confirm('Привязать релизы без артиста ко всем артистам по имени? Это может занять некоторое время.')) {
+      return
+    }
+    
+    setIsAssigning(true)
+    try {
+      const response = await fetch('/api/admin/assign-releases-to-artists', {
+        method: 'POST'
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`✅ ${result.message}\n\nДетали:\n${result.details.map((d: any) => `• ${d.artist}: ${d.assigned} релиз(ов)`).join('\n')}`)
+        fetchReleases()
+      } else {
+        alert(`❌ Ошибка: ${result.error}`)
+      }
+    } catch (error) {
+      alert(`❌ Ошибка при привязке релизов: ${error}`)
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
   const handleDeleteRelease = async (releaseId: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот релиз?')) {
       return
@@ -297,6 +325,35 @@ export default function AdminReleasesPage() {
                 <span className="hidden sm:inline">Koala Parser</span>
               </Button>
             </Link>
+            
+            {/* Привязать релизы к артистам */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs sm:text-sm"
+              style={{
+                borderColor: '#f59e0b',
+                color: '#f59e0b',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f59e0b'
+                e.currentTarget.style.color = 'white'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = '#f59e0b'
+              }}
+              onClick={handleAssignReleasesToArtists}
+              disabled={isAssigning}
+            >
+              {isAssigning ? (
+                <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+              )}
+              <span className="hidden sm:inline">Привязать релизы</span>
+            </Button>
             
             {/* Поиск */}
             <div className="relative">

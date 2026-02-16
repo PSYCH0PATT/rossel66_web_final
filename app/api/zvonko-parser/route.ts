@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
-import { loadReleases, saveReleases, addActivity, findArtistByName, addUser, updateRelease, getUserByUsername } from '@/lib/storage'
+import { loadReleases, saveReleases, addActivity, findArtistByName, addUser, updateRelease, getUserByUsername, assignReleasesToNewArtist } from '@/lib/storage'
 import type { Release } from '@/lib/storage'
 import { nicknameToUsername } from '@/lib/utils'
 
@@ -515,6 +515,16 @@ export async function POST(request: NextRequest) {
                       description: `Профиль артиста "${artistName}" создан парсером Zvonko`,
                       metadata: { artistId, source: 'zvonko' }
                     })
+                    
+                    // Привязываем существующие релизы без артиста к новому артисту
+                    try {
+                      const assignedCount = await assignReleasesToNewArtist(artistId, artistName, username)
+                      if (assignedCount > 0) {
+                        console.log(`  ✅ Привязано ${assignedCount} релиз(ов) к артисту ${artistName}`)
+                      }
+                    } catch (error) {
+                      console.error(`  ⚠️ Ошибка привязки релизов к артисту ${artistName}:`, error)
+                    }
                   }
                 }
                 
