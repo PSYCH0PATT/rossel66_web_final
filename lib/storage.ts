@@ -442,8 +442,16 @@ export async function assignReleasesToNewArtist(artistId: string, artistName: st
   const toUpdate = releases.filter(release => {
     if (release.artistId) return false
     const releaseArtistName = (release as any).artistName || ''
-    return normalizeArtistName(releaseArtistName) === normalizedName ||
-           normalizeArtistName(releaseArtistName) === normalizedUsername
+    if (!releaseArtistName) return false
+    
+    // Разбиваем список артистов по запятой и проверяем первого (main artist)
+    const artists = releaseArtistName.split(',').map((a: string) => a.trim())
+    const mainArtist = artists[0]
+    const normalizedMainArtist = normalizeArtistName(mainArtist)
+    
+    // Сравниваем с главным артистом из релиза
+    return normalizedMainArtist === normalizedName ||
+           normalizedMainArtist === normalizedUsername
   })
   
   if (toUpdate.length === 0) return 0
