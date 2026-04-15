@@ -2,15 +2,18 @@ import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
 import * as JSZip from "jszip"
-import { loadReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
+import { reportFromPrisma } from "@/lib/storage-adapters"
 
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
     const quarter = params.quarter
-    
-    // Получаем список отчетов из БД
-    const allReports = await loadReports()
-    const quarterReports = allReports.filter(report => report.quarter === quarter)
+
+    const raw = await prisma.report.findMany({
+      where: { quarter },
+      orderBy: { uploadedAt: "desc" },
+    })
+    const quarterReports = raw.map(reportFromPrisma)
 
     if (quarterReports.length === 0) {
       return NextResponse.json({ error: "Нет отчетов за выбранный квартал" }, { status: 404 })

@@ -1,11 +1,31 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Nunito_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ParticlesBackground } from "@/components/particles-background";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+const syncopate = localFont({
+  src: [
+    {
+      path: "../public/fonts/SyncopateRus.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/SyncopateRus.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-syncopate",
+  display: "swap",
+});
+
+const nunitoSans = Nunito_Sans({
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-nunito-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -30,7 +50,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-[#0a0a0a]">
-      <body className={`${inter.variable} antialiased bg-[#0a0a0a]`}>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
+      <body className={`${nunitoSans.variable} ${syncopate.variable} font-body bg-[#0a0a0a] text-gray-100 min-h-screen relative overflow-x-hidden transition-colors duration-300 antialiased`}>
         <ParticlesBackground />
         {children}
       </body>

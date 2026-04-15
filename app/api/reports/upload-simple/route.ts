@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { loadUsers } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
+import { requireAdmin } from "@/lib/server-auth"
 import * as XLSX from 'xlsx'
 import * as fs from 'fs'
 import * as path from 'path'
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -61,13 +64,28 @@ export async function POST(request: NextRequest) {
     const finalAmount = totalAmount ? parseFloat(totalAmount) : calculatedAmount
     const finalPlays = totalPlays ? parseInt(totalPlays) : calculatedPlays
 
-    // Проверяем, зарегистрирован ли артист
-    const users = await loadUsers()
-    const registeredArtist = users.find(user => 
-      user.role === 'artist' && 
-      (user.name.toLowerCase() === artistName.toLowerCase() || 
-       user.username.toLowerCase() === artistName.toLowerCase())
-    )
+    const registeredArtist = await prisma.user.findFirst({
+      where: {
+        role: "artist",
+        OR: [
+          { name: { equals: artistName, mode: "insensitive" } },
+          { username: { equals: artistName, mode: "insensitive" } },
+        ],
+      },
+    })
+
+    // Проверка дубликата
+    if (registeredArtist) {
+      const duplicateReport = await prisma.report.findFirst({
+        where: { artistId: registeredArtist.id, quarter, year: parseInt(year) }
+      })
+      if (duplicateReport) {
+        return NextResponse.json({
+          success: false,
+          message: `Отчёт для ${artistName} за ${quarter} ${parseInt(year)} уже существует`
+        }, { status: 409 })
+      }
+    }
 
     // Создаем отчет
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`

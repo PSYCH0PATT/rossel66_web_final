@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Grained Artist Dashboard Overview | ROSSEL</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Syncopate:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981", // Emerald 500
+                        "background-light": "#f3f4f6",
+                        "background-dark": "#020202",
+                        "glass-dark": "rgba(10, 10, 10, 0.7)",
+                        "glass-light": "rgba(255, 255, 255, 0.7)",
+                        "accent-azure": "#0ea5e9", // Sky 500
+                        "accent-emerald": "#10b981", // Emerald 500
+                    },
+                    fontFamily: {
+                        display: ["Syncopate", "sans-serif"],
+                        body: ["Space Grotesk", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #020202;
+        }
+        .font-display {
+            font-family: 'Syncopate', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+        .glass-panel {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(10, 10, 10, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        .grid-bg {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.15; 
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+        }
+        .card-glass {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+        .stat-card-glass {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        .stat-card-glass:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(30, 30, 30, 0.7);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-gray-100 min-h-screen relative overflow-x-hidden transition-colors duration-300">
+<div class="noise-overlay"></div>
+<div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-accent-azure blur-[150px] opacity-[0.08] animate-pulse-slow"></div>
+<div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-accent-emerald blur-[150px] opacity-[0.1]"></div>
+<div class="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-purple-900 blur-[150px] opacity-[0.05]"></div>
+</div>
+<div class="fixed inset-0 z-0 grid-bg pointer-events-none opacity-40"></div>
+<div class="relative z-10 flex flex-col md:flex-row h-screen overflow-hidden">
+<aside class="w-full md:w-20 lg:w-64 flex-shrink-0 bg-black/60 glass-panel border-r border-white/5 flex flex-col justify-between md:h-full hidden md:flex backdrop-blur-xl">
+<div>
+<div class="h-24 flex items-center justify-center lg:justify-start lg:px-8 border-b border-white/5">
+<span class="material-symbols-outlined text-3xl text-primary lg:mr-3">graphic_eq</span>
+<span class="font-display font-bold text-xl tracking-[0.2em] hidden lg:block text-white">ROSSEL</span>
+</div>
+<nav class="mt-10 px-2 lg:px-4 space-y-1">
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">dashboard</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Overview</span>
+</a>
+<a class="flex items-center p-3 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]" href="#">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Playlists</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">library_music</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Releases</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">analytics</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Analytics</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">account_balance_wallet</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Revenue</span>
+</a>
+</nav>
+</div>
+<div class="p-6 border-t border-white/5">
+<div class="flex items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer">
+<img alt="Artist Profile" class="w-10 h-10 rounded-full object-cover border border-primary/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe2YOdZNN_7s2I0rHIjzRrCxVpC_LqDKpCln1n6UX5v59qwal00v-AC3gI362s7L9_IcuffylcKqqiT5z93zY0BM9EFykg7rl2kz87UgVUgN42WedCfoaQZ4qP4J3tHNVYzs-xuRChOPB6xe1aFtZ6lqZITR6ZBQvtKyM6SczZfFgYQiu_fnit9UvoZtGq2wwpcvvYCRzE792ghu9uUqVUbZSfsjv3XtAS0FYwekzc3ZiFZKVEww0KsNmfmJR43u00Zwz7gPPwS1M"/>
+<div class="ml-3 hidden lg:block overflow-hidden">
+<p class="text-sm font-bold text-white truncate">Alex Chen</p>
+<p class="text-[10px] text-primary uppercase tracking-widest">Pro Artist</p>
+</div>
+</div>
+</div>
+</aside>
+<header class="md:hidden h-16 bg-black/80 glass-panel border-b border-white/10 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-lg">
+<span class="material-symbols-outlined text-primary">graphic_eq</span>
+<span class="font-display font-bold text-lg tracking-widest text-white">ROSSEL</span>
+<button class="text-gray-300">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<main class="flex-1 overflow-y-auto relative">
+<div class="p-6 md:p-10 max-w-7xl mx-auto pb-24">
+<div class="flex flex-col gap-6 mb-12">
+<div class="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+<span class="hover:text-primary cursor-pointer transition-colors">Dashboard</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Overview</span>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+<div>
+<h1 class="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-tight">
+                            ARTIST DASHBOARD
+                        </h1>
+<p class="text-sm text-gray-400 font-light max-w-md">
+                            Welcome back, Alex. Here is what's happening with your music today.
+                        </p>
+</div>
+<div class="flex gap-3">
+<div class="text-right hidden md:block">
+<p class="text-xs text-gray-500 font-mono uppercase">Last Updated</p>
+<p class="text-white font-mono text-sm">Oct 24, 14:30 GMT</p>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
+<div class="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-white">album</span>
+</div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div class="mb-4">
+<span class="inline-flex items-center justify-center p-2 rounded-lg bg-white/5 text-white mb-3 border border-white/10">
+<span class="material-symbols-outlined text-xl">library_music</span>
+</span>
+<h3 class="text-gray-400 text-xs font-mono uppercase tracking-widest">Total Releases</h3>
+</div>
+<div class="flex items-end justify-between">
+<p class="text-4xl font-bold text-white font-display">124</p>
+<span class="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded border border-primary/20 flex items-center">
+                                +2 <span class="material-symbols-outlined text-[10px] ml-1">arrow_upward</span>
+</span>
+</div>
+</div>
+</div>
+<div class="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-accent-azure">bar_chart</span>
+</div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div class="mb-4">
+<span class="inline-flex items-center justify-center p-2 rounded-lg bg-accent-azure/10 text-accent-azure mb-3 border border-accent-azure/20">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</span>
+<h3 class="text-gray-400 text-xs font-mono uppercase tracking-widest">Monthly Streams</h3>
+</div>
+<div class="flex items-end justify-between">
+<p class="text-4xl font-bold text-white font-display">2.4M</p>
+<span class="text-accent-azure text-xs font-bold bg-accent-azure/10 px-2 py-1 rounded border border-accent-azure/20 flex items-center">
+                                +12% <span class="material-symbols-outlined text-[10px] ml-1">trending_up</span>
+</span>
+</div>
+</div>
+</div>
+<div class="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-primary">attach_money</span>
+</div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div class="mb-4">
+<span class="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary mb-3 border border-primary/20">
+<span class="material-symbols-outlined text-xl">payments</span>
+</span>
+<h3 class="text-gray-400 text-xs font-mono uppercase tracking-widest">Earnings (Est.)</h3>
+</div>
+<div class="flex items-end justify-between">
+<p class="text-4xl font-bold text-white font-display">$8.2k</p>
+<span class="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded border border-primary/20 flex items-center">
+                                +5.4% <span class="material-symbols-outlined text-[10px] ml-1">arrow_upward</span>
+</span>
+</div>
+</div>
+</div>
+<div class="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-purple-400">playlist_play</span>
+</div>
+<div class="flex flex-col h-full justify-between relative z-10">
+<div class="mb-4">
+<span class="inline-flex items-center justify-center p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 border border-purple-500/20">
+<span class="material-symbols-outlined text-xl">queue_music</span>
+</span>
+<h3 class="text-gray-400 text-xs font-mono uppercase tracking-widest">Playlists Added</h3>
+</div>
+<div class="flex items-end justify-between">
+<p class="text-4xl font-bold text-white font-display">842</p>
+<span class="text-purple-400 text-xs font-bold bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20 flex items-center">
+                                +28 <span class="material-symbols-outlined text-[10px] ml-1">add</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-8">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+                        LATEST ACTIVITY
+                    </h2>
+<a class="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all" href="#">View All</a>
+</div>
+<div class="card-glass rounded-2xl overflow-hidden border border-white/5">
+<div class="divide-y divide-white/5">
+<div class="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group">
+<div class="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+<img alt="Cover" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARvjnyL6S4TlNdJ6kwbxFnV-fbcZSYmWFDUN42cpDYKTh6aZebu0XDPuHqgWYsd2Gvji5GJyq2gL2Zn_b6R5IQ88Q5K62aRAsRG7QFo22uYv9LY1LLi9f2VuLViMxk22BLxiRzIwq-3fjFG9Yh1nfY_YEIuZ0CaH3C5WfxyKAWmwzy4p5cmqBmx1-f-y6JlB-wJ-3zaH8U_L4tkMiZYax9qThDp4dctkx8I27jNXeIVzIN4F4gGw1FkAPsSpCqVoXP4IDsLLYit2s"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-white font-bold text-sm truncate">Neon Cybernetics</h4>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/20 uppercase font-bold tracking-wider">Spotify</span>
+</div>
+<p class="text-gray-400 text-xs truncate">Added to "Future Bass 2024" by Spotify Editorial</p>
+</div>
+<div class="text-right">
+<p class="text-white font-mono text-sm">+15k</p>
+<p class="text-gray-500 text-[10px] uppercase">Followers</p>
+</div>
+<div class="text-gray-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</div>
+</div>
+<div class="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group">
+<div class="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+<div class="w-full h-full bg-gradient-to-br from-blue-900 to-black flex items-center justify-center text-blue-400">
+<span class="material-symbols-outlined text-xl">payments</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-white font-bold text-sm truncate">Monthly Payout</h4>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/20 uppercase font-bold tracking-wider">System</span>
+</div>
+<p class="text-gray-400 text-xs truncate">Revenue report for September 2023 is ready</p>
+</div>
+<div class="text-right">
+<p class="text-white font-mono text-sm">$8,245</p>
+<p class="text-gray-500 text-[10px] uppercase">Processed</p>
+</div>
+<div class="text-gray-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</div>
+</div>
+<div class="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group">
+<div class="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+<img alt="Cover" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnwyAwFPhplla2gJJUm4mVr-oY0Nzu8HHmHG2C4aUlimJuFLCRncxBKkeieMW_eJQgsUaQOaDbrogWjra9e26ywb2ZjS8OAplXPDqDaOiqO1M2ErLKp8KlYgW9mguFizwZePIrAQqJguHG82_9PdmTXt9zicHWgXnV_Ai4QS4sHMD-pGT-GMTto5gt5YE4wkGqspBHNObtzXVE3I24ow1lGZkrNABBrjyCSjbdD_NXO1_EDv7SuamkrYgJFzmc08jqJYQ14xS0uwY"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-white font-bold text-sm truncate">Russian Phonk</h4>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 uppercase font-bold tracking-wider">VK Music</span>
+</div>
+<p class="text-gray-400 text-xs truncate">New milestone reached: 1 Million streams</p>
+</div>
+<div class="text-right">
+<p class="text-white font-mono text-sm">1M</p>
+<p class="text-gray-500 text-[10px] uppercase">Streams</p>
+</div>
+<div class="text-gray-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</div>
+</div>
+<div class="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group">
+<div class="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+<img alt="Cover" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTiT1D0TMlrsTWIUnIbENynp5lsUS98hhWju6Em2_fK_tHYqcM8yzUzeBKk30rqA9TXKS-tGoE6IkhSGVlc6FdGQ8DQ1d-88VtgV_FVp7s4lxRHrEcS6S2IBfbqLUEPYCkZOLHPDZxYr__OH2MlMMjlC2PWRUQxm7a5YGzcYVX571mU_kj_dhTJc645Mq80YngckPchLxWO6vm66Vz5n-EI9VFXSYRUGP-hl2ozOrZykspPgkCCF7Uj1OfLv-CY19p92lPZU_-4bA"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-white font-bold text-sm truncate">Best of 2023</h4>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 border border-red-500/20 uppercase font-bold tracking-wider">YouTube</span>
+</div>
+<p class="text-gray-400 text-xs truncate">Content ID claim dispute resolved</p>
+</div>
+<div class="text-right">
+<p class="text-white font-mono text-sm">Resolved</p>
+<p class="text-gray-500 text-[10px] uppercase">Status</p>
+</div>
+<div class="text-gray-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</div>
+</div>
+<div class="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group">
+<div class="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+<div class="w-full h-full bg-gradient-to-br from-purple-900 to-black flex items-center justify-center text-purple-400">
+<span class="material-symbols-outlined text-xl">upload</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<h4 class="text-white font-bold text-sm truncate">New Single Upload</h4>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/20 uppercase font-bold tracking-wider">Ingest</span>
+</div>
+<p class="text-gray-400 text-xs truncate">"Nightcall (Remix)" is processing for distribution</p>
+</div>
+<div class="text-right">
+<p class="text-yellow-400 font-mono text-sm">Pending</p>
+<p class="text-gray-500 text-[10px] uppercase">Status</p>
+</div>
+<div class="text-gray-600 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
+<div class="text-gray-500 font-mono">
+<span class="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse"></span>
+                    System Operational
+                </div>
+<div class="text-gray-400 font-mono text-xs">
+                    ROSSEL LABEL ENGINE V2.4
+                </div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

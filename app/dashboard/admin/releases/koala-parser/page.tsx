@@ -3,22 +3,7 @@
 import { useState, useEffect } from "react"
 import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { 
-  RefreshCw, 
-  Play, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
-  Loader2,
-  ArrowLeft,
-  Music,
-  Link as LinkIcon,
-  Barcode
-} from "lucide-react"
 import Link from "next/link"
 
 interface ParseStats {
@@ -49,27 +34,36 @@ interface KoalaRelease {
   parsed_at: string
 }
 
+function statusBadgeClass(raw: string): string {
+  const s = raw || ""
+  if (["Доставлен", "released", "Одобрен"].includes(s)) return "release-status-badge release-status-badge--live"
+  if (["В доставке", "delivery"].includes(s)) return "release-status-badge release-status-badge--delivered"
+  if (["Модерируется", "На модерации", "moderation", "scheduled", "Новый", "новый"].includes(s))
+    return "release-status-badge release-status-badge--moderation"
+  if (["Отклонен", "Отклонён", "Снят"].includes(s)) return "release-status-badge release-status-badge--rejected"
+  return "release-status-badge release-status-badge--draft"
+}
+
 export default function KoalaParserPage() {
   const [status, setStatus] = useState<ParserStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [lastReleases, setLastReleases] = useState<KoalaRelease[]>([])
 
-  // Загрузка статуса при монтировании
   useEffect(() => {
     fetchStatus()
   }, [])
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch('/api/koala-parser')
+      const response = await fetch("/api/koala-parser")
       const data = await response.json()
-      
+
       if (data.success && data.status) {
         setStatus(data.status)
       }
     } catch (error) {
-      console.error('Ошибка загрузки статуса:', error)
+      console.error("Ошибка загрузки статуса:", error)
     } finally {
       setIsLoading(false)
     }
@@ -77,21 +71,21 @@ export default function KoalaParserPage() {
 
   const runParser = async () => {
     setIsRunning(true)
-    
+
     try {
-      const response = await fetch('/api/koala-parser', {
-        method: 'POST'
+      const response = await fetch("/api/koala-parser", {
+        method: "POST",
       })
       const data = await response.json()
-      
+
       if (data.success) {
         setStatus({
           lastRun: new Date().toISOString(),
           success: true,
           stats: data.stats,
-          message: data.message
+          message: data.message,
         })
-        
+
         if (data.releases) {
           setLastReleases(data.releases)
         }
@@ -99,17 +93,17 @@ export default function KoalaParserPage() {
         setStatus({
           lastRun: new Date().toISOString(),
           success: false,
-          stats: { total: 0, added: 0, updated: 0, skipped: 0, errors: [data.error || 'Неизвестная ошибка'] },
-          message: data.error || 'Ошибка парсинга'
+          stats: { total: 0, added: 0, updated: 0, skipped: 0, errors: [data.error || "Неизвестная ошибка"] },
+          message: data.error || "Ошибка парсинга",
         })
       }
     } catch (error) {
-      console.error('Ошибка запуска парсера:', error)
+      console.error("Ошибка запуска парсера:", error)
       setStatus({
         lastRun: new Date().toISOString(),
         success: false,
         stats: { total: 0, added: 0, updated: 0, skipped: 0, errors: [String(error)] },
-        message: 'Ошибка подключения к серверу'
+        message: "Ошибка подключения к серверу",
       })
     } finally {
       setIsRunning(false)
@@ -117,31 +111,21 @@ export default function KoalaParserPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     })
-  }
-
-  // Status badge colors
-  const statusColors: Record<string, string> = {
-    "На модерации": "bg-orange-500 text-white",
-    "Одобрен": "bg-blue-500 text-white",
-    "Отклонён": "bg-red-500 text-white",
-    "В доставке": "bg-purple-500 text-white",
-    "Доставлен": "bg-green-500 text-white",
-    "Снят": "bg-gray-500 text-white",
   }
 
   if (isLoading) {
     return (
       <Layout role="admin" requiredRole="admin">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-green-400" />
-          <span className="ml-2 text-green-400">Загрузка...</span>
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
         </div>
       </Layout>
     )
@@ -149,243 +133,218 @@ export default function KoalaParserPage() {
 
   return (
     <Layout role="admin" requiredRole="admin">
-      <div className="space-y-6">
-        {/* Заголовок */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard/admin/releases">
-              <Button
-                variant="outline"
-                size="sm"
-                style={{
-                  borderColor: '#64748b',
-                  color: '#cbd5e1',
-                  backgroundColor: 'transparent'
-                }}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Назад к релизам
-              </Button>
+      <div className="space-y-8 max-w-7xl mx-auto pb-8">
+        <div className="space-y-4">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
+              Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-white">Koala Music Parser</h1>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <Link href="/dashboard/admin/releases" className="hover:text-primary">
+              Релизы
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Koala Parser</span>
           </div>
-          
-          <Button
-            onClick={runParser}
-            disabled={isRunning}
-            className="bg-green-600 hover:bg-green-700 text-white"
+          <div className="border-b border-white/5 pb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
+                Koala Music Parser
+              </h1>
+              <p className="text-sm text-gray-400 font-light max-w-lg mt-2">
+                Импорт релизов из Koala Music: статус последнего запуска и таблица последних записей.
+              </p>
+            </div>
+            <Button
+              onClick={() => void runParser()}
+              disabled={isRunning}
+              className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold shrink-0 inline-flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+            >
+              {isRunning ? (
+                <>
+                  <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                  Парсинг…
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-lg">play_arrow</span>
+                  Запустить парсинг
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">schedule</span>
+            </div>
+            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Последний запуск</p>
+            <p className="font-display text-2xl text-white mt-2">
+              {status?.lastRun ? formatDate(status.lastRun) : "Никогда"}
+            </p>
+          </div>
+
+          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">flag</span>
+            </div>
+            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Статус</p>
+            <p
+              className={`font-display text-2xl mt-2 ${
+                status?.success ? "text-primary" : status?.lastRun ? "text-destructive" : "text-yellow-500"
+              }`}
+            >
+              {status?.success ? "Успешно" : status?.lastRun ? "Ошибка" : "Не запускался"}
+            </p>
+          </div>
+
+          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">library_add</span>
+            </div>
+            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Добавлено</p>
+            <p className="font-display text-2xl text-white mt-2">{status?.stats?.added ?? 0}</p>
+          </div>
+
+          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">sync</span>
+            </div>
+            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Обновлено</p>
+            <p className="font-display text-2xl text-white mt-2">{status?.stats?.updated ?? 0}</p>
+          </div>
+        </div>
+
+        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-2">
+            <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
+            Расписание автоматического парсинга
+          </h2>
+          <p className="text-sm text-gray-400 mb-4">Парсер может запускаться по расписанию (cron).</p>
+          <div className="flex flex-wrap gap-6 text-sm text-gray-300">
+            <span className="inline-flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">schedule</span>
+              12:00 (полдень)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">schedule</span>
+              20:00 (вечер)
+            </span>
+          </div>
+        </div>
+
+        {status?.message && (
+          <div
+            className={`card-glass rounded-2xl border p-6 md:p-8 ${
+              status.success ? "border-primary/30" : "border-destructive/40"
+            }`}
           >
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Парсинг...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Запустить парсинг
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Статистика */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-slate-400">Последний запуск</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-400" />
-                <span className="text-lg font-semibold text-white">
-                  {status?.lastRun ? formatDate(status.lastRun) : 'Никогда'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-slate-400">Статус</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                {status?.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-400" />
-                ) : status?.lastRun ? (
-                  <XCircle className="h-5 w-5 text-red-400" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-400" />
+            <div className="flex items-start gap-3">
+              <span
+                className={`material-symbols-outlined shrink-0 ${
+                  status.success ? "text-primary" : "text-destructive"
+                }`}
+              >
+                {status.success ? "check_circle" : "cancel"}
+              </span>
+              <div>
+                <p className={`font-medium ${status.success ? "text-primary" : "text-destructive"}`}>{status.message}</p>
+                {status.stats && (
+                  <p className="text-sm text-gray-500 font-mono mt-2">
+                    Всего: {status.stats.total} · Добавлено: {status.stats.added} · Обновлено: {status.stats.updated} ·
+                    Пропущено: {status.stats.skipped}
+                  </p>
                 )}
-                <span className={`text-lg font-semibold ${status?.success ? 'text-green-400' : status?.lastRun ? 'text-red-400' : 'text-yellow-400'}`}>
-                  {status?.success ? 'Успешно' : status?.lastRun ? 'Ошибка' : 'Не запускался'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-slate-400">Добавлено</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Music className="h-5 w-5 text-green-400" />
-                <span className="text-lg font-semibold text-white">
-                  {status?.stats?.added || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-            <CardHeader className="pb-2">
-              <CardDescription className="text-slate-400">Обновлено</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-blue-400" />
-                <span className="text-lg font-semibold text-white">
-                  {status?.stats?.updated || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Информация о расписании */}
-        <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-          <CardHeader>
-            <CardTitle className="text-white">Расписание автоматического парсинга</CardTitle>
-            <CardDescription className="text-slate-400">
-              Парсер автоматически запускается по расписанию
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-slate-300">
-                <Clock className="h-5 w-5 text-green-400" />
-                <span>12:00 (полдень)</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-300">
-                <Clock className="h-5 w-5 text-green-400" />
-                <span>20:00 (вечер)</span>
+                {status.stats?.errors && status.stats.errors.length > 0 && (
+                  <ul className="mt-2 text-sm text-destructive space-y-1">
+                    {status.stats.errors.map((err, index) => (
+                      <li key={index}>• {err}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Сообщение о результате */}
-        {status?.message && (
-          <Card className={`border-slate-700 ${status.success ? 'border-green-600' : 'border-red-600'}`} style={{ backgroundColor: '#1a1d24' }}>
-            <CardContent className="pt-4">
-              <div className="flex items-start gap-3">
-                {status.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-400 mt-0.5" />
-                )}
-                <div>
-                  <p className={`font-medium ${status.success ? 'text-green-400' : 'text-red-400'}`}>
-                    {status.message}
-                  </p>
-                  {status.stats && (
-                    <p className="text-sm text-slate-400 mt-1">
-                      Всего: {status.stats.total} | Добавлено: {status.stats.added} | Обновлено: {status.stats.updated} | Пропущено: {status.stats.skipped}
-                    </p>
-                  )}
-                  {status.stats?.errors && status.stats.errors.length > 0 && (
-                    <ul className="mt-2 text-sm text-red-400">
-                      {status.stats.errors.map((error, index) => (
-                        <li key={index}>• {error}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         )}
 
-        {/* Таблица последних спарсенных релизов */}
         {lastReleases.length > 0 && (
-          <Card className="border-slate-700" style={{ backgroundColor: '#1a1d24' }}>
-            <CardHeader>
-              <CardTitle className="text-white">Последние спарсенные релизы</CardTitle>
-              <CardDescription className="text-slate-400">
-                Релизы из последнего запуска парсера
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-slate-700 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-700 hover:bg-slate-800">
-                      <TableHead className="text-slate-300">Название</TableHead>
-                      <TableHead className="text-slate-300">Артист</TableHead>
-                      <TableHead className="text-slate-300">Статус</TableHead>
-                      <TableHead className="text-slate-300">UPC</TableHead>
-                      <TableHead className="text-slate-300">BandLink</TableHead>
-                      <TableHead className="text-slate-300">Дата</TableHead>
+          <div className="card-glass rounded-2xl border border-white/5 p-0 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
+            <div className="p-6 md:p-8 pb-0">
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-1">
+                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
+                Последние спарсенные релизы
+              </h2>
+              <p className="text-sm text-gray-400 mb-4">Релизы из последнего запуска парсера</p>
+            </div>
+            <div className="table-glass overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Название</TableHead>
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Артист</TableHead>
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Статус</TableHead>
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">UPC</TableHead>
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">BandLink</TableHead>
+                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Дата</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lastReleases.map((release) => (
+                    <TableRow key={release.koala_id} className="table-row-hover border-white/10">
+                      <TableCell className="text-white font-medium">{release.title}</TableCell>
+                      <TableCell className="text-gray-400">{release.artist}</TableCell>
+                      <TableCell>
+                        <span className={statusBadgeClass(release.status)}>{release.status}</span>
+                      </TableCell>
+                      <TableCell className="text-gray-400">
+                        {release.upc ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-primary text-base">barcode_scanner</span>
+                            {release.upc}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {release.bandlink_url ? (
+                          <a
+                            href={release.bandlink_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-accent-azure hover:text-primary text-sm"
+                          >
+                            <span className="material-symbols-outlined text-base">link</span>
+                            BandLink
+                          </a>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-gray-400">{release.release_date || "—"}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lastReleases.map((release) => (
-                      <TableRow 
-                        key={release.koala_id}
-                        className="border-slate-700 hover:bg-slate-800"
-                      >
-                        <TableCell className="text-white font-medium">
-                          {release.title}
-                        </TableCell>
-                        <TableCell className="text-slate-300">
-                          {release.artist}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={statusColors[release.status] || 'bg-gray-500 text-white'}>
-                            {release.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-300">
-                          {release.upc ? (
-                            <div className="flex items-center gap-1">
-                              <Barcode className="h-4 w-4 text-green-400" />
-                              {release.upc}
-                            </div>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {release.bandlink_url ? (
-                            <a 
-                              href={release.bandlink_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                              BandLink
-                            </a>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-slate-300">
-                          {release.release_date || '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
+
+        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
+        </footer>
       </div>
     </Layout>
   )
 }
-
-

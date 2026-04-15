@@ -42,10 +42,23 @@ next-env.d.ts
 chrome_profiles/
 __pycache__/
 *.pyc
+.venv/
 *.db
 temp_*_config.json
 
 /generated/prisma
+
+# Local / deploy artifacts (не коммитить)
+deploy-logs*.txt
+backups/
+sftp_downloads/*
+!sftp_downloads/.gitkeep
+*.xlsx
+4c1c78d1-*.txt
+skills-lock.json
+
+# Agent skills (локально)
+.agents/
 
 # data directory (migrated to Supabase)
 data/

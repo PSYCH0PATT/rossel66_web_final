@@ -2,6 +2,8 @@ import cron from 'node-cron';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { prisma } from '@/lib/prisma';
+import { releaseFromPrisma } from '@/lib/storage-adapters';
 
 let isSchedulerInitialized = false;
 
@@ -270,7 +272,11 @@ async function runSftpPlaylistSync() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
+      return;
+    }
     
     const response = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${cronSecret}`);
     const result = await response.json();
@@ -297,11 +303,9 @@ async function runPlaylistParsers() {
     console.log('🎵 PLAYLIST PARSERS');
     console.log('═══════════════════════════════════════════════════');
     
-    // Импортируем функции для работы с данными
-    const { loadReleases, loadUsers, addActivity } = await import('@/lib/storage');
-    
-    // Находим артистов с недавними релизами
-    const artistsToScan = await getArtistsWithRecentReleases(loadReleases, loadUsers);
+    const { addActivity } = await import('@/lib/storage');
+
+    const artistsToScan = await getArtistsWithRecentReleases();
     
     if (artistsToScan.length === 0) {
       console.log('📭 Нет артистов с недавними релизами для сканирования');
@@ -410,7 +414,11 @@ async function runAnalyticsFlashImport() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
+      return;
+    }
     
     const response = await fetch(`${baseUrl}/api/cron/analytics-flash?secret=${cronSecret}`);
     const result = await response.json();
@@ -432,7 +440,11 @@ async function runAnalyticsCleanup() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET || 'x7Kp9mN2vQ8sL4wR';
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
+      return;
+    }
     
     const response = await fetch(`${baseUrl}/api/cron/analytics-cleanup?secret=${cronSecret}`);
     const result = await response.json();
@@ -447,64 +459,71 @@ async function runAnalyticsCleanup() {
   }
 }
 
-/**
- * Находит артистов с релизами за последние 7 дней
- */
-async function getArtistsWithRecentReleases(
-  loadReleases: () => Promise<any[]>,
-  loadUsers: () => Promise<any[]>
-): Promise<Array<{ id: string; username: string; name: string; recentRelease: string }>> {
-  const releases = await loadReleases();
-  const users = await loadUsers();
-  
+/** Находит артистов с релизами за последние 7 дней (без полного скана таблиц) */
+async function getArtistsWithRecentReleases(): Promise<
+  Array<{ id: string; username: string; name: string; recentRelease: string }>
+> {
   const now = new Date();
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
   weekAgo.setHours(0, 0, 0, 0);
-  
-  // Находим релизы за последние 7 дней
-  const recentReleases = releases.filter((release: any) => {
-    if (!release.releaseDate) return false;
-    
-    const releaseDate = new Date(release.releaseDate);
-    releaseDate.setHours(0, 0, 0, 0);
-    
-    return releaseDate >= weekAgo && releaseDate <= now;
+  const weekAgoStr = weekAgo.toISOString().split("T")[0];
+  const nowStr = now.toISOString().split("T")[0];
+
+  const raw = await prisma.release.findMany({
+    where: { releaseDate: { gte: weekAgoStr, lte: nowStr } },
+    orderBy: { createdAt: "desc" },
   });
-  
-  console.log(`📅 Период: ${weekAgo.toISOString().split('T')[0]} — ${now.toISOString().split('T')[0]}`);
-  console.log(`📀 Релизов за неделю: ${recentReleases.length}`);
-  
-  // Собираем уникальных артистов
-  const artistMap = new Map<string, { id: string; username: string; name: string; recentRelease: string }>();
-  
+  const recentReleases = raw.map(releaseFromPrisma);
+
+  const artistIdSet = new Set<string>();
   for (const release of recentReleases) {
-    const artist = users.find((u: any) => u.id === release.artistId);
-    
-    if (artist && artist.role === 'artist' && !artistMap.has(artist.id)) {
+    if (release.artistId) artistIdSet.add(release.artistId);
+    for (const fid of release.featuredArtistIds || []) {
+      if (fid) artistIdSet.add(fid);
+    }
+  }
+  const artistIds = [...artistIdSet];
+  const users =
+    artistIds.length === 0
+      ? []
+      : await prisma.user.findMany({
+          where: { id: { in: artistIds }, role: "artist" },
+        });
+  const userById = new Map(users.map((u) => [u.id, u]));
+
+  console.log(`📅 Период: ${weekAgoStr} — ${nowStr}`);
+  console.log(`📀 Релизов за неделю: ${recentReleases.length}`);
+
+  const artistMap = new Map<
+    string,
+    { id: string; username: string; name: string; recentRelease: string }
+  >();
+
+  for (const release of recentReleases) {
+    const artist = release.artistId ? userById.get(release.artistId) : undefined;
+    if (artist && !artistMap.has(artist.id)) {
       artistMap.set(artist.id, {
         id: artist.id,
         username: artist.username,
         name: artist.name,
-        recentRelease: `${release.title} (${release.releaseDate})`
+        recentRelease: `${release.title} (${release.releaseDate})`,
       });
     }
-    
-    // Также добавляем featured артистов
     if (release.featuredArtistIds) {
       for (const featuredId of release.featuredArtistIds) {
-        const featuredArtist = users.find((u: any) => u.id === featuredId);
-        if (featuredArtist && featuredArtist.role === 'artist' && !artistMap.has(featuredArtist.id)) {
+        const featuredArtist = userById.get(featuredId);
+        if (featuredArtist && !artistMap.has(featuredArtist.id)) {
           artistMap.set(featuredArtist.id, {
             id: featuredArtist.id,
             username: featuredArtist.username,
             name: featuredArtist.name,
-            recentRelease: `${release.title} (feat, ${release.releaseDate})`
+            recentRelease: `${release.title} (feat, ${release.releaseDate})`,
           });
         }
       }
     }
   }
-  
+
   return Array.from(artistMap.values());
 }

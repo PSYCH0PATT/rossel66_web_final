@@ -37,7 +37,8 @@ export default function LoginForm() {
     }
 
     try {
-      // Аутентификация через безопасный API endpoint
+      // Отладка: замер времени ответа сервера (сеть + обработка на сервере)
+      const fetchStart = performance.now()
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -45,6 +46,10 @@ export default function LoginForm() {
         },
         body: JSON.stringify({ username, password }),
       })
+      const fetchMs = Math.round(performance.now() - fetchStart)
+      if (typeof window !== 'undefined') {
+        console.log('[LOGIN_DEBUG] client: fetch + response', fetchMs, 'ms')
+      }
       const result = await response.json()
       
       if (!result.success) {

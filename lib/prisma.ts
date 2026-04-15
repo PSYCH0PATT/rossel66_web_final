@@ -4,20 +4,26 @@ import { Pool } from 'pg'
 
 const globalForPrisma = globalThis as unknown as { 
   prisma: PrismaClient
-  pool: Pool 
+  pool: Pool
+  prismaAdapter: PrismaPg
 }
 
 if (!globalForPrisma.pool) {
   globalForPrisma.pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL 
+    connectionString: process.env.DATABASE_URL,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
   })
 }
 
-const adapter = new PrismaPg(globalForPrisma.pool)
+if (!globalForPrisma.prismaAdapter) {
+  globalForPrisma.prismaAdapter = new PrismaPg(globalForPrisma.pool)
+}
 
 export const prisma = globalForPrisma.prisma || new PrismaClient({ 
-  adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
+  adapter: globalForPrisma.prismaAdapter,
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error']
 })
 
 if (process.env.NODE_ENV !== 'production') {

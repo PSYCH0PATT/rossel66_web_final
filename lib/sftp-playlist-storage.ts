@@ -1,6 +1,8 @@
 import { ParsedPlaylist, ParsedTrack } from './sftp-playlist-parser';
 import { recordPlaylistChange } from './playlist-history';
-import { findArtistByName, normalizeArtistName } from '@/lib/storage';
+import { normalizeArtistName } from '@/lib/storage';
+import { tokenizeCollaborationArtistField } from '@/lib/playlist-artist-match';
+import { userFromPrisma } from '@/lib/storage-adapters';
 import { prisma } from './prisma';
 
 /**
@@ -30,7 +32,23 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
     errors: [] as string[],
     addedPlaylists: [] as AddedPlaylistInfo[]
   };
-  
+
+  const artistRows = await prisma.user.findMany({ where: { role: 'artist' } })
+  const artistIdByNormalizedKey = new Map<string, string>()
+  for (const row of artistRows) {
+    const u = userFromPrisma(row)
+    artistIdByNormalizedKey.set(normalizeArtistName(u.name), u.id)
+    artistIdByNormalizedKey.set(normalizeArtistName(u.username), u.id)
+  }
+  /** Совпадение по целой строке или по сегменту коллаба («rompy & лоло» → rompy). */
+  const resolveArtistId = (rawName: string): string | null => {
+    for (const t of tokenizeCollaborationArtistField(rawName)) {
+      const id = artistIdByNormalizedKey.get(t)
+      if (id) return id
+    }
+    return null
+  }
+
   for (const playlist of playlists) {
     try {
       // Парсим артистов из треков
@@ -46,9 +64,7 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
       
       // Сохраняем отдельную запись для каждого артиста
       for (const [artistName, artistTracks] of Array.from(tracksByArtist.entries())) {
-        // Находим ID артиста
-        const artist = await findArtistByName(artistName);
-        const artistId = artist?.id || null;
+        const artistId = resolveArtistId(artistName);
         
         // Проверяем существующий плейлист
         const existing = await prisma.playlist.findFirst({
@@ -65,14 +81,16 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
           // Проверяем, изменились ли треки
           const existingTracks = existing.trackData as unknown as ParsedTrack[];
           const tracksChanged = JSON.stringify(existingTracks) !== JSON.stringify(artistTracks);
-          
-          if (tracksChanged || existing.lastSeenDate !== today) {
+          const shouldFillArtistId = !existing.artistId && !!artistId;
+
+          if (tracksChanged || existing.lastSeenDate !== today || shouldFillArtistId) {
             await prisma.playlist.update({
               where: { id: existing.id },
               data: {
                 trackData: artistTracks as any,
                 lastSeenDate: today,
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                ...(shouldFillArtistId ? { artistId } : {}),
               }
             });
             
@@ -147,10 +165,14 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
 /**
  * Получает все плейлисты
  */
-export async function getAllPlaylists(): Promise<any[]> {
+export async function getAllPlaylists(opts?: { take?: number; skip?: number }): Promise<any[]> {
   try {
+    const take = opts?.take !== undefined ? Math.min(opts.take, 5000) : undefined
+    const skip = opts?.skip !== undefined ? Math.max(0, opts.skip) : undefined
     const playlists = await prisma.playlist.findMany({
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { updatedAt: 'desc' },
+      ...(take !== undefined ? { take } : {}),
+      ...(skip !== undefined ? { skip } : {}),
     });
     
     return playlists.map(p => ({

@@ -121,80 +121,95 @@ export interface StreamFilters {
  * 3. Платные vs бесплатные — для горизонтального бара (всегда за всё время)
  * 4. Стримы по источникам — для горизонтального бара (всегда за всё время)
  */
-export async function getStreamAnalytics(filters: StreamFilters) {
-  // Базовый where для фильтрации
-  const baseWhere: any = {}
+const DEFAULT_ANALYTICS_RANGE_DAYS = 90
+
+function buildStreamAnalyticsWhere(filters: StreamFilters): { rangeWhere: Record<string, unknown> } {
+  const baseWhere: Record<string, unknown> = {}
   if (filters.artistId) baseWhere.artistId = filters.artistId
   if (filters.trackName) baseWhere.trackName = filters.trackName
   if (filters.isrc) baseWhere.isrc = filters.isrc
 
-  // Where с датами (для XY графиков)
-  const dateWhere: any = { ...baseWhere }
-  if (filters.startDate || filters.endDate) {
-    dateWhere.date = {}
-    if (filters.startDate) dateWhere.date.gte = new Date(filters.startDate)
-    if (filters.endDate) dateWhere.date.lte = new Date(filters.endDate)
+  const rangeWhere: Record<string, unknown> = { ...baseWhere }
+  if (!filters.startDate && !filters.endDate) {
+    const end = new Date()
+    const start = new Date(end.getTime() - DEFAULT_ANALYTICS_RANGE_DAYS * 24 * 60 * 60 * 1000)
+    rangeWhere.date = { gte: start, lte: end }
+  } else {
+    const date: Record<string, Date> = {}
+    if (filters.startDate) date.gte = new Date(filters.startDate)
+    if (filters.endDate) date.lte = new Date(filters.endDate)
+    rangeWhere.date = date
   }
+
+  return { rangeWhere }
+}
+
+export async function getStreamAnalytics(filters: StreamFilters) {
+  const { rangeWhere } = buildStreamAnalyticsWhere(filters)
 
   // Отображаемые названия площадок (артистам показываем понятные имена)
   const dspDisplayName = (dsp: string) => (dsp === 'UMA' ? 'ВК Музыка' : dsp)
 
-  // 1. Стримы по дням и платформам (XY)
-  const rawByDspDay = await prisma.streamAnalytics.findMany({
-    where: dateWhere,
-    select: { date: true, dsp: true, streams: true }
+  // 1+2. Стримы по дням и платформам + общие стримы по дням — через groupBy
+  const rawByDspDay = await prisma.streamAnalytics.groupBy({
+    by: ['date', 'dsp'],
+    where: rangeWhere,
+    _sum: { streams: true },
+    orderBy: { date: 'asc' },
   })
 
-  // Агрегируем по дням и DSP
   const dspDayMap = new Map<string, Map<string, number>>()
+  const allDsps = new Set<string>()
+  const totalDayMap = new Map<string, number>()
+
   for (const r of rawByDspDay) {
     const day = r.date.toISOString().split('T')[0]
     const dspName = dspDisplayName(r.dsp)
+    const count = r._sum.streams ?? 0
+
     if (!dspDayMap.has(day)) dspDayMap.set(day, new Map())
     const dayMap = dspDayMap.get(day)!
-    dayMap.set(dspName, (dayMap.get(dspName) || 0) + r.streams)
+    dayMap.set(dspName, (dayMap.get(dspName) || 0) + count)
+    allDsps.add(dspName)
+
+    totalDayMap.set(day, (totalDayMap.get(day) || 0) + count)
   }
 
   const streamsByDspDay: Array<{ date: string; [dsp: string]: string | number }> = []
-  const allDsps = new Set<string>()
   for (const [day, dspMap] of [...dspDayMap.entries()].sort()) {
     const entry: any = { date: day }
     for (const [dsp, count] of dspMap) {
       entry[dsp] = count
-      allDsps.add(dsp)
     }
     streamsByDspDay.push(entry)
-  }
-
-  // 2. Общие стримы по дням (XY)
-  const totalDayMap = new Map<string, number>()
-  for (const r of rawByDspDay) {
-    const day = r.date.toISOString().split('T')[0]
-    totalDayMap.set(day, (totalDayMap.get(day) || 0) + r.streams)
   }
 
   const streamsByDay = [...totalDayMap.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, streams]) => ({ date, streams }))
 
-  // 3. Платные vs бесплатные (за всё время)
-  const allForBars = await prisma.streamAnalytics.findMany({
-    where: baseWhere,
-    select: { length: true, source: true, streams: true }
-  })
+  // 3. Платные vs бесплатные + источники — через groupBy
+  const [lengthAgg, sourceAgg] = await Promise.all([
+    prisma.streamAnalytics.groupBy({
+      by: ['length'],
+      where: rangeWhere,
+      _sum: { streams: true },
+    }),
+    prisma.streamAnalytics.groupBy({
+      by: ['source'],
+      where: rangeWhere,
+      _sum: { streams: true },
+      orderBy: { _sum: { streams: 'desc' } },
+    }),
+  ])
 
   let paidStreams = 0
   let freeStreams = 0
-  const sourceMap = new Map<string, number>()
-
-  for (const r of allForBars) {
+  for (const r of lengthAgg) {
     const isPaid = r.length === 'Полный стрим' || r.length.toLowerCase() === 'full'
-    if (isPaid) {
-      paidStreams += r.streams
-    } else {
-      freeStreams += r.streams
-    }
-    sourceMap.set(r.source, (sourceMap.get(r.source) || 0) + r.streams)
+    const count = r._sum.streams ?? 0
+    if (isPaid) paidStreams += count
+    else freeStreams += count
   }
 
   const paidVsFree = [
@@ -202,24 +217,43 @@ export async function getStreamAnalytics(filters: StreamFilters) {
     { name: 'Бесплатные', value: freeStreams },
   ]
 
-  const streamsBySource = [...sourceMap.entries()]
-    .sort(([, a], [, b]) => b - a)
-    .map(([name, value]) => ({ name, value }))
+  const streamsBySource = sourceAgg.map(r => ({
+    name: r.source,
+    value: r._sum.streams ?? 0,
+  }))
 
-  // 5. По трекам (все треки с общим числом прослушиваний) — для горизонтального графика
+  // 5. По трекам (все треки с общим числом прослушиваний + paid/free) — для горизонтальных списков
   const trackAgg = await prisma.streamAnalytics.groupBy({
-    by: ['trackName', 'trackArtist', 'isrc'],
-    where: baseWhere,
+    by: ['trackName', 'trackArtist', 'isrc', 'length'],
+    where: rangeWhere,
     _sum: { streams: true },
   })
-  const streamsByTrack = trackAgg
-    .map((r) => ({
-      trackName: r.trackName,
-      trackArtist: r.trackArtist,
-      isrc: r.isrc,
-      value: r._sum.streams ?? 0,
-    }))
-    .sort((a, b) => b.value - a.value)
+
+  const trackMap = new Map<string, { trackName: string; trackArtist: string; isrc: string; value: number; paid: number; free: number }>()
+
+  for (const r of trackAgg) {
+    const key = r.isrc || r.trackName // Fallback to trackName if isrc missing
+    if (!trackMap.has(key)) {
+      trackMap.set(key, {
+        trackName: r.trackName,
+        trackArtist: r.trackArtist,
+        isrc: r.isrc,
+        value: 0,
+        paid: 0,
+        free: 0
+      })
+    }
+    
+    const track = trackMap.get(key)!
+    const count = r._sum.streams ?? 0
+    track.value += count
+
+    const isPaid = r.length === 'Полный стрим' || r.length.toLowerCase() === 'full'
+    if (isPaid) track.paid += count
+    else track.free += count
+  }
+
+  const streamsByTrack = [...trackMap.values()].sort((a, b) => b.value - a.value)
 
   const totalStreams = streamsByDay.reduce((s, d) => s + d.streams, 0)
 
@@ -237,15 +271,19 @@ export async function getStreamAnalytics(filters: StreamFilters) {
 /**
  * Возвращает список уникальных треков для фильтра-выпадашки.
  */
-export async function getAvailableTracks(artistId?: string) {
-  const where: any = {}
+export async function getAvailableTracks(artistId?: string, opts?: { take?: number; skip?: number }) {
+  const where: Record<string, unknown> = {}
   if (artistId) where.artistId = artistId
+  const take = Math.min(opts?.take ?? 500, 2000)
+  const skip = Math.max(0, opts?.skip ?? 0)
 
   const tracks = await prisma.streamAnalytics.findMany({
     where,
     select: { trackName: true, trackArtist: true, isrc: true },
     distinct: ['isrc'],
     orderBy: { trackName: 'asc' },
+    take,
+    skip,
   })
 
   return tracks.map(t => ({
@@ -258,12 +296,17 @@ export async function getAvailableTracks(artistId?: string) {
 /**
  * Возвращает список уникальных артистов из аналитики (для админского фильтра).
  */
-export async function getAvailableArtists() {
+export async function getAvailableArtists(opts?: { take?: number; skip?: number }) {
+  const take = Math.min(opts?.take ?? 500, 2000)
+  const skip = Math.max(0, opts?.skip ?? 0)
+
   const artists = await prisma.streamAnalytics.findMany({
     select: { trackArtist: true, artistId: true },
     distinct: ['artistId'],
     where: { artistId: { not: null } },
     orderBy: { trackArtist: 'asc' },
+    take,
+    skip,
   })
 
   return artists.map(a => ({

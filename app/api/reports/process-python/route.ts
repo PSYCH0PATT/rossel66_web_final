@@ -3,8 +3,12 @@ import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/server-auth'
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -34,7 +38,13 @@ export async function POST(request: NextRequest) {
     const pythonScript = path.join(process.cwd(), 'lib', 'python-report-processor.py')
     const args = [pythonScript, tempFilePath, quarter, year.toString()]
     
-    const pythonProcess = spawn('py', args)
+    // Предпочитаем Python из .venv (pandas, openpyxl); иначе системный
+    const venvPython = path.join(process.cwd(), '.venv', 'bin', 'python3')
+    const pythonCmd =
+      process.platform === 'win32'
+        ? 'py'
+        : (fs.existsSync(venvPython) ? venvPython : 'python3')
+    const pythonProcess = spawn(pythonCmd, args)
 
     let output = ''
     let errorOutput = ''

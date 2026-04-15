@@ -2,15 +2,15 @@ import { NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
 import * as XLSX from "xlsx"
-import { loadReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
+import { reportFromPrisma } from "@/lib/storage-adapters"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const reportId = params.id
 
-    // Находим отчет по ID в БД
-    const reports = await loadReports()
-    const report = reports.find((r) => r.id === reportId)
+    const raw = await prisma.report.findUnique({ where: { id: reportId } })
+    const report = raw ? reportFromPrisma(raw) : null
 
     if (!report) {
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })

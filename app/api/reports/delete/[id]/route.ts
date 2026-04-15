@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireAdmin } from "@/lib/server-auth"
 import * as fs from "fs"
 import * as path from "path"
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const report = await prisma.report.findUnique({ where: { id: params.id } })
     

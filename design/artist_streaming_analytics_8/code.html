@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Grained Payouts and Balance | ROSSEL</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Syncopate:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981", // Emerald 500
+                        "background-light": "#f3f4f6",
+                        "background-dark": "#020202",
+                        "glass-dark": "rgba(10, 10, 10, 0.7)",
+                        "glass-light": "rgba(255, 255, 255, 0.7)",
+                        "accent-azure": "#0ea5e9", // Sky 500
+                        "accent-emerald": "#10b981", // Emerald 500
+                    },
+                    fontFamily: {
+                        display: ["Syncopate", "sans-serif"],
+                        body: ["Space Grotesk", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #050505;
+        }
+        .font-display {
+            font-family: 'Syncopate', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(10, 10, 10, 0.6);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        .grid-bg {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.15; 
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+        }
+        .card-glass {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+        .report-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .status-badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        .glow-emerald {
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-gray-100 min-h-screen relative overflow-x-hidden transition-colors duration-300">
+<div class="noise-overlay"></div>
+<div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-accent-azure blur-[150px] opacity-[0.06] animate-pulse-slow"></div>
+<div class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-accent-emerald blur-[150px] opacity-[0.06]"></div>
+<div class="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-purple-900 blur-[150px] opacity-[0.04]"></div>
+</div>
+<div class="fixed inset-0 z-0 grid-bg pointer-events-none opacity-30"></div>
+<div class="relative z-10 flex flex-col md:flex-row h-screen overflow-hidden">
+<aside class="w-full md:w-20 lg:w-64 flex-shrink-0 bg-black/60 glass-panel border-r border-white/5 flex flex-col justify-between md:h-full hidden md:flex backdrop-blur-xl">
+<div>
+<div class="h-24 flex items-center justify-center lg:justify-start lg:px-8 border-b border-white/5">
+<span class="material-symbols-outlined text-3xl text-primary lg:mr-3">graphic_eq</span>
+<span class="font-display font-bold text-xl tracking-[0.2em] hidden lg:block text-white">ROSSEL</span>
+</div>
+<nav class="mt-10 px-2 lg:px-4 space-y-1">
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">dashboard</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Overview</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">queue_music</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Playlists</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">library_music</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Releases</span>
+</a>
+<a class="flex items-center p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">analytics</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Analytics</span>
+</a>
+<a class="flex items-center p-3 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="ml-4 hidden lg:block font-medium tracking-wide text-sm">Revenue</span>
+</a>
+</nav>
+</div>
+<div class="p-6 border-t border-white/5">
+<div class="flex items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer">
+<img alt="Artist Profile" class="w-10 h-10 rounded-full object-cover border border-primary/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe2YOdZNN_7s2I0rHIjzRrCxVpC_LqDKpCln1n6UX5v59qwal00v-AC3gI362s7L9_IcuffylcKqqiT5z93zY0BM9EFykg7rl2kz87UgVUgN42WedCfoaQZ4qP4J3tHNVYzs-xuRChOPB6xe1aFtZ6lqZITR6ZBQvtKyM6SczZfFgYQiu_fnit9UvoZtGq2wwpcvvYCRzE792ghu9uUqVUbZSfsjv3XtAS0FYwekzc3ZiFZKVEww0KsNmfmJR43u00Zwz7gPPwS1M"/>
+<div class="ml-3 hidden lg:block overflow-hidden">
+<p class="text-sm font-bold text-white truncate">Alex Chen</p>
+<p class="text-[10px] text-primary uppercase tracking-widest">Pro Artist</p>
+</div>
+</div>
+</div>
+</aside>
+<header class="md:hidden h-16 bg-black/80 glass-panel border-b border-white/10 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-lg">
+<span class="material-symbols-outlined text-primary">graphic_eq</span>
+<span class="font-display font-bold text-lg tracking-widest text-white">ROSSEL</span>
+<button class="text-gray-300">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<main class="flex-1 overflow-y-auto relative scroll-smooth">
+<div class="p-6 md:p-10 max-w-7xl mx-auto pb-24">
+<div class="flex flex-col gap-6 mb-10">
+<div class="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+<span class="hover:text-primary cursor-pointer transition-colors">Dashboard</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Reports &amp; Payouts</span>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+<div>
+<h1 class="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-tight">
+                                FINANCIALS
+                            </h1>
+<p class="text-sm text-gray-400 font-light max-w-md">
+                                Detailed breakdown of your royalty reports and withdrawal history.
+                            </p>
+</div>
+<div class="flex gap-3">
+<button class="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span class="text-xs uppercase tracking-wider">Payment Settings</span>
+</button>
+<button class="bg-primary hover:bg-emerald-400 text-black font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+<span class="material-symbols-outlined text-xl">payments</span>
+<span class="text-xs uppercase tracking-wider">Request Payout</span>
+</button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="card-glass rounded-2xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-white">account_balance</span>
+</div>
+<p class="text-gray-400 text-xs font-mono uppercase tracking-widest mb-2">Total Balance</p>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-bold text-white tracking-tight">$ 12,450.00</span>
+</div>
+<div class="mt-4 flex items-center text-xs text-emerald-400 font-mono">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
+                            +12% from last month
+                        </div>
+</div>
+<div class="card-glass rounded-2xl p-6 relative overflow-hidden group border-primary/20 glow-emerald">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-primary">savings</span>
+</div>
+<p class="text-primary/80 text-xs font-mono uppercase tracking-widest mb-2">Available for Payout</p>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-bold text-white tracking-tight">$ 2,850.50</span>
+</div>
+<div class="mt-4 w-full bg-white/10 rounded-full h-1">
+<div class="bg-primary h-1 rounded-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="card-glass rounded-2xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-white">check_circle</span>
+</div>
+<p class="text-gray-400 text-xs font-mono uppercase tracking-widest mb-2">Total Paid Out</p>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-bold text-white tracking-tight">$ 45,200.00</span>
+</div>
+<div class="mt-4 text-xs text-gray-500 font-mono">
+                            Last payout: Oct 12, 2023
+                        </div>
+</div>
+</div>
+<div class="mb-10 rounded-xl bg-gradient-to-r from-emerald-900/20 to-transparent border border-emerald-500/20 p-4 flex items-start gap-4 backdrop-blur-md relative overflow-hidden">
+<div class="absolute inset-0 bg-primary/5 animate-pulse-slow"></div>
+<span class="material-symbols-outlined text-primary relative z-10">info</span>
+<div class="relative z-10">
+<h4 class="text-white font-bold text-sm mb-1">Minimum payout threshold not reached</h4>
+<p class="text-gray-400 text-xs leading-relaxed">
+                            Your available balance is currently <strong>$2,850.50</strong>. The minimum threshold for automated payouts is <strong>$3,000.00</strong>. You can still request a manual payout with a processing fee, or wait until the next royalty cycle.
+                        </p>
+</div>
+</div>
+<div class="space-y-12">
+<div>
+<div class="flex items-center gap-4 mb-6">
+<h2 class="text-2xl font-display font-bold text-white">2023</h2>
+<div class="h-px bg-white/10 flex-1"></div>
+</div>
+<div class="card-glass rounded-2xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-xs text-gray-500 font-mono uppercase tracking-wider border-b border-white/5 bg-white/[0.02]">
+<th class="px-6 py-4 font-medium">Report Period</th>
+<th class="px-6 py-4 font-medium">Date Issued</th>
+<th class="px-6 py-4 font-medium">Status</th>
+<th class="px-6 py-4 font-medium text-right">Amount</th>
+<th class="px-6 py-4 font-medium text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5 text-sm">
+<tr class="report-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+</div>
+<span class="text-white font-medium">Q3 2023 Royalties</span>
+</div>
+</td>
+<td class="px-6 py-4 text-gray-400 font-mono">Oct 15, 2023</td>
+<td class="px-6 py-4">
+<span class="status-badge px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">verified</span> Signed
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right text-white font-mono font-bold">$ 3,240.50</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white transition-colors bg-primary/10 hover:bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</td>
+</tr>
+<tr class="report-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+</div>
+<span class="text-white font-medium">Q2 2023 Royalties</span>
+</div>
+</td>
+<td class="px-6 py-4 text-gray-400 font-mono">Jul 14, 2023</td>
+<td class="px-6 py-4">
+<span class="status-badge px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">verified</span> Signed
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right text-white font-mono font-bold">$ 2,890.12</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white transition-colors bg-primary/10 hover:bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</td>
+</tr>
+<tr class="report-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+</div>
+<span class="text-white font-medium">Q1 2023 Royalties</span>
+</div>
+</td>
+<td class="px-6 py-4 text-gray-400 font-mono">Apr 12, 2023</td>
+<td class="px-6 py-4">
+<span class="status-badge px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">verified</span> Signed
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right text-white font-mono font-bold">$ 3,105.00</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:text-white transition-colors bg-primary/10 hover:bg-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-4 mb-6">
+<h2 class="text-2xl font-display font-bold text-gray-500">2022</h2>
+<div class="h-px bg-white/5 flex-1"></div>
+</div>
+<div class="card-glass rounded-2xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<tbody class="divide-y divide-white/5 text-sm">
+<tr class="report-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined text-sm">history</span>
+</div>
+<span class="text-gray-300 font-medium">Q4 2022 Royalties</span>
+</div>
+</td>
+<td class="px-6 py-4 text-gray-500 font-mono">Jan 15, 2023</td>
+<td class="px-6 py-4">
+<span class="bg-gray-800 text-gray-400 border border-gray-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">lock_clock</span> Archived
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right text-gray-300 font-mono font-bold">$ 2,980.50</td>
+<td class="px-6 py-4 text-right">
+<button class="text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</td>
+</tr>
+<tr class="report-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined text-sm">history</span>
+</div>
+<span class="text-gray-300 font-medium">Q3 2022 Royalties</span>
+</div>
+</td>
+<td class="px-6 py-4 text-gray-500 font-mono">Oct 14, 2022</td>
+<td class="px-6 py-4">
+<span class="bg-gray-800 text-gray-400 border border-gray-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">lock_clock</span> Archived
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right text-gray-300 font-mono font-bold">$ 2,450.00</td>
+<td class="px-6 py-4 text-right">
+<button class="text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

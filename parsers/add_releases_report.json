@@ -1,11 +1,57 @@
 {
-  "timestamp": "2026-01-30T23:53:03.529183",
+  "timestamp": "2026-04-15T23:05:02.900512",
   "summary": {
-    "total_new": 0,
-    "added": 0,
-    "updated": 0,
+    "total_new": 9,
+    "added": 9,
+    "updated": 13,
     "failed": 0
   },
-  "added_releases": [],
+  "added_releases": [
+    {
+      "id": "release_1776287102886_f925b244",
+      "title": "FALLEN SKY",
+      "artist": "W.1ce3"
+    },
+    {
+      "id": "release_1776287102886_0809b4c3",
+      "title": "I Want to Be Honest",
+      "artist": "5ocean"
+    },
+    {
+      "id": "release_1776287102886_8380830f",
+      "title": "#Newicons",
+      "artist": "kvvitz"
+    },
+    {
+      "id": "release_1776287102886_d6d0685a",
+      "title": "Лекало",
+      "artist": "stemstyl"
+    },
+    {
+      "id": "release_1776287102886_bd9db711",
+      "title": "Another Life",
+      "artist": "5ocean"
+    },
+    {
+      "id": "release_1776287102886_7d2ce5e9",
+      "title": "Pompeii VS",
+      "artist": "nime"
+    },
+    {
+      "id": "release_1776287102886_dd62478f",
+      "title": "Все уставшие лошадки вернутся домой, Pt. 1 (2026 Remastered)",
+      "artist": "usi"
+    },
+    {
+      "id": "release_1776287102886_77c94cf0",
+      "title": "Поверил",
+      "artist": "PLANBABY, weekplug"
+    },
+    {
+      "id": "release_1776287102886_e3d44e88",
+      "title": "蒸気 V A P O R 3026",
+      "artist": "whitechemicals"
+    }
+  ],
   "failed_releases": []
 }

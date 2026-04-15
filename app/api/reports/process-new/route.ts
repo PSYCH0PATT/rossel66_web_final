@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { processReportFile } from "@/lib/report-processor"
 import { prisma } from "@/lib/prisma"
+import { requireAdmin } from "@/lib/server-auth"
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
@@ -38,6 +42,17 @@ export async function POST(request: Request) {
 
     // Сохраняем отчёты в БД
     for (const report of result.reports) {
+      // Пропускаем дубликат (artistId + quarter + year)
+      if (report.artistId) {
+        const existing = await prisma.report.findFirst({
+          where: { artistId: report.artistId, quarter, year }
+        })
+        if (existing) {
+          console.warn(`Дубликат отчёта пропущен: ${report.artistName} ${quarter} ${year}`)
+          continue
+        }
+      }
+
       await prisma.report.create({
         data: {
           id: report.id,

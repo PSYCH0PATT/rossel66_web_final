@@ -1,81 +1,95 @@
-import { NextResponse } from 'next/server';
-import { loadReleases, loadUsers } from '@/lib/storage';
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { releaseFromPrisma } from "@/lib/storage-adapters"
 
 export async function GET() {
   try {
-    const releases = await loadReleases();
-    const users = await loadUsers();
-    
-    // Получаем дату 2 недели назад
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    
-    // Фильтруем релизы за последние 2 недели
-    const recentReleases = releases.filter(release => {
-      const releaseDate = new Date(release.releaseDate);
-      return releaseDate >= twoWeeksAgo;
-    });
-    
-    // Получаем уникальных артистов из недавних релизов
-    const artistIds = [...new Set(recentReleases.map(release => release.artistId))];
-    
-    // Находим информацию об артистах
-    const recentArtists = artistIds.map(artistId => {
-      // Пробуем разные форматы ID
-      let user = users.find(u => u.id === artistId);
-      if (!user) {
-        user = users.find(u => u.id === artistId.replace('user_', ''));
+    const twoWeeksAgo = new Date()
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+    const minDate = twoWeeksAgo.toISOString().split("T")[0]
+
+    const rawReleases = await prisma.release.findMany({
+      where: { releaseDate: { gte: minDate } },
+      orderBy: { createdAt: "desc" },
+    })
+    const recentReleases = rawReleases.map(releaseFromPrisma)
+
+    const artistIds = [...new Set(recentReleases.map((r) => r.artistId).filter(Boolean))] as string[]
+    if (artistIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        artists: [],
+        totalArtists: 0,
+        totalReleases: recentReleases.length,
+        dateRange: {
+          from: minDate,
+          to: new Date().toISOString().split("T")[0],
+        },
+      })
+    }
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: artistIds } },
+    })
+    const userById = new Map(users.map((u) => [u.id, u]))
+
+    const resolveUser = (artistId: string) => {
+      let u = userById.get(artistId)
+      if (u) return u
+      u = userById.get(artistId.replace("user_", ""))
+      if (u) return u
+      for (const [id, usr] of userById) {
+        if (`user_${id}` === artistId) return usr
+        if (id.replace("artist", "user_") === artistId) return usr
+        if (id.replace("user_", "artist") === artistId) return usr
       }
-      if (!user) {
-        user = users.find(u => `user_${u.id}` === artistId);
-      }
-      if (!user) {
-        user = users.find(u => u.id.replace('artist', 'user_') === artistId);
-      }
-      if (!user) {
-        user = users.find(u => u.id.replace('user_', 'artist') === artistId);
-      }
-      
-      if (user) {
-        // Подсчитываем количество релизов за последние 2 недели
-        const artistReleases = recentReleases.filter(r => r.artistId === artistId);
-        
+      return undefined
+    }
+
+    const recentArtists = artistIds
+      .map((artistId) => {
+        const user = resolveUser(artistId)
+        if (!user) return null
+        const artistReleases = recentReleases.filter((r) => r.artistId === artistId)
         return {
           id: user.id,
           name: user.name,
-          username: user.username || user.name.toLowerCase().replace(/\s+/g, ''),
+          username: user.username || user.name.toLowerCase().replace(/\s+/g, ""),
           releasesCount: artistReleases.length,
-          releases: artistReleases.map(r => ({
+          releases: artistReleases.map((r) => ({
             title: r.title,
-            releaseDate: r.releaseDate
-          }))
-        };
-      }
-      
-      return null;
-    }).filter(Boolean);
-    
-    // Сортируем по количеству релизов (больше релизов = выше приоритет)
-    recentArtists.sort((a, b) => b.releasesCount - a.releasesCount);
-    
+            releaseDate: r.releaseDate,
+          })),
+        }
+      })
+      .filter(Boolean) as Array<{
+      id: string
+      name: string
+      username: string
+      releasesCount: number
+      releases: { title: string; releaseDate: string }[]
+    }>
+
+    recentArtists.sort((a, b) => b.releasesCount - a.releasesCount)
+
     return NextResponse.json({
       success: true,
       artists: recentArtists,
       totalArtists: recentArtists.length,
       totalReleases: recentReleases.length,
       dateRange: {
-        from: twoWeeksAgo.toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
-      }
-    });
-    
+        from: minDate,
+        to: new Date().toISOString().split("T")[0],
+      },
+    })
   } catch (error) {
-    console.error('Ошибка получения недавних артистов:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Ошибка получения недавних артистов'
-    }, { status: 500 });
+    console.error("Ошибка получения недавних артистов:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Ошибка получения недавних артистов",
+      },
+      { status: 500 }
+    )
   }
 }
-
-

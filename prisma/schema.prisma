@@ -50,6 +50,7 @@ model Release {
 
   @@index([artistId])
   @@index([koalaId])
+  @@index([artistId, createdAt])
 }
 
 model Report {
@@ -73,6 +74,9 @@ model Report {
 
   @@index([artistId])
   @@index([quarter])
+  @@index([artistId, isRegistered])
+  @@index([quarter, isRegistered])
+  @@index([artistId, quarter])
 }
 
 model Activity {
@@ -106,6 +110,7 @@ model Playlist {
   @@unique([playlistUrl, playlistName, artistName])
   @@index([artistId])
   @@index([platform])
+  @@index([artistId, platform])
 }
 
 model StreamAnalytics {
@@ -137,4 +142,6 @@ model StreamAnalytics {
   @@index([dsp])
   @@index([isMonthlyAggregate])
   @@index([year, month])
+  @@index([artistId, date])
+  @@index([artistId, isMonthlyAggregate, year, month])
 }

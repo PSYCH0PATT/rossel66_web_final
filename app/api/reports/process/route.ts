@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server"
 import { processExcelFile } from "@/lib/report-generator"
+import { findArtistByName } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
+import { requireAdmin } from "@/lib/server-auth"
 import * as fs from "fs"
 import * as path from "path"
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
@@ -65,9 +70,32 @@ export async function POST(request: Request) {
 
     // Сохраняем файлы и создаём записи в БД
     const savedReports = []
+    let counter = 0
     for (let i = 0; i < result.reports.length; i++) {
       const report = result.reports[i]
       const reportFile = result.reportFiles[i]
+
+      // report.artistId здесь содержит ИМЯ артиста из файла артистов — резолвим реальный ID
+      const artistNameFromReport: string = report.artistId as string
+      const artistUser = await findArtistByName(artistNameFromReport)
+      const resolvedArtistId = artistUser?.id || null
+      const resolvedArtistName = artistUser?.name || artistNameFromReport
+
+      // Проверяем дубликат: (artistId/name + quarter + year)
+      const duplicateKey = resolvedArtistId
+        ? { artistId: resolvedArtistId, quarter, year: report.year }
+        : null
+      if (duplicateKey) {
+        const existing = await prisma.report.findFirst({ where: duplicateKey })
+        if (existing) {
+          console.warn(`Дубликат отчёта пропущен: ${resolvedArtistName} ${quarter} ${report.year}`)
+          continue
+        }
+      }
+
+      // Уникальный ID без коллизии
+      counter++
+      const uniqueId = `r${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 7)}`
 
       // Сохраняем файл на диск
       const filePath = path.join(uploadsDir, report.fileName)
@@ -78,13 +106,13 @@ export async function POST(request: Request) {
       // Относительный путь для БД
       const relativeFilePath = `uploads/reports/${quarter}/${report.fileName}`
 
-      // Создаём запись в БД
+      // Создаём запись в БД с правильным artistId
       await prisma.report.create({
         data: {
-          id: report.id,
-          artistId: report.artistId || null,
-          artistName: report.artistId, // artistId содержит имя артиста
-          quarter: quarter,
+          id: uniqueId,
+          artistId: resolvedArtistId,
+          artistName: resolvedArtistName,
+          quarter,
           year: report.year,
           fileName: report.fileName,
           filePath: relativeFilePath,
@@ -92,7 +120,7 @@ export async function POST(request: Request) {
           status: report.status || "processed",
           totalPlays: report.totalPlays || 0,
           totalAmount: report.totalAmount || 0,
-          isRegistered: report.isRegistered ?? true,
+          isRegistered: !!resolvedArtistId,
           isSigned: false,
           isPaid: false,
           processed: true,
@@ -100,8 +128,10 @@ export async function POST(request: Request) {
       })
 
       savedReports.push({
-        id: report.id,
-        artistName: report.artistId,
+        id: uniqueId,
+        artistName: resolvedArtistName,
+        artistId: resolvedArtistId,
+        isRegistered: !!resolvedArtistId,
         fileName: report.fileName,
         totalPlays: report.totalPlays,
         totalAmount: report.totalAmount,

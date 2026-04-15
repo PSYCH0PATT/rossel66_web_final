@@ -22,7 +22,7 @@ export default function AdminArtistReportsPage({ params }: { params: { id: strin
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Отчеты: {artist.name}</h1>
-        <ArtistReports reports={reports} artistName={artist.name} />
+        <ArtistReports username={artist.username} reports={reports} artistName={artist.name} />
       </div>
     </Layout>
   )

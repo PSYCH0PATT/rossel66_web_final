@@ -2,17 +2,24 @@
 
 import { useState, useEffect } from 'react'
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Music, Trash2, RefreshCw, Search, Users, Clock, Settings, Cookie, Save, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react'
-import Image from 'next/image'
+import Image from "next/image"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Link from "next/link"
 
 interface Artist {
   id: string
@@ -71,8 +78,7 @@ export default function PlaylistsPage() {
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'added_at' | 'parsed_at'>('added_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [windowWidth, setWindowWidth] = useState(0)
-  
+
   // Состояния для управления cookies
   const [cookiesInput, setCookiesInput] = useState('')
   const [isUpdatingCookies, setIsUpdatingCookies] = useState(false)
@@ -92,6 +98,11 @@ export default function PlaylistsPage() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<{id: number, name: string, type: 'vk' | 'bandlink'} | null>(null)
   const [selectedArtistForAssign, setSelectedArtistForAssign] = useState<string>('')
   const [isAssigning, setIsAssigning] = useState(false)
+  const [actionBanner, setActionBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: "vk" | "bandlink" } | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [sftpConfirmOpen, setSftpConfirmOpen] = useState(false)
+  const [clearResultsOpen, setClearResultsOpen] = useState(false)
 
   useEffect(() => {
     loadArtists()
@@ -101,22 +112,6 @@ export default function PlaylistsPage() {
     checkCookiesNotification()
     loadParsingHistory()
     loadVkCookiesStatus()
-  }, [])
-
-  // Отслеживание ширины окна
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth)
-    }
-    
-    // Установить начальную ширину
-    handleResize()
-    
-    // Добавить слушатель события
-    window.addEventListener('resize', handleResize)
-    
-    // Очистка при размонтировании
-    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   const loadArtists = async () => {
@@ -222,12 +217,7 @@ export default function PlaylistsPage() {
     }
   }
   
-  // Функция для ручного запуска SFTP синхронизации
   const runManualParser = async () => {
-    if (!confirm('Запустить синхронизацию плейлистов с SFTP сервером? Это может занять некоторое время.')) {
-      return
-    }
-    
     setIsSftpSyncing(true)
     setParsingOutput('🔄 Запуск синхронизации SFTP...\n')
     
@@ -264,26 +254,26 @@ export default function PlaylistsPage() {
     }
   }
 
-  const clearResults = async () => {
-    if (confirm('Очистить все результаты парсинга из базы данных?')) {
-      try {
-        const response = await fetch('/api/parsers/clear', {
-          method: 'DELETE'
-        })
-        
-        const data = await response.json()
-        
-        if (data.success) {
-          setVkResults([])
-          setBandlinkResults([])
-          setParsingOutput(prev => prev + '\n✅ Все результаты парсинга очищены\n')
-        } else {
-          alert('Ошибка очистки: ' + data.error)
-        }
-      } catch (error) {
-        console.error('Ошибка очистки результатов:', error)
-        alert('Ошибка очистки результатов')
+  const clearResultsConfirmed = async () => {
+    setClearResultsOpen(false)
+    try {
+      const response = await fetch("/api/parsers/clear", {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setVkResults([])
+        setBandlinkResults([])
+        setParsingOutput((prev) => prev + "\n[OK] Все результаты парсинга очищены\n")
+        setActionBanner({ type: "ok", text: "Результаты парсинга очищены" })
+      } else {
+        setActionBanner({ type: "err", text: "Ошибка очистки: " + (data.error || "") })
       }
+    } catch (error) {
+      console.error("Ошибка очистки результатов:", error)
+      setActionBanner({ type: "err", text: "Ошибка очистки результатов" })
     }
   }
 
@@ -444,7 +434,7 @@ export default function PlaylistsPage() {
 
   const runVKParser = async () => {
     if (selectedArtists.length === 0) {
-      alert('Выберите артистов для парсинга')
+      setActionBanner({ type: "err", text: "Выберите артистов для парсинга" })
       return
     }
 
@@ -487,7 +477,7 @@ export default function PlaylistsPage() {
 
   const runBandlinkParser = async () => {
     if (selectedArtists.length === 0) {
-      alert('Выберите артистов для парсинга')
+      setActionBanner({ type: "err", text: "Выберите артистов для парсинга" })
       return
     }
 
@@ -585,44 +575,32 @@ export default function PlaylistsPage() {
     return Array.from(artistsSet).sort()
   }
 
-  // Определение количества колонок на основе ширины
-  const getColumnsCount = (width: number) => {
-    if (width < 640) return 2   // < sm
-    if (width < 768) return 3   // sm
-    if (width < 1024) return 4  // md
-    if (width < 1280) return 4  // lg (изменено с 5 на 4)
-    if (width < 1536) return 5  // xl (изменено с 6 на 5)
-    if (width < 1920) return 6  // до 1920px - 6 колонок
-    return 8 // >= 1920px - 8 колонок
-  }
-
-  const currentColumns = getColumnsCount(windowWidth)
-
-  const deletePlaylist = async (id: number, type: 'vk' | 'bandlink') => {
-    if (!confirm('Вы уверены, что хотите удалить этот плейлист?')) {
-      return
-    }
-
+  const performDeletePlaylist = async () => {
+    if (!deleteTarget) return
+    setDeleteBusy(true)
     try {
-      const response = await fetch('/api/parsers/delete-playlist', {
-        method: 'DELETE',
+      const response = await fetch("/api/parsers/delete-playlist", {
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, type }),
+        body: JSON.stringify({ id: deleteTarget.id, type: deleteTarget.type }),
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
-        // Обновляем список
+        setDeleteTarget(null)
         loadResults()
+        setActionBanner({ type: "ok", text: "Плейлист удалён" })
       } else {
-        alert('Ошибка удаления: ' + data.error)
+        setActionBanner({ type: "err", text: "Ошибка удаления: " + (data.error || "") })
       }
     } catch (error) {
-      console.error('Ошибка удаления плейлиста:', error)
-      alert('Ошибка удаления плейлиста')
+      console.error("Ошибка удаления плейлиста:", error)
+      setActionBanner({ type: "err", text: "Ошибка удаления плейлиста" })
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -634,35 +612,35 @@ export default function PlaylistsPage() {
 
   const assignPlaylistToArtist = async () => {
     if (!selectedPlaylist || !selectedArtistForAssign) {
-      alert('Выберите артиста')
+      setActionBanner({ type: "err", text: "Выберите артиста" })
       return
     }
 
     setIsAssigning(true)
     try {
-      const response = await fetch('/api/playlists/assign', {
-        method: 'POST',
+      const response = await fetch("/api/playlists/assign", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          playlistId: selectedPlaylist.id, 
-          artistId: selectedArtistForAssign 
+        body: JSON.stringify({
+          playlistId: selectedPlaylist.id,
+          artistId: selectedArtistForAssign,
         }),
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
-        alert('Плейлист успешно привязан к артисту!')
+        setActionBanner({ type: "ok", text: "Плейлист привязан к артисту" })
         setAssignModalOpen(false)
         loadResults()
       } else {
-        alert('Ошибка привязки: ' + data.error)
+        setActionBanner({ type: "err", text: "Ошибка привязки: " + (data.error || "") })
       }
     } catch (error) {
-      console.error('Ошибка привязки плейлиста:', error)
-      alert('Ошибка привязки плейлиста')
+      console.error("Ошибка привязки плейлиста:", error)
+      setActionBanner({ type: "err", text: "Ошибка привязки плейлиста" })
     } finally {
       setIsAssigning(false)
     }
@@ -679,256 +657,291 @@ export default function PlaylistsPage() {
     return { bg: '#6b7280', color: '#FFFFFF' }
   }
 
-  const PlaylistCard = ({ playlist, type }: { playlist: VKPlaylist | BandlinkPlaylist, type: 'vk' | 'bandlink' }) => {
+  const inputCls =
+    "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+
+  const PlaylistCard = ({ playlist, type }: { playlist: VKPlaylist | BandlinkPlaylist; type: "vk" | "bandlink" }) => {
     const tracksCount = (playlist as any).tracks_count || ((playlist as any).multiple_tracks ? 2 : 1)
-    const hasMultipleTracks = tracksCount > 1
-    const isVK = type === 'vk'
+    const isVK = type === "vk"
     const vkPlaylist = playlist as VKPlaylist
     const bandlinkPlaylist = playlist as BandlinkPlaylist
-    const platformName = isVK ? (vkPlaylist.platform || 'VK Музыка') : bandlinkPlaylist.platform
-    const badgeStyle = getPlatformBadgeStyle(platformName)
-    
-    // Получаем позицию трека в плейлисте (для отображения "X место")
+    const platformName = isVK ? vkPlaylist.platform || "VK Музыка" : bandlinkPlaylist.platform
+    const dotColor = getPlatformBadgeStyle(platformName).bg
+    const playlistUrl = isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url
+    const coverUrl = isVK ? vkPlaylist.playlist_cover_url || "/placeholder.svg" : bandlinkPlaylist.playlist_cover_url || "/placeholder.svg"
+    const title = isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name
+    const artistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name
+
     const getTrackPosition = () => {
       if (isVK) {
         if (vkPlaylist.track_position != null && !isNaN(vkPlaylist.track_position)) {
-          return vkPlaylist.track_position;
+          return vkPlaylist.track_position
         }
         if (vkPlaylist.tracks_info && vkPlaylist.tracks_info.length > 0) {
           const positions = vkPlaylist.tracks_info
             .map((t: any) => t.position)
-            .filter((p: number) => p != null && !isNaN(p) && isFinite(p));
-          if (positions.length > 0) {
-            return Math.min(...positions);
-          }
+            .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
+          if (positions.length > 0) return Math.min(...positions)
         }
       } else {
         if (bandlinkPlaylist.track_position != null && !isNaN(bandlinkPlaylist.track_position)) {
-          return bandlinkPlaylist.track_position;
+          return bandlinkPlaylist.track_position
         }
         if (bandlinkPlaylist.tracks_info && bandlinkPlaylist.tracks_info.length > 0) {
           const positions = bandlinkPlaylist.tracks_info
             .map((t: any) => t.position)
-            .filter((p: number) => p != null && !isNaN(p) && isFinite(p));
-          if (positions.length > 0) {
-            return Math.min(...positions);
-          }
+            .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
+          if (positions.length > 0) return Math.min(...positions)
         }
       }
-      return null;
-    };
-    
-    const trackPosition = getTrackPosition();
-    
-    // Форматируем дату
+      return null
+    }
+
+    const trackPosition = getTrackPosition()
+
     const formatDate = (dateString: string | undefined) => {
-      if (!dateString) return '';
+      if (!dateString) return ""
       try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return new Date(dateString).toLocaleDateString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
       } catch {
-        return dateString;
+        return dateString
       }
-    };
-    
-    const displayDate = isVK 
+    }
+
+    const displayDate = isVK
       ? formatDate(vkPlaylist.added_at || vkPlaylist.parsed_at)
       : formatDate(bandlinkPlaylist.added_at || bandlinkPlaylist.parsed_at)
 
+    const tracksInfo = isVK ? vkPlaylist.tracks_info || [] : bandlinkPlaylist.tracks_info || []
+    const artistReleases = tracksInfo
+      .map((t: any) => t.title || t.releaseName)
+      .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index)
+    const releaseNames = isVK
+      ? vkPlaylist.track_names || artistReleases.join(", ")
+      : bandlinkPlaylist.track_names || artistReleases.join(", ")
+
+    const trackLine =
+      tracksCount > 0
+        ? `${tracksCount} ${tracksCount === 1 ? "трек" : tracksCount < 5 ? "трека" : "треков"}`
+        : "Треки"
+    const metaLine = [displayDate, trackPosition != null && !isNaN(trackPosition) ? `${trackPosition} место` : null]
+      .filter(Boolean)
+      .join(" · ")
+
     return (
-      <Card className="group hover:shadow-lg transition-all duration-200">
-        <CardContent className="p-3">
-          <div className="flex flex-col space-y-2">
-            {/* Обложка - кликабельная */}
-            <a
-              href={isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted block cursor-pointer"
-            >
-              <Image
-                src={isVK ? (vkPlaylist.playlist_cover_url || "/placeholder.svg") : (bandlinkPlaylist.playlist_cover_url || "/placeholder.svg")}
-                alt={isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-              {/* Кнопка привязки к артисту */}
+      <div className="playlist-card group relative aspect-square rounded-2xl overflow-hidden card-glass">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={coverUrl}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          />
+        </div>
+        <a
+          href={playlistUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-[5]"
+          aria-label="Открыть плейлист"
+        />
+
+        <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10 pointer-events-none">
+          <div className="flex justify-between items-start gap-2 pointer-events-auto">
+            <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1 max-w-[70%]">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+              <span className="truncate">{platformName}</span>
+            </span>
+            <div className="flex gap-1 shrink-0">
               <button
+                type="button"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  openAssignModal(playlist.id, isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name, type)
+                  openAssignModal(playlist.id, title, type)
                 }}
-                className="absolute top-2 left-2 p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                className="p-1.5 rounded-full bg-primary/90 hover:bg-primary text-black transition-colors"
                 title="Привязать к артисту"
               >
-                <UserPlus className="w-3 h-3" />
+                <span className="material-symbols-outlined text-lg leading-none">person_add</span>
               </button>
-              {/* Кнопка удаления */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  deletePlaylist(playlist.id, type)
+                  setDeleteTarget({ id: playlist.id, type })
                 }}
-                className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition-colors"
                 title="Удалить плейлист"
               >
-                <Trash2 className="w-3 h-3" />
+                <span className="material-symbols-outlined text-lg leading-none">delete</span>
               </button>
-            </a>
-
-            {/* Информация о плейлисте */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                {isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name}
-              </h3>
-              
-              <Badge 
-                className="text-xs font-medium border-0"
-                style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.color }}
-              >
-                {platformName}
-              </Badge>
-
-              <div className="text-xs text-muted-foreground line-clamp-1 font-medium">
-                {isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name}
-                {trackPosition !== null && trackPosition !== undefined && !isNaN(trackPosition) && (
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    {trackPosition} место
-                  </Badge>
-                )}
-              </div>
-
-              {/* Названия релизов - только для этого артиста */}
-              {(() => {
-                const tracksInfo = isVK ? (vkPlaylist.tracks_info || []) : (bandlinkPlaylist.tracks_info || []);
-                
-                // Названия треков для блока «Релизы» (title = название трека)
-                const artistReleases = tracksInfo
-                  .map((t: any) => t.title || t.releaseName)
-                  .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index);
-                
-                const releaseNames = isVK 
-                  ? (vkPlaylist.track_names || artistReleases.join(', '))
-                  : (bandlinkPlaylist.track_names || artistReleases.join(', '));
-                
-                if (releaseNames && releaseNames.trim()) {
-                  return (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Релизы:</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {releaseNames}
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              
-              {/* Дата */}
-              {displayDate && (
-                <div className="text-xs text-muted-foreground">
-                  {displayDate}
-                </div>
-              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
-    )
-  }
 
-  return (
-    <Layout role="admin">
-      <div className="space-y-6">
-        {/* Заголовок */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Плейлисты</h1>
-            <p className="text-muted-foreground">
-              Управление плейлистами из VK, МТС Музыки и Яндекс Музыки
+          <div className="self-center transform transition-transform group-hover:scale-110 duration-300 pointer-events-auto">
+            <a
+              href={playlistUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative z-10 w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-colors group/play"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="material-symbols-outlined text-3xl text-white group-hover/play:text-black ml-1">play_arrow</span>
+            </a>
+          </div>
+
+          <div className="pointer-events-none">
+            <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{title}</h3>
+            <p className="text-xs text-gray-400 font-mono line-clamp-1">{artistName}</p>
+            <p className="text-xs text-gray-500 font-mono mt-1 line-clamp-1">
+              {trackLine} {metaLine ? `· ${metaLine}` : ""}
             </p>
-            </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Music className="w-3 h-3" />
-              {vkResults.length + bandlinkResults.length} плейлистов
-            </Badge>
+            {releaseNames && releaseNames.trim() ? (
+              <p className="text-[10px] text-gray-500 font-mono mt-2 line-clamp-2 leading-relaxed">Релизы: {releaseNames}</p>
+            ) : null}
           </div>
         </div>
 
-        <Tabs defaultValue="playlists" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="playlists" className="flex items-center gap-2">
-              <Music className="w-4 h-4" />
+        <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
+          <h3 className="font-bold text-white text-lg truncate">{title}</h3>
+          <p className="text-xs text-gray-400 font-mono mt-1 truncate">
+            {platformName} · {artistName}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const totalPlaylistsCount =
+    vkPlaylists.length +
+    yandexPlaylists.length +
+    mtsPlaylists.length +
+    sberPlaylists.length +
+    okPlaylists.length
+
+  return (
+    <Layout role="admin" requiredRole="admin">
+      <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-10 pb-24 space-y-8">
+        {actionBanner && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
+              actionBanner.type === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : "border-red-500/30 bg-red-500/10 text-red-200"
+            }`}
+            role="status"
+          >
+            <span className="material-symbols-outlined flex-shrink-0">
+              {actionBanner.type === "ok" ? "check_circle" : "error"}
+            </span>
+            {actionBanner.text}
+            <button
+              type="button"
+              onClick={() => setActionBanner(null)}
+              className="ml-auto text-gray-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              aria-label="Закрыть"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+        )}
+        <div className="space-y-4 mb-2">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
+              Dashboard
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Плейлисты</span>
+          </div>
+          <div className="border-b border-white/5 pb-8">
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight mb-2">
+              Плейлисты
+            </h1>
+            <p className="text-sm text-gray-400 font-light max-w-lg">
+              Управление плейлистами из VK, МТС Музыки, Яндекс Музыки и других площадок (SFTP).
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="playlists" className="space-y-8">
+          <TabsList className="flex flex-wrap gap-2 h-auto p-0 bg-transparent w-full justify-start">
+            <TabsTrigger
+              value="playlists"
+              className="rounded-lg border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:bg-primary/10 inline-flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">queue_music</span>
               По платформам
             </TabsTrigger>
-            <TabsTrigger value="by-artists" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
+            <TabsTrigger
+              value="by-artists"
+              className="rounded-lg border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:bg-primary/10 inline-flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">groups</span>
               По артистам
             </TabsTrigger>
-            <TabsTrigger value="parsing" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
+            <TabsTrigger
+              value="parsing"
+              className="rounded-lg border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:bg-primary/10 inline-flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">settings</span>
               Парсинг (резерв)
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="playlists" className="space-y-6">
-            {/* Фильтр и сортировка */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span className="font-medium">Фильтр:</span>
-                  </div>
-                  <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Все артисты" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все артисты</SelectItem>
-                      {getUniqueArtists().map(artist => (
-                        <SelectItem key={artist} value={artist}>{artist}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="flex items-center gap-2 ml-4">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span className="font-medium">Сортировка:</span>
-                  </div>
-                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'added_at' | 'parsed_at')}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="added_at">По дате добавления</SelectItem>
-                      <SelectItem value="parsed_at">По дате парсинга</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">Сначала новые</SelectItem>
-                      <SelectItem value="asc">Сначала старые</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="text-sm text-muted-foreground ml-auto">
-                    Показано: {vkPlaylists.length + yandexPlaylists.length + mtsPlaylists.length + sberPlaylists.length + okPlaylists.length} плейлистов
-                  </div>
+          <TabsContent value="playlists" className="space-y-8">
+            <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="material-symbols-outlined text-primary text-xl">filter_alt</span>
+                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Фильтр</span>
+                <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
+                  <SelectTrigger className={`w-64 ${inputCls} h-10`}>
+                    <SelectValue placeholder="Все артисты" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все артисты</SelectItem>
+                    {getUniqueArtists().map((artist) => (
+                      <SelectItem key={artist} value={artist}>
+                        {artist}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <span className="material-symbols-outlined text-accent-azure text-xl">sort</span>
+                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Сортировка</span>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as "added_at" | "parsed_at")}>
+                  <SelectTrigger className={`w-48 ${inputCls} h-10`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="added_at">По дате добавления</SelectItem>
+                    <SelectItem value="parsed_at">По дате парсинга</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
+                  <SelectTrigger className={`w-40 ${inputCls} h-10`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Сначала новые</SelectItem>
+                    <SelectItem value="asc">Сначала старые</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="text-xs text-gray-500 font-mono ml-auto">
+                  Показано: <span className="text-white font-semibold">{totalPlaylistsCount}</span> плейлистов
                 </div>
-            </CardContent>
-          </Card>
+              </div>
+            </div>
 
             {/* VK Музыка */}
             {vkPlaylists.length > 0 && (
@@ -950,10 +963,7 @@ export default function PlaylistsPage() {
                   </Badge>
                       </div>
 
-                <div 
-                  className="grid gap-3" 
-                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {vkPlaylists.map((playlist) => (
                     <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" />
                   ))}
@@ -981,10 +991,7 @@ export default function PlaylistsPage() {
                   </Badge>
                         </div>
 
-                <div 
-                  className="grid gap-3" 
-                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {yandexPlaylists.map((playlist) => (
                     <PlaylistCard key={`yandex-${playlist.id}`} playlist={playlist} type="bandlink" />
                   ))}
@@ -1012,10 +1019,7 @@ export default function PlaylistsPage() {
                   </Badge>
                 </div>
                 
-                <div 
-                  className="grid gap-3" 
-                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {mtsPlaylists.map((playlist) => (
                     <PlaylistCard key={`mts-${playlist.id}`} playlist={playlist} type="bandlink" />
                   ))}
@@ -1042,10 +1046,7 @@ export default function PlaylistsPage() {
                     {sberPlaylists.length}
                   </Badge>
                 </div>
-                <div 
-                  className="grid gap-3" 
-                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {sberPlaylists.map((playlist) => (
                     <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" />
                   ))}
@@ -1073,10 +1074,7 @@ export default function PlaylistsPage() {
                     {okPlaylists.length}
                   </Badge>
                 </div>
-                <div 
-                  className="grid gap-3" 
-                  style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {okPlaylists.map((playlist) => (
                     <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" />
                   ))}
@@ -1085,35 +1083,30 @@ export default function PlaylistsPage() {
             )}
 
             {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && sberPlaylists.length === 0 && okPlaylists.length === 0 && (
-              <Card className="border-2 border-dashed border-border/50">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="bg-muted rounded-full p-6 mb-6">
-                    <Music className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Нет плейлистов</h3>
-                  <p className="text-muted-foreground mb-6 text-center max-w-md">
-                    {selectedArtistFilter === 'all' 
-                      ? 'Запустите парсинг для получения плейлистов'
-                      : `Нет плейлистов для артиста "${selectedArtistFilter}"`
-                    }
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      const tab = document.querySelector('[value="parsing"]') as HTMLElement
-                      tab?.click()
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Перейти к парсингу
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="card-glass rounded-2xl border border-dashed border-white/15 flex flex-col items-center justify-center py-16 px-4">
+                <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">queue_music</span>
+                <h3 className="text-xl font-bold text-white mb-2">Нет плейлистов</h3>
+                <p className="text-gray-400 mb-6 text-center max-w-md text-sm">
+                  {selectedArtistFilter === "all"
+                    ? "Запустите парсинг для получения плейлистов"
+                    : `Нет плейлистов для артиста «${selectedArtistFilter}»`}
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const tab = document.querySelector('[value="parsing"]') as HTMLElement
+                    tab?.click()
+                  }}
+                  className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary inline-flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">settings</span>
+                  Перейти к парсингу
+                </Button>
+              </div>
             )}
           </TabsContent>
 
-          <TabsContent value="by-artists" className="space-y-6">
+          <TabsContent value="by-artists" className="space-y-8">
             {/* Группировка плейлистов по артистам. VK только из vkResults; Bandlink — всё кроме VK (чтобы не дублировать). */}
             {getUniqueArtists().map(artistName => {
               const artist = artists.find(a => a.name === artistName)
@@ -1128,16 +1121,17 @@ export default function PlaylistsPage() {
               return (
                 <div key={artistName} className="space-y-4">
                   {/* Заголовок артиста */}
-                  <div className="flex items-center gap-4 border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
-                    <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center text-2xl font-bold text-primary">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 card-glass rounded-2xl border border-white/5 p-4 md:p-6 hover:border-primary/20 transition-colors">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center text-2xl font-display font-bold text-primary shrink-0">
                       {artist?.name?.charAt(0) || artistName.charAt(0)}
                     </div>
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold">{artistName}</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {totalPlaylists} {totalPlaylists === 1 ? 'плейлист' : totalPlaylists < 5 ? 'плейлиста' : 'плейлистов'}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-xl font-bold text-white tracking-wide">{artistName}</h2>
+                      <p className="text-sm text-gray-500 font-mono mt-1">
+                        {totalPlaylists}{" "}
+                        {totalPlaylists === 1 ? "плейлист" : totalPlaylists < 5 ? "плейлиста" : "плейлистов"}
                       </p>
-                      </div>
+                    </div>
                     <div className="flex gap-2">
                       {artistVKPlaylists.length > 0 && (
                         <Badge style={{ backgroundColor: "#0077FF", color: "#FFFFFF" }}>
@@ -1168,10 +1162,7 @@ export default function PlaylistsPage() {
                   </div>
 
                   {/* Плейлисты артиста */}
-                  <div 
-                    className="grid gap-3" 
-                    style={{ gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))` }}
-                  >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {artistVKPlaylists.map((playlist) => (
                       <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" />
                     ))}
@@ -1185,98 +1176,87 @@ export default function PlaylistsPage() {
 
             {/* Пустое состояние */}
             {getUniqueArtists().length === 0 && (
-              <Card className="border-2 border-dashed border-border/50">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="bg-muted rounded-full p-6 mb-6">
-                    <Users className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Нет артистов</h3>
-                  <p className="text-muted-foreground mb-6 text-center max-w-md">
-                    Запустите парсинг для получения плейлистов
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      const tab = document.querySelector('[value="parsing"]') as HTMLElement
-                      tab?.click()
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Перейти к парсингу
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="card-glass rounded-2xl border border-dashed border-white/15 flex flex-col items-center justify-center py-16 px-4">
+                <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">groups</span>
+                <h3 className="text-xl font-bold text-white mb-2">Нет артистов</h3>
+                <p className="text-gray-400 mb-6 text-center max-w-md text-sm">Запустите парсинг для получения плейлистов</p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const tab = document.querySelector('[value="parsing"]') as HTMLElement
+                    tab?.click()
+                  }}
+                  className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary inline-flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">settings</span>
+                  Перейти к парсингу
+                </Button>
+              </div>
             )}
           </TabsContent>
 
-          <TabsContent value="parsing" className="space-y-6">
-            {/* Информация о SFTP синхронизации */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="w-5 h-5" />
-                  Синхронизация SFTP
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    По умолчанию плейлисты синхронизируются с SFTP сервером автоматически в 16:00 и 00:30 ежедневно.
-                    Система подключается к SFTP серверу, скачивает CSV файлы и парсит их автоматически.
-                  </AlertDescription>
-                </Alert>
-                <Button 
-                  onClick={runManualParser}
+          <TabsContent value="parsing" className="space-y-8">
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-4">
+                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
+                <span className="material-symbols-outlined text-accent-azure text-2xl">sync</span>
+                Синхронизация SFTP
+              </h2>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-400">
+                  <span className="material-symbols-outlined text-primary align-middle mr-2 text-lg">info</span>
+                  По умолчанию плейлисты синхронизируются с SFTP сервером автоматически в 16:00 и 00:30 ежедневно. Система
+                  подключается к SFTP серверу, скачивает CSV файлы и парсит их автоматически.
+                </div>
+                <Button
+                  onClick={() => setSftpConfirmOpen(true)}
                   disabled={isSftpSyncing}
-                  className="w-full"
+                  className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold inline-flex items-center justify-center gap-2"
                 >
                   {isSftpSyncing ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
                       Синхронизация...
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 mr-2" />
+                      <span className="material-symbols-outlined">play_arrow</span>
                       Запустить синхронизацию SFTP
                     </>
                   )}
                 </Button>
-                
-                {/* Вывод парсинга */}
                 {parsingOutput && (
-                  <div className="mt-4 p-4 bg-muted rounded-lg border">
-                    <div className="text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto">
+                  <div className="mt-4 p-4 rounded-xl border border-white/10 bg-black/20">
+                    <div className="text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto text-gray-300">
                       {parsingOutput}
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
             
-            {/* Существующий контент парсинга */}
-            {/* Панель управления парсингом */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-6">
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="space-y-6">
                   {/* Первая строка: Выбор артистов и Парсинг */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Поиск и выбор артистов */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Выбор артистов</h3>
+                <span className="material-symbols-outlined text-primary text-xl">groups</span>
+                <h3 className="text-lg font-bold text-white tracking-wide">Выбор артистов</h3>
               </div>
               
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
+                  search
+                </span>
                 <Input
                   placeholder="Поиск артистов..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className={`pl-10 ${inputCls}`}
                 />
               </div>
 
@@ -1286,9 +1266,9 @@ export default function PlaylistsPage() {
                   size="sm" 
                   onClick={selectAllRecentArtists}
                   disabled={recentArtists.length === 0}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 border border-white/10 text-gray-400 hover:text-primary"
                 >
-                  <Clock className="w-3 h-3" />
+                  <span className="material-symbols-outlined text-base">schedule</span>
                   Недавние ({recentArtists.length})
                 </Button>
                 <Button 
@@ -1296,12 +1276,13 @@ export default function PlaylistsPage() {
                   size="sm" 
                   onClick={clearSelection}
                   disabled={selectedArtists.length === 0}
+                  className="border border-white/10 text-gray-400 hover:text-primary"
                 >
                   Очистить
                 </Button>
               </div>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto bg-background/50 rounded-lg p-3 border">
+              <div className="space-y-2 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 {filteredArtists.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     {searchTerm ? 'Артисты не найдены' : 'Загрузка артистов...'}
@@ -1332,33 +1313,33 @@ export default function PlaylistsPage() {
                 )}
               </div>
 
-              <div className="text-sm text-muted-foreground bg-muted/30 rounded p-2">
-                Выбрано: <span className="font-semibold text-foreground">{selectedArtists.length}</span> артистов
+              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
+                Выбрано: <span className="font-semibold text-white">{selectedArtists.length}</span> артистов
               </div>
             </div>
 
             {/* Запуск парсинга */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Парсинг</h3>
+                <span className="material-symbols-outlined text-primary text-xl">sync</span>
+                <h3 className="text-lg font-bold text-white tracking-wide">Парсинг</h3>
               </div>
 
               <div className="space-y-3">
                 <Button 
                   onClick={runVKParser}
                   disabled={isParsingVK || selectedArtists.length === 0}
-                  className="w-full h-12 text-sm font-medium"
+                  className="w-full h-12 text-sm font-semibold rounded-lg bg-primary text-black hover:bg-emerald-400"
                   size="lg"
                 >
                   {isParsingVK ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
                       Парсинг VK...
                     </>
                   ) : (
                     <>
-                      <Music className="w-4 h-4 mr-2" />
+                      <span className="material-symbols-outlined mr-2">queue_music</span>
                       Парсить VK
                     </>
                   )}
@@ -1368,29 +1349,29 @@ export default function PlaylistsPage() {
                   onClick={runBandlinkParser}
                   disabled={isParsingBandlink || selectedArtists.length === 0}
                   variant="secondary"
-                  className="w-full h-12 text-sm font-medium"
+                  className="w-full h-12 text-sm font-medium border border-white/10 bg-white/5 text-white hover:bg-white/10"
                   size="lg"
                 >
                   {isParsingBandlink ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
                       Парсинг Bandlink...
                     </>
                   ) : (
                     <>
-                      <Search className="w-4 h-4 mr-2" />
+                      <span className="material-symbols-outlined mr-2">travel_explore</span>
                       Парсить Bandlink
                     </>
                   )}
                 </Button>
 
                 <Button 
-                  onClick={clearResults}
+                  onClick={() => setClearResultsOpen(true)}
                   variant="destructive"
                   size="sm"
-                  className="w-full"
+                  className="w-full border-destructive/50"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <span className="material-symbols-outlined mr-2 text-lg">delete</span>
                   Очистить результаты
                 </Button>
               </div>
@@ -1402,38 +1383,39 @@ export default function PlaylistsPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-primary" />
-                        <h3 className="font-semibold">История парсинга</h3>
+                        <span className="material-symbols-outlined text-primary text-xl">history</span>
+                        <h3 className="text-lg font-bold text-white tracking-wide">История парсинга</h3>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={loadParsingHistory}
                         disabled={isLoadingHistory}
+                        className="text-gray-400 hover:text-primary"
                       >
-                        <RefreshCw className={`w-3 h-3 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                        <span className={`material-symbols-outlined text-lg ${isLoadingHistory ? "animate-spin" : ""}`}>sync</span>
                       </Button>
                     </div>
 
-              <div className="bg-background/50 rounded-lg p-3 border min-h-[200px] max-h-[400px] overflow-y-auto">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 min-h-[200px] max-h-[400px] overflow-y-auto">
                 {isLoadingHistory ? (
-                  <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <div className="flex items-center justify-center h-full py-12">
+                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
                   </div>
                 ) : parsingHistory.length > 0 ? (
                   <div className="space-y-3">
                     {parsingHistory.map((item, index) => (
-                      <div key={index} className="border rounded-lg p-3 space-y-2 bg-background/30">
-                        <div className="flex items-center gap-2">
+                      <div key={index} className="border border-white/10 rounded-xl p-3 space-y-2 bg-white/[0.02]">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={item.parser_type === 'bandlink' ? 'default' : 'secondary'} className="text-xs">
                             {item.parser_type === 'bandlink' ? 'Bandlink' : 'VK'}
                           </Badge>
                           {item.status === 'completed' ? (
-                            <CheckCircle className="w-3 h-3 text-green-500" />
+                            <span className="material-symbols-outlined text-lg text-primary">check_circle</span>
                           ) : item.status === 'failed' ? (
-                            <XCircle className="w-3 h-3 text-red-500" />
+                            <span className="material-symbols-outlined text-lg text-destructive">cancel</span>
                           ) : (
-                            <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+                            <span className="material-symbols-outlined text-lg text-accent-azure animate-spin">progress_activity</span>
                           )}
                           <span className="text-xs font-medium">
                             {item.status === 'completed' ? 'Успешно' : item.status === 'failed' ? 'Ошибка' : 'Выполняется'}
@@ -1456,8 +1438,8 @@ export default function PlaylistsPage() {
                         {item.errors && (
                           <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs">
                             <div className="flex items-center gap-1 mb-1">
-                              <AlertCircle className="w-3 h-3 text-red-500" />
-                              <span className="font-medium text-red-500">Ошибки:</span>
+                              <span className="material-symbols-outlined text-sm text-destructive">error</span>
+                              <span className="font-medium text-destructive">Ошибки:</span>
                             </div>
                             <pre className="text-red-400 whitespace-pre-wrap text-xs">{item.errors}</pre>
                           </div>
@@ -1466,11 +1448,11 @@ export default function PlaylistsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="flex items-center justify-center h-full text-gray-500 py-12">
                     <div className="text-center">
-                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">История парсинга пуста</p>
-                      <p className="text-xs mt-1">Запустите парсинг, чтобы увидеть историю</p>
+                      <span className="material-symbols-outlined text-4xl mx-auto mb-2 opacity-40 block">schedule</span>
+                      <p className="text-sm font-mono">История парсинга пуста</p>
+                      <p className="text-xs mt-1 text-gray-600">Запустите парсинг, чтобы увидеть историю</p>
                     </div>
                   </div>
                 )}
@@ -1482,27 +1464,33 @@ export default function PlaylistsPage() {
             {/* Управление Cookies Bandlink */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Cookie className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Cookies Bandlink</h3>
+                <span className="material-symbols-outlined text-primary text-xl">cookie</span>
+                <h3 className="text-lg font-bold text-white tracking-wide">Cookies Bandlink</h3>
               </div>
               
               <Textarea
                 placeholder={`Вставьте cookies для Bandlink в формате строки (каждая строка: name=value):\n_yascZbPBpGejBI8wyUctjcuMZQX8ThOZfHYB5DN8GWR3zkzmGIuIN9V4/Lu9t62ssa13vA==\n_ym_d1768914125\n...`}
                 value={cookiesInput}
                 onChange={(e) => setCookiesInput(e.target.value)}
-                className="min-h-[120px] font-mono text-xs"
+                className="min-h-[120px] font-mono text-xs rounded-xl border border-white/10 bg-white/5 text-gray-200 placeholder:text-gray-600"
               />
               
               <Button
                 onClick={updateCookies}
                 disabled={isUpdatingCookies || !cookiesInput.trim()}
                 size="sm"
-                className="w-full"
+                className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold"
               >
                 {isUpdatingCookies ? (
-                  <><RefreshCw className="w-3 h-3 mr-2 animate-spin" />Обновление...</>
+                  <>
+                    <span className="material-symbols-outlined mr-2 animate-spin text-lg">progress_activity</span>
+                    Обновление...
+                  </>
                 ) : (
-                  <><Save className="w-3 h-3 mr-2" />Обновить Cookies</>
+                  <>
+                    <span className="material-symbols-outlined mr-2 text-lg">save</span>
+                    Обновить Cookies
+                  </>
                 )}
               </Button>
               
@@ -1512,36 +1500,42 @@ export default function PlaylistsPage() {
                 </Alert>
               )}
               
-              <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
+              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
                 <p>Последнее обновление:</p>
-                <p className="font-mono">{lastCookiesUpdate || 'Не обновлялись'}</p>
+                <p className="text-gray-300">{lastCookiesUpdate || "Не обновлялись"}</p>
               </div>
             </div>
 
             {/* Управление Cookies VK */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Cookie className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Cookies VK</h3>
+                <span className="material-symbols-outlined text-primary text-xl">cookie</span>
+                <h3 className="text-lg font-bold text-white tracking-wide">Cookies VK</h3>
               </div>
               
               <Textarea
                 placeholder={`Вставьте cookies для VK в формате строки (каждая строка: name=value):\nadblock1\ndomain_sidw3y9a5vc6Kz6rEXNpmFZX%3A1768866028820\nhttokenjzx5WH7NpAcA8fnDeklUB6xDpwlgX4bAGyi5jYNGT3JsF-q-K7ACAWN3IXZXjmJgIBzPumtgTSgGud6x72Oy5EhMpk9kajtz_W3WaSDbQwXUjzV9HLoIEj5KZG8v5hbFK1k\n...`}
                 value={vkCookiesInput}
                 onChange={(e) => setVkCookiesInput(e.target.value)}
-                className="min-h-[120px] font-mono text-xs"
+                className="min-h-[120px] font-mono text-xs rounded-xl border border-white/10 bg-white/5 text-gray-200 placeholder:text-gray-600"
               />
               
               <Button
                 onClick={updateVkCookies}
                 disabled={isUpdatingVkCookies || !vkCookiesInput.trim()}
                 size="sm"
-                className="w-full"
+                className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold"
               >
                 {isUpdatingVkCookies ? (
-                  <><RefreshCw className="w-3 h-3 mr-2 animate-spin" />Обновление...</>
+                  <>
+                    <span className="material-symbols-outlined mr-2 animate-spin text-lg">progress_activity</span>
+                    Обновление...
+                  </>
                 ) : (
-                  <><Save className="w-3 h-3 mr-2" />Обновить Cookies</>
+                  <>
+                    <span className="material-symbols-outlined mr-2 text-lg">save</span>
+                    Обновить Cookies
+                  </>
                 )}
               </Button>
               
@@ -1551,18 +1545,29 @@ export default function PlaylistsPage() {
                 </Alert>
               )}
               
-              <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
+              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
                 <p>Последнее обновление:</p>
-                <p className="font-mono">{lastVkCookiesUpdate || 'Не обновлялись'}</p>
+                <p className="text-gray-300">{lastVkCookiesUpdate || "Не обновлялись"}</p>
               </div>
             </div>
                   </div>
                 </div>
-            </CardContent>
-          </Card>
+            </div>
     </TabsContent>
 
     </Tabs>
+
+        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary inline-block animate-pulse" />
+            System Operational
+          </div>
+          <div className="text-gray-400 uppercase tracking-widest">
+            TOTAL FOUND:{" "}
+            <span className="text-white font-bold">{vkResults.length + bandlinkResults.length}</span> PLAYLISTS
+          </div>
+          <span className="sm:text-right">ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
+        </footer>
       </div>
 
       {/* Модальное окно для привязки плейлиста к артисту */}
@@ -1580,7 +1585,7 @@ export default function PlaylistsPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Выберите артиста:</label>
                 <Select value={selectedArtistForAssign} onValueChange={setSelectedArtistForAssign}>
-                  <SelectTrigger>
+                  <SelectTrigger className={`${inputCls} h-10`}>
                     <SelectValue placeholder="Выберите артиста" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1609,12 +1614,12 @@ export default function PlaylistsPage() {
                 >
                   {isAssigning ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
                       Привязка...
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-4 h-4 mr-2" />
+                      <span className="material-symbols-outlined mr-2">person_add</span>
                       Привязать
                     </>
                   )}
@@ -1624,6 +1629,78 @@ export default function PlaylistsPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={sftpConfirmOpen} onOpenChange={setSftpConfirmOpen}>
+        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase">Синхронизация SFTP</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Запустить синхронизацию плейлистов с SFTP? Операция может занять несколько минут.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setSftpConfirmOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              className="bg-primary text-black hover:bg-primary/90"
+              onClick={() => {
+                setSftpConfirmOpen(false)
+                void runManualParser()
+              }}
+            >
+              Запустить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={clearResultsOpen} onOpenChange={setClearResultsOpen}>
+        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase text-red-400">Очистка</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Очистить все результаты парсинга в базе? Это действие необратимо.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setClearResultsOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+              onClick={() => void clearResultsConfirmed()}
+            >
+              Очистить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase">Удалить плейлист</DialogTitle>
+            <DialogDescription className="text-gray-400">Удалить эту запись из базы?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              className="bg-primary text-black hover:bg-primary/90"
+              onClick={() => void performDeletePlaylist()}
+              disabled={deleteBusy}
+            >
+              {deleteBusy ? "Удаление..." : "Удалить"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   )
 }

@@ -1,26 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { FileText, Download, Eye, CheckCircle, XCircle, DollarSign } from "lucide-react"
+import Link from "next/link"
 import type { Report } from "@/lib/data"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 
 interface ArtistReportsProps {
+  username: string
   reports: Report[]
   artistName: string
 }
 
-export default function ArtistReports({ reports, artistName }: ArtistReportsProps) {
+export default function ArtistReports({ username, reports, artistName }: ArtistReportsProps) {
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
 
-  // Получаем только уникальные годы из реальных отчетов
   const years = [...new Set(reports.map((report) => report.year))].sort((a, b) => b - a)
 
-  // Группируем отчеты по кварталам для текущего года
   const reportsByQuarter = reports
     .filter((report) => report.year === currentYear)
     .reduce<Record<string, Report[]>>((acc, report) => {
@@ -31,133 +28,165 @@ export default function ArtistReports({ reports, artistName }: ArtistReportsProp
       return acc
     }, {})
 
-  // Сортируем кварталы
   const sortedQuarters = Object.keys(reportsByQuarter).sort((a, b) => {
     const quarterOrder: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 }
     return quarterOrder[a] - quarterOrder[b]
   })
 
-  // Обработчик скачивания отчета
   const handleDownloadReport = (reportId: string) => {
     window.open(`/api/reports/download/${reportId}`, "_blank")
   }
 
-  // Обработчик предпросмотра отчета
-  const handlePreviewReport = (reportId: string) => {
-    setPreviewReportId(reportId)
-  }
-
-  // Закрытие диалога предпросмотра
   const handleClosePreview = () => {
     setPreviewReportId(null)
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="p-0 md:p-0 max-w-full pb-24">
+      <div className="flex flex-col gap-6 mb-8">
+        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+          <Link
+            href={`/dashboard/artist/${username}/dashboard`}
+            className="hover:text-[#10b981] cursor-pointer transition-colors"
+          >
+            Dashboard
+          </Link>
+          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
+            chevron_right
+          </span>
+          <span className="text-white">Отчёты</span>
+        </div>
+
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+          <div>
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ОТЧЁТЫ</h1>
+            <p className="text-sm text-gray-400 font-light max-w-md">
+              Квартальные отчёты, предпросмотр и скачивание PDF.
+            </p>
+          </div>
+          {years.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {years.map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  onClick={() => setCurrentYear(year)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    year === currentYear
+                      ? "bg-primary/20 border-primary/30 text-primary"
+                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {years.length > 0 ? (
         <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Отчеты</h2>
-            {years.length > 1 && (
-              <div className="flex space-x-2">
-                {years.map((year) => (
-                  <Button
-                    key={year}
-                    variant={year === currentYear ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentYear(year)}
-                  >
-                    {year}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-
           {sortedQuarters.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               {sortedQuarters.map((quarter) => (
-                <div key={quarter} className="space-y-3">
-                  <h3 className="text-lg font-medium">
+                <div key={quarter} className="space-y-4">
+                  <h2 className="text-sm font-mono uppercase tracking-widest text-gray-500 border-b border-white/5 pb-2">
                     {quarter} {currentYear}
-                  </h3>
-                  {reportsByQuarter[quarter].map((report) => (
-                    <Card key={report.id} className="p-4 bg-transparent border-slate-600/30 hover:border-slate-500/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-slate-700/30">
-                          <FileText className="h-5 w-5 text-green-400" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">
-                            Отчет за {quarter} {report.year}
-                          </h4>
-                          <p className="text-sm text-gray-400">
-                            {report.generatedDate
-                              ? `Сгенерирован: ${new Date(report.generatedDate).toLocaleDateString()}`
-                              : `Загружен: ${new Date(report.uploadDate).toLocaleDateString()}`}
-                          </p>
-                          <div className="flex items-center gap-4 mt-2">
-                            <div className="flex items-center gap-1">
-                              {(report as any).isSigned ? (
-                                <CheckCircle className="h-4 w-4 text-green-400" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-400" />
-                              )}
-                              <span className="text-xs text-slate-400">
-                                {(report as any).isSigned ? "Подписан" : "Не подписан"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-4 w-4 text-yellow-400" />
-                              <span className="text-xs text-slate-400">
-                                {Math.round((report as any).totalAmount || 0).toLocaleString()} ₽
-                              </span>
-                            </div>
+                  </h2>
+                  <div className="space-y-3">
+                    {reportsByQuarter[quarter].map((report) => (
+                      <div
+                        key={report.id}
+                        className="card-glass rounded-2xl border border-white/5 p-4 flex items-center gap-4 hover:border-white/10 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+                          <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-black flex items-center justify-center">
+                            <span className="material-symbols-outlined text-xl text-emerald-400">description</span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-slate-400 hover:text-white"
-                            onClick={() => handlePreviewReport(report.id)}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-bold text-sm truncate">
+                            Отчёт за {quarter} {report.year}
+                          </h4>
+                          <p className="text-xs text-gray-400 mt-1 font-mono tabular-nums">
+                            {(report as any).generatedDate
+                              ? `Сгенерирован: ${new Date((report as any).generatedDate).toLocaleDateString("ru-RU")}`
+                              : report.uploadDate
+                                ? `Загружен: ${new Date(report.uploadDate).toLocaleDateString("ru-RU")}`
+                                : "—"}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] font-mono uppercase tracking-wider">
+                            <span className={`inline-flex items-center gap-1 ${(report as any).isSigned ? "text-emerald-400" : "text-red-400"}`}>
+                              <span className="material-symbols-outlined text-sm">
+                                {(report as any).isSigned ? "verified" : "cancel"}
+                              </span>
+                              {(report as any).isSigned ? "Подписан" : "Не подписан"}
+                            </span>
+                            <span className="text-yellow-400/90 tabular-nums">
+                              {Math.round((report as any).totalAmount || 0).toLocaleString("ru-RU")} ₽
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewReportId(report.id)}
+                            className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            aria-label="Предпросмотр"
                             title="Предпросмотр"
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-slate-400 hover:text-white"
+                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleDownloadReport(report.id)}
+                            className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            aria-label="Скачать"
                             title="Скачать"
                           >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                            <span className="material-symbols-outlined text-[20px]">download</span>
+                          </button>
                         </div>
                       </div>
-                    </Card>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">Нет отчетов за {currentYear} год</div>
+            <div className="text-center py-12 text-gray-500 font-mono text-sm uppercase tracking-wider mb-12">
+              Нет отчётов за {currentYear} год
+            </div>
           )}
         </>
       ) : (
-        <div className="text-center py-8 text-gray-400">Отчеты для {artistName} пока не сгенерированы</div>
+        <div className="flex flex-col items-center justify-center py-16 card-glass rounded-2xl border border-white/5 mb-12">
+          <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">folder_off</span>
+          <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">
+            Отчёты для {artistName} пока не сгенерированы
+          </p>
+        </div>
       )}
 
-      {/* Диалог предпросмотра отчета */}
-      <Dialog open={previewReportId !== null} onOpenChange={handleClosePreview}>
-        <DialogContent className="max-w-4xl">
+      <div className="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
+        <div className="text-gray-500 font-mono">
+          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
+          System Operational
+        </div>
+        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
+      </div>
+      </div>
+
+      <Dialog open={previewReportId !== null} onOpenChange={(open) => !open && handleClosePreview()}>
+        <DialogContent className="max-w-4xl bg-[#0f0f0f] border border-white/10 text-white sm:rounded-xl">
           <DialogHeader>
-            <DialogTitle>Предпросмотр отчета</DialogTitle>
+            <DialogTitle className="font-display text-lg tracking-wide text-white">Предпросмотр отчёта</DialogTitle>
           </DialogHeader>
           {previewReportId && <ReportPreview reportId={previewReportId} />}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

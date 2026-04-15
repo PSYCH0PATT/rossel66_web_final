@@ -2,13 +2,20 @@
 
 import { useState } from "react"
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { User, Check, AlertCircle, Loader2, ArrowLeft, Edit3, X, Plus } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 
 export default function BulkAddArtistsPage() {
   const router = useRouter()
@@ -42,15 +49,15 @@ export default function BulkAddArtistsPage() {
     "wvlaik",
   ])
   const [editText, setEditText] = useState("")
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [newArtistName, setNewArtistName] = useState("")
 
-  // Функция для генерации случайного 4-значного числа
   const generateRandomDigits = () => {
     return Math.floor(1000 + Math.random() * 9000).toString()
   }
 
-  // Функции для редактирования списка
   const startEditing = () => {
-    setEditText(artistNames.join('\n'))
+    setEditText(artistNames.join("\n"))
     setIsEditing(true)
   }
 
@@ -61,68 +68,60 @@ export default function BulkAddArtistsPage() {
 
   const saveEditing = () => {
     const newNames = editText
-      .split('\n')
-      .map(name => name.trim())
-      .filter(name => name.length > 0)
-    
+      .split("\n")
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0)
+
     setArtistNames(newNames)
     setIsEditing(false)
     setEditText("")
   }
 
   const removeArtist = (index: number) => {
-    const newNames = artistNames.filter((_, i) => i !== index)
-    setArtistNames(newNames)
+    setArtistNames(artistNames.filter((_, i) => i !== index))
   }
 
-  const addNewArtist = () => {
-    const newName = prompt("Введите имя артиста:")
-    if (newName && newName.trim()) {
-      setArtistNames([...artistNames, newName.trim()])
-    }
+  const confirmAddArtist = () => {
+    const trimmed = newArtistName.trim()
+    if (!trimmed) return
+    setArtistNames([...artistNames, trimmed])
+    setNewArtistName("")
+    setAddDialogOpen(false)
   }
 
-  // Функция для добавления всех артистов
   const addAllArtists = async () => {
     setIsAdding(true)
     setError("")
     setAddedArtists([])
 
     try {
-      // Получаем существующих пользователей через API
-      const usersResponse = await fetch('/api/users')
-      const usersData = await usersResponse.json()
-      const existingUsers = usersData.success ? usersData.users : []
+      const existingUsers = await fetchAllUsersFromApi()
 
-      const addedArtistsInfo = []
+      const addedArtistsInfo: Array<{ name: string; password: string }> = []
       let successCount = 0
       let errorCount = 0
 
       for (const name of artistNames) {
         try {
-          // Генерируем пароль (никнейм + 4 случайных цифры)
           const randomDigits = generateRandomDigits()
           const password = `${name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")}${randomDigits}`
 
-          // Создаем username (используем никнейм, заменяя пробелы и специальные символы)
           const username = name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")
 
-          // Проверяем, существует ли уже пользователь с таким именем
           const existingUser = existingUsers.some(
-            (user: any) => user.username.toLowerCase() === username.toLowerCase()
+            (user: { username: string }) => user.username.toLowerCase() === username.toLowerCase(),
           )
 
           if (!existingUser) {
-            // Создаем артиста через API
-            const response = await fetch('/api/artists', {
-              method: 'POST',
+            const response = await fetch("/api/artists", {
+              method: "POST",
               headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                username: username,
-                password: password,
-                name: name,
+                username,
+                password,
+                name,
                 email: undefined,
                 avatarUrl: undefined,
                 vkMusicUrl: undefined,
@@ -136,26 +135,19 @@ export default function BulkAddArtistsPage() {
             if (result.success) {
               addedArtistsInfo.push({ name, password })
               successCount++
-              console.log(`✅ Артист ${name} успешно создан`)
             } else {
-              console.error(`❌ Ошибка создания артиста ${name}:`, result.error)
               errorCount++
             }
-          } else {
-            console.log(`⚠️ Артист ${name} уже существует, пропускаем`)
           }
 
-          // Небольшая задержка между запросами
           await new Promise((resolve) => setTimeout(resolve, 100))
-        } catch (artistError) {
-          console.error(`❌ Ошибка при создании артиста ${name}:`, artistError)
+        } catch {
           errorCount++
         }
       }
 
-      // Обновляем состояние
       setAddedArtists(addedArtistsInfo)
-      
+
       if (successCount > 0) {
         setSuccess(true)
         if (errorCount > 0) {
@@ -166,9 +158,7 @@ export default function BulkAddArtistsPage() {
       } else {
         setError("Все артисты уже существуют в системе")
       }
-
-    } catch (err) {
-      console.error('Общая ошибка при добавлении артистов:', err)
+    } catch {
       setError("Произошла ошибка при добавлении артистов")
     } finally {
       setIsAdding(false)
@@ -178,185 +168,251 @@ export default function BulkAddArtistsPage() {
   return (
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link
-              href="/dashboard/admin/artists"
-              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Назад к списку артистов</span>
+        <div className="flex flex-col gap-6 mb-6">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
+              Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-white">Массовое добавление артистов</h1>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
+              Артисты
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Массовое добавление</span>
           </div>
-          
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <User className="h-6 w-6 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
+            <div className="min-w-0">
+              <Link
+                href="/dashboard/admin/artists"
+                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                К списку
+              </Link>
+              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
+                Массовое добавление
+              </h1>
+              <p className="text-sm text-gray-400 font-light mt-2">Создание нескольких артистов по списку имён</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-2xl text-primary">groups</span>
+            </div>
           </div>
         </div>
 
         {error && (
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
+            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
+            {error}
+          </div>
         )}
 
         {success && (
-          <Alert className="bg-emerald-500/20 border-emerald-500/50 text-white">
-            <Check className="h-4 w-4 text-emerald-400" />
-            <AlertDescription>Артисты успешно добавлены!</AlertDescription>
-          </Alert>
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
+            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
+            Артисты успешно добавлены!
+          </div>
         )}
 
-        <Card className="bg-transparent border-slate-600/40 text-white rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5 text-emerald-400" />
-              Добавление списка артистов
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">Будут добавлены следующие артисты (всего {artistNames.length}):</p>
-                <div className="flex items-center gap-2">
-                  {!isEditing && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={addNewArtist}
-                        className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Добавить
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={startEditing}
-                        className="border-slate-500/50 text-slate-300 hover:bg-slate-500/20"
-                      >
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Редактировать
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {isEditing ? (
-                <div className="space-y-3">
-                  <Textarea
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    placeholder="Введите имена артистов, каждое с новой строки..."
-                    className="min-h-60 bg-transparent border-slate-600/30 text-white resize-none"
-                    rows={15}
-                  />
-                  <div className="flex items-center gap-2 justify-end">
+        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+            <span className="w-1.5 h-6 bg-primary rounded-full" />
+            Список артистов
+          </h2>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <p className="text-sm text-gray-400">
+                Будут добавлены следующие артисты (всего{" "}
+                <span className="font-mono text-primary [font-variant-numeric:tabular-nums]">{artistNames.length}</span>
+                ):
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {!isEditing && (
+                  <>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={cancelEditing}
-                      className="border-slate-500/50 text-slate-300 hover:bg-slate-500/20"
+                      type="button"
+                      onClick={() => setAddDialogOpen(true)}
+                      className="rounded-lg border-primary/40 text-primary hover:bg-primary/10"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Отмена
+                      <span className="material-symbols-outlined text-base mr-1">add</span>
+                      Добавить
                     </Button>
                     <Button
+                      variant="outline"
                       size="sm"
-                      onClick={saveEditing}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                      type="button"
+                      onClick={startEditing}
+                      className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
                     >
-                      <Check className="h-4 w-4 mr-1" />
-                      Сохранить
+                      <span className="material-symbols-outlined text-base mr-1">edit</span>
+                      Редактировать
                     </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="max-h-60 overflow-y-auto p-4 bg-transparent border border-slate-600/20 rounded-xl hover:border-slate-500/40 transition-colors">
-                  <ul className="space-y-1">
-                    {artistNames.map((name, index) => (
-                      <li key={index} className="flex items-center justify-between text-sm group">
-                        <span>{name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeArtist(index)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="p-4 bg-transparent border border-slate-600/20 rounded-xl hover:border-slate-500/40 transition-colors">
-                <h3 className="text-sm font-medium mb-2">Примечания:</h3>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Для каждого артиста будет создан пароль в формате "никнейм + 4 случайных цифры"</li>
-                  <li>Логин будет создан на основе никнейма (без пробелов и специальных символов)</li>
-                  <li>Профили будут созданы без релизов и других данных</li>
-                </ul>
-              </div>
-
-              {addedArtists.length > 0 && (
-                <div className="p-4 bg-emerald/10 border border-emerald/30 rounded-xl">
-                  <h3 className="text-sm font-medium mb-2 text-emerald">Созданные учетные данные:</h3>
-                  <div className="max-h-60 overflow-y-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left border-b border-gray-700">
-                          <th className="pb-2">Артист</th>
-                          <th className="pb-2">Пароль</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {addedArtists.map((artist, index) => (
-                          <tr key={index} className="border-b border-gray-800">
-                            <td className="py-2">{artist.name}</td>
-                            <td className="py-2 font-mono">{artist.password}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/dashboard/admin/artists")}
-                  className="border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white transition-colors"
-                  disabled={isAdding}
-                >
-                  Назад к списку артистов
-                </Button>
-                <Button
-                  onClick={addAllArtists}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-transparent hover:border-emerald-300 transition-all duration-200"
-                  disabled={isAdding}
-                >
-                  {isAdding ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Добавление...
-                    </>
-                  ) : (
-                    "Добавить всех артистов"
-                  )}
-                </Button>
+                  </>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {isEditing ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  placeholder="Введите имена артистов, каждое с новой строки..."
+                  className="min-h-60 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-gray-500 resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  rows={15}
+                  spellCheck={false}
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={cancelEditing}
+                    className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
+                  >
+                    <span className="material-symbols-outlined text-base mr-1">close</span>
+                    Отмена
+                  </Button>
+                  <Button size="sm" type="button" onClick={saveEditing} className="rounded-lg bg-primary text-black hover:bg-primary/90">
+                    <span className="material-symbols-outlined text-base mr-1">check</span>
+                    Сохранить
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                <ul className="space-y-1">
+                  {artistNames.map((name, index) => (
+                    <li key={`${name}-${index}`} className="flex items-center justify-between text-sm group min-w-0">
+                      <span className="truncate pr-2">{name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => removeArtist(index)}
+                        aria-label={`Удалить ${name} из списка`}
+                        className="opacity-0 group-hover:opacity-100 motion-safe:transition-opacity h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20 focus-visible:opacity-100"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+              <h3 className="text-sm font-medium text-white mb-2">Примечания</h3>
+              <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
+                <li>Пароль: никнейм + 4 случайных цифры</li>
+                <li>Логин: никнейм без пробелов и спецсимволов</li>
+                <li>Профили создаются без релизов и прочих данных</li>
+              </ul>
+            </div>
+
+            {addedArtists.length > 0 && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 overflow-hidden">
+                <h3 className="text-sm font-medium mb-3 text-primary">Созданные учётные данные</h3>
+                <div className="max-h-60 overflow-auto rounded-lg border border-white/10 table-glass">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b border-white/10 text-xs font-mono uppercase text-gray-500">
+                        <th className="p-3">Артист</th>
+                        <th className="p-3">Пароль</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {addedArtists.map((artist, index) => (
+                        <tr key={index} className="border-b border-white/5 hover:bg-white/[0.03]">
+                          <td className="p-3 text-white">{artist.name}</td>
+                          <td className="p-3 font-mono text-gray-300 [font-variant-numeric:tabular-nums]">{artist.password}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push("/dashboard/admin/artists")}
+                className="rounded-lg border-white/20 text-gray-300 hover:bg-white/5 hover:text-white"
+                disabled={isAdding}
+              >
+                Назад к списку
+              </Button>
+              <Button
+                type="button"
+                onClick={addAllArtists}
+                className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold inline-flex items-center justify-center gap-2"
+                disabled={isAdding}
+              >
+                {isAdding ? (
+                  <>
+                    <span className="inline-block size-4 border-2 border-black/30 border-t-black rounded-full motion-safe:animate-spin" aria-hidden />
+                    Добавление...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-lg">upload</span>
+                    Добавить всех артистов
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
+        </footer>
       </div>
+
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase tracking-tight">Добавить артиста</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="bulk-new-name" className="text-xs font-mono uppercase text-gray-400">
+              Имя артиста
+            </Label>
+            <Input
+              id="bulk-new-name"
+              value={newArtistName}
+              onChange={(e) => setNewArtistName(e.target.value)}
+              placeholder="Введите имя..."
+              className="h-11 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  confirmAddArtist()
+                }
+              }}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setAddDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button type="button" className="bg-primary text-black hover:bg-primary/90" onClick={confirmAddArtist}>
+              Добавить в список
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   )
 }

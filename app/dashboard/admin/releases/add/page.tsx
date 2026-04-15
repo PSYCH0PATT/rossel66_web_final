@@ -2,23 +2,23 @@
 
 import React, { useEffect, useState } from "react"
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Plus, Trash2, Upload, Music, Calendar, Barcode, User, Check, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { users as staticUsers } from "@/lib/data"
 import Image from "next/image"
+import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 
 interface Track {
   title: string
   isrc: string
   duration: string
 }
+
+const inputCls =
+  "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
 export default function AddReleasePage() {
   const router = useRouter()
@@ -27,7 +27,6 @@ export default function AddReleasePage() {
   const [success, setSuccess] = useState(false)
   const [artists, setArtists] = useState<Array<{ id: string; name: string; username: string; role: string }>>([])
 
-  // Form fields
   const [artistId, setArtistId] = useState("")
   const [title, setTitle] = useState("")
   const [coverUrl, setCoverUrl] = useState("")
@@ -36,21 +35,13 @@ export default function AddReleasePage() {
   const [upc, setUpc] = useState("")
   const [releaseDate, setReleaseDate] = useState("")
   const [status, setStatus] = useState<"Модерируется" | "Отклонен" | "В доставке" | "Доставлен">("Модерируется")
-  const [tracks, setTracks] = useState<Track[]>([
-    { title: "", isrc: "", duration: "" }
-  ])
+  const [tracks, setTracks] = useState<Track[]>([{ title: "", isrc: "", duration: "" }])
 
-  // Загружаем список артистов из API (единый источник)
   useEffect(() => {
     const loadArtists = async () => {
       try {
-        const res = await fetch('/api/users')
-        const data = await res.json()
-        if (res.ok && data?.success && Array.isArray(data.users)) {
-          setArtists(data.users.filter((u: any) => u.role === 'artist'))
-        } else {
-          setArtists([])
-        }
+        const all = await fetchAllUsersFromApi({ role: "artist" })
+        setArtists(all.map((u: any) => ({ id: u.id, name: u.name, username: u.username, role: u.role })))
       } catch {
         setArtists([])
       }
@@ -81,9 +72,7 @@ export default function AddReleasePage() {
   }
 
   const updateTrack = (index: number, field: keyof Track, value: string) => {
-    const updatedTracks = tracks.map((track, i) => 
-      i === index ? { ...track, [field]: value } : track
-    )
+    const updatedTracks = tracks.map((track, i) => (i === index ? { ...track, [field]: value } : track))
     setTracks(updatedTracks)
   }
 
@@ -93,13 +82,11 @@ export default function AddReleasePage() {
       return false
     }
 
-    // Validate UPC (should be 12 digits)
     if (!/^\d{12}$/.test(upc)) {
       setError("UPC должен содержать ровно 12 цифр")
       return false
     }
 
-    // Validate tracks
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i]
       if (!track.title || !track.duration) {
@@ -107,13 +94,11 @@ export default function AddReleasePage() {
         return false
       }
 
-      // Validate duration format (MM:SS)
       if (!/^\d{1,2}:\d{2}$/.test(track.duration)) {
         setError(`Трек ${i + 1}: длительность должна быть в формате MM:SS (например, 3:45)`)
         return false
       }
 
-      // Validate ISRC format if provided
       if (track.isrc && !/^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(track.isrc)) {
         setError(`Трек ${i + 1}: ISRC должен быть в формате CCOOOYYNNNNN (например, USRC17607839)`)
         return false
@@ -135,7 +120,7 @@ export default function AddReleasePage() {
     setIsSubmitting(true)
 
     try {
-      const selectedArtist = artists.find(artist => artist.id === artistId)
+      const selectedArtist = artists.find((artist) => artist.id === artistId)
       const releaseData = {
         artistId,
         artistName: selectedArtist?.name || "Неизвестный артист",
@@ -144,15 +129,15 @@ export default function AddReleasePage() {
         upc,
         releaseDate,
         status,
-        tracks: tracks.filter(track => track.title && track.duration) // Only include valid tracks
+        tracks: tracks.filter((track) => track.title && track.duration),
       }
 
       const response = await fetch("/api/releases", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(releaseData)
+        body: JSON.stringify(releaseData),
       })
 
       const result = await response.json()
@@ -161,15 +146,11 @@ export default function AddReleasePage() {
         throw new Error(result.error || "Произошла ошибка при создании релиза")
       }
 
-      // Релиз уже сохранен в базе данных через API, localStorage не используем
-
       setSuccess(true)
-      
-      // Redirect after success
+
       setTimeout(() => {
         router.push("/dashboard/admin/releases")
       }, 2000)
-
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка при создании релиза")
     } finally {
@@ -177,72 +158,87 @@ export default function AddReleasePage() {
     }
   }
 
-  const statusLabels: Record<string, string> = {
-    "Модерируется": "Модерируется",
-    "Отклонен": "Отклонен",
-    "В доставке": "В доставке",
-    "Доставлен": "Доставлен",
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован"
-  }
+  const statusSelectItems: { value: "Модерируется" | "Отклонен" | "В доставке" | "Доставлен"; label: string }[] = [
+    { value: "Модерируется", label: "Модерируется" },
+    { value: "Отклонен", label: "Отклонен" },
+    { value: "В доставке", label: "В доставке" },
+    { value: "Доставлен", label: "Доставлен" },
+  ]
 
   return (
     <Layout role="admin" requiredRole="admin">
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Link
-            href="/dashboard/admin/releases"
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Назад к списку релизов</span>
-          </Link>
+      <div className="space-y-8 max-w-7xl mx-auto pb-8">
+        <div className="space-y-4">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
+              Dashboard
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <Link href="/dashboard/admin/releases" className="hover:text-primary">
+              Релизы
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Новый релиз</span>
+          </div>
+          <div className="border-b border-white/5 pb-8">
+            <Link
+              href="/dashboard/admin/releases"
+              className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              К списку
+            </Link>
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
+              Добавить релиз
+            </h1>
+            <p className="text-sm text-gray-400 font-light max-w-md mt-2">
+              Заполните карточку релиза, обложку и треклист. UPC — 12 цифр.
+            </p>
+          </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-white">Добавить релиз</h1>
-
         {error && (
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="card-glass rounded-2xl border border-destructive/30 p-4 flex items-start gap-3"
+          >
+            <span className="material-symbols-outlined text-destructive shrink-0">error</span>
+            <p className="text-sm text-gray-300">{error}</p>
+          </div>
         )}
 
         {success && (
-          <Alert className="bg-emerald/20 border-emerald/50 text-white">
-            <Check className="h-4 w-4 text-green-400" />
-            <AlertDescription>Релиз успешно создан! Перенаправление...</AlertDescription>
-          </Alert>
+          <div
+            role="status"
+            className="card-glass rounded-2xl border border-primary/30 p-4 flex items-start gap-3"
+          >
+            <span className="material-symbols-outlined text-primary shrink-0">check_circle</span>
+            <p className="text-sm text-gray-300">Релиз успешно создан. Перенаправление...</p>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Release Info */}
-            <Card className="bg-card border-border text-card-foreground">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="h-5 w-5 text-green-400" />
-                  Информация о релизе
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
+                <span className="material-symbols-outlined text-primary text-2xl">album</span>
+                Информация о релизе
+              </h2>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="artist" className="text-white">
-                    Артист <span className="text-red-500">*</span>
+                  <Label htmlFor="artist" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                    Артист <span className="text-destructive">*</span>
                   </Label>
                   <Select value={artistId} onValueChange={setArtistId}>
-                    <SelectTrigger className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors">
+                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
                       <SelectValue placeholder="Выберите артиста" />
                     </SelectTrigger>
                     <SelectContent>
                       {artists.map((artist) => (
                         <SelectItem key={artist.id} value={artist.id}>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            {artist.name} (@{artist.username})
-                          </div>
+                          {artist.name} (@{artist.username})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -250,39 +246,41 @@ export default function AddReleasePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-white">
-                    Название релиза <span className="text-red-500">*</span>
+                  <Label htmlFor="title" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                    Название релиза <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="bg-accent/50 border-gray-700 text-white"
+                    className={inputCls}
                     placeholder="Введите название релиза"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="upc" className="text-white">
-                    UPC <span className="text-red-500">*</span>
+                  <Label htmlFor="upc" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                    UPC <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
                     <Input
                       id="upc"
                       value={upc}
-                      onChange={(e) => setUpc(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                      className="bg-accent/50 border-gray-700 text-white pl-10"
+                      onChange={(e) => setUpc(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                      className={`${inputCls} pl-10`}
                       placeholder="123456789012"
                       maxLength={12}
                     />
-                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
+                      barcode_scanner
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-400">12-значный универсальный код продукта</p>
+                  <p className="text-xs text-gray-500 font-mono">12-значный универсальный код продукта</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="releaseDate" className="text-white">
-                    Дата релиза <span className="text-red-500">*</span>
+                  <Label htmlFor="releaseDate" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                    Дата релиза <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
                     <Input
@@ -290,22 +288,24 @@ export default function AddReleasePage() {
                       type="date"
                       value={releaseDate}
                       onChange={(e) => setReleaseDate(e.target.value)}
-                      className="bg-accent/50 border-gray-700 text-white pl-10"
+                      className={`${inputCls} pl-10`}
                     />
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
+                      calendar_month
+                    </span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="status" className="text-white">
-                    Статус <span className="text-red-500">*</span>
+                  <Label htmlFor="status" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                    Статус <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={status} onValueChange={(value: any) => setStatus(value)}>
-                    <SelectTrigger className="bg-accent/50 border-gray-700 text-white">
+                  <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(statusLabels).map(([value, label]) => (
+                      {statusSelectItems.map(({ value, label }) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>
@@ -313,154 +313,148 @@ export default function AddReleasePage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Right Column - Cover */}
-            <Card className="bg-card border-border text-card-foreground">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-green-400" />
-                  Обложка релиза
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-700 rounded-xl bg-accent/20">
-                  {coverPreview ? (
-                    <div className="relative w-48 h-48 mb-4">
-                      <Image
-                        src={coverPreview}
-                        alt="Cover preview"
-                        fill
-                        className="object-cover rounded-lg"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-48 h-48 mb-4 rounded-lg bg-accent/30 flex items-center justify-center">
-                      <Music className="h-24 w-24 text-gray-400" />
-                    </div>
-                  )}
-                  <label
-                    htmlFor="cover-upload"
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors cursor-pointer"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Загрузить обложку</span>
-                  </label>
-                  <input
-                    id="cover-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverChange}
-                    className="hidden"
-                  />
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    Рекомендуемый размер: 3000x3000 пикселей<br />
-                    Форматы: JPG, PNG
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
+                <span className="material-symbols-outlined text-accent-azure text-2xl">upload</span>
+                Обложка релиза
+              </h2>
+              <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/15 rounded-xl bg-white/[0.02]">
+                {coverPreview ? (
+                  <div className="relative w-48 h-48 mb-4 rounded-lg overflow-hidden border border-white/10">
+                    <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 mb-4 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                    <span className="material-symbols-outlined text-6xl text-gray-600">album</span>
+                  </div>
+                )}
+                <label
+                  htmlFor="cover-upload"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer bg-primary text-black font-semibold hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:scale-[1.02] transition-all"
+                >
+                  <span className="material-symbols-outlined text-lg">upload</span>
+                  Загрузить обложку
+                </label>
+                <input id="cover-upload" type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
+                <p className="text-xs text-gray-500 font-mono text-center mt-3 uppercase tracking-wider">
+                  Рекомендуемый размер: 3000×3000 px · JPG, PNG
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Tracks Section */}
-          <Card className="bg-card border-border text-card-foreground">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="h-5 w-5 text-green-400" />
-                  Треки
-                </CardTitle>
-                <Button
-                  type="button"
-                  onClick={addTrack}
-                  className="bg-green-500 hover:bg-green-600 text-white"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить трек
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
+                <span className="material-symbols-outlined text-primary text-2xl">queue_music</span>
+                Треки
+              </h2>
+              <Button
+                type="button"
+                onClick={addTrack}
+                className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold inline-flex items-center gap-2"
+                size="sm"
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+                Добавить трек
+              </Button>
+            </div>
+            <div className="space-y-4">
               {tracks.map((track, index) => (
-                <div key={index} className="p-4 bg-accent/30 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-white">Трек {index + 1}</h4>
+                <div key={index} className="p-4 rounded-xl border border-white/10 bg-white/[0.02] space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-mono uppercase tracking-widest text-gray-400">Трек {index + 1}</h4>
                     {tracks.length > 1 && (
                       <Button
                         type="button"
                         onClick={() => removeTrack(index)}
                         variant="outline"
                         size="sm"
-                        className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                        className="border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <span className="material-symbols-outlined text-lg">delete</span>
                       </Button>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">
-                        Название <span className="text-red-500">*</span>
+                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                        Название <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         value={track.title}
                         onChange={(e) => updateTrack(index, "title", e.target.value)}
-                        className="bg-accent/50 border-gray-700 text-white"
+                        className={inputCls}
                         placeholder="Название трека"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">ISRC</Label>
+                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">ISRC</Label>
                       <Input
                         value={track.isrc}
                         onChange={(e) => updateTrack(index, "isrc", e.target.value.toUpperCase())}
-                        className="bg-accent/50 border-gray-700 text-white"
+                        className={inputCls}
                         placeholder="USRC17607839"
                         maxLength={12}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">
-                        Длительность <span className="text-red-500">*</span>
+                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">
+                        Длительность <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         value={track.duration}
                         onChange={(e) => updateTrack(index, "duration", e.target.value)}
-                        className="bg-accent/50 border-gray-700 text-white"
+                        className={inputCls}
                         placeholder="3:45"
                       />
                     </div>
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end gap-3">
+          <div className="flex items-center justify-end gap-3 flex-wrap">
             <Button
               type="button"
               variant="outline"
               onClick={() => router.push("/dashboard/admin/releases")}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+              className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary"
               disabled={isSubmitting}
             >
               Отмена
             </Button>
             <Button
               type="submit"
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02] transition-all"
               disabled={isSubmitting}
             >
               {isSubmitting ? "Создание..." : "Создать релиз"}
             </Button>
           </div>
         </form>
+
+        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
+        </footer>
       </div>
     </Layout>
   )

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStreamAnalytics } from '@/lib/flash-storage'
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/analytics/streams
  * Возвращает данные стриминговой аналитики для графиков.

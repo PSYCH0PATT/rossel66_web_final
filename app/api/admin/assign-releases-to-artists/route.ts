@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { loadUsers, assignReleasesToNewArtist } from '@/lib/storage';
+import { assignReleasesToNewArtist } from '@/lib/storage';
+import { prisma } from '@/lib/prisma';
 
 /**
  * POST /api/admin/assign-releases-to-artists
@@ -8,8 +9,10 @@ import { loadUsers, assignReleasesToNewArtist } from '@/lib/storage';
 export async function POST() {
   try {
     console.log('🔍 Загрузка списка артистов...');
-    const users = await loadUsers();
-    const artists = users.filter(u => u.role === 'artist');
+    const artists = await prisma.user.findMany({
+      where: { role: 'artist' },
+      orderBy: { createdAt: 'asc' },
+    });
     
     console.log(`📋 Найдено артистов: ${artists.length}`);
     

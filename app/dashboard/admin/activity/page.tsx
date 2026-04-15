@@ -1,90 +1,79 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
-import Layout from '@/components/layout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Activity,
-  Music,
-  ListMusic,
-  FileText,
-  DollarSign,
-  User,
-  UserPlus,
-  UserMinus,
-  CheckCircle,
-  FileCheck,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-} from 'lucide-react'
-import type { ActivityType } from '@/lib/storage'
+import { useState, useEffect, useCallback } from "react"
+import Layout from "@/components/layout"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Link from "next/link"
+import type { ActivityType } from "@/lib/storage"
 
 const CATEGORIES = [
-  { id: 'all', label: 'Общее', types: undefined },
-  { id: 'releases', label: 'Релизы', types: ['release_added', 'release_status_updated'] as ActivityType[] },
-  { id: 'playlists', label: 'Плейлисты', types: ['playlist_found'] as ActivityType[] },
-  { id: 'reports', label: 'Отчёты', types: ['report_received', 'reports_generated'] as ActivityType[] },
-  { id: 'payments', label: 'Выплаты', types: ['payment_sent'] as ActivityType[] },
-  { id: 'artists', label: 'Артисты', types: ['artist_added', 'artist_removed', 'user_data_updated'] as ActivityType[] },
+  { id: "all", label: "Общее", types: undefined },
+  { id: "releases", label: "Релизы", types: ["release_added", "release_status_updated"] as ActivityType[] },
+  { id: "playlists", label: "Плейлисты", types: ["playlist_found"] as ActivityType[] },
+  { id: "reports", label: "Отчёты", types: ["report_received", "reports_generated"] as ActivityType[] },
+  { id: "payments", label: "Выплаты", types: ["payment_sent"] as ActivityType[] },
+  {
+    id: "artists",
+    label: "Артисты",
+    types: ["artist_added", "artist_removed", "user_data_updated"] as ActivityType[],
+  },
 ]
 
 const TYPE_LABELS: Record<ActivityType, string> = {
-  release_added: 'Релиз добавлен',
-  playlist_found: 'Плейлист найден',
-  report_received: 'Отчёт назначен',
-  payment_sent: 'Выплата отправлена',
-  user_data_updated: 'Данные артиста обновлены',
-  reports_generated: 'Отчёты сгенерированы',
-  artist_added: 'Артист добавлен',
-  artist_removed: 'Артист удалён',
-  release_status_updated: 'Статус релиза обновлён',
-  parser_started: 'Парсер запущен',
-  parser_completed: 'Парсер завершён',
-  parser_error: 'Ошибка парсера',
-  parser_release_found: 'Парсер: релиз найден',
-  parser_release_updated: 'Парсер: релиз обновлён',
-  parser_playlist_found: 'Парсер: плейлист найден',
-  analytics_import: 'Импорт аналитики',
-  analytics_cleanup: 'Очистка аналитики',
+  release_added: "Релиз добавлен",
+  playlist_found: "Плейлист найден",
+  report_received: "Отчёт назначен",
+  payment_sent: "Выплата отправлена",
+  user_data_updated: "Данные артиста обновлены",
+  reports_generated: "Отчёты сгенерированы",
+  artist_added: "Артист добавлен",
+  artist_removed: "Артист удалён",
+  release_status_updated: "Статус релиза обновлён",
+  parser_started: "Парсер запущен",
+  parser_completed: "Парсер завершён",
+  parser_error: "Ошибка парсера",
+  parser_release_found: "Парсер: релиз найден",
+  parser_release_updated: "Парсер: релиз обновлён",
+  parser_playlist_found: "Парсер: плейлист найден",
+  analytics_import: "Импорт аналитики",
+  analytics_cleanup: "Очистка аналитики",
 }
 
-function getActivityIcon(type: ActivityType) {
+function activityIcon(type: ActivityType): { name: string; className: string } {
   switch (type) {
-    case 'release_added':
-    case 'parser_release_found':
-    case 'parser_release_updated':
-      return <Music className="h-4 w-4 text-category-blue" />
-    case 'playlist_found':
-    case 'parser_playlist_found':
-      return <ListMusic className="h-4 w-4 text-category-red" />
-    case 'report_received':
-    case 'reports_generated':
-      return <FileText className="h-4 w-4 text-category-green" />
-    case 'payment_sent':
-      return <DollarSign className="h-4 w-4 text-category-amber" />
-    case 'user_data_updated':
-      return <User className="h-4 w-4 text-category-purple" />
-    case 'artist_added':
-      return <UserPlus className="h-4 w-4 text-category-green" />
-    case 'artist_removed':
-      return <UserMinus className="h-4 w-4 text-category-red" />
-    case 'release_status_updated':
-      return <CheckCircle className="h-4 w-4 text-category-blue" />
-    case 'parser_started':
-      return <RefreshCw className="h-4 w-4 text-blue-400" />
-    case 'parser_completed':
-      return <CheckCircle className="h-4 w-4 text-green-400" />
-    case 'parser_error':
-      return <Activity className="h-4 w-4 text-red-400" />
-    case 'analytics_import':
-    case 'analytics_cleanup':
-      return <Activity className="h-4 w-4 text-category-amber" />
+    case "release_added":
+    case "parser_release_found":
+    case "parser_release_updated":
+      return { name: "library_music", className: "text-sky-400" }
+    case "playlist_found":
+    case "parser_playlist_found":
+      return { name: "queue_music", className: "text-rose-400" }
+    case "report_received":
+    case "reports_generated":
+      return { name: "description", className: "text-emerald-400" }
+    case "payment_sent":
+      return { name: "payments", className: "text-amber-400" }
+    case "user_data_updated":
+      return { name: "person", className: "text-violet-400" }
+    case "artist_added":
+      return { name: "person_add", className: "text-emerald-400" }
+    case "artist_removed":
+      return { name: "person_remove", className: "text-red-400" }
+    case "release_status_updated":
+      return { name: "task_alt", className: "text-sky-400" }
+    case "parser_started":
+      return { name: "play_circle", className: "text-blue-400" }
+    case "parser_completed":
+      return { name: "check_circle", className: "text-green-400" }
+    case "parser_error":
+      return { name: "error", className: "text-red-400" }
+    case "analytics_import":
+    case "analytics_cleanup":
+      return { name: "analytics", className: "text-amber-400" }
     default:
-      return <FileText className="h-4 w-4 text-gray-400" />
+      return { name: "article", className: "text-gray-400" }
   }
 }
 
@@ -92,10 +81,10 @@ interface ActivityItem {
   id: string
   type: ActivityType
   userId: string
-  userRole: 'artist' | 'admin'
+  userRole: "artist" | "admin"
   title: string
   description: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   createdAt: string
 }
 
@@ -106,50 +95,75 @@ interface UserOption {
   role?: string
 }
 
-const PAGE_SIZE = 50
-
 export default function AdminActivityPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [categoryId, setCategoryId] = useState('all')
-  const [role, setRole] = useState<string>('admin')
-  const [userId, setUserId] = useState<string>('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [categoryId, setCategoryId] = useState("all")
+  const [role, setRole] = useState<string>("admin")
+  const [userId, setUserId] = useState<string>("")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [offset, setOffset] = useState(0)
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20)
   const [users, setUsers] = useState<UserOption[]>([])
-
-  const loadUsers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/users')
-      const data = await res.json()
-      if (data?.users?.length) {
-        setUsers(data.users.map((u: any) => ({ id: u.id, name: u.name || u.username, username: u.username, role: u.role })))
-      }
-    } catch (e) {
-      console.error('Failed to load users:', e)
-    }
-  }, [])
+  const [userSearch, setUserSearch] = useState("")
+  const [debouncedUserSearch, setDebouncedUserSearch] = useState("")
 
   useEffect(() => {
-    loadUsers()
-  }, [loadUsers])
+    const t = setTimeout(() => setDebouncedUserSearch(userSearch), 300)
+    return () => clearTimeout(t)
+  }, [userSearch])
+
+  const fetchUsersForFilters = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      params.set("page", "1")
+      params.set("pageSize", "50")
+      const q = debouncedUserSearch.trim()
+      if (q) params.set("q", q)
+      const res = await fetch(`/api/users?${params.toString()}`)
+      const data = await res.json()
+      let list: UserOption[] = Array.isArray(data?.users)
+        ? data.users.map((u: { id: string; name?: string; username?: string; role?: string }) => ({
+            id: u.id,
+            name: u.name || u.username,
+            username: u.username,
+            role: u.role,
+          }))
+        : []
+      if (userId && !list.some((u) => u.id === userId)) {
+        const ures = await fetch(`/api/users?id=${encodeURIComponent(userId)}`)
+        const udata = await ures.json()
+        const u = udata?.users?.[0]
+        if (u) {
+          list = [{ id: u.id, name: u.name || u.username, username: u.username, role: u.role }, ...list]
+        }
+      }
+      setUsers(list)
+    } catch (e) {
+      console.error("Failed to load users:", e)
+    }
+  }, [debouncedUserSearch, userId])
+
+  useEffect(() => {
+    fetchUsersForFilters()
+  }, [fetchUsersForFilters])
 
   const loadActivities = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      params.set('limit', String(PAGE_SIZE))
-      params.set('offset', String(offset))
-      if (role && role !== 'all') params.set('role', role)
-      if (userId) params.set('userId', userId)
-      if (dateFrom) params.set('dateFrom', dateFrom)
-      if (dateTo) params.set('dateTo', dateTo)
+      params.set("limit", String(pageSize))
+      params.set("offset", String(offset))
+      if (role && role !== "all") params.set("role", role)
+      if (userId) params.set("userId", userId)
+      if (dateFrom) params.set("dateFrom", dateFrom)
+      if (dateTo) params.set("dateTo", dateTo)
 
-      const cat = CATEGORIES.find(c => c.id === categoryId)
+      const cat = CATEGORIES.find((c) => c.id === categoryId)
       if (cat?.types?.length) {
-        cat.types.forEach(t => params.append('type', t))
+        cat.types.forEach((t) => params.append("type", t))
       }
 
       const res = await fetch(`/api/activities?${params.toString()}`)
@@ -159,182 +173,294 @@ export default function AdminActivityPage() {
         setTotal(data.total ?? data.activities?.length ?? 0)
       }
     } catch (e) {
-      console.error('Failed to load activities:', e)
+      console.error("Failed to load activities:", e)
     } finally {
       setLoading(false)
     }
-  }, [categoryId, role, userId, dateFrom, dateTo, offset])
+  }, [categoryId, role, userId, dateFrom, dateTo, offset, pageSize])
 
   useEffect(() => {
     loadActivities()
   }, [loadActivities])
 
   const resetOffset = () => setOffset(0)
-  const prevPage = () => setOffset(o => Math.max(0, o - PAGE_SIZE))
-  const nextPage = () => setOffset(o => o + PAGE_SIZE)
+  const prevPage = () => setOffset((o) => Math.max(0, o - pageSize))
+  const nextPage = () => setOffset((o) => o + pageSize)
   const hasPrev = offset > 0
   const hasNext = offset + activities.length < total
 
   const formatDateTime = (dateString: string) =>
-    new Date(dateString).toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    new Date(dateString).toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     })
 
   const whoLabel = (item: ActivityItem) => {
-    if (item.userId === 'system') return 'Система'
-    const u = users.find(x => x.id === item.userId)
+    if (item.userId === "system") return "Система"
+    const u = users.find((x) => x.id === item.userId)
     return u ? u.name || u.username || item.userId : item.userId
   }
 
+  const filterInput =
+    "h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+
   return (
     <Layout role="admin" requiredRole="admin">
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Активность</h1>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
+              Dashboard
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Активность</span>
+          </div>
+          <div className="border-b border-white/5 pb-8">
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Активность</h1>
+            <p className="text-sm text-gray-400 font-light mt-2">Журнал событий платформы</p>
+          </div>
+        </div>
 
-        <Card className="bg-transparent border-slate-600/30 text-white rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Вся активность
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-600/50 pb-3">
-              {CATEGORIES.map(cat => (
-                <Button
-                  key={cat.id}
-                  variant={categoryId === cat.id ? 'default' : 'ghost'}
-                  size="sm"
-                  className={categoryId === cat.id ? 'bg-slate-600 text-white' : 'text-slate-300 hover:text-white'}
-                  onClick={() => {
-                    setCategoryId(cat.id)
-                    resetOffset()
-                  }}
-                >
-                  {cat.label}
-                </Button>
+        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 space-y-6">
+          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+            <span className="w-1.5 h-6 bg-primary rounded-full" />
+            Фильтры и лента
+          </h2>
+
+          <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
+            {CATEGORIES.map((cat) => (
+              <Button
+                key={cat.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={`rounded-lg border text-xs font-mono uppercase ${
+                  categoryId === cat.id
+                    ? "bg-primary/20 border-primary/40 text-primary"
+                    : "border-white/10 bg-white/5 text-gray-400 hover:bg-white/[0.08]"
+                }`}
+                onClick={() => {
+                  setCategoryId(cat.id)
+                  resetOffset()
+                }}
+              >
+                {cat.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div>
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Роль</label>
+              <Select
+                value={role}
+                onValueChange={(v) => {
+                  setRole(v)
+                  resetOffset()
+                }}
+              >
+                <SelectTrigger className={filterInput}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  <SelectItem value="artist">Артист</SelectItem>
+                  <SelectItem value="admin">Админ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Поиск пользователя</label>
+              <Input
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value)
+                  resetOffset()
+                }}
+                placeholder="Имя или username..."
+                className={`${filterInput} mb-2`}
+                spellCheck={false}
+              />
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Пользователь</label>
+              <Select
+                value={userId || "all"}
+                onValueChange={(v) => {
+                  setUserId(v === "all" ? "" : v)
+                  resetOffset()
+                }}
+              >
+                <SelectTrigger className={filterInput}>
+                  <SelectValue placeholder="Все" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name || u.username || u.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Дата от</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value)
+                  resetOffset()
+                }}
+                className={filterInput}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Дата до</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value)
+                  resetOffset()
+                }}
+                className={filterInput}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">На странице</label>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  setPageSize(Number(v) as 20 | 50 | 100)
+                  setOffset(0)
+                }}
+              >
+                <SelectTrigger className={filterInput}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setOffset(0)
+                  loadActivities()
+                }}
+                className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5 w-full md:w-auto"
+              >
+                <span className="material-symbols-outlined text-base mr-1">refresh</span>
+                Обновить
+              </Button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="space-y-2 py-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-12 rounded-lg bg-white/[0.04] motion-safe:animate-pulse" aria-hidden />
               ))}
             </div>
-
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Роль</label>
-                <Select value={role} onValueChange={v => { setRole(v); resetOffset() }}>
-                  <SelectTrigger className="bg-slate-800/50 border-slate-600 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все</SelectItem>
-                    <SelectItem value="artist">Артист</SelectItem>
-                    <SelectItem value="admin">Админ</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Пользователь</label>
-                <Select value={userId || 'all'} onValueChange={v => { setUserId(v === 'all' ? '' : v); resetOffset() }}>
-                  <SelectTrigger className="bg-slate-800/50 border-slate-600 text-white">
-                    <SelectValue placeholder="Все" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все</SelectItem>
-                    {users.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.name || u.username || u.id}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Дата от</label>
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => { setDateFrom(e.target.value); resetOffset() }}
-                  className="bg-slate-800/50 border-slate-600 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Дата до</label>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => { setDateTo(e.target.value); resetOffset() }}
-                  className="bg-slate-800/50 border-slate-600 text-white"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button variant="outline" size="sm" onClick={() => { setOffset(0); loadActivities() }} className="border-slate-600 text-slate-300">
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Обновить
-                </Button>
-              </div>
-            </div>
-
-            {/* List */}
-            {loading ? (
-              <div className="text-slate-400 py-8">Загрузка...</div>
-            ) : activities.length === 0 ? (
-              <div className="text-slate-400 py-8 text-center">Нет записей</div>
-            ) : (
-              <>
-                <div className="rounded-lg border border-slate-600/50 overflow-x-auto">
-                  <table className="w-full text-sm min-w-[800px]">
-                    <thead className="bg-slate-800/50 text-slate-400">
-                      <tr>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Дата / время</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Тип</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Заголовок</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Описание</th>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">Кто</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-600/50">
-                      {activities.map(item => (
-                        <tr key={item.id} className="hover:bg-slate-800/30">
-                          <td className="p-2 sm:p-3 text-slate-300 whitespace-nowrap text-xs sm:text-sm">{formatDateTime(item.createdAt)}</td>
-                          <td className="p-2 sm:p-3">
-                            <div className="flex items-center gap-1 sm:gap-2">
-                              <span className="flex-shrink-0">{getActivityIcon(item.type)}</span>
-                              <span className="text-slate-300 text-xs sm:text-sm whitespace-nowrap">{TYPE_LABELS[item.type] || item.type}</span>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 font-mono text-sm">Нет записей</div>
+          ) : (
+            <>
+              <div className="rounded-2xl border border-white/10 overflow-x-auto table-glass">
+                <table className="w-full text-sm min-w-[800px]">
+                  <thead>
+                    <tr className="text-left text-xs font-mono uppercase text-gray-500 border-b border-white/10">
+                      <th className="p-3 sm:p-4 whitespace-nowrap">Дата / время</th>
+                      <th className="p-3 sm:p-4 whitespace-nowrap">Тип</th>
+                      <th className="p-3 sm:p-4">Заголовок</th>
+                      <th className="p-3 sm:p-4">Описание</th>
+                      <th className="p-3 sm:p-4 whitespace-nowrap">Кто</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activities.map((item) => {
+                      const ic = activityIcon(item.type)
+                      return (
+                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/[0.04] table-row-hover">
+                          <td className="p-3 sm:p-4 text-gray-300 whitespace-nowrap text-xs sm:text-sm [font-variant-numeric:tabular-nums]">
+                            {formatDateTime(item.createdAt)}
+                          </td>
+                          <td className="p-3 sm:p-4">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`material-symbols-outlined text-lg flex-shrink-0 ${ic.className}`}>
+                                {ic.name}
+                              </span>
+                              <span className="text-gray-300 text-xs sm:text-sm whitespace-nowrap truncate">
+                                {TYPE_LABELS[item.type] || item.type}
+                              </span>
                             </div>
                           </td>
-                          <td className="p-2 sm:p-3 font-medium text-white text-xs sm:text-sm">{item.title}</td>
-                          <td className="p-2 sm:p-3 text-slate-400 text-xs sm:text-sm min-w-[200px]">
-                            <div className="whitespace-normal break-words">{item.description}</div>
+                          <td className="p-3 sm:p-4 font-medium text-white text-xs sm:text-sm min-w-0 max-w-[220px]">
+                            <span className="line-clamp-2">{item.title}</span>
                           </td>
-                          <td className="p-2 sm:p-3 text-slate-300 text-xs sm:text-sm whitespace-nowrap">{whoLabel(item)}</td>
+                          <td className="p-3 sm:p-4 text-gray-400 text-xs sm:text-sm min-w-[200px] max-w-md">
+                            <div className="whitespace-normal break-words line-clamp-3">{item.description}</div>
+                          </td>
+                          <td className="p-3 sm:p-4 text-gray-300 text-xs sm:text-sm whitespace-nowrap">{whoLabel(item)}</td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between text-sm text-slate-400">
-                  <span>
-                    Показано {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} из {total}
-                  </span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={!hasPrev} onClick={prevPage} className="border-slate-600 text-slate-300">
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Назад
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={!hasNext} onClick={nextPage} className="border-slate-600 text-slate-300">
-                      Далее
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono text-gray-500">
+                <span className="[font-variant-numeric:tabular-nums]">
+                  {offset + 1}–{Math.min(offset + pageSize, total)} из {total}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!hasPrev}
+                    onClick={prevPage}
+                    className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
+                  >
+                    <span className="material-symbols-outlined text-base mr-1">chevron_left</span>
+                    Назад
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!hasNext}
+                    onClick={nextPage}
+                    className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
+                  >
+                    Далее
+                    <span className="material-symbols-outlined text-base ml-1">chevron_right</span>
+                  </Button>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </>
+          )}
+        </div>
+
+        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
+        </footer>
       </div>
     </Layout>
   )

@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Clock, ArrowLeft, Save, User, Link as LinkIcon, ExternalLink, Percent, Users } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -83,22 +80,14 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
     }
   }
 
-  const statusColors: Record<string, string> = {
-    "Модерируется": "bg-orange-500 text-white",
-    "Отклонен": "bg-red-500 text-white",
-    "В доставке": "bg-purple-500 text-white",
-    "Доставлен": "bg-green-500 text-white",
-    // Legacy статусы (маппинг старых значений)
-    "На модерации": "bg-orange-500 text-white",
-    "Одобрен": "bg-blue-500 text-white",
-    "Отклонён": "bg-red-500 text-white",
-    "Снят": "bg-gray-500 text-white",
-    released: "bg-green-500 text-white",
-    moderation: "bg-orange-500 text-white",
-    delivery: "bg-purple-500 text-white",
-    scheduled: "bg-orange-500 text-white",
-    "новый": "bg-gray-500 text-white",
-    "Новый": "bg-gray-500 text-white",
+  const statusBadgeClass = (s?: string) => {
+    const key = s || "Доставлен"
+    if (["Доставлен", "released", "Одобрен"].includes(key)) return "release-status-badge release-status-badge--live"
+    if (["В доставке", "delivery"].includes(key)) return "release-status-badge release-status-badge--delivered"
+    if (["Модерируется", "На модерации", "moderation", "scheduled", "Новый", "новый"].includes(key))
+      return "release-status-badge release-status-badge--moderation"
+    if (["Отклонен", "Отклонён", "Снят"].includes(key)) return "release-status-badge release-status-badge--rejected"
+    return "release-status-badge release-status-badge--draft"
   }
 
   const statusLabels: Record<string, string> = {
@@ -122,79 +111,122 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   if (loading || !release) {
     return (
       <Layout role="admin" requiredRole="admin">
-        <div className="flex items-center justify-center py-16 text-slate-300">Загрузка…</div>
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
+        </div>
       </Layout>
     )
   }
 
+  const inputCls =
+    "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+
   return (
     <Layout role="admin" requiredRole="admin">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard/admin/releases" className="text-slate-400 hover:text-white text-sm flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" /> Назад к релизам
-          </Link>
-
-          <Button onClick={save} disabled={saving}
-            style={{ backgroundColor: '#10b981', color: 'white' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#059669' }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#10b981' }}
+      <div className="space-y-8 max-w-7xl mx-auto">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-4 min-w-0">
+            <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
+              <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
+                Dashboard
+              </Link>
+              <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+              <Link href="/dashboard/admin/releases" className="hover:text-primary">
+                Релизы
+              </Link>
+              <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+              <span className="text-white truncate max-w-[200px]">{release.title}</span>
+            </div>
+            <div className="border-b border-white/5 pb-6">
+              <Link
+                href="/dashboard/admin/releases"
+                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                К списку
+              </Link>
+              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase line-clamp-2">
+                {release.title}
+              </h1>
+              <p className="text-sm text-gray-400 mt-2 font-mono">{artistName}</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => void save()}
+            disabled={saving}
+            className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold shrink-0 inline-flex items-center gap-2"
           >
-            <Save className="h-4 w-4 mr-2" /> Сохранить
+            <span className="material-symbols-outlined text-lg">save</span>
+            {saving ? "Сохранение..." : "Сохранить"}
           </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <Card className="bg-card border-border text-white overflow-hidden">
+            <div className="card-glass rounded-2xl border border-white/5 overflow-hidden text-white">
               <div className="aspect-square relative">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
-                <Badge className={`absolute top-2 right-2 ${statusColors[release.status || 'Доставлен'] || 'bg-gray-500 text-white'}`}>
-                  {statusLabels[release.status || 'Доставлен'] || release.status || 'Доставлен'}
-                </Badge>
+                <span
+                  className={`absolute top-3 right-3 ${statusBadgeClass(release.status)}`}
+                >
+                  {statusLabels[release.status || "Доставлен"] || release.status || "Доставлен"}
+                </span>
               </div>
-              <CardContent className="p-4 space-y-3">
+              <div className="p-4 md:p-6 space-y-3">
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Название</div>
-                  <Input value={release.title} onChange={(e) => setRelease({ ...release, title: e.target.value })} />
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Название</div>
+                  <Input className={inputCls} value={release.title} onChange={(e) => setRelease({ ...release, title: e.target.value })} />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">UPC</div>
-                  <Input value={release.upc || ''} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">UPC</div>
+                  <Input className={inputCls} value={release.upc || ''} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
                 </div>
                 {release.koalaId && (
                   <div>
-                    <div className="text-xs text-slate-400 mb-1">Koala ID</div>
-                    <div className="text-sm text-slate-300 py-2 px-3 bg-slate-800 rounded-md">
+                    <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Koala ID</div>
+                    <div className="text-sm text-gray-300 py-2 px-3 rounded-lg border border-white/10 bg-white/5">
                       {release.koalaId}
                     </div>
                   </div>
                 )}
                 {release.bandlinkUrl && (
                   <div>
-                    <div className="text-xs text-slate-400 mb-1">BandLink</div>
-                    <a 
-                      href={release.bandlinkUrl} 
-                      target="_blank" 
+                    <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">BandLink</div>
+                    <a
+                      href={release.bandlinkUrl}
+                      target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800 rounded-md"
+                      className="flex items-center gap-2 text-sm text-accent-azure py-2 px-3 rounded-lg border border-white/10 bg-white/5 hover:border-accent-azure/30 transition-colors"
                     >
-                      <LinkIcon className="h-4 w-4" />
-                      {release.bandlinkUrl}
-                      <ExternalLink className="h-3 w-3 ml-auto" />
+                      <span className="material-symbols-outlined text-base shrink-0">link</span>
+                      <span className="truncate min-w-0">{release.bandlinkUrl}</span>
+                      <span className="material-symbols-outlined text-base ml-auto shrink-0">open_in_new</span>
                     </a>
                   </div>
                 )}
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Дата релиза</div>
-                  <Input type="date" value={release.releaseDate?.slice(0,10)} onChange={(e) => setRelease({ ...release, releaseDate: e.target.value })} />
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Дата релиза</div>
+                  <Input
+                    className={inputCls}
+                    type="date"
+                    value={release.releaseDate?.slice(0, 10)}
+                    onChange={(e) => setRelease({ ...release, releaseDate: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Обложка (URL)</div>
-                  <Input placeholder="https://..." value={release.coverUrl || ''} onChange={(e) => setRelease({ ...release, coverUrl: e.target.value })} />
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Обложка (URL)</div>
+                  <Input
+                    className={inputCls}
+                    placeholder="https://..."
+                    value={release.coverUrl || ''}
+                    onChange={(e) => setRelease({ ...release, coverUrl: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label htmlFor="cover-upload" className="block text-sm font-medium text-gray-400 mb-2">Загрузить обложку</label>
+                  <label htmlFor="cover-upload" className="block text-xs text-gray-500 font-mono uppercase tracking-widest mb-2">
+                    Загрузить обложку
+                  </label>
                   <div className="relative">
                     <input
                       id="cover-upload"
@@ -209,37 +241,25 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                         const res = await fetch('/api/uploads/covers', { method: 'POST', body: formData })
                         const data = await res.json()
                         if (data?.success && data.url) {
-                          setRelease(prev => prev ? { ...prev, coverUrl: data.url } : null)
+                          setRelease((prev) => (prev ? { ...prev, coverUrl: data.url } : null))
                         }
                       }}
                     />
                     <label
                       htmlFor="cover-upload"
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white rounded-lg cursor-pointer transition-all duration-200"
-                      style={{
-                        backgroundColor: '#10b981',
-                        border: '1px solid #10b981'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#059669'
-                        e.currentTarget.style.borderColor = '#059669'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#10b981'
-                        e.currentTarget.style.borderColor = '#10b981'
-                      }}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-black rounded-lg cursor-pointer bg-primary hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:scale-[1.02] transition-all"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
+                      <span className="material-symbols-outlined text-lg">upload</span>
                       Выбрать файл
                     </label>
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Статус</div>
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Статус</div>
                   <Select value={release.status || 'Модерируется'} onValueChange={(v) => setRelease({ ...release, status: v })}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Модерируется">Модерируется</SelectItem>
                       <SelectItem value="Отклонен">Отклонен</SelectItem>
@@ -249,9 +269,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                   </Select>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Артист</div>
+                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Артист</div>
                   <Select value={release.artistId} onValueChange={(v) => setRelease({ ...release, artistId: v })}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder={artistName || 'Выберите артиста'} /></SelectTrigger>
+                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                      <SelectValue placeholder={artistName || 'Выберите артиста'} />
+                    </SelectTrigger>
                     <SelectContent>
                       {users.map((u) => (
                         <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
@@ -259,40 +281,74 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-2">
-            <Card className="bg-card border-border text-white">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="h-5 w-5 text-green-400" /> Список треков
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="card-glass rounded-2xl border border-white/5 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="p-6 md:p-8">
+                <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                  <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
+                  <span className="material-symbols-outlined text-primary text-2xl">queue_music</span>
+                  Список треков
+                </h2>
                 <div className="space-y-3">
                   {release.tracks.map((track, index) => (
-                    <div key={track.id} className="p-4 rounded-lg bg-transparent border border-slate-600/30 hover:border-slate-500/60 transition-colors space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div
+                      key={track.id}
+                      className="p-4 rounded-xl border border-white/10 hover:border-primary/20 bg-white/[0.02] transition-colors space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-medium">{index + 1}</div>
-                          <div className="text-slate-300">Трек</div>
+                          <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-display text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="text-sm text-gray-400 font-mono uppercase tracking-widest">Трек</div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setRelease({ ...release, tracks: release.tracks.filter((_, i) => i !== index) })}
-                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                        >Удалить</Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setRelease({ ...release, tracks: release.tracks.filter((_, i) => i !== index) })
+                          }
+                          className="border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
+                        >
+                          Удалить
+                        </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Input value={track.title} onChange={(e) => {
-                          const tracks = [...release.tracks]; tracks[index] = { ...track, title: e.target.value }; setRelease({ ...release, tracks })
-                        }} placeholder="Название" />
-                        <Input value={track.isrc || ''} onChange={(e) => {
-                          const tracks = [...release.tracks]; tracks[index] = { ...track, isrc: e.target.value }; setRelease({ ...release, tracks })
-                        }} placeholder="ISRC" />
-                        <Input value={track.duration || ''} onChange={(e) => {
-                          const tracks = [...release.tracks]; tracks[index] = { ...track, duration: e.target.value }; setRelease({ ...release, tracks })
-                        }} placeholder="Длительность mm:ss" />
+                        <Input
+                          className={inputCls}
+                          value={track.title}
+                          onChange={(e) => {
+                            const tracks = [...release.tracks]
+                            tracks[index] = { ...track, title: e.target.value }
+                            setRelease({ ...release, tracks })
+                          }}
+                          placeholder="Название"
+                        />
+                        <Input
+                          className={inputCls}
+                          value={track.isrc || ''}
+                          onChange={(e) => {
+                            const tracks = [...release.tracks]
+                            tracks[index] = { ...track, isrc: e.target.value }
+                            setRelease({ ...release, tracks })
+                          }}
+                          placeholder="ISRC"
+                        />
+                        <Input
+                          className={inputCls}
+                          value={track.duration || ''}
+                          onChange={(e) => {
+                            const tracks = [...release.tracks]
+                            tracks[index] = { ...track, duration: e.target.value }
+                            setRelease({ ...release, tracks })
+                          }}
+                          placeholder="Длительность mm:ss"
+                        />
                       </div>
 
                       {/* Доли роялти - показываем только если есть несколько артистов */}
@@ -316,16 +372,16 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                         const isValid = totalShare === 100 || totalShare === 0
 
                         return (
-                          <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Percent className="h-4 w-4 text-green-400" />
-                                <span className="text-sm font-medium text-slate-300">Доли роялти</span>
+                          <div className="mt-4 p-4 rounded-xl border border-white/10 bg-white/[0.03] space-y-3">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="material-symbols-outlined text-primary text-xl">percent</span>
+                                <span className="text-sm font-medium text-gray-300">Доли роялти</span>
                                 {!isValid && totalShare > 0 && (
-                                  <span className="text-xs text-red-400">(Сумма: {totalShare}%, должно быть 100%)</span>
+                                  <span className="text-xs text-destructive">(Сумма: {totalShare}%, должно быть 100%)</span>
                                 )}
                                 {isValid && totalShare === 100 && (
-                                  <span className="text-xs text-green-400">✓ 100%</span>
+                                  <span className="text-xs text-primary font-mono">[OK] 100%</span>
                                 )}
                               </div>
                               <Button
@@ -346,7 +402,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                                   tracks[index] = { ...track, royaltyShares: shares }
                                   setRelease({ ...release, tracks })
                                 }}
-                                className="text-xs"
+                                className="text-xs border border-white/10 text-gray-400 hover:text-primary"
                               >
                                 Распределить поровну
                               </Button>
@@ -354,7 +410,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {allArtists.map((artistName) => (
                                 <div key={artistName} className="space-y-1">
-                                  <label className="text-xs text-slate-400">{artistName}</label>
+                                  <label className="text-xs text-gray-500 font-mono uppercase tracking-widest">{artistName}</label>
                                   <div className="flex items-center gap-2">
                                     <Input
                                       type="number"
@@ -369,15 +425,17 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                                         setRelease({ ...release, tracks })
                                       }}
                                       placeholder="0"
-                                      className="w-20"
+                                      className={`${inputCls} w-20`}
                                     />
-                                    <span className="text-sm text-slate-400">%</span>
+                                    <span className="text-sm text-gray-500">%</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
                             {totalShare === 0 && (
-                              <p className="text-xs text-slate-500">Доли не заданы. Используется процент из профиля артиста или равное деление.</p>
+                              <p className="text-xs text-gray-500 font-mono">
+                                Доли не заданы. Используется процент из профиля артиста или равное деление.
+                              </p>
                             )}
                           </div>
                         )
@@ -385,17 +443,39 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                     </div>
                   ))}
                   <div className="pt-2">
-                    <Button variant="outline" onClick={() => setRelease({ ...release, tracks: [...release.tracks, { id: `track_${Date.now()}`, title: '', isrc: '', duration: '00:00' }] })}
-                      style={{ borderColor: '#10b981', color: '#10b981' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; e.currentTarget.style.color = 'white' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#10b981' }}
-                    >Добавить трек</Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setRelease({
+                          ...release,
+                          tracks: [
+                            ...release.tracks,
+                            { id: `track_${Date.now()}`, title: '', isrc: '', duration: '00:00' },
+                          ],
+                        })
+                      }
+                      className="border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold"
+                    >
+                      <span className="material-symbols-outlined text-lg mr-1">add</span>
+                      Добавить трек
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
+
+        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
+        </footer>
       </div>
     </Layout>
   )

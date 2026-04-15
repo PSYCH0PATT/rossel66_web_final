@@ -68,13 +68,34 @@ module.exports = {
           red: "#EF4444",
           amber: "#F59E0B",
         },
+        "background-light": "#f3f4f6",
+        "background-dark": "#020202",
+        "glass-dark": "rgba(10, 10, 10, 0.7)",
+        "glass-light": "rgba(255, 255, 255, 0.7)",
+        "accent-azure": "#0ea5e9", // Sky 500
+        "accent-emerald": "#10b981", // Emerald 500
+      },
+      fontFamily: {
+        // ALL body/UI text — Nunito Sans (full Cyrillic)
+        sans: ["var(--font-nunito-sans)", "sans-serif"],
+        body: ["var(--font-nunito-sans)", "sans-serif"],
+        mono: ["var(--font-nunito-sans)", "sans-serif"],
+        "card-heading": ["var(--font-nunito-sans)", "sans-serif"],
+        "card-label": ["var(--font-nunito-sans)", "sans-serif"],
+        // ONLY for h1 section headings
+        display: ["var(--font-syncopate)", "sans-serif"],
+      },
+      backdropBlur: {
+        xs: '2px',
       },
       borderRadius: {
-        lg: "1rem",
-        md: "0.75rem",
-        sm: "0.5rem",
-        xl: "1.5rem",
-        "2xl": "2rem",
+        sm: "0.25rem",
+        DEFAULT: "0.375rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        "2xl": "1rem",
+        "3xl": "1.5rem",
       },
       keyframes: {
         "accordion-down": {
@@ -85,10 +106,21 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
+        pulse: {
+          '0%, 100%': { opacity: 1 },
+          '50%': { opacity: .5 }
+        },
+        "pulse-azure-blob": {
+          "0%, 100%": { opacity: 0.7 },
+          "50%": { opacity: 0.4 },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        "pulse-slow-azure-blob":
+          "pulse-azure-blob 6s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
   },

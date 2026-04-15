@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { getArtistBalance } from "@/lib/storage"
+import { requireSelfOrAdmin } from "@/lib/server-auth"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(
   request: Request,
@@ -14,6 +17,9 @@ export async function GET(
         { status: 400 }
       )
     }
+
+    const authError = await requireSelfOrAdmin(request, artistId)
+    if (authError) return authError
 
     const balance = await getArtistBalance(artistId)
     

@@ -2,39 +2,55 @@
 
 import { useState, useEffect } from "react"
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Music, ExternalLink } from "lucide-react"
+
+type ReleasePreview = {
+  id: string
+  title: string
+  coverUrl?: string | null
+  releaseDate: string
+}
 
 export default function ArtistProfilePage({ params }: { params: { username: string } }) {
   const [artist, setArtist] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [releases, setReleases] = useState<any[]>([])
-  const [playlists, setPlaylists] = useState<any[]>([])
+  const [releases, setReleases] = useState<ReleasePreview[]>([])
 
   useEffect(() => {
     const fetchArtistData = async () => {
       try {
-        // Получаем всех пользователей через API
-        const usersResponse = await fetch('/api/users')
+        const usersResponse = await fetch(
+          `/api/users?username=${encodeURIComponent(params.username)}&role=artist`
+        )
         const usersResult = await usersResponse.json()
-        
+
         if (usersResult.success) {
-          const foundArtist = usersResult.users.find(
-            (a: any) => a.username === params.username && a.role === "artist"
-          )
-          
+          const foundArtist = usersResult.users?.[0]
+
           if (foundArtist) {
             setArtist(foundArtist)
-            // TODO: Загрузить релизы и плейлисты через API когда они будут готовы
-            setReleases([])
-            setPlaylists([])
+            const relRes = await fetch(
+              `/api/releases?artistId=${encodeURIComponent(foundArtist.id)}&page=1&pageSize=4`
+            )
+            const relJson = await relRes.json()
+            if (relJson.success && Array.isArray(relJson.releases)) {
+              setReleases(
+                relJson.releases.slice(0, 4).map((r: any) => ({
+                  id: r.id,
+                  title: r.title,
+                  coverUrl: r.coverUrl,
+                  releaseDate: r.releaseDate,
+                }))
+              )
+            } else {
+              setReleases([])
+            }
           }
         }
       } catch (error) {
-        console.error('Ошибка при загрузке данных артиста:', error)
+        console.error("Ошибка при загрузке данных артиста:", error)
       } finally {
         setLoading(false)
       }
@@ -43,205 +59,202 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
     fetchArtistData()
   }, [params.username])
 
-  // Если артист не найден
   if (!loading && !artist) {
     notFound()
   }
 
-  // Если еще загружается
   if (loading) {
     return (
       <Layout role="artist" requiredRole="artist" username={params.username}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
+          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
         </div>
       </Layout>
     )
   }
 
+  const dash = `/dashboard/artist/${params.username}/dashboard`
+  const releasesHref = `/dashboard/artist/${params.username}/releases`
+  const playlistsHref = `/dashboard/artist/${params.username}/playlists`
+
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <div className="w-full md:w-1/3">
-            <Card className="bg-card border-border text-card-foreground rounded-xl overflow-hidden">
-              <div className="relative h-48 bg-gradient-to-r from-blue-900 to-purple-900">
-                <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
-                  <div className="relative w-32 h-32 rounded-full border-4 border-card overflow-hidden">
-                    {artist.avatarUrl ? (
-                      artist.avatarUrl.startsWith('data:') ? (
-                        <img
-                          src={artist.avatarUrl}
-                          alt={artist.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Image
-                          src={artist.avatarUrl}
-                          alt={artist.name}
-                          fill
-                          className="object-cover"
-                        />
-                      )
-                    ) : (
-                      <div className="w-full h-full bg-accent flex items-center justify-center">
-                        <span className="text-4xl font-bold text-white">{artist.name.charAt(0).toUpperCase()}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <CardContent className="pt-20 pb-6">
-                <h1 className="text-2xl font-bold text-center text-white mb-2">{artist.name}</h1>
-                {artist.email && <p className="text-sm text-center text-gray-400 mb-4">{artist.email}</p>}
+      <div className="p-0 md:p-0 max-w-full pb-24">
+      <div className="flex flex-col gap-6 mb-8">
+        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+          <Link href={dash} className="hover:text-[#10b981] cursor-pointer transition-colors">
+            Dashboard
+          </Link>
+          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
+            chevron_right
+          </span>
+          <span className="text-white">Профиль</span>
+        </div>
 
-                {/* Добавляем ссылки на музыкальные сервисы */}
-                <div className="flex justify-center gap-4 mt-4">
-                  {artist.vkMusicUrl && (
-                    <a
-                      href={artist.vkMusicUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                      <Music className="h-4 w-4" />
-                      <span>ВК Музыка</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-
-                  {artist.yandexMusicUrl && (
-                    <a
-                      href={artist.yandexMusicUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
-                    >
-                      <Music className="h-4 w-4" />
-                      <span>Яндекс Музыка</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-
-                  {artist.spotifyUrl && (
-                    <a
-                      href={artist.spotifyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-green-400 hover:text-green-300 transition-colors"
-                    >
-                      <Music className="h-4 w-4" />
-                      <span>Spotify</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="w-full md:w-2/3 space-y-6">
-            <Card className="bg-card border-border text-card-foreground rounded-xl">
-              <CardHeader>
-                <CardTitle>Последние релизы</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {releases.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {releases.slice(0, 4).map((release) => (
-                      <Link
-                        key={release.id}
-                        href={`/dashboard/artist/${params.username}/releases/${release.id}`}
-                        className="block"
-                      >
-                        <div className="bg-accent/30 rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="relative w-12 h-12 rounded overflow-hidden">
-                              <Image
-                                src={release.coverUrl || "/placeholder.svg"}
-                                alt={release.title}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-white">{release.title}</h3>
-                              <p className="text-xs text-gray-400">
-                                {new Date(release.releaseDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-400">Нет доступных релизов</p>
-                )}
-
-                {releases.length > 4 && (
-                  <div className="mt-4 text-center">
-                    <Link
-                      href={`/dashboard/artist/${params.username}/releases`}
-                      className="text-sm text-category-blue hover:text-category-blue/80 transition-colors"
-                    >
-                      Смотреть все релизы
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border text-card-foreground rounded-xl">
-              <CardHeader>
-                <CardTitle>Плейлисты</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {playlists.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {playlists.slice(0, 4).map((playlist) => (
-                      <Link
-                        key={playlist.id}
-                        href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`}
-                        className="block"
-                      >
-                        <div className="bg-accent/30 rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="relative w-12 h-12 rounded overflow-hidden">
-                              <Image
-                                src={playlist.imageUrl || "/placeholder.svg"}
-                                alt={playlist.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-white">{playlist.name}</h3>
-                              <p className="text-xs text-gray-400">{playlist.platform}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-400">Нет доступных плейлистов</p>
-                )}
-
-                {playlists.length > 4 && (
-                  <div className="mt-4 text-center">
-                    <Link
-                      href={`/dashboard/artist/${params.username}/playlists`}
-                      className="text-sm text-category-blue hover:text-category-blue/80 transition-colors"
-                    >
-                      Смотреть все плейлисты
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+          <div>
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">{artist.name}</h1>
+            <p className="text-sm text-gray-400 font-light max-w-md">
+              Публичная карточка и быстрые ссылки на релизы и плейлисты.
+            </p>
           </div>
         </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-8 mb-12">
+        <div className="w-full lg:w-1/3">
+          <div className="card-glass rounded-2xl border border-white/5 p-8 text-center">
+            <div className="relative w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden mx-auto mb-4">
+              {artist.avatarUrl ? (
+                artist.avatarUrl.startsWith("data:") ? (
+                  <img src={artist.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Image src={artist.avatarUrl} alt="" fill className="object-cover" sizes="96px" />
+                )
+              ) : (
+                <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-white font-display">{artist.name.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xl font-bold text-white">{artist.name}</p>
+            {artist.email && <p className="text-sm text-gray-400 mt-2 break-all">{artist.email}</p>}
+
+            <div className="flex flex-wrap justify-center gap-2 mt-6">
+              {artist.vkMusicUrl && (
+                <a
+                  href={artist.vkMusicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-blue-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  <span className="material-symbols-outlined text-sm">library_music</span>
+                  VK
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                </a>
+              )}
+              {artist.yandexMusicUrl && (
+                <a
+                  href={artist.yandexMusicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-yellow-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  <span className="material-symbols-outlined text-sm">music_note</span>
+                  Яндекс
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                </a>
+              )}
+              {artist.spotifyUrl && (
+                <a
+                  href={artist.spotifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-emerald-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  <span className="material-symbols-outlined text-sm">graphic_eq</span>
+                  Spotify
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-2/3 space-y-8">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-primary rounded-full" />
+                Последние релизы
+              </h2>
+              <Link
+                href={releasesHref}
+                className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
+              >
+                Все релизы
+              </Link>
+            </div>
+            <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6">
+              {releases.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {releases.map((release) => (
+                    <Link
+                      key={release.id}
+                      href={`/dashboard/artist/${params.username}/releases/${release.id}`}
+                      className="group flex items-center gap-3 p-3 rounded-xl border border-white/5 hover:bg-white/5 hover:border-primary/20 transition-all min-w-0"
+                    >
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
+                        <Image
+                          src={release.coverUrl || "/placeholder.svg"}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-white text-sm truncate group-hover:text-[#10b981] transition-colors">
+                          {release.title}
+                        </p>
+                        <p className="text-[10px] font-mono text-gray-500 tabular-nums">
+                          {release.releaseDate
+                            ? new Date(release.releaseDate).toLocaleDateString("ru-RU")
+                            : "—"}
+                        </p>
+                      </div>
+                      <span className="material-symbols-outlined text-gray-600 group-hover:text-white text-sm flex-shrink-0">
+                        chevron_right
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">album</span>
+                  <p className="text-gray-500 font-mono text-xs uppercase tracking-wider">Нет релизов</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
+                Плейлисты
+              </h2>
+              <Link
+                href={playlistsHref}
+                className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
+              >
+                Все плейлисты
+              </Link>
+            </div>
+            <div className="card-glass rounded-2xl border border-white/5 p-8 text-center">
+              <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">queue_music</span>
+              <p className="text-gray-500 font-mono text-xs uppercase tracking-wider mb-2">Смотрите плейлисты</p>
+              <p className="text-[10px] text-gray-600 mb-4">Полный список — на отдельной странице.</p>
+              <Link
+                href={playlistsHref}
+                className="inline-flex items-center gap-2 text-xs text-primary font-mono uppercase tracking-widest border border-primary/30 rounded-lg px-4 py-2 hover:bg-primary/10 transition-colors"
+              >
+                Перейти к плейлистам
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
+        <div className="text-gray-500 font-mono">
+          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
+          System Operational
+        </div>
+        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
+      </div>
       </div>
     </Layout>
   )

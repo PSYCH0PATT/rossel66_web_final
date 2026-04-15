@@ -1,0 +1,121 @@
+ROSSEL MUSIC — DESIGN SYSTEM
+==============================
+Эталонные страницы: Dashboard (artist + admin), Analytics. Releases — частично готова.
+
+REFERENCE FILES (читай перед работой с UI):
+  app/dashboard/dashboard.css
+  app/dashboard/artist/[username]/dashboard/artist-dashboard-client.tsx
+  app/dashboard/artist/[username]/releases/releases-client.tsx
+  components/sidebar.tsx / components/layout.tsx
+  tailwind.config.js
+
+
+── НЕСТАНДАРТНЫЕ РЕШЕНИЯ (ловушки) ──────────────────────────────────────────
+
+- font-mono в Tailwind ПЕРЕМАПЛЕН на Nunito Sans. Это НЕ моноширинный шрифт.
+  Используется как стиль "технической метки": breadcrumbs, table headers, labels, footer.
+- font-display = Syncopate — ТОЛЬКО для h1 заголовков страниц и чисел метрик KPI.
+- Иконки — ТОЛЬКО Material Symbols Outlined: <span className="material-symbols-outlined">.
+  Не добавлять Lucide/Heroicons в новые компоненты дашборда.
+- dashboard.css полностью переопределяет CSS-переменные globals.css для дашборда.
+  Дашборд — тёмная тема, публичный сайт — светлая. Не смешивать.
+
+
+── КЛЮЧЕВЫЕ ЦВЕТА ───────────────────────────────────────────────────────────
+
+Page background:    hsl(0 0% 4%)  ≈ #0a0a0a    --background
+Sidebar bg:         hsl(0 0% 6%)  ≈ #0f0f0f    --sidebar-background
+Card bg:            hsl(0 0% 7%)  ≈ #121212     --card
+Muted/input:        hsl(0 0% 10%) ≈ #1a1a1a    --muted, --input
+Stat card glass:    rgba(20,20,20,0.6)
+Glass panel:        rgba(10,10,10,0.4)
+Default border:     hsl(0 0% 14%) ≈ #242424    --border
+Subtle borders:     rgba(255,255,255,0.05/0.08/0.10)
+
+Primary / emerald:  #10b981   text-primary, bg-primary
+Azure / sky:        #0ea5e9   text-accent-azure, bg-accent-azure
+Purple:             #c084fc   text-purple-400
+Destructive:        #ef4444
+
+Status — live:        #10b981    delivered: #0ea5e9
+Status — moderation:  #eab308    rejected:  #ef4444    draft: #9ca3af
+
+Chart DSP palette (строго по порядку):
+  #10b981 #3b82f6 #f59e0b #ef4444 #8b5cf6 #ec4899 #06b6d4 #84cc16 #f97316 #6366f1
+
+
+── CSS КЛАССЫ ДАШБОРДА (определены в globals.css / dashboard.css) ────────────
+
+  stat-card-glass        — KPI карточки (bg rgba(20,20,20,0.6), border white/8, hover translateY(-2px))
+  card-glass             — контентные панели activity/chart (gradient bg white/5→white/1, shadow 0 10px 40px -10px black/50)
+  glass-panel            — sidebar (backdrop-blur-xl, border white/5, shadow 0 4px 30px black/30)
+  stat-dash-bg-wrap      — фоновая иконка карточки (absolute top-0 right-0 p-4 opacity-0.1, hover 0.2)
+  stat-dash-bg-icon      — размер фоновой иконки (3.75rem)
+  stat-dash-metric-badge — значок изменения (--primary / --azure / --purple variants)
+  release-status-badge   — статус релиза (border-radius 9999px, uppercase, 0.65rem)
+  release-status-badge--live/delivered/moderation/draft/rejected
+  table-glass            — обёртка таблицы
+  table-row-hover        — строка таблицы при ховере (bg emerald/3, border-bottom emerald/20)
+
+
+── ПАТТЕРНЫ КОМПОНЕНТОВ ─────────────────────────────────────────────────────
+
+Каждая страница ДОЛЖНА иметь:
+  1. Breadcrumb: flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2
+                 separator: material-symbols-outlined text-[10px] "chevron_right"
+  2. Page header: h1.font-display.text-4xl.md:text-5xl.font-bold.text-white.uppercase.tracking-tight
+                  + p.text-sm.text-gray-400.font-light.max-w-md + border-b border-white/5 pb-8
+  3. Status footer: border-t border-white/5 pt-6, левый: animate-pulse dot + "System Operational",
+                    правый: font-mono text-xs "ROSSEL LABEL ENGINE V2.4"
+
+Section headings (h2): text-xl font-bold text-white tracking-wide + flex items-center gap-2
+  + span.w-1.5.h-6.rounded-full.bg-primary (emerald) или bg-accent-azure
+
+KPI grid: grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12
+  Каждая карточка: stat-card-glass p-6 rounded-2xl relative overflow-hidden group
+  Icon wrapper variants: bg-primary/10 text-primary border-primary/20
+                         bg-accent-azure/10 text-accent-azure border-accent-azure/20
+                         bg-purple-500/10 text-purple-400 border-purple-500/20
+                         bg-white/5 text-white border-white/10
+
+Primary CTA button: bg-[#10b981] hover:bg-emerald-400 text-black font-bold rounded-lg
+  + shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 transition-all
+  Текст кнопки — ЧЁРНЫЙ, не белый.
+
+Ghost button: border border-white/10 rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-widest
+  text-gray-500 hover:text-primary transition-colors
+
+Table top accent: div.absolute.top-0.left-0.w-full.h-px.bg-gradient-to-r.from-transparent.via-[#10b981]/50.to-transparent
+
+Chart tooltip (streaming): bg rgba(15,15,15,0.95), border rgba(16,185,129,0.3), borderRadius 8px
+Chart tooltip (DSP):        bg #1f2937, border #374151, borderRadius 8px
+
+Loading spinner: w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin
+Empty state:     material-symbols-outlined text-4xl/5xl block mb-4 opacity-30
+                 + p.text-sm.font-mono.uppercase.tracking-widest.text-gray-500
+
+
+── LAYOUT ───────────────────────────────────────────────────────────────────
+
+Sidebar: w-64 (256px), fixed mobile / static desktop
+Content: p-6 md:p-10, max-w-7xl mx-auto, pb-24
+Panels grid: grid-cols-1 xl:grid-cols-2 gap-8
+
+
+── RULES — ЗАПРЕЩЕНО ────────────────────────────────────────────────────────
+
+NEVER use white/light backgrounds inside the dashboard (no bg-white, bg-gray-100).
+NEVER use font-display outside h1 titles and KPI metric values.
+NEVER add new icon libraries — Material Symbols Outlined only.
+NEVER use colored left-border (border-l-4) on dashboard cards.
+NEVER introduce a color not listed above — use opacity variants of existing colors.
+NEVER center stat-card content — always flex-col justify-between (label top, value bottom).
+NEVER use text-white for subtitles/descriptions under h1 — use text-gray-400.
+NEVER use shadcn Card component for KPI blocks — use stat-card-glass.
+NEVER use chart animations (isAnimationActive={false} always).
+
+NEW COMPONENTS: derive from the nearest existing pattern.
+  New content panel → card-glass rounded-2xl border border-white/5
+  New metric block  → stat-card-glass structure with bg-icon + label + value + badge
+  New status badge  → release-status-badge + variant (color only from status palette)
+  When in doubt     → follow artist-dashboard-client.tsx as the primary reference

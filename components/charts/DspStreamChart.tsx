@@ -1,7 +1,7 @@
 "use client"
 
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts"
 
@@ -39,10 +39,18 @@ function CustomTooltip({ active, payload, label, formatDate }: any) {
 export default function DspStreamChart({ data, dsps, formatDate }: DspStreamChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-        <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }} tickFormatter={formatDate} />
-        <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} width={40} />
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+        <defs>
+          {dsps.map((dsp, i) => (
+            <linearGradient key={`color-${i}`} id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={DSP_COLORS[i % DSP_COLORS.length]} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={DSP_COLORS[i % DSP_COLORS.length]} stopOpacity={0} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="date" stroke="rgba(255,255,255,0.1)" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} tickFormatter={formatDate} tickLine={false} axisLine={false} />
+        <YAxis stroke="rgba(255,255,255,0.1)" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} width={40} tickLine={false} axisLine={false} />
         <Tooltip
           content={<CustomTooltip formatDate={formatDate} />}
           contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
@@ -58,18 +66,20 @@ export default function DspStreamChart({ data, dsps, formatDate }: DspStreamChar
           iconSize={10}
         />
         {dsps.map((dsp, i) => (
-          <Line
+          <Area
             key={dsp}
             type="monotone"
             dataKey={dsp}
             stroke={DSP_COLORS[i % DSP_COLORS.length]}
+            fill={`url(#color-${i})`}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4 }}
+            activeDot={{ r: 4, stroke: "#1f2937", strokeWidth: 2 }}
             isAnimationActive={false}
+            style={(dsp === "Яндекс Музыка" || i === 0) ? { filter: `drop-shadow(0 0 8px ${DSP_COLORS[i % DSP_COLORS.length]}80)` } : {}}
           />
         ))}
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   )
 }

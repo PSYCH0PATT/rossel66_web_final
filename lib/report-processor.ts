@@ -2,7 +2,8 @@
 import * as XLSX from 'xlsx'
 import * as fs from 'fs'
 import * as path from 'path'
-import { loadUsers, addReport, ReportData, findArtistByName, assignReportsToArtist } from './storage'
+import { addReport, ReportData, findArtistByName, assignReportsToArtist } from './storage'
+import { prisma } from './prisma'
 
 // Интерфейс для данных артиста
 interface ArtistData {
@@ -89,20 +90,21 @@ function calculateArtistShare(
 
 // Функция для загрузки данных артистов
 async function getArtistsData(): Promise<ArtistData> {
-  const users = await loadUsers()
-  const artistsData: ArtistData = {}
-  
-  users.forEach(user => {
-    if (user.role === 'artist') {
-      artistsData[user.name] = {
-        fullName: user.name,
-        shortName: user.name,
-        contractNumber: `ДОГ-${user.id}`,
-        percentage: '100%'
-      }
-    }
+  const users = await prisma.user.findMany({
+    where: { role: 'artist' },
+    select: { id: true, name: true },
   })
-  
+  const artistsData: ArtistData = {}
+
+  for (const user of users) {
+    artistsData[user.name] = {
+      fullName: user.name,
+      shortName: user.name,
+      contractNumber: `ДОГ-${user.id}`,
+      percentage: '100%',
+    }
+  }
+
   return artistsData
 }
 

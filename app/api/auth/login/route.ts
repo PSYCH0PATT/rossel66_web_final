@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
-import { loadUsers } from "@/lib/storage"
+import { getUserByUsername } from "@/lib/storage"
+import { buildSessionCookieValue } from "@/lib/server-auth"
 import bcrypt from "bcryptjs"
 
 export async function POST(request: Request) {
+  const debugStart = performance.now()
+  const debugLog = (phase: string, start: number) => {
+    const ms = Math.round(performance.now() - start)
+    console.log(`[LOGIN_DEBUG] ${phase}: ${ms}ms`)
+  }
+
   try {
     const { username, password } = await request.json()
 
@@ -13,18 +20,18 @@ export async function POST(request: Request) {
       )
     }
 
-    let users
+    const tLoadUser = performance.now()
+    let user
     try {
-      users = await loadUsers()
+      user = await getUserByUsername(username)
+      debugLog("getUserByUsername (DB)", tLoadUser)
     } catch (err) {
-      console.error("Login: не удалось загрузить пользователей (проверьте DATABASE_URL):", err)
+      console.error("Login: не удалось загрузить пользователя (проверьте DATABASE_URL):", err)
       return NextResponse.json(
         { success: false, error: "Ошибка сервера. Проверьте подключение к базе данных." },
         { status: 500 }
       )
     }
-
-    const user = users.find(u => u.username === username)
 
     if (!user) {
       return NextResponse.json(
@@ -33,18 +40,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // Проверяем пароль
+    const tPassword = performance.now()
     let isValidPassword = false
-    
-    // Проверяем, захеширован ли пароль (bcrypt хеши начинаются с $2)
-    if (user.password.startsWith('$2')) {
-      // Пароль захеширован - сравниваем через bcrypt
+
+    if (user.password.startsWith("$2")) {
       isValidPassword = await bcrypt.compare(password, user.password)
     } else {
-      // Пароль в plaintext (для обратной совместимости)
-      // После миграции этот блок можно удалить
       isValidPassword = user.password === password
     }
+    debugLog("password check (bcrypt/plain)", tPassword)
 
     if (!isValidPassword) {
       return NextResponse.json(
@@ -53,8 +57,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Возвращаем данные пользователя БЕЗ пароля
-    return NextResponse.json({
+    const tSession = performance.now()
+    const sessionValue = buildSessionCookieValue({
+      id: user.id,
+      username: user.username,
+      role: user.role as "admin" | "artist",
+    })
+
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -66,8 +76,19 @@ export async function POST(request: Request) {
         vkMusicUrl: user.vkMusicUrl,
         yandexMusicUrl: user.yandexMusicUrl,
         spotifyUrl: user.spotifyUrl,
-      }
+      },
     })
+
+    response.cookies.set("rossel_session", sessionValue, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    })
+
+    debugLog("session build", tSession)
+    debugLog("TOTAL login request", debugStart)
+    return response
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json(

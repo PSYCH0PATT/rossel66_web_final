@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
-import { addUser, getUserByUsername, loadUsers, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
+import bcrypt from "bcryptjs"
+import type { Prisma } from "@prisma/client"
+import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
 import * as fs from "fs"
 import * as path from "path"
+
+export const dynamic = "force-dynamic"
 
 export async function POST(request: Request) {
   try {
@@ -175,39 +180,84 @@ export async function POST(request: Request) {
   }
 }
 
+const ARTIST_PAGE_SIZES = new Set([20, 50, 100])
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const verifiedParam = searchParams.get('verified')
-    
-    const users = await loadUsers()
-    let artists = users.filter(user => user.role === 'artist')
-    
-    // Фильтр по статусу подтверждения
-    if (verifiedParam !== null) {
-      const isVerified = verifiedParam === 'true'
-      artists = artists.filter(artist => (artist.verified ?? true) === isVerified)
+    const verifiedParam = searchParams.get("verified")
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
+    const rawPs = parseInt(searchParams.get("pageSize") || "20", 10)
+    const pageSize = ARTIST_PAGE_SIZES.has(rawPs) ? rawPs : 20
+    const q = (searchParams.get("q") || "").trim()
+
+    const searchWhere: Prisma.UserWhereInput | undefined =
+      q.length > 0
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { username: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : undefined
+
+    const where: Prisma.UserWhereInput = {
+      role: "artist",
+      ...(verifiedParam !== null ? { verified: verifiedParam === "true" } : {}),
+      ...(searchWhere ?? {}),
     }
-    
+
+    const baseArtistWhere: Prisma.UserWhereInput = {
+      role: "artist",
+      ...(searchWhere ?? {}),
+    }
+
+    const skip = (page - 1) * pageSize
+
+    const artistSelect = {
+      id: true,
+      username: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      vkMusicUrl: true,
+      yandexMusicUrl: true,
+      spotifyUrl: true,
+      fio: true,
+      fioShort: true,
+      contract: true,
+      percentage: true,
+      verified: true,
+    } as const
+
+    const [artists, total, statsAll, statsVerified, statsUnverified] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+        select: artistSelect,
+        skip,
+        take: pageSize,
+      }),
+      prisma.user.count({ where }),
+      prisma.user.count({ where: baseArtistWhere }),
+      prisma.user.count({ where: { ...baseArtistWhere, verified: true } }),
+      prisma.user.count({ where: { ...baseArtistWhere, verified: false } }),
+    ])
+
     return NextResponse.json({
       success: true,
-      artists: artists.map(artist => ({
-        id: artist.id,
-        username: artist.username,
-        password: artist.password,
-        name: artist.name,
-        email: artist.email,
-        avatarUrl: artist.avatarUrl,
-        vkMusicUrl: artist.vkMusicUrl,
-        yandexMusicUrl: artist.yandexMusicUrl,
-        spotifyUrl: artist.spotifyUrl,
-        // Новые поля
-        fio: artist.fio,
-        fioShort: artist.fioShort,
-        contract: artist.contract,
-        percentage: artist.percentage,
+      artists: artists.map((artist) => ({
+        ...artist,
         verified: artist.verified ?? true,
-      }))
+      })),
+      total,
+      page,
+      pageSize,
+      stats: {
+        all: statsAll,
+        verified: statsVerified,
+        unverified: statsUnverified,
+      },
     })
   } catch (error) {
     console.error("Error loading artists:", error)
@@ -221,20 +271,48 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const data = await request.json()
-    const { id, username, password, name, email, vkMusicUrl, yandexMusicUrl, spotifyUrl, avatarUrl, fio, fioShort, contract, percentage, verified } = data
+    const {
+      id,
+      username,
+      password,
+      currentPassword,
+      name,
+      email,
+      vkMusicUrl,
+      yandexMusicUrl,
+      spotifyUrl,
+      avatarUrl,
+      fio,
+      fioShort,
+      contract,
+      percentage,
+      verified,
+    } = data
 
     // Validate required field (only ID is required)
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 })
     }
 
-    const users = await loadUsers()
-    
-    // Check if username already exists (excluding current user) - only if username is being updated
     if (username) {
-      const existingUser = users.find(user => user.username === username && user.id !== id)
+      const existingUser = await prisma.user.findFirst({
+        where: { username, NOT: { id } },
+      })
       if (existingUser) {
         return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+      }
+    }
+
+    if (password !== undefined) {
+      const existingUser = await prisma.user.findUnique({ where: { id } })
+      if (!existingUser) {
+        return NextResponse.json({ error: "Artist not found" }, { status: 404 })
+      }
+      if (currentPassword) {
+        const match = await bcrypt.compare(currentPassword, existingUser.password)
+        if (!match) {
+          return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 401 })
+        }
       }
     }
 
@@ -309,10 +387,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Artist ID is required" }, { status: 400 })
     }
 
-    // Проверяем, существует ли артист
-    const users = await loadUsers()
-    const artist = users.find(user => user.id === artistId && user.role === 'artist')
-    
+    const artist = await prisma.user.findFirst({
+      where: { id: artistId, role: "artist" },
+    })
+
     if (!artist) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }

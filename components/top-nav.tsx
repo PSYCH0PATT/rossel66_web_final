@@ -43,13 +43,15 @@ export default function TopNav({ role, username }: TopNavProps) {
   useEffect(() => {
     const fetchUserData = async () => {
       if (!currentUsername) return
-      
+
       try {
-        const response = await fetch('/api/users')
+        const response = await fetch(
+          `/api/users?username=${encodeURIComponent(currentUsername)}`
+        )
         const result = await response.json()
-        
+
         if (result.success) {
-          const user = result.users.find((u: any) => u.username === currentUsername)
+          const user = result.users?.[0]
           if (user) {
             setCurrentUserName(user.name)
             setAvatarUrl(user.avatarUrl || null)
@@ -107,84 +109,50 @@ export default function TopNav({ role, username }: TopNavProps) {
   }
 
   return (
-    <nav className="px-3 sm:px-6 flex items-center justify-between bg-card border-b border-gray-700 h-full relative">
-      {/* Breadcrumbs - скрыты на мобильных когда есть гамбургер меню */}
-      <div className="font-medium text-sm hidden lg:flex items-center space-x-1 truncate max-w-[300px]">
-        {breadcrumbs.map((item, index) => (
-          <div key={item.label} className="flex items-center">
-            {index > 0 && <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />}
-            {item.href === pathname ? (
-              <span className="text-emerald">{item.label}</span>
-            ) : (
-              <Link href={item.href} className="text-gray-300 hover:text-white transition-colors">
-                {item.label}
-              </Link>
-            )}
-          </div>
-        ))}
+    <header className="md:hidden h-16 bg-black/80 glass-panel border-b border-white/10 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-lg">
+      <div className="flex items-center">
+        <span className="material-symbols-outlined text-primary">graphic_eq</span>
+        <span className="font-display font-bold text-lg tracking-widest text-white ml-2">ROSSEL</span>
       </div>
 
-      {/* Пустой div для выравнивания на мобильных (слева от логотипа) */}
-      <div className="lg:hidden w-10" />
+      {/* Search Input / Left Area Breadcrumbs — hidden on mobile anyway, but keeping for structural similarity if needed, though HTML only has menu button */}
 
-      {/* Логотип по центру (только на мобилке) */}
-      <div className="absolute left-1/2 -translate-x-1/2 lg:hidden">
-        <Image src="/images/logo.png" alt="ROSSEL 66" width={42} height={42} className="flex-shrink-0" />
-      </div>
-
-      <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+      <div className="flex items-center gap-4">
+        {/* We can keep the User Dropdown here for mobile users so they can still log out */}
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
-            <div className="flex items-center gap-2 p-1.5 hover:bg-accent/50 rounded-xl transition-colors">
-              <div className="h-10 w-10 rounded-full overflow-hidden bg-emerald flex items-center justify-center text-black">
-                {avatarUrl ? (
-                  avatarUrl.startsWith('data:') ? (
-                    <img
-                      src={avatarUrl}
-                      alt="User avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Image
-                      src={avatarUrl}
-                      alt="User avatar"
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover"
-                    />
-                  )
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-800 border border-primary/50 text-white text-sm font-bold">
+              {avatarUrl ? (
+                avatarUrl.startsWith('data:') ? (
+                  <img src={avatarUrl} alt="User avatar" className="w-full h-full object-cover rounded-full" />
                 ) : (
-                  <User className="h-5 w-5" />
-                )}
-              </div>
+                  <Image src={avatarUrl} alt="User avatar" width={32} height={32} className="w-full h-full object-cover rounded-full" />
+                )
+              ) : (
+                currentUsername ? currentUsername.charAt(0).toUpperCase() : 'U'
+              )}
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            sideOffset={8}
-            className="w-[200px] border-gray-700 rounded-xl shadow-lg"
-          >
-            <div className="p-3 border-b border-gray-700">
-              <p className="text-sm font-medium text-white">{currentUserName || currentUsername}</p>
-              <p className="text-xs text-gray-400">{role === "artist" ? "Артист" : "Администратор"}</p>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-[200px] bg-black/90 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl">
+            <div className="p-3 border-b border-white/10">
+              <p className="text-sm font-bold text-white">{currentUserName || currentUsername}</p>
+              <p className="text-xs text-primary uppercase tracking-widest mt-1">{role === "artist" ? "Артист" : "Админ"}</p>
             </div>
-            <div className="p-2">
-              <Link
-                href={role === "artist" ? `/dashboard/artist/${currentUsername}/settings` : "/dashboard/admin/settings"}
-                className="flex items-center gap-2 p-2 text-sm text-gray-300 hover:text-white hover:bg-accent/50 rounded-lg transition-colors"
-              >
-                Настройки
+            <div className="p-2 space-y-1">
+              <Link href={role === "artist" ? `/dashboard/artist/${currentUsername}/settings` : "/dashboard/admin/settings"} className="flex items-center gap-3 p-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors group">
+                <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">settings</span>
+                <span className="mt-0.5">Настройки</span>
               </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2 p-2 text-sm text-gray-300 hover:text-white hover:bg-accent/50 rounded-lg transition-colors"
-              >
-                Выйти
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2 text-sm text-gray-400 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors group">
+                <span className="material-symbols-outlined text-[18px] group-hover:text-red-400 transition-colors">logout</span>
+                <span className="mt-0.5">Выйти</span>
               </button>
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Note: The physical hamburger menu button is actually rendered inside components/sidebar.tsx as fixed position, so we don't need it here to avoid duplication. */}
       </div>
-    </nav>
+    </header>
   )
 }

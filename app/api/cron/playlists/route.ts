@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { loadReleases, loadUsers, addActivity } from '@/lib/storage';
+import { addActivity } from '@/lib/storage';
+import { prisma } from '@/lib/prisma';
+import { releaseFromPrisma } from '@/lib/storage-adapters';
+
+export const dynamic = 'force-dynamic'
 
 // Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -25,37 +29,37 @@ if (!CRON_SECRET) {
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Проверяем авторизацию
     const authHeader = request.headers.get('authorization');
     const cronSecret = request.nextUrl.searchParams.get('secret');
     const source = request.nextUrl.searchParams.get('source'); // 'parser' для ручного парсинга
-    
+
     // Проверяем секрет (через заголовок или query параметр)
     const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
-    
+
     if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
       console.log('❌ Cron Playlists: Неверный секрет авторизации или CRON_SECRET не настроен');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized'
       }, { status: 401 });
     }
-    
+
     // Проверяем, использовать ли SFTP синхронизацию (по умолчанию) или парсинг
     const useSftpSync = process.env.USE_SFTP_SYNC !== 'false' && source !== 'parser';
-    
+
     if (useSftpSync) {
       // Перенаправляем на SFTP синхронизацию
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-      
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
       try {
         const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${CRON_SECRET}`, {
           headers: authHeader ? { 'Authorization': authHeader } : {}
         });
-        
+
         const sftpResult = await sftpResponse.json();
         return NextResponse.json(sftpResult);
       } catch (error) {
@@ -67,41 +71,41 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
       }
     }
-    
+
     // Используем старый парсинг (только если явно запрошен или USE_SFTP_SYNC=false)
     console.log('');
     console.log('═══════════════════════════════════════════════════');
     console.log('🎵 CRON PLAYLIST PARSER (Legacy)');
     console.log('═══════════════════════════════════════════════════');
     console.log(`📅 Время запуска: ${new Date().toISOString()}`);
-    
+
     // Находим артистов с недавними релизами
     const artistsToScan = await getArtistsWithRecentReleases();
-    
+
     if (artistsToScan.length === 0) {
       console.log('📭 Нет артистов с недавними релизами для сканирования');
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'Нет артистов с недавними релизами',
         artists: [],
         duration: `${Date.now() - startTime}ms`
       });
     }
-    
+
     console.log(`👥 Найдено артистов для сканирования: ${artistsToScan.length}`);
     artistsToScan.forEach(a => {
       console.log(`   • ${a.name} (@${a.username}) — релиз: ${a.recentRelease}`);
     });
-    
+
     // Определяем базовый URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
     const results = {
       bandlink: { success: false, count: 0, error: null as string | null },
       vk: { success: false, count: 0, error: null as string | null }
     };
-    
+
     // Запускаем Bandlink парсер
     console.log('');
     console.log('🔗 Запуск Bandlink парсера...');
@@ -109,15 +113,15 @@ export async function GET(request: NextRequest) {
       const bandlinkResponse = await fetch(`${baseUrl}/api/parsers/bandlink`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          artists: artistsToScan.map(a => a.username) 
+        body: JSON.stringify({
+          artists: artistsToScan.map(a => a.username)
         })
       });
-      
+
       const bandlinkResult = await bandlinkResponse.json();
       results.bandlink.success = bandlinkResult.success;
       results.bandlink.count = bandlinkResult.results?.length || 0;
-      
+
       if (!bandlinkResult.success) {
         results.bandlink.error = bandlinkResult.error;
         console.log(`❌ Bandlink: ${bandlinkResult.error}`);
@@ -128,7 +132,7 @@ export async function GET(request: NextRequest) {
       results.bandlink.error = String(error);
       console.log(`❌ Bandlink ошибка: ${error}`);
     }
-    
+
     // Запускаем VK парсер
     console.log('');
     console.log('🎵 Запуск VK парсера...');
@@ -136,15 +140,15 @@ export async function GET(request: NextRequest) {
       const vkResponse = await fetch(`${baseUrl}/api/parsers/vk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          artists: artistsToScan.map(a => a.username) 
+        body: JSON.stringify({
+          artists: artistsToScan.map(a => a.username)
         })
       });
-      
+
       const vkResult = await vkResponse.json();
       results.vk.success = vkResult.success;
       results.vk.count = vkResult.results?.length || 0;
-      
+
       if (!vkResult.success) {
         results.vk.error = vkResult.error;
         console.log(`❌ VK: ${vkResult.error}`);
@@ -155,9 +159,9 @@ export async function GET(request: NextRequest) {
       results.vk.error = String(error);
       console.log(`❌ VK ошибка: ${error}`);
     }
-    
+
     const duration = Date.now() - startTime;
-    
+
     // Логируем активность
     addActivity({
       type: 'playlist_found',
@@ -171,27 +175,27 @@ export async function GET(request: NextRequest) {
         duration: `${duration}ms`
       }
     });
-    
+
     console.log('');
     console.log('═══════════════════════════════════════════════════');
     console.log(`✅ Парсинг завершен за ${duration}ms`);
     console.log('═══════════════════════════════════════════════════');
     console.log('');
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: 'Cron парсинг плейлистов завершен',
       artists: artistsToScan.map(a => ({ name: a.name, username: a.username, release: a.recentRelease })),
       results,
       duration: `${duration}ms`
     });
-    
+
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error('❌ Cron Playlists: Критическая ошибка:', error);
-    
-    return NextResponse.json({ 
-      success: false, 
+
+    return NextResponse.json({
+      success: false,
       error: 'Internal server error',
       details: String(error),
       duration: `${duration}ms`
@@ -209,67 +213,72 @@ async function getArtistsWithRecentReleases(): Promise<Array<{
   name: string;
   recentRelease: string;
 }>> {
-  const releases = await loadReleases();
-  const users = await loadUsers();
-  
-  // Текущая дата
   const now = new Date();
-  
-  // 7 дней назад
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
   weekAgo.setHours(0, 0, 0, 0);
-  
-  // Находим релизы за последние 7 дней
-  const recentReleases = releases.filter(release => {
-    if (!release.releaseDate) return false;
-    
-    const releaseDate = new Date(release.releaseDate);
-    releaseDate.setHours(0, 0, 0, 0);
-    
-    // Релиз должен быть между weekAgo и now
-    return releaseDate >= weekAgo && releaseDate <= now;
+  const weekAgoStr = weekAgo.toISOString().split("T")[0];
+  const nowStr = now.toISOString().split("T")[0];
+
+  const raw = await prisma.release.findMany({
+    where: {
+      releaseDate: { gte: weekAgoStr, lte: nowStr },
+    },
+    orderBy: { createdAt: "desc" },
   });
-  
-  console.log(`📅 Период поиска: ${weekAgo.toISOString().split('T')[0]} — ${now.toISOString().split('T')[0]}`);
-  console.log(`📀 Найдено релизов за неделю: ${recentReleases.length}`);
-  
-  // Собираем уникальных артистов
-  const artistMap = new Map<string, { 
-    id: string; 
-    username: string; 
-    name: string; 
-    recentRelease: string 
-  }>();
-  
+  const recentReleases = raw.map(releaseFromPrisma);
+
+  const artistIdSet = new Set<string>();
   for (const release of recentReleases) {
-    const artist = users.find(u => u.id === release.artistId);
-    
-    if (artist && artist.role === 'artist' && !artistMap.has(artist.id)) {
+    if (release.artistId) artistIdSet.add(release.artistId);
+    for (const fid of release.featuredArtistIds || []) {
+      if (fid) artistIdSet.add(fid);
+    }
+  }
+  const artistIds = [...artistIdSet];
+  const users =
+    artistIds.length === 0
+      ? []
+      : await prisma.user.findMany({
+          where: { id: { in: artistIds }, role: "artist" },
+        });
+  const userById = new Map(users.map((u) => [u.id, u]));
+
+  console.log(`📅 Период поиска: ${weekAgoStr} — ${nowStr}`);
+  console.log(`📀 Найдено релизов за неделю: ${recentReleases.length}`);
+
+  const artistMap = new Map<
+    string,
+    { id: string; username: string; name: string; recentRelease: string }
+  >();
+
+  for (const release of recentReleases) {
+    const artist = release.artistId ? userById.get(release.artistId) : undefined;
+
+    if (artist && !artistMap.has(artist.id)) {
       artistMap.set(artist.id, {
         id: artist.id,
         username: artist.username,
         name: artist.name,
-        recentRelease: `${release.title} (${release.releaseDate})`
+        recentRelease: `${release.title} (${release.releaseDate})`,
       });
     }
-    
-    // Также добавляем featured артистов
+
     if (release.featuredArtistIds) {
       for (const featuredId of release.featuredArtistIds) {
-        const featuredArtist = users.find(u => u.id === featuredId);
-        if (featuredArtist && featuredArtist.role === 'artist' && !artistMap.has(featuredArtist.id)) {
+        const featuredArtist = userById.get(featuredId);
+        if (featuredArtist && !artistMap.has(featuredArtist.id)) {
           artistMap.set(featuredArtist.id, {
             id: featuredArtist.id,
             username: featuredArtist.username,
             name: featuredArtist.name,
-            recentRelease: `${release.title} (feat, ${release.releaseDate})`
+            recentRelease: `${release.title} (feat, ${release.releaseDate})`,
           });
         }
       }
     }
   }
-  
+
   return Array.from(artistMap.values());
 }
 

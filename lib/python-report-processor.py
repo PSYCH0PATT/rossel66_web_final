@@ -1,5 +1,6 @@
 import pandas as pd
 from openpyxl import load_workbook
+from openpyxl.utils.cell import coordinate_from_string, column_index_from_string
 import shutil
 import os
 import re
@@ -9,54 +10,92 @@ import time
 from collections import defaultdict
 
 # Путь к шаблону (копируем из оригинального проекта)
-TEMPLATE_PATH = "OtchetyAppFinal/2Отчёт шаблон.xlsx"
+TEMPLATE_PATH = "Отчёт MENDXZA.xlsx"
 
 # Пути к Excel файлам вместо Google Sheets (ТОЧНО как в MAIN_MAY.py)
 ARTISTS_EXCEL_PATH = "artists.xlsx"  # Файл со списком артистов
 ROYALTY_SHARES_EXCEL_PATH = "royalty_shares.xlsx"  # Файл с долями артистов
 
+# Ожидаемые колонки отчёта и возможные варианты названий в Excel
+COLUMN_ALIASES = {
+    'Код': ['Код', 'код', 'Код трека'],
+    'Исполнитель': ['Исполнитель', 'исполнитель', 'Artist'],
+    'Наименование': ['Наименование', 'наименование', 'Название', 'Трек'],
+    'Альбом': ['Альбом', 'альбом', 'Release'],
+    'Количество': ['Количество', 'количество', 'Кол-во', 'Прослушивания'],
+    'Сумма, руб.': ['Сумма, руб.', 'Сумма,руб.', 'Сумма (руб.)', 'Сумма руб.', 'Сумма руб', 'Сумма, руб', 'Сумма', 'сумма, руб.', 'Сумма (руб)'],
+}
+
+def _set_cell(ws, cell_ref, value):
+    """Записывает значение в ячейку; если ячейка объединена — в левую верхнюю ячейку диапазона."""
+    try:
+        cell = ws[cell_ref]
+        if type(cell).__name__ == 'MergedCell':
+            col_letter, row = coordinate_from_string(cell_ref)
+            col = column_index_from_string(col_letter)
+            for mr in ws.merged_cells.ranges:
+                if mr.min_row <= row <= mr.max_row and mr.min_col <= col <= mr.max_col:
+                    ws.cell(row=mr.min_row, column=mr.min_col).value = value
+                    return
+        cell.value = value
+    except AttributeError:
+        col_letter, row = coordinate_from_string(cell_ref)
+        col = column_index_from_string(col_letter)
+        for mr in ws.merged_cells.ranges:
+            if mr.min_row <= row <= mr.max_row and mr.min_col <= col <= mr.max_col:
+                ws.cell(row=mr.min_row, column=mr.min_col).value = value
+                return
+        raise
+
+def _normalize_statement_columns(df):
+    """Приводит названия колонок к ожидаемым (разные форматы выгрузки)."""
+    rename = {}
+    for col in df.columns:
+        c = str(col).strip() if pd.notna(col) else ''
+        for canonical, aliases in COLUMN_ALIASES.items():
+            if c in aliases or c == canonical:
+                rename[col] = canonical
+                break
+    return df.rename(columns=rename)
+
 def get_artists_list_from_users():
-    """Читает данные артистов из users.json"""
+    """Читает данные артистов из users.json. Один канонический ключ на артиста (name или username), чтобы не дублировать отчёты."""
     try:
         users_file = 'data/users.json'
         if not os.path.exists(users_file):
             print("Файл users.json не найден")
-            return {}
+            return {}, []
         
         with open(users_file, 'r', encoding='utf-8') as f:
             users_data = json.load(f)
         
         artists_dict = {}
+        match_list = []  # (canonical_key, [name, username, ...]) для сопоставления по строке исполнителя
         for user in users_data:
-            if user.get('role') == 'artist':
-                # Используем name или username как ключ
-                artist_key = user.get('name') or user.get('username')
-                if not artist_key:
-                    continue
-                
-                # Пропускаем артистов без percentage (None или не указан)
-                percentage = user.get('percentage')
-                if percentage is None or percentage == '':
-                    print(f"⚠️  Пропущен артист {artist_key}: не указан процент")
-                    continue
-                
-                # Формируем данные в формате [ФИО, ФИО кратко, Номер договора, Процент]
-                artists_dict[artist_key] = [
-                    user.get('fio') or user.get('name') or '',  # ФИО полное
-                    user.get('fioShort') or user.get('name') or '',  # ФИО кратко
-                    user.get('contract') or '',  # Номер договора
-                    str(user.get('percentage', 50))  # Процент (по умолчанию 50 если не указан)
-                ]
-                
-                # Также добавляем username как ключ, если он отличается от name
-                if user.get('username') and user.get('username') != artist_key:
-                    artists_dict[user.get('username')] = artists_dict[artist_key]
+            if user.get('role') != 'artist':
+                continue
+            canonical = user.get('name') or user.get('username')
+            if not canonical:
+                continue
+            percentage = user.get('percentage')
+            if percentage is None or percentage == '':
+                print(f"⚠️  Пропущен артист {canonical}: не указан процент")
+                continue
+            
+            artists_dict[canonical] = [
+                user.get('fio') or user.get('name') or '',
+                user.get('fioShort') or user.get('name') or '',
+                user.get('contract') or '',
+                str(user.get('percentage', 50))
+            ]
+            aliases = [a for a in (user.get('name'), user.get('username')) if a]
+            match_list.append((canonical, aliases))
         
         print(f"✅ Загружено {len(artists_dict)} артистов из users.json")
-        return artists_dict
+        return artists_dict, match_list
     except Exception as e:
         print(f"Ошибка при чтении users.json: {e}")
-        return {}
+        return {}, []
 
 def get_royalty_shares():
     # Возвращаем пустой словарь (как в оригинале)
@@ -86,16 +125,17 @@ def get_royalty_shares_from_file(file_path):
         print(f"Ошибка при чтении файла долей: {e}")
         return {}
 
-def extract_artists_from_track(artist_str, artists_data):
-    """Извлекает список артистов из строки исполнителя."""
+def extract_artists_from_track(artist_str, match_list):
+    """Извлекает список артистов из строки исполнителя. Возвращает только канонические имена (без дубликатов по регистру)."""
     if not isinstance(artist_str, str):
         artist_str = str(artist_str)
-
-    found_artists = []
-    for artist in artists_data.keys():
-        if re.search(re.escape(artist), artist_str, re.IGNORECASE):
-            found_artists.append(artist)
-    return found_artists
+    found = []
+    for canonical, aliases in match_list:
+        for alias in aliases:
+            if alias and re.search(re.escape(alias), artist_str, re.IGNORECASE):
+                found.append(canonical)
+                break
+    return found
 
 def get_royalty_shares_from_tracks():
     """Загружает доли роялти из треков в releases.json"""
@@ -182,10 +222,22 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
                 if user.get('name'):
                     registered_users.add(user.get('name'))
     
-    statement_df = pd.read_excel(statement_path, sheet_name='TDSheet')
-    
-    # Загружаем данные артистов из users.json (только с указанным percentage)
-    artists_data = get_artists_list_from_users()
+    # Лист с данными: по умолчанию TDSheet, если нет — первый лист
+    xl = pd.ExcelFile(statement_path)
+    sheet_name = 'TDSheet' if 'TDSheet' in xl.sheet_names else xl.sheet_names[0]
+    statement_df = pd.read_excel(statement_path, sheet_name=sheet_name)
+    statement_df = _normalize_statement_columns(statement_df)
+
+    required = ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.']
+    missing = [c for c in required if c not in statement_df.columns]
+    if missing:
+        raise ValueError(
+            f"В файле отчёта не найдены колонки: {missing}. "
+            f"Есть колонки: {list(statement_df.columns)}"
+        )
+
+    # Загружаем данные артистов из users.json (один канонический ключ на артиста)
+    artists_data, match_list = get_artists_list_from_users()
     
     if not artists_data:
         print("⚠️  Не найдено артистов с указанным процентом в users.json")
@@ -204,7 +256,7 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
     for _, row in statement_df.iterrows():
         track_code = row['Код']
         artist_str = row['Исполнитель']
-        track_artists = extract_artists_from_track(artist_str, artists_data)
+        track_artists = extract_artists_from_track(artist_str, match_list)
         if not track_artists:
             continue
         for artist in track_artists:
@@ -232,17 +284,20 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
         
         shutil.copy(TEMPLATE_PATH, artist_file_path)
         wb = load_workbook(artist_file_path)
-        if 'Итог' in wb.sheetnames:
-            ws = wb['Итог']
-            ws['B10'] = artist
-            total_amount = sum(track['Сумма, руб.'] for track in tracks.values())
-            ws['E14'] = total_amount
-            # Заполняем данные из artists_data
-            ws['B6'] = artists_data[artist][0]  # ФИО полное
-            ws['B4'] = artists_data[artist][2]  # Номер договора
-            ws['D15'] = artists_data[artist][3]  # Процент
-            ws['D32'] = artists_data[artist][0]  # ФИО полное (повтор)
-            ws['E37'] = artists_data[artist][1]  # ФИО кратко
+        # Лист сводки: в шаблоне может быть "Итог" или "Краткая сводка"
+        summary_sheet_name = 'Итог' if 'Итог' in wb.sheetnames else ('Краткая сводка' if 'Краткая сводка' in wb.sheetnames else wb.sheetnames[0])
+        ws = wb[summary_sheet_name]
+        total_amount = sum(track['Сумма, руб.'] for track in tracks.values())
+        _set_cell(ws, 'B10', artist)                           # Артист
+        _set_cell(ws, 'B4', artists_data[artist][2])           # Договор (B4:F4 объединены)
+        _set_cell(ws, 'B6', artists_data[artist][0])          # Лицензиар / ФИО полное (B6:F6 объединены)
+        _set_cell(ws, 'E14', total_amount)                     # Доход в форме контента (или F14, если шаблон с F)
+        _set_cell(ws, 'D15', artists_data[artist][3])          # Процент (D15 — не трогать E15, иначе затрёт процент)
+        _set_cell(ws, 'F15', total_amount)                     # Итого доход Лицензиара — сумма в F15
+        _set_cell(ws, 'E26', total_amount)                     # Начислено вознаграждение (E26, не D26 — D26 в объединении с подписью)
+        _set_cell(ws, 'E28', total_amount)                     # К выплате за период
+        _set_cell(ws, 'D32', artists_data[artist][0])         # Лицензиар ФИО (повтор)
+        _set_cell(ws, 'E37', artists_data[artist][1])         # ФИО кратко (E37:F37 объединены)
         ws_artist = wb.create_sheet(title=artist)
         ws_artist.append(['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %'])
         total_quantity = 0

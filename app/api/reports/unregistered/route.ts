@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server"
-import { loadReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
+import { reportFromPrisma } from "@/lib/storage-adapters"
 
 export async function GET() {
   try {
-    const allReports = await loadReports()
-    const unregisteredReports = allReports.filter(report => !report.isRegistered)
-    
-    
+    const raw = await prisma.report.findMany({
+      where: { isRegistered: false },
+      orderBy: { uploadedAt: "desc" },
+    })
+    let unregisteredReports = raw.map(reportFromPrisma)
+
+    const seen = new Set<string>()
+    unregisteredReports = unregisteredReports.filter(r => {
+      const key = `${r.quarter}|${r.year}|${(r.artistName || '').trim().toLowerCase()}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
     return NextResponse.json({ 
       reports: unregisteredReports.map(report => ({
         id: report.id,

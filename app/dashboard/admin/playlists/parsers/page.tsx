@@ -9,6 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Play, Users, Calendar, ExternalLink, Image, RefreshCw, Save, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { fetchAllUsersFromApi } from '@/lib/fetch-all-users';
+import Layout from '@/components/layout';
+import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Artist {
   id: string;
@@ -53,7 +64,9 @@ export default function ParsersPage() {
   const [vkCookiesLastUpdated, setVkCookiesLastUpdated] = useState<string | null>(null);
   const [isSavingBandlinkCookies, setIsSavingBandlinkCookies] = useState(false);
   const [isSavingVkCookies, setIsSavingVkCookies] = useState(false);
-  
+  const [actionBanner, setActionBanner] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+
   useEffect(() => {
     loadArtists();
     loadRecentArtists();
@@ -65,12 +78,8 @@ export default function ParsersPage() {
   const loadArtists = async () => {
     setIsLoadingArtists(true);
     try {
-      const response = await fetch('/api/users');
-      const data = await response.json();
-      if (data.success) {
-        const artistUsers = data.users.filter((user: any) => user.role === 'artist');
-        setArtists(artistUsers);
-      }
+      const artistUsers = await fetchAllUsersFromApi({ role: 'artist' });
+      setArtists(artistUsers);
     } catch (error) {
       console.error('Ошибка загрузки артистов:', error);
     } finally {
@@ -115,28 +124,29 @@ export default function ParsersPage() {
     }
   };
 
-  const clearResults = async () => {
-    if (confirm('Очистить все результаты парсинга из базы данных?')) {
-      try {
-        const response = await fetch('/api/parsers/clear', {
-          method: 'DELETE'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          setVkResults([]);
-          setBandlinkResults([]);
-          setParsingOutput(prev => prev + '\n✅ Все результаты парсинга очищены\n');
-        } else {
-          alert('Ошибка очистки: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Ошибка очистки результатов:', error);
-        alert('Ошибка очистки результатов');
+  const clearResultsConfirmed = async () => {
+    setClearDialogOpen(false);
+    try {
+      const response = await fetch('/api/parsers/clear', {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setVkResults([]);
+        setBandlinkResults([]);
+        setParsingOutput((prev) => prev + '\n[OK] Все результаты парсинга очищены\n');
+        setActionBanner({ type: 'ok', text: 'Результаты парсинга очищены' });
+      } else {
+        setActionBanner({ type: 'err', text: 'Ошибка очистки: ' + (data.error || '') });
       }
+    } catch (error) {
+      console.error('Ошибка очистки результатов:', error);
+      setActionBanner({ type: 'err', text: 'Ошибка очистки результатов' });
     }
   };
+
 
   const handleArtistSelect = (artistId: string, checked: boolean) => {
     if (checked) {
@@ -157,7 +167,7 @@ export default function ParsersPage() {
 
   const runVKParser = async () => {
     if (selectedArtists.length === 0) {
-      alert('Выберите артистов для парсинга');
+      setActionBanner({ type: 'err', text: 'Выберите артистов для парсинга' });
       return;
     }
 
@@ -202,7 +212,7 @@ export default function ParsersPage() {
 
   const runBandlinkParser = async () => {
     if (selectedArtists.length === 0) {
-      alert('Выберите артистов для парсинга');
+      setActionBanner({ type: 'err', text: 'Выберите артистов для парсинга' });
       return;
     }
 
@@ -317,7 +327,7 @@ export default function ParsersPage() {
 
   const saveBandlinkCookies = async () => {
     if (!bandlinkCookies.trim()) {
-      alert('Введите cookies для Bandlink');
+      setActionBanner({ type: 'err', text: 'Введите cookies для Bandlink' });
       return;
     }
 
@@ -338,14 +348,14 @@ export default function ParsersPage() {
       if (data.success) {
         setBandlinkCookies('');
         setBandlinkCookiesLastUpdated(new Date().toISOString());
-        alert(`✅ Cookies Bandlink успешно обновлены (${data.count} шт.)`);
+        setActionBanner({ type: 'ok', text: `Cookies Bandlink обновлены (${data.count} шт.)` });
         loadCookies();
       } else {
-        alert('❌ Ошибка: ' + data.error);
+        setActionBanner({ type: 'err', text: 'Ошибка: ' + data.error });
       }
     } catch (error) {
       console.error('Ошибка сохранения Bandlink cookies:', error);
-      alert('❌ Ошибка сохранения cookies');
+      setActionBanner({ type: 'err', text: 'Ошибка сохранения cookies' });
     } finally {
       setIsSavingBandlinkCookies(false);
     }
@@ -353,7 +363,7 @@ export default function ParsersPage() {
 
   const saveVkCookies = async () => {
     if (!vkCookies.trim()) {
-      alert('Введите cookies для VK');
+      setActionBanner({ type: 'err', text: 'Введите cookies для VK' });
       return;
     }
 
@@ -374,33 +384,75 @@ export default function ParsersPage() {
       if (data.success) {
         setVkCookies('');
         setVkCookiesLastUpdated(new Date().toISOString());
-        alert(`✅ Cookies VK успешно обновлены (${data.count} шт.)`);
+        setActionBanner({ type: 'ok', text: `Cookies VK обновлены (${data.count} шт.)` });
         loadCookies();
       } else {
-        alert('❌ Ошибка: ' + data.error);
+        setActionBanner({ type: 'err', text: 'Ошибка: ' + data.error });
       }
     } catch (error) {
       console.error('Ошибка сохранения VK cookies:', error);
-      alert('❌ Ошибка сохранения cookies');
+      setActionBanner({ type: 'err', text: 'Ошибка сохранения cookies' });
     } finally {
       setIsSavingVkCookies(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Парсеры плейлистов</h1>
-          <p className="text-muted-foreground">
-            Парсинг плейлистов из VK и поиск через Bandlink в МТС Музыке и Яндекс Музыке
-          </p>
+    <Layout role="admin" requiredRole="admin">
+      <div className="space-y-8 max-w-7xl mx-auto">
+        {actionBanner && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
+              actionBanner.type === 'ok'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                : 'border-red-500/30 bg-red-500/10 text-red-200'
+            }`}
+            role="status"
+          >
+            <span className="material-symbols-outlined flex-shrink-0">
+              {actionBanner.type === 'ok' ? 'check_circle' : 'error'}
+            </span>
+            {actionBanner.text}
+            <button
+              type="button"
+              onClick={() => setActionBanner(null)}
+              className="ml-auto text-gray-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              aria-label="Закрыть"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+        )}
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
+              Dashboard
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <Link href="/dashboard/admin/playlists" className="hover:text-primary transition-colors">
+              Плейлисты
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Парсеры</span>
+          </div>
+          <div className="border-b border-white/5 pb-8">
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
+              Парсеры плейлистов
+            </h1>
+            <p className="text-sm text-gray-400 font-light mt-2">
+              VK и Bandlink (МТС, Яндекс)
+            </p>
+          </div>
         </div>
-      </div>
 
       <Tabs defaultValue="control" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="control">Управление</TabsTrigger>
+        <TabsList className="flex flex-wrap gap-1 bg-black/40 p-1 rounded-xl border border-white/5 h-auto">
+          <TabsTrigger
+            value="control"
+            className="rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
+          >
+            Управление
+          </TabsTrigger>
           <TabsTrigger value="history">
             История парсинга {parsingHistory.length > 0 && `(${parsingHistory.length})`}
           </TabsTrigger>
@@ -587,7 +639,7 @@ export default function ParsersPage() {
                 </Button>
 
                 <Button 
-                  onClick={clearResults}
+                  onClick={() => setClearDialogOpen(true)}
                   variant="destructive"
                   size="sm"
                   className="ml-auto"
@@ -899,6 +951,42 @@ export default function ParsersPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+
+        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
+        </footer>
+      </div>
+
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase text-red-400">Очистка</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Очистить все результаты парсинга в базе?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setClearDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+              onClick={() => void clearResultsConfirmed()}
+            >
+              Очистить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Layout>
   );
 }

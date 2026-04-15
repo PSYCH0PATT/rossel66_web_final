@@ -1,124 +1,173 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import Image from "next/image"
-import { getArtistPlaylists, getTrackById, users } from "@/lib/data"
-import { Music, Calendar } from "lucide-react"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import Image from "next/image"
+import { prisma } from "@/lib/prisma"
+import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
+import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { getSessionUser } from "@/lib/server-auth"
+import Layout from "@/components/layout"
 
-export default function PlaylistsPage({ params }: { params: { username: string } }) {
-  const [artistId, setArtistId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+function firstTrackLabel(trackDataJson: string): string {
+  try {
+    const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
+    const t = arr[0]
+    if (!t) return ""
+    return (t.trackTitle || t.titleArtist || "").trim()
+  } catch {
+    return ""
+  }
+}
 
-  useEffect(() => {
-    // Находим артиста по username из URL
-    const artist = users.find((user) => user.username === params.username && user.role === "artist")
+function platformDotColor(platform: string): string {
+  switch (platform) {
+    case "Яндекс Музыка":
+      return "#FFCC00"
+    case "Spotify":
+      return "#1DB954"
+    case "VK Музыка":
+      return "#0077FF"
+    case "Apple Music":
+      return "#ffffff"
+    default:
+      return "#9ca3af"
+  }
+}
 
-    // Проверяем динамически добавленных артистов
-    if (!artist) {
-      const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-      const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-      const dynamicArtist = dynamicUsers.find(
-        (user: any) => user.username === params.username && user.role === "artist",
-      )
+function relativeTimeLabel(dateRaw: string | Date | null | undefined): string {
+  if (!dateRaw) return "—"
+  const d = new Date(dateRaw)
+  const now = Date.now()
+  const diff = Math.max(0, now - d.getTime())
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 60) return `${mins} мин назад`
+  if (hours < 24) return `${hours} ч назад`
+  if (days < 7) return `${days} дн назад`
+  if (days < 30) return `${Math.floor(days / 7)} нед назад`
+  return d.toLocaleDateString("ru-RU")
+}
 
-      if (dynamicArtist) {
-        setArtistId(dynamicArtist.id)
-      }
-    } else {
-      setArtistId(artist.id)
-    }
+export default async function PlaylistsPage({ params }: { params: { username: string } }) {
+  const session = getSessionUser()
+  if (!session) redirect("/dashboard/login")
 
-    setLoading(false)
-  }, [params.username])
+  const row = await prisma.user.findFirst({
+    where: { username: params.username, role: "artist" },
+  })
+  if (!row) notFound()
 
-  // Если артист не найден
-  if (!loading && !artistId) {
+  if (session.role === "artist" && session.id !== row.id) {
     notFound()
   }
 
-  // Если еще загружается
-  if (loading || !artistId) {
-    return (
-      <Layout role="artist" requiredRole="artist" username={params.username}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-        </div>
-      </Layout>
-    )
-  }
-
-  const playlists = getArtistPlaylists(artistId)
-
-  // Цвета для платформ
-  const platformColors = {
-    "Яндекс Музыка": "bg-category-amber text-black",
-    Spotify: "bg-category-green text-black",
-    "VK Музыка": "bg-category-blue text-white",
-    "Apple Music": "bg-category-red text-white",
-  }
+  const playlists = await getCachedArtistPlaylists(row.id)
+  const total = playlists.length
 
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Плейлисты</h1>
+      <div className="p-0 md:p-0 max-w-full pb-24">
+        <div className="flex flex-col gap-6 mb-8">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+            <Link
+              href={`/dashboard/artist/${params.username}/dashboard`}
+              className="hover:text-[#10b981] cursor-pointer transition-colors"
+            >
+              Dashboard
+            </Link>
+            <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
+              chevron_right
+            </span>
+            <span className="text-white">Плейлисты</span>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+            <div>
+              <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ПЛЕЙЛИСТЫ</h1>
+              <p className="text-sm text-gray-400 font-light max-w-md">
+                Плейлисты, в которые попали ваши треки на стриминговых платформах.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {playlists.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
             {playlists.map((playlist) => {
-              // Получение информации о треке и релизе
-              const trackInfo = getTrackById(playlist.trackId)
+              const cover = getPlaylistCoverUrl(playlist.platform)
+              const trackLine = firstTrackLabel(playlist.track_data)
+              const dot = platformDotColor(playlist.platform)
+              const dateRaw = playlist.last_seen_date || playlist.first_seen_date
+              const dateLabel = dateRaw ? new Date(dateRaw).toLocaleDateString("ru-RU") : "—"
+              const rel = relativeTimeLabel(dateRaw)
 
               return (
-                <Link href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`} key={playlist.id}>
-                  <Card className="bg-card border-border text-card-foreground overflow-hidden rounded-xl hover:border-category-red/50 transition-colors cursor-pointer">
-                    <div className="aspect-square relative">
-                      <Image
-                        src={playlist.imageUrl || "/placeholder.svg"}
-                        alt={playlist.name}
-                        fill
-                        className="object-cover"
-                      />
-                      <Badge
-                        className={`absolute top-2 right-2 rounded-xl text-xs ${platformColors[playlist.platform as keyof typeof platformColors] || "bg-gray-500"}`}
-                      >
+                <Link
+                  href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`}
+                  key={playlist.id}
+                  className="playlist-card group relative aspect-square rounded-2xl overflow-hidden cursor-pointer card-glass block"
+                >
+                  <div className="absolute inset-0 z-0">
+                    <Image
+                      src={cover || "/placeholder.svg"}
+                      alt={playlist.playlist_name}
+                      fill
+                      className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                  </div>
+
+                  <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10">
+                    <div className="flex justify-start items-start">
+                      <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />
                         {playlist.platform}
-                      </Badge>
+                      </span>
                     </div>
-                    <CardContent className="p-3">
-                      <h2 className="text-sm font-bold mb-1 line-clamp-1">{playlist.name}</h2>
-
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-1">
-                          <Music className="h-3 w-3 text-category-blue" />
-                          <span className="text-muted-foreground line-clamp-1">
-                            {trackInfo ? `${trackInfo.track.title}` : `Трек: ${playlist.trackId}`}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-category-amber" />
-                          <span className="text-muted-foreground">
-                            {new Date(playlist.addedDate).toLocaleDateString()}
-                          </span>
-                        </div>
+                    <div className="self-center transform transition-transform group-hover:scale-110 duration-300">
+                      <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors">
+                        <span className="material-symbols-outlined text-3xl text-white group-hover:text-black ml-1">
+                          play_arrow
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{playlist.playlist_name}</h3>
+                      <p className="text-xs text-gray-400 font-mono line-clamp-2">
+                        {trackLine || "Трек из плейлиста"} · {rel}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] transition-opacity duration-300">
+                    <h3 className="font-bold text-white text-lg truncate">{playlist.playlist_name}</h3>
+                    <p className="text-xs text-gray-400 font-mono mt-1">
+                      {playlist.platform} · {dateLabel}
+                    </p>
+                  </div>
                 </Link>
               )
             })}
           </div>
         ) : (
-          <div className="bg-card border-border text-card-foreground rounded-xl p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">У вас пока нет плейлистов</h2>
-            <p className="text-muted-foreground">Здесь будут отображаться плейлисты, в которые попали ваши треки.</p>
+          <div className="flex flex-col items-center justify-center py-16 card-glass rounded-2xl border border-white/5 mb-12">
+            <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">queue_music</span>
+            <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">У вас пока нет плейлистов</p>
+            <p className="text-[10px] text-gray-600 mt-2 text-center max-w-md px-4">
+              Здесь будут отображаться плейлисты, в которые попали ваши треки.
+            </p>
           </div>
         )}
+
+        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/5 pt-6 text-sm">
+          <div className="text-gray-500 font-mono flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary inline-block animate-pulse" />
+            System Operational
+          </div>
+          <div className="text-gray-400 font-mono text-xs uppercase tracking-widest">
+            TOTAL FOUND: <span className="text-white font-bold">{total}</span> PLAYLISTS
+          </div>
+        </div>
       </div>
     </Layout>
   )

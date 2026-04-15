@@ -1,27 +1,28 @@
 import { NextResponse } from "next/server"
-import { loadReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
-    const reports = await loadReports()
-    
-    // Получаем уникальные кварталы из отчетов
-    const quarterSet = new Set<string>()
-    reports.forEach(report => {
-      quarterSet.add(report.quarter)
-    })
-    
-    const quarters = Array.from(quarterSet)
-      .filter(quarter => /^Q[1-4]$/.test(quarter)) // Фильтруем только Q1, Q2, Q3, Q4
-      .sort() // Сортируем по алфавиту
-    
-    const response = NextResponse.json({ quarters })
-    // Отключаем кеширование
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-    response.headers.set('Pragma', 'no-cache')
-    response.headers.set('Expires', '0')
+    const rows = await prisma.$queryRaw<{ quarter: string }[]>`
+      SELECT DISTINCT quarter FROM "Report"
+      WHERE quarter ~ '^Q[1-4]$'
+      ORDER BY quarter ASC
+    `
+    const quarters = rows.map(r => r.quarter)
+
+    const pairRows = await prisma.$queryRaw<{ quarter: string; year: number }[]>`
+      SELECT DISTINCT quarter, year FROM "Report"
+      WHERE "isRegistered" = true
+        AND year IS NOT NULL
+        AND quarter ~ '^Q[1-4]$'
+      ORDER BY year DESC, quarter ASC
+    `
+    const quarterYearPairs = pairRows.map((r) => ({ quarter: r.quarter, year: r.year }))
+
+    const response = NextResponse.json({ quarters, quarterYearPairs })
+    response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=30')
     return response
   } catch (error) {
     console.error("Ошибка при получении списка кварталов:", error)

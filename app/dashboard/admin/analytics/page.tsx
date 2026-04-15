@@ -2,14 +2,16 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
 import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { BarChart3, TrendingUp, CalendarIcon, Loader2, Upload, RefreshCw, Download } from "lucide-react"
+import { BarChart3, CalendarIcon, Loader2, TrendingUp } from "lucide-react"
+import dynamic from "next/dynamic"
+import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
+import TrackPaidFreeDistribution from "@/components/analytics/TrackPaidFreeDistribution"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -50,7 +52,7 @@ interface AnalyticsData {
   streamsByDay: Array<{ date: string; streams: number }>
   paidVsFree: Array<{ name: string; value: number }>
   streamsBySource: Array<{ name: string; value: number }>
-  streamsByTrack?: Array<{ trackName: string; trackArtist: string; isrc: string; value: number }>
+  streamsByTrack?: Array<{ trackName: string; trackArtist: string; isrc: string; value: number; paid: number; free: number }>
   totalStreams?: number
 }
 
@@ -108,8 +110,10 @@ export default function AdminAnalyticsPage() {
         const user = JSON.parse(userStr)
         if (user.role === "admin") {
           setCurrentUser(user)
+        } else if (user.username) {
+          router.push(`/dashboard/artist/${user.username}/dashboard`)
         } else {
-          router.push("/dashboard/artist/dashboard")
+          router.push("/dashboard/login")
         }
       } catch {
         router.push("/dashboard/login")
@@ -271,179 +275,200 @@ export default function AdminAnalyticsPage() {
   return (
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Аналитика стримов</h1>
-            <p className="text-gray-400 mt-1">Статистика прослушиваний всех артистов</p>
+        {/* TopAppBar Mapping */}
+        <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
+          {/* Left: breadcrumb + title + admin actions */}
+          <div className="flex flex-col gap-1 shrink-0">
+            <div className="flex items-center text-xs text-gray-500 uppercase tracking-widest space-x-2 mb-1">
+              <span className="hover:text-primary cursor-pointer transition-colors">Dashboard</span>
+              <span className="material-symbols-outlined text-[10px] mx-1">chevron_right</span>
+              <span className="text-white">Analytics</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight uppercase">АНАЛИТИКА</h1>
+            <nav className="flex items-center gap-2 mt-2">
+              <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" onClick={() => handleSync('7days')} disabled={syncing}>
+                {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                Синхронизировать
+              </Button>
+              <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" onClick={() => handleSync('all')} disabled={syncing}>
+                {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                Импорт
+              </Button>
+              <label className="cursor-pointer">
+                <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
+                <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" asChild disabled={importing}>
+                  <span>{importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin inline" /> : null}Загрузить CSV</span>
+                </Button>
+              </label>
+            </nav>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Sync latest from SFTP */}
-            <Button
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:text-white"
-              onClick={() => handleSync('7days')}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Синхронизировать
-            </Button>
+          {/* Right: all controls in one row */}
+          <div className="flex flex-row flex-wrap items-center gap-2">
 
-            {/* Import ALL from SFTP */}
-            <Button
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:text-white"
-              onClick={() => handleSync('all')}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-              Импорт всех файлов
-            </Button>
+            {/* Artist select — pill style */}
+            <Select value={selectedArtist} onValueChange={setSelectedArtist}>
+              <SelectTrigger className={`h-9 px-3 text-[10px] font-bold uppercase tracking-widest border rounded-lg transition-colors bg-[#141414] w-auto min-w-[130px] ${
+                selectedArtist !== "all"
+                  ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                  : "text-gray-500 border-white/5 hover:text-emerald-400 hover:border-white/15"
+              }`}>
+                <SelectValue placeholder="Все артисты" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#141414] border-white/10 text-white">
+                <SelectItem value="all" className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">Все артисты</SelectItem>
+                {artists.map(a => (
+                  <SelectItem key={a.artistId} value={a.artistId} className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">
+                    {a.trackArtist}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Manual CSV upload */}
-            <label className="cursor-pointer">
-              <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
-              <Button variant="outline" className="border-gray-600 text-gray-300 hover:text-white" asChild disabled={importing}>
-                <span>
-                  {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-                  Загрузить CSV
-                </span>
-              </Button>
-            </label>
+            {/* Track select — pill style */}
+            <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+              <SelectTrigger className={`h-9 px-3 text-[10px] font-bold uppercase tracking-widest border rounded-lg transition-colors bg-[#141414] w-auto min-w-[120px] ${
+                selectedTrack !== "all"
+                  ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                  : "text-gray-500 border-white/5 hover:text-emerald-400 hover:border-white/15"
+              }`}>
+                <SelectValue placeholder="Все треки" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#141414] border-white/10 text-white">
+                <SelectItem value="all" className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">Все треки</SelectItem>
+                {tracks.map(t => (
+                  <SelectItem key={t.isrc} value={t.isrc} className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">
+                    {t.trackName} — {t.trackArtist}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Period pills */}
+            <div className="flex bg-[#141414] rounded-lg p-1 border border-white/5">
+              {[
+                { value: "7d", label: "7Д" },
+                { value: "30d", label: "30Д" },
+                { value: "90d", label: "90Д" },
+                { value: "180d", label: "180Д" },
+                { value: "365d", label: "Год" },
+                { value: "custom", label: "Custom" },
+              ].map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriod(p.value)}
+                  className={`px-3 py-1.5 min-w-[max-content] text-[10px] font-bold uppercase tracking-widest transition-colors rounded-md ${
+                    period === p.value
+                      ? "text-emerald-400 bg-emerald-500/10"
+                      : "text-gray-500 hover:text-emerald-400"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom date pickers */}
+            {period === "custom" && (
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {customStart ? customStart.toLocaleDateString("ru-RU") : "ОТ"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={customStart} onSelect={setCustomStart} />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {customEnd ? customEnd.toLocaleDateString("ru-RU") : "ДО"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+        </header>
+
+
+
+        {/* HERO SUMMARY CARD */}
+        <div className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-xl relative overflow-hidden p-6 flex items-center justify-between min-h-[100px]">
+          {/* Animated waveform bars */}
+          <div className="absolute inset-0 flex items-end justify-center gap-[3px] px-6 pb-0 pointer-events-none overflow-hidden opacity-[0.07]">
+            {Array.from({ length: 48 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-1 rounded-t-sm bg-emerald-400 flex-shrink-0"
+                style={{
+                  height: `${30 + Math.sin(i * 0.7) * 20 + Math.cos(i * 0.3) * 15}%`,
+                  animationDelay: `${i * 0.06}s`,
+                  animation: `analyticsWave ${1.2 + (i % 5) * 0.3}s ease-in-out infinite alternate`,
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes analyticsWave {
+              from { transform: scaleY(0.4); }
+              to   { transform: scaleY(1); }
+            }
+          `}</style>
+
+          {/* Left — total */}
+          <div className="relative z-10">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Общее число стримов</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-black text-white font-display uppercase tracking-tight leading-none drop-shadow-[0_2px_15px_rgba(255,255,255,0.1)]">{totalStreams.toLocaleString("ru-RU")}</span>
+              <span className="text-emerald-400 flex items-center">
+                <span className="material-symbols-outlined text-[14px] leading-none">trending_up</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Right — paid / free */}
+          <div className="relative z-10 flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Платные</p>
+              <p className="text-2xl font-black text-emerald-400 font-display leading-none">{totalPaid.toLocaleString("ru-RU")}</p>
+            </div>
+            <div className="w-px h-10 bg-white/10" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Бесплатные</p>
+              <p className="text-2xl font-black text-gray-400 font-display leading-none">{totalFree.toLocaleString("ru-RU")}</p>
+            </div>
           </div>
         </div>
-
-        {importResult && (
-          <div className={`p-3 rounded-lg text-sm ${importResult.startsWith("Ошибка") ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}`}>
-            {importResult}
-          </div>
-        )}
-
-        {/* Filters */}
-        <Card className="bg-card border-gray-700">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Artist selector */}
-              <div className="flex flex-col gap-1 min-w-[180px]">
-                <label className="text-xs text-gray-400 font-medium">Артист</label>
-                <Select value={selectedArtist} onValueChange={setSelectedArtist}>
-                  <SelectTrigger className="bg-background border-gray-600 text-white">
-                    <SelectValue placeholder="Все артисты" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все артисты</SelectItem>
-                    {artists.map(a => (
-                      <SelectItem key={a.artistId} value={a.artistId}>
-                        {a.trackArtist}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Track selector */}
-              <div className="flex flex-col gap-1 min-w-[200px]">
-                <label className="text-xs text-gray-400 font-medium">Трек</label>
-                <Select value={selectedTrack} onValueChange={setSelectedTrack}>
-                  <SelectTrigger className="bg-background border-gray-600 text-white">
-                    <SelectValue placeholder="Все треки" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все треки</SelectItem>
-                    {tracks.map(t => (
-                      <SelectItem key={t.isrc} value={t.isrc}>
-                        {t.trackName} — {t.trackArtist}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Period selector */}
-              <div className="flex flex-col gap-1 min-w-[160px]">
-                <label className="text-xs text-gray-400 font-medium">Период (XY графики)</label>
-                <Select value={period} onValueChange={setPeriod}>
-                  <SelectTrigger className="bg-background border-gray-600 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PERIOD_OPTIONS.map(o => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Custom date range */}
-              {period === "custom" && (
-                <>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-400 font-medium">От</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="bg-background border-gray-600 text-white justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customStart ? customStart.toLocaleDateString("ru-RU") : "Выберите дату"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={customStart} onSelect={setCustomStart} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-400 font-medium">До</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="bg-background border-gray-600 text-white justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customEnd ? customEnd.toLocaleDateString("ru-RU") : "Выберите дату"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </>
-              )}
-
-              {/* Summary chips */}
-              <div className="ml-auto flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg text-sm font-medium">
-                  <TrendingUp className="h-4 w-4" />
-                  {totalStreams.toLocaleString("ru-RU")} стримов
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
           </div>
         ) : !data || (data.streamsByDay.length === 0 && data.paidVsFree.every(p => p.value === 0)) ? (
-          <Card className="bg-card border-gray-700">
-            <CardContent className="py-16 text-center">
-              <BarChart3 className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-              <h3 className="text-lg font-medium text-white">Нет данных</h3>
-              <p className="text-gray-400 mt-2">Импортируйте CSV файл из rossel_flash или дождитесь автоматического импорта в 20:00 МСК</p>
+          <Card className="stat-card-glass bg-[#141414]/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden">
+            <CardContent className="py-16 text-center px-6">
+              <BarChart3 className="h-12 w-12 mx-auto text-gray-500 mb-4 opacity-50" />
+              <h3 className="text-lg font-bold text-white tracking-wide">Нет данных</h3>
+              <p className="text-gray-400 mt-2 text-sm">Импортируйте CSV файл из rossel_flash или дождитесь автоматического импорта в 20:00 МСК</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* LEFT: XY Charts */}
-
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             {/* Chart 1: Streams by DSP */}
-            <Card className="bg-card border-gray-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">Стримы по площадкам</CardTitle>
+            <Card className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-2xl relative overflow-hidden flex flex-col p-5">
+              <CardHeader className="p-0 mb-4 flex-shrink-0">
+                <CardTitle className="font-card-heading font-bold tracking-[0.08em] uppercase text-white text-base leading-tight">Стримы по площадкам</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="h-[380px] sm:h-[340px] lg:h-[300px]">
+              <CardContent className="p-0 flex-1 min-h-0">
+                <div className="h-[290px] w-full">
                   {chartMounted ? (
                     <DspStreamChart data={data.streamsByDspDay} dsps={data.dsps} formatDate={formatDate} />
                   ) : (
@@ -453,72 +478,32 @@ export default function AdminAnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* RIGHT: Paid vs Free */}
-            <Card className="bg-card border-gray-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">Платные / Бесплатные стримы</CardTitle>
-                <p className="text-xs text-gray-500">За всё время</p>
+            {/* Chart 2: Paid vs Free */}
+            <Card className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-2xl relative overflow-hidden flex flex-col p-5">
+              <CardHeader className="p-0 mb-1 flex-shrink-0">
+                <CardTitle className="font-card-heading font-bold tracking-[0.08em] uppercase text-white text-base leading-tight">Платные / Бесплатные</CardTitle>
+                <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">По трекам</p>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] flex flex-col justify-center">
-                  <div className="space-y-4">
-                    {data.paidVsFree.map((item) => {
-                      const total = totalPaid + totalFree
-                      const pct = total > 0 ? (item.value / total) * 100 : 0
-                      const isPaid = item.name === "Платные"
-                      return (
-                        <div key={item.name} className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-300 font-medium">{item.name}</span>
-                            <span className="text-white font-semibold">
-                              {item.value.toLocaleString("ru-RU")} ({pct.toFixed(1)}%)
-                            </span>
-                          </div>
-                          <div className="h-8 bg-gray-700 rounded-lg overflow-hidden">
-                            <div
-                              className="h-full rounded-lg transition-all duration-500"
-                              style={{
-                                width: `${Math.max(pct, 1)}%`,
-                                backgroundColor: isPaid ? BAR_COLORS.paid : BAR_COLORS.free,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Streams by track (horizontal, scrollable, 8 visible) */}
-            <Card className="bg-card border-gray-700 flex flex-col">
-              <CardHeader className="pb-1 pt-3 flex-shrink-0">
-                <CardTitle className="text-white text-base">Прослушивания по трекам</CardTitle>
-                <p className="text-xs text-gray-500">Всего: {tracksForChart.length} треков</p>
-              </CardHeader>
-              <CardContent className="pt-2 pb-3 flex-1 min-h-0 flex flex-col">
-                <div className="flex flex-col gap-0 overflow-y-auto min-h-[290px]" style={{ maxHeight: '290px' }}>
+              <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
+                <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 h-[290px]">
                   {tracksForChart.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-4">Нет данных по трекам</p>
+                    <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                   ) : (
                     tracksForChart.map((item, idx) => {
-                      const maxVal = tracksForChart[0]?.value || 1
-                      const pct = (item.value / maxVal) * 100
+                      const total = item.paid + item.free
+                      const pctPaid = total > 0 ? (item.paid / total) * 100 : 0
+                      const pctFree = total > 0 ? (item.free / total) * 100 : 0
                       const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
                       return (
-                        <div key={item.isrc || idx} className="flex items-center gap-2 flex-shrink-0 py-0.5 min-h-[32px]">
-                          <span className="text-xs text-gray-300 truncate shrink-0 w-[140px]" title={label}>{label}</span>
-                          <div className="flex-1 min-w-0 h-6 min-h-[24px] bg-gray-700 rounded overflow-hidden self-center">
-                            <div
-                              className="h-full rounded transition-all duration-500"
-                              style={{
-                                width: `${Math.max(pct, 2)}%`,
-                                backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
-                              }}
-                            />
+                        <div key={`pf-${item.isrc || idx}`} className="flex flex-col flex-shrink-0 gap-1 group py-1 border-b border-white/[0.03] last:border-0">
+                          <div className="flex justify-between items-center w-full">
+                            <span className="text-[11px] font-card-heading font-semibold text-gray-300 truncate max-w-[55%] group-hover:text-white transition-colors" title={label}>{label}</span>
+                            <div className="flex gap-2 shrink-0">
+                              <span className="text-[11px] text-emerald-400 font-card-heading font-bold tabular-nums">{item.paid > 0 ? `${pctPaid.toFixed(0)}%` : ''}</span>
+                              <span className="text-[11px] text-gray-500 font-card-heading font-bold tabular-nums">{item.free > 0 ? `${pctFree.toFixed(0)}%` : ''}</span>
+                            </div>
                           </div>
-                          <span className="text-xs text-white font-semibold shrink-0 w-14 text-right">{item.value.toLocaleString('ru-RU')}</span>
+                          <TrackThinPaidFreeBar paid={item.paid} free={item.free} heightClass="h-[4px]" />
                         </div>
                       )
                     })
@@ -527,30 +512,72 @@ export default function AdminAnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* Streams by source */}
-            <Card className="bg-card border-gray-700 flex flex-col">
-              <CardHeader className="pb-1 pt-3 flex-shrink-0">
-                <CardTitle className="text-white text-base">Стримы по источникам</CardTitle>
-                <p className="text-xs text-gray-500">За всё время</p>
+            {/* Chart 3: Streams by track */}
+            <Card className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-2xl relative overflow-hidden flex flex-col p-5">
+              <CardHeader className="p-0 mb-1 flex-shrink-0">
+                <CardTitle className="font-card-heading font-bold tracking-[0.08em] uppercase text-white text-base leading-tight">Прослушивания по трекам</CardTitle>
+                <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {tracksForChart.length} треков</p>
               </CardHeader>
-              <CardContent className="pt-2 pb-3 flex-1 min-h-0 flex flex-col">
-                <div className="flex flex-col flex-1 min-h-[300px] gap-0" style={{ maxHeight: '300px' }}>
+              <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
+                <div className="flex flex-col gap-0 overflow-y-auto pr-1 h-[290px]">
+                  {tracksForChart.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
+                  ) : (
+                    tracksForChart.map((item, idx) => {
+                      const maxVal = tracksForChart[0]?.value || 1
+                      const pct = (item.value / maxVal) * 100
+                      const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
+                      return (
+                        <div key={item.isrc || idx} className="flex flex-col flex-shrink-0 group py-1.5 border-b border-white/[0.03] last:border-0">
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-[11px] font-card-heading font-medium text-gray-400 truncate shrink-0 w-[130px] group-hover:text-gray-200 transition-colors" title={label}>{label}</span>
+                            <div className="flex-1 min-w-0 h-[3px] bg-gray-800/80 rounded-full overflow-hidden self-center relative">
+                              <div
+                                className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
+                                style={{
+                                  width: `${Math.max(pct, 2)}%`,
+                                  backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
+                                  boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
+                                }}
+                              />
+                            </div>
+                            <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 w-[66px] text-right tabular-nums">{item.value.toLocaleString('ru-RU')}</span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Chart 4: Streams by source */}
+            <Card className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-2xl relative overflow-hidden flex flex-col p-5">
+              <CardHeader className="p-0 mb-1 flex-shrink-0">
+                <CardTitle className="font-card-heading font-bold tracking-[0.08em] uppercase text-white text-base leading-tight">Стримы по источникам</CardTitle>
+                <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Детализация</p>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
+                <div className="flex flex-col justify-between h-[290px]">
                   {data.streamsBySource.map((item, idx) => {
                     const maxVal = data.streamsBySource[0]?.value || 1
                     const pct = (item.value / maxVal) * 100
                     return (
-                      <div key={item.name} className="flex items-center gap-2 flex-shrink-0 py-0.5 min-h-[32px]">
-                        <span className="text-xs text-gray-300 truncate shrink-0 w-[120px]">{item.name}</span>
-                        <div className="flex-1 min-w-0 h-6 min-h-[24px] bg-gray-700 rounded overflow-hidden self-center">
+                      <div key={item.name} className="flex flex-col flex-shrink-0 group py-1 border-b border-white/[0.03] last:border-0">
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-[11px] font-card-heading font-bold text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors">{item.name}</span>
+                          <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 tabular-nums">{item.value.toLocaleString("ru-RU")}</span>
+                        </div>
+                        <div className="w-full h-[3px] bg-gray-800/80 rounded-full overflow-hidden mt-1 relative">
                           <div
-                            className="h-full rounded transition-all duration-500"
+                            className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
                             style={{
                               width: `${Math.max(pct, 2)}%`,
                               backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
+                              boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
                             }}
                           />
                         </div>
-                        <span className="text-xs text-white font-semibold shrink-0 w-14 text-right">{item.value.toLocaleString("ru-RU")}</span>
                       </div>
                     )
                   })}

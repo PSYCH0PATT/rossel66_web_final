@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
-import { loadUsers } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
+import { requireAdmin } from "@/lib/server-auth"
 import * as XLSX from "xlsx"
 
 // Директория для сохранения отчетов
 const REPORTS_DIR = path.join(process.cwd(), "uploads", "reports")
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const formData = await request.formData()
     const quarter = formData.get("quarter") as string
@@ -31,17 +34,14 @@ export async function POST(request: Request) {
       fs.mkdirSync(quarterDir, { recursive: true })
     }
 
-    // Загружаем список пользователей из БД
-    const users = await loadUsers()
-    
-    // Создаем маппинг отображаемых имен артистов к их ID
-    const artistsMap = new Map()
-    users.forEach((user) => {
-      if (user.role === "artist") {
-        // Сохраняем маппинг отображаемого имени в нижнем регистре для сравнения
-        artistsMap.set(user.name.toLowerCase(), user.id)
-      }
+    const artists = await prisma.user.findMany({
+      where: { role: "artist" },
+      select: { id: true, name: true },
     })
+    const artistsMap = new Map<string, string>()
+    for (const user of artists) {
+      artistsMap.set(user.name.toLowerCase(), user.id)
+    }
 
     // Обрабатываем каждый файл
     const processedFiles = []
@@ -90,8 +90,17 @@ export async function POST(request: Request) {
           }
         }
 
+        // Проверка дубликата
+        const existing = await prisma.report.findFirst({
+          where: { artistId, quarter, year }
+        })
+        if (existing) {
+          errors.push({ fileName, error: `Отчёт для этого артиста за ${quarter} ${year} уже существует` })
+          continue
+        }
+
         // Создаем запись отчета с правильным ID артиста
-        const reportId = `r${Date.now()}-${artistNameFromFile}`
+        const reportId = `r${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         const artist = users.find((user) => user.id === artistId)
 
         // Относительный путь для БД

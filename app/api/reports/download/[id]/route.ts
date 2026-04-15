@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
-import { loadReports } from "@/lib/storage"
+import { prisma } from "@/lib/prisma"
+import { reportFromPrisma } from "@/lib/storage-adapters"
 import * as fs from "fs"
 import * as path from "path"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    // Ищем отчет в БД
-    const reports = await loadReports()
-    const report = reports.find(r => r.id === params.id)
+    const raw = await prisma.report.findUnique({ where: { id: params.id } })
+    const report = raw ? reportFromPrisma(raw) : null
     
     if (!report) {
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })

@@ -11,6 +11,8 @@ import * as path from 'path';
  * Ручной запуск синхронизации SFTP из админ-интерфейса.
  * Вызывает логику напрямую (без proxy на cron endpoint).
  */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
@@ -89,7 +91,7 @@ export async function GET(request: NextRequest) {
     if (saveResult.added > 0 && saveResult.addedPlaylists.length > 0) {
       try {
         console.log(`📢 Создаём уведомления для ${saveResult.addedPlaylists.length} добавленных плейлистов...`);
-        
+
         for (const added of saveResult.addedPlaylists) {
           // Уведомление для артиста
           if (added.artistId) {
@@ -106,7 +108,7 @@ export async function GET(request: NextRequest) {
               }
             });
           }
-          
+
           // Уведомление для админа
           addActivity({
             type: 'playlist_found',
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
             }
           });
         }
-        
+
         console.log(`✅ Создано уведомлений: ${saveResult.addedPlaylists.length * 2}`);
       } catch (error) {
         console.error('⚠️ Ошибка при создании уведомлений:', error);

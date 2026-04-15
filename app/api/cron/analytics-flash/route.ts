@@ -12,6 +12,8 @@ import {
   withIpv4SocketIfRequested,
 } from '@/lib/sftp-connect'
 
+export const dynamic = 'force-dynamic'
+
 const CRON_SECRET = process.env.CRON_SECRET
 const DOWNLOADS_DIR = path.join(process.cwd(), 'sftp_downloads')
 

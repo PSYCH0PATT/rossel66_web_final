@@ -3,13 +3,15 @@
  * Проходит по всем артистам и привязывает релизы без artistId по имени артиста
  */
 
-import { loadUsers, assignReleasesToNewArtist } from '../lib/storage';
+import { assignReleasesToNewArtist } from '../lib/storage';
+import { prisma } from '../lib/prisma';
+import { userFromPrisma } from '../lib/storage-adapters';
 
 async function main() {
   try {
     console.log('🔍 Загрузка списка артистов...');
-    const users = await loadUsers();
-    const artists = users.filter(u => u.role === 'artist');
+    const rows = await prisma.user.findMany({ where: { role: 'artist' } });
+    const artists = rows.map(userFromPrisma);
     
     console.log(`📋 Найдено артистов: ${artists.length}`);
     console.log('');

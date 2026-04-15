@@ -5,13 +5,10 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Layout from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Upload, Check, AlertCircle, ArrowLeft, Music, LinkIcon, Settings, FileText, DollarSign, Plus, Edit, Trash } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -242,15 +239,15 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
               href="/dashboard/admin/artists"
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <span className="material-symbols-outlined text-base">arrow_back</span>
               <span>Назад к списку артистов</span>
             </Link>
           </div>
 
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Артист не найден</AlertDescription>
-          </Alert>
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
+            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
+            Артист не найден
+          </div>
         </div>
       </Layout>
     )
@@ -259,67 +256,91 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   return (
     <Layout role="admin" requiredRole="admin">
       <div className="space-y-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link
-              href="/dashboard/admin/artists"
-              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Назад к списку артистов</span>
+        <div className="flex flex-col gap-6 mb-6">
+          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
+            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
+              Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-white">Редактирование: {name}</h1>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
+              Артисты
+            </Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white truncate max-w-[180px]">{name}</span>
           </div>
-          
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <User className="h-6 w-6 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
+            <div className="min-w-0">
+              <Link
+                href="/dashboard/admin/artists"
+                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                К списку
+              </Link>
+              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
+                Редактирование
+              </h1>
+              <p className="text-sm text-gray-400 font-light mt-2">{name}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-2xl text-primary">person</span>
+            </div>
           </div>
         </div>
 
         {error && (
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
+            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
+            {error}
+          </div>
         )}
 
         {success && (
-          <Alert className="bg-emerald-500/20 border-emerald-500/50 text-white">
-            <Check className="h-4 w-4 text-emerald-400" />
-            <AlertDescription>Данные артиста успешно обновлены!</AlertDescription>
-          </Alert>
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
+            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
+            Данные артиста успешно обновлены!
+          </div>
         )}
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
-            <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Профиль</span>
+          <TabsList className="grid w-full grid-cols-4 mb-6 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+            <TabsTrigger
+              value="profile"
+              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">settings</span>
+              <span className="hidden sm:inline text-xs font-mono uppercase">Профиль</span>
             </TabsTrigger>
-            <TabsTrigger value="releases" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <Music className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Релизы</span>
+            <TabsTrigger
+              value="releases"
+              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">library_music</span>
+              <span className="hidden sm:inline text-xs font-mono uppercase">Релизы</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <FileText className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Отчеты</span>
+            <TabsTrigger
+              value="reports"
+              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">description</span>
+              <span className="hidden sm:inline text-xs font-mono uppercase">Отчёты</span>
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <DollarSign className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Выплаты</span>
+            <TabsTrigger
+              value="payments"
+              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">payments</span>
+              <span className="hidden sm:inline text-xs font-mono uppercase">Выплаты</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Вкладка Профиль */}
           <TabsContent value="profile" className="space-y-4">
-            <Card className="bg-transparent border-slate-600/30 text-white rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-emerald-400" />
-                  Информация об артисте
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 bg-primary rounded-full" />
+                Информация об артисте
+              </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -331,7 +352,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите логин"
                     />
                     <p className="text-xs text-muted-foreground">Логин для входа в систему</p>
@@ -346,7 +367,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Оставьте пустым, чтобы не менять"
                     />
                     <p className="text-xs text-muted-foreground">Оставьте пустым, если не хотите менять пароль</p>
@@ -360,7 +381,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите имя артиста"
                     />
                     <p className="text-xs text-muted-foreground">Отображаемое имя артиста</p>
@@ -375,7 +396,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите email"
                     />
                     <p className="text-xs text-muted-foreground">Необязательно</p>
@@ -391,7 +412,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       type="text"
                       value={fio}
                       onChange={(e) => setFio(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите полное ФИО"
                     />
                   </div>
@@ -405,7 +426,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       type="text"
                       value={fioShort}
                       onChange={(e) => setFioShort(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите ФИО кратко (И. О.)"
                     />
                   </div>
@@ -419,7 +440,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       type="text"
                       value={contract}
                       onChange={(e) => setContract(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите номер договора"
                     />
                   </div>
@@ -435,7 +456,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       max="100"
                       value={percentage}
                       onChange={(e) => setPercentage(e.target.value)}
-                      className="bg-transparent border border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Введите процент (0-100)"
                     />
                   </div>
@@ -452,10 +473,10 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                         type="url"
                         value={vkMusicUrl}
                         onChange={(e) => setVkMusicUrl(e.target.value)}
-                        className="bg-accent/50 border-gray-700 text-white pl-9"
+                        className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         placeholder="https://vk.com/music/artist/..."
                       />
-                      <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 pointer-events-none">link</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Ссылка на профиль артиста в ВК Музыке</p>
                   </div>
@@ -471,10 +492,10 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                         type="url"
                         value={yandexMusicUrl}
                         onChange={(e) => setYandexMusicUrl(e.target.value)}
-                        className="bg-accent/50 border-gray-700 text-white pl-9"
+                        className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         placeholder="https://music.yandex.ru/artist/..."
                       />
-                      <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 pointer-events-none">link</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Ссылка на профиль артиста в Яндекс Музыке</p>
                   </div>
@@ -490,10 +511,10 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                         type="url"
                         value={spotifyUrl}
                         onChange={(e) => setSpotifyUrl(e.target.value)}
-                        className="bg-accent/50 border-gray-700 text-white pl-9"
+                        className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         placeholder="https://open.spotify.com/artist/..."
                       />
-                      <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400 pointer-events-none">link</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Ссылка на профиль артиста в Spotify</p>
                   </div>
@@ -504,7 +525,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                     <Label htmlFor="avatar" className="text-white">
                       Аватар
                     </Label>
-                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-600/30 rounded-xl bg-transparent hover:border-slate-500/60 transition-colors">
+                    <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02] hover:border-primary/30 motion-safe:transition-colors">
                       {avatarPreview ? (
                         <div className="relative w-32 h-32 mb-4 rounded-full border-2 border-emerald-500/60 hover:border-emerald-400 transition-colors overflow-hidden">
                           <Image
@@ -515,15 +536,15 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           />
                         </div>
                       ) : (
-                        <div className="w-32 h-32 mb-4 rounded-full bg-transparent border-2 border-slate-600/40 hover:border-slate-500/70 transition-colors flex items-center justify-center">
-                          <User className="h-16 w-16 text-slate-400" />
+                        <div className="w-32 h-32 mb-4 rounded-full bg-white/5 border border-white/10 hover:border-primary/40 motion-safe:transition-colors flex items-center justify-center">
+                          <span className="material-symbols-outlined text-6xl text-gray-500">person</span>
                         </div>
                       )}
                       <label
                         htmlFor="avatar-upload"
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 border-2 border-transparent hover:border-emerald-300 transition-all duration-200 cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <Upload className="h-4 w-4" />
+                        <span className="material-symbols-outlined text-lg">upload</span>
                         <span>Загрузить аватар</span>
                       </label>
                       <input
@@ -537,7 +558,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-transparent border border-slate-600/20 rounded-xl hover:border-slate-500/40 transition-colors">
+                  <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:border-white/20 motion-safe:transition-colors">
                     <h3 className="text-sm font-medium mb-2">Профили в музыкальных сервисах:</h3>
                     <p className="text-xs text-muted-foreground mb-3">
                       Добавьте ссылки на профили артиста в музыкальных сервисах для отображения на странице артиста.
@@ -550,7 +571,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
                         >
-                          <Music className="h-4 w-4" />
+                          <span className="material-symbols-outlined text-base">library_music</span>
                           ВК Музыка
                         </a>
                       )}
@@ -561,7 +582,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300"
                         >
-                          <Music className="h-4 w-4" />
+                          <span className="material-symbols-outlined text-base">library_music</span>
                           Яндекс Музыка
                         </a>
                       )}
@@ -572,7 +593,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300"
                         >
-                          <Music className="h-4 w-4" />
+                          <span className="material-symbols-outlined text-base">library_music</span>
                           Spotify
                         </a>
                       )}
@@ -589,83 +610,75 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                   type="button"
                   variant="outline"
                   onClick={() => router.push("/dashboard/admin/artists")}
-                  className="border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white transition-colors"
+                  className="rounded-lg border-white/20 text-gray-300 hover:bg-white/5 hover:text-white"
                   disabled={isSubmitting}
                 >
                   Отмена
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-transparent hover:border-emerald-300 transition-all duration-200"
+                  className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Сохранение..." : "Сохранить изменения"}
                 </Button>
               </div>
             </form>
-              </CardContent>
-            </Card>
+            </div>
           </TabsContent>
 
           {/* Вкладка Релизы */}
           <TabsContent value="releases" className="space-y-4">
-            <Card className="bg-transparent border-slate-600/30 text-white rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="h-5 w-5 text-purple-400" />
-                  Управление релизами
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 bg-primary rounded-full" />
+                Управление релизами
+              </h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-slate-400">Здесь вы можете управлять релизами артиста</p>
-                    <Button className="bg-purple-500 hover:bg-purple-600 text-white border-2 border-transparent hover:border-purple-300 transition-all duration-200">
-                      <Plus className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p className="text-gray-400 text-sm">Здесь вы можете управлять релизами артиста</p>
+                    <Button className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2">
+                      <span className="material-symbols-outlined text-lg">add</span>
                       Добавить релиз
                     </Button>
                   </div>
                   
-                  <div className="p-8 text-center border-2 border-dashed border-slate-600/30 rounded-xl bg-transparent">
-                    <Music className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                    <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">library_music</span>
                     <h3 className="text-lg font-medium text-white mb-2">Нет релизов</h3>
-                    <p className="text-slate-400 mb-4">У этого артиста пока нет добавленных релизов</p>
-                    <Button variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20">
+                    <p className="text-gray-400 mb-4 text-sm">У этого артиста пока нет добавленных релизов</p>
+                    <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg">
                       Создать первый релиз
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           </TabsContent>
 
           {/* Вкладка Отчеты */}
           <TabsContent value="reports" className="space-y-4">
-            <Card className="bg-transparent border-slate-600/30 text-white rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-emerald-400" />
-                  Отчеты и аналитика
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 bg-primary rounded-full" />
+                Отчёты и аналитика
+              </h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-slate-400">Отчеты по прослушиваниям и доходам ({reports.length})</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p className="text-gray-400 text-sm">Отчёты по прослушиваниям и доходам ({reports.length})</p>
                     <Button 
                       onClick={fetchReports}
                       disabled={isLoadingReports}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-transparent hover:border-emerald-300 transition-all duration-200"
+                      className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2"
                     >
                       {isLoadingReports ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <span className="inline-block size-4 border-2 border-black/30 border-t-black rounded-full motion-safe:animate-spin" aria-hidden />
                           Загрузка...
                         </>
                       ) : (
                         <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Обновить отчеты
+                          <span className="material-symbols-outlined text-lg">refresh</span>
+                          Обновить отчёты
                         </>
                       )}
                     </Button>
@@ -673,41 +686,41 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                   
                   {isLoadingReports ? (
                     <div className="p-8 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400 mx-auto mb-4"></div>
-                      <p className="text-slate-400">Загрузка отчетов...</p>
+                      <span className="inline-block size-8 border-2 border-primary/30 border-t-primary rounded-full motion-safe:animate-spin mx-auto mb-4" aria-hidden />
+                      <p className="text-gray-400 text-sm">Загрузка отчётов...</p>
                     </div>
                   ) : reports.length > 0 ? (
                     <div className="space-y-3">
                       {reports.map((report: any) => (
-                        <div key={report.id} className="p-4 bg-slate-800/50 rounded-xl border border-slate-600/30">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium text-white">{report.quarter} {report.year}</h4>
-                              <p className="text-sm text-slate-400">{report.fileName}</p>
+                        <div key={report.id} className="p-4 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] motion-safe:transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-white font-mono text-sm">{report.quarter} {report.year}</h4>
+                              <p className="text-sm text-gray-500 truncate">{report.fileName}</p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-emerald-400">
+                            <div className="text-left sm:text-right shrink-0 [font-variant-numeric:tabular-nums]">
+                              <p className="text-lg font-display font-semibold text-primary">
                                 {report.totalAmount?.toLocaleString('ru-RU')} ₽
                               </p>
-                              <p className="text-sm text-slate-400">
+                              <p className="text-sm text-gray-400">
                                 {report.totalPlays?.toLocaleString('ru-RU')} прослушиваний
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4 mt-3">
+                          <div className="flex flex-wrap items-center gap-4 mt-3 text-xs font-mono uppercase text-gray-500">
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${report.isSigned ? 'bg-emerald-400' : 'bg-slate-500'}`}></div>
-                              <span className="text-sm text-slate-400">
+                              <div className={`size-2 rounded-full ${report.isSigned ? 'bg-primary' : 'bg-gray-600'}`} aria-hidden />
+                              <span className="text-gray-400 normal-case">
                                 {report.isSigned ? 'Подписан' : 'Не подписан'}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${report.isPaid ? 'bg-emerald-400' : 'bg-slate-500'}`}></div>
-                              <span className="text-sm text-slate-400">
+                              <div className={`size-2 rounded-full ${report.isPaid ? 'bg-primary' : 'bg-gray-600'}`} aria-hidden />
+                              <span className="text-gray-400 normal-case">
                                 {report.isPaid ? 'Выплачен' : 'Не выплачен'}
                               </span>
                             </div>
-                            <div className="text-xs text-slate-500 ml-auto">
+                            <div className="ml-auto [font-variant-numeric:tabular-nums]">
                               {new Date(report.uploadDate).toLocaleDateString('ru-RU')}
                             </div>
                           </div>
@@ -715,56 +728,62 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       ))}
                     </div>
                   ) : (
-                    <div className="p-8 text-center border-2 border-dashed border-slate-600/30 rounded-xl bg-transparent">
-                      <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">Нет отчетов</h3>
-                      <p className="text-slate-400 mb-4">У этого артиста пока нет загруженных отчетов</p>
+                    <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                      <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">description</span>
+                      <h3 className="text-lg font-medium text-white mb-2">Нет отчётов</h3>
+                      <p className="text-gray-400 mb-4 text-sm">У этого артиста пока нет загруженных отчётов</p>
                       <Button 
                         variant="outline" 
-                        className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20"
+                        className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg"
                         onClick={() => window.open('/admin/reports', '_blank')}
                       >
-                        Перейти к загрузке отчетов
+                        Перейти к загрузке отчётов
                       </Button>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           </TabsContent>
 
           {/* Вкладка Выплаты */}
           <TabsContent value="payments" className="space-y-4">
-            <Card className="bg-transparent border-slate-600/30 text-white rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-emerald-400" />
-                  История выплат
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
+                <span className="w-1.5 h-6 bg-primary rounded-full" />
+                История выплат
+              </h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-slate-400">Управление выплатами и финансами</p>
-                    <Button className="bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-transparent hover:border-emerald-300 transition-all duration-200">
-                      <Plus className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p className="text-gray-400 text-sm">Управление выплатами и финансами</p>
+                    <Button className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2">
+                      <span className="material-symbols-outlined text-lg">add</span>
                       Добавить выплату
                     </Button>
                   </div>
                   
-                  <div className="p-8 text-center border-2 border-dashed border-slate-600/30 rounded-xl bg-transparent">
-                    <DollarSign className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                    <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">payments</span>
                     <h3 className="text-lg font-medium text-white mb-2">Нет выплат</h3>
-                    <p className="text-slate-400 mb-4">История выплат артисту будет отображаться здесь</p>
-                    <Button variant="outline" className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20">
+                    <p className="text-gray-400 mb-4 text-sm">История выплат артисту будет отображаться здесь</p>
+                    <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg">
                       Создать выплату
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           </TabsContent>
         </Tabs>
+
+        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            System Operational
+          </div>
+          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
+        </footer>
       </div>
     </Layout>
   )
