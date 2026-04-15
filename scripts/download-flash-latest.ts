@@ -12,8 +12,12 @@
 import SftpClient from 'ssh2-sftp-client';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  resolveFlashRemoteDir,
+  sftpConnectOptions,
+  withIpv4SocketIfRequested,
+} from '../lib/sftp-connect';
 
-const REMOTE_PATH = 'rossel_flash';
 const LOCAL_DIR = path.join(process.cwd(), 'sftp_downloads');
 
 function loadEnvLocal() {
@@ -58,17 +62,20 @@ async function main() {
   const sftp = new SftpClient();
   try {
     console.log(`🔌 Подключение к ${config.host}:${config.port}...`);
-    await sftp.connect({
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      password: config.password,
-      readyTimeout: 20000,
-    });
+    const connectOpts = await withIpv4SocketIfRequested(
+      sftpConnectOptions(config)
+    );
+    await sftp.connect(connectOpts as any);
     console.log('✅ Подключено');
 
-    console.log(`📋 Список файлов в /${REMOTE_PATH}...`);
-    const files = await sftp.list(REMOTE_PATH);
+    const flashDir = await resolveFlashRemoteDir(sftp);
+    if (!flashDir) {
+      console.error('❌ Не найден каталог rossel_flash (SFTP_REMOTE_FLASH_PATH)');
+      await sftp.end().catch(() => {});
+      process.exit(1);
+    }
+    console.log(`📋 Список файлов в ${flashDir}...`);
+    const files = await sftp.list(flashDir);
     const csvFiles = (files as any[])
       .filter((f: any) => f.type === '-' && f.name.endsWith('.csv'))
       .map((f: any) => ({
@@ -113,7 +120,7 @@ async function main() {
     const localPath = path.join(LOCAL_DIR, latest.name);
 
     console.log(`⬇️  Скачиваю в ${localPath}...`);
-    await sftp.fastGet(`${REMOTE_PATH}/${latest.name}`, localPath);
+    await sftp.fastGet(path.posix.join(flashDir, latest.name), localPath);
     console.log('✅ Готово. Файл сохранён локально.');
     await sftp.end();
   } catch (err: any) {

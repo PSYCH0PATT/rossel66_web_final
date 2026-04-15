@@ -239,6 +239,16 @@ async function processKoalaResults(releases: any[]) {
           description: `Релиз "${koalaRelease.title}" добавлен из Koala Music`,
           metadata: { releaseId: created.id, koalaId: koalaRelease.koala_id }
         });
+        
+        // Дубликат для админа
+        await addActivity({
+          type: 'release_added',
+          userId: 'system',
+          userRole: 'admin',
+          title: 'Новый релиз добавлен',
+          description: `Релиз "${koalaRelease.title}" добавлен из Koala Music (артист: ${artist.name || artist.username})`,
+          metadata: { releaseId: created.id, koalaId: koalaRelease.koala_id, artistId: artist.id, artistName: artist.name }
+        });
       }
     }
     

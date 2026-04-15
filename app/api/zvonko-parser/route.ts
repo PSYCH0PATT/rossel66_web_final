@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
-import { loadReleases, saveReleases, addActivity, findArtistByName, addUser, updateRelease, getUserByUsername, assignReleasesToNewArtist } from '@/lib/storage'
+import { addActivity, findArtistByName, addUser, updateRelease, getUserByUsername, assignReleasesToNewArtist } from '@/lib/storage'
 import type { Release } from '@/lib/storage'
 import { nicknameToUsername } from '@/lib/utils'
+import { prisma } from '@/lib/prisma'
+import { releaseFromPrisma, userFromPrisma } from '@/lib/storage-adapters'
+import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard'
 
 interface ParseStats {
   total: number
@@ -41,7 +44,7 @@ function normalizeUpc(upc: string): string {
  * Релизы, которые были на модерации, но после парсера НЕТ ни во вкладке модерации,
  * ни во вкладке отклонённых — считаем доставленными и помечаем статус «Доставлен».
  */
-function markModerationDeliveredAfterParse(parsersDir: string): number {
+async function markModerationDeliveredAfterParse(parsersDir: string): Promise<number> {
   const zvonkoFile = path.join(parsersDir, 'zvonko_all_releases_full.json')
   if (!fs.existsSync(zvonkoFile)) return 0
 
@@ -64,7 +67,8 @@ function markModerationDeliveredAfterParse(parsersDir: string): number {
     }
   }
 
-  const releases = loadReleases()
+  const releaseRows = await prisma.release.findMany({ orderBy: { updatedAt: "desc" } })
+  const releases = releaseRows.map(releaseFromPrisma)
   const markedReleases: Release[] = []
   for (const release of releases) {
     const s = (release.status || '').trim()
@@ -76,13 +80,27 @@ function markModerationDeliveredAfterParse(parsersDir: string): number {
     const stillOnModByUpc = upcKey && modOrRejectedUpcs.has(upcKey)
     if (stillOnModByTitle || stillOnModByUpc) continue
 
-    ;(release as any).status = 'Доставлен'
+      ; (release as any).status = 'Доставлен'
     markedReleases.push(release)
     console.log(`✅ Zvonko: релиз "${release.title}" больше не на модерации и не отклонён → Доставлен`)
   }
   if (markedReleases.length > 0) {
-    saveReleases(releases)
+    await Promise.all(
+      markedReleases.map((r) =>
+        prisma.release.update({
+          where: { id: r.id },
+          data: { status: "Доставлен" },
+        })
+      )
+    )
+    const artistIds = [...new Set(markedReleases.map((r) => r.artistId).filter(Boolean))] as string[]
+    const userRows =
+      artistIds.length > 0 ? await prisma.user.findMany({ where: { id: { in: artistIds } } }) : []
+    const userById = new Map(userRows.map((row) => [row.id, userFromPrisma(row)]))
+
     for (const release of markedReleases) {
+      const artist = release.artistId ? userById.get(release.artistId) : undefined
+
       addActivity({
         type: 'release_status_updated',
         userId: release.artistId,
@@ -91,7 +109,24 @@ function markModerationDeliveredAfterParse(parsersDir: string): number {
         description: `Релиз "${release.title}" переведён в «Доставлен»`,
         metadata: { releaseId: release.id, artistId: release.artistId, status: 'Доставлен' }
       })
+
+      // Дубликат для админа
+      addActivity({
+        type: 'release_status_updated',
+        userId: 'system',
+        userRole: 'admin',
+        title: 'Статус релиза обновлён',
+        description: `Релиз "${release.title}" переведён в «Доставлен» (артист: ${artist?.name || artist?.username || release.artistId})`,
+        metadata: { releaseId: release.id, artistId: release.artistId, artistName: artist?.name, status: 'Доставлен' }
+      })
     }
+
+    const dashboardIds: string[] = []
+    for (const r of markedReleases) {
+      if (r.artistId) dashboardIds.push(r.artistId)
+      for (const fid of r.featuredArtistIds || []) dashboardIds.push(fid)
+    }
+    await revalidateArtistDashboardsForArtistIds(dashboardIds)
   }
   return markedReleases.length
 }
@@ -124,20 +159,20 @@ function loadParserStatus(): ParserStatus | null {
 export async function GET() {
   try {
     const status = loadParserStatus()
-    
+
     if (!status) {
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'Парсер еще не запускался',
         status: null
       })
     }
-    
+
     return NextResponse.json({
       success: true,
       status
     })
-    
+
   } catch (error) {
     console.error('Ошибка получения статуса Zvonko парсера:', error)
     return NextResponse.json({
@@ -149,15 +184,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   console.log('🚀 Запуск Zvonko Parser...')
-  
+
   try {
     const body = await request.json()
     const { action = 'parse', pagesToParse = 1 } = body
-    
+
     const parsersDir = path.join(process.cwd(), 'parsers')
     let scriptPath = ''
     let scriptName = ''
-    
+
     switch (action) {
       case 'parse':
         scriptPath = path.join(parsersDir, 'zvonko_linux_parser.py')
@@ -177,25 +212,25 @@ export async function POST(request: NextRequest) {
           error: 'Неизвестное действие'
         }, { status: 400 })
     }
-    
+
     if (!fs.existsSync(scriptPath)) {
       return NextResponse.json({
         success: false,
         error: `Скрипт ${scriptName} не найден`
       }, { status: 404 })
     }
-    
+
     return new Promise<NextResponse>((resolve) => {
       let output = ''
       let errorOutput = ''
-      
+
       // Запускаем Python парсер
       let args = [scriptPath]
-      
+
       if (action === 'parse') {
         args.push(pagesToParse.toString())
       }
-      
+
       const pythonProcess = spawn('python3', args, {
         cwd: process.cwd(),
         env: {
@@ -203,20 +238,20 @@ export async function POST(request: NextRequest) {
           PYTHONPATH: parsersDir
         }
       })
-      
+
       pythonProcess.stdout.on('data', (data) => {
         output += data.toString()
         console.log('Zvonko Parser:', data.toString())
       })
-      
+
       pythonProcess.stderr.on('data', (data) => {
         errorOutput += data.toString()
         console.error('Zvonko Parser Error:', data.toString())
       })
-      
+
       pythonProcess.on('close', async (code) => {
         console.log(`Python процесс завершился с кодом ${code}`)
-        
+
         if (code !== 0) {
           const errorStatus: ParserStatus = {
             lastRun: new Date().toISOString(),
@@ -224,25 +259,25 @@ export async function POST(request: NextRequest) {
             stats: { total: 0, added: 0, updated: 0, skipped: 0, errors: [errorOutput] },
             message: `Python процесс завершился с кодом ${code}`
           }
-          
+
           saveParserStatus(errorStatus)
-          
-          resolve(NextResponse.json({ 
-            success: false, 
+
+          resolve(NextResponse.json({
+            success: false,
             error: `Python процесс завершился с кодом ${code}`,
             stderr: errorOutput,
             stats: errorStatus.stats
           }, { status: 500 }))
           return
         }
-        
+
         // Парсим результаты в зависимости от действия
         let stats: ParseStats = { total: 0, added: 0, updated: 0, skipped: 0, errors: [] }
         let message = ''
         let releases: any[] = []
         let pagesProcessed = 0
         let totalPages = pagesToParse
-        
+
         if (action === 'parse') {
           // Пробуем извлечь JSON из stdout
           const jsonMatch = output.match(/JSON_OUTPUT_START\n([\s\S]*?)\nJSON_OUTPUT_END/)
@@ -255,10 +290,10 @@ export async function POST(request: NextRequest) {
               const parsedReleases = JSON.parse(jsonText)
               stats.total = parsedReleases.length || 0
               message = `Найдено ${stats.total} релизов`
-              
+
               // Берем последние релизы для отображения
               releases = parsedReleases.slice(-10).reverse()
-              
+
               // Определяем количество обработанных страниц
               if (parsedReleases.length > 0) {
                 pagesProcessed = Math.max(...parsedReleases.map((r: any) => r.page || 1))
@@ -281,7 +316,7 @@ export async function POST(request: NextRequest) {
                 stats.total = results.length || 0
                 message = `Найдено ${stats.total} релизов`
                 releases = results.slice(-10).reverse()
-                
+
                 if (results.length > 0) {
                   pagesProcessed = Math.max(...results.map((r: any) => r.page || 1))
                 }
@@ -291,46 +326,46 @@ export async function POST(request: NextRequest) {
               }
             } else {
               // Если JSON не найден ни в stdout, ни в файле
-              console.warning('⚠️ JSON_OUTPUT не найден в stdout и файл результатов отсутствует')
+              console.warn('⚠️ JSON_OUTPUT не найден в stdout и файл результатов отсутствует')
               console.log('Вывод парсера (последние 1000 символов):', output.substring(Math.max(0, output.length - 1000)))
               stats.errors.push('JSON_OUTPUT не найден в выводе парсера')
               message = 'Парсинг завершен, но результаты не найдены'
             }
           }
-          
+
           // После успешного парсинга автоматически запускаем сравнение и добавление
           // ВАЖНО: Это должно выполняться ДО отправки ответа, чтобы статистика была актуальной
           if (action === 'parse' && stats.total > 0 && code === 0) {
             console.log('🔄 Автоматически запускаем сравнение релизов...')
-            
+
             try {
               // Запускаем compare
               const compareScript = path.join(parsersDir, 'compare_releases.py')
               const compareProcess = spawn('python3', [compareScript], { cwd: process.cwd() })
-              
+
               let compareOutput = ''
               let compareError = ''
-              
+
               compareProcess.stdout.on('data', (data) => {
                 compareOutput += data.toString()
                 console.log('Compare:', data.toString())
               })
-              
+
               compareProcess.stderr.on('data', (data) => {
                 compareError += data.toString()
                 console.error('Compare Error:', data.toString())
               })
-              
+
               // Ждем завершения процесса сравнения
               const compareCode = await new Promise<number>((resolve) => {
                 compareProcess.on('close', (code) => {
-                  resolve(code)
+                  resolve(code ?? 1)
                 })
               })
-              
+
               if (compareCode === 0) {
                 console.log('✅ Сравнение завершено')
-                
+
                 // Читаем результаты сравнения
                 const comparisonFile = path.join(parsersDir, 'comparison_results.json')
                 if (fs.existsSync(comparisonFile)) {
@@ -339,40 +374,40 @@ export async function POST(request: NextRequest) {
                     const newReleasesCount = comparisonResults.summary?.new_releases || 0
                     const existingByUpc = comparisonResults.summary?.existing_by_upc || 0
                     const existingByTitle = comparisonResults.summary?.existing_by_title || 0
-                    
+
                     console.log(`📊 Найдено новых релизов: ${newReleasesCount}`)
                     console.log(`📊 Существующих релизов: ${existingByUpc + existingByTitle}`)
-                    
+
                     // Если есть новые релизы или существующие для обновления, запускаем добавление
                     if (newReleasesCount > 0 || existingByUpc > 0 || existingByTitle > 0) {
                       console.log('🔄 Автоматически запускаем добавление/обновление релизов...')
-                      
+
                       const addScript = path.join(parsersDir, 'add_new_releases.py')
                       const addProcess = spawn('python3', [addScript], { cwd: process.cwd() })
-                      
+
                       let addOutput = ''
                       let addError = ''
-                      
+
                       addProcess.stdout.on('data', (data) => {
                         addOutput += data.toString()
                         console.log('Add:', data.toString())
                       })
-                      
+
                       addProcess.stderr.on('data', (data) => {
                         addError += data.toString()
                         console.error('Add Error:', data.toString())
                       })
-                      
+
                       // Ждем завершения процесса добавления
                       const addCode = await new Promise<number>((resolve) => {
                         addProcess.on('close', (code) => {
-                          resolve(code)
+                          resolve(code ?? 1)
                         })
                       })
-                      
+
                       if (addCode === 0) {
                         console.log('✅ Добавление завершено')
-                        
+
                         // Читаем отчет о добавлении
                         const reportFile = path.join(parsersDir, 'add_releases_report.json')
                         if (fs.existsSync(reportFile)) {
@@ -380,18 +415,18 @@ export async function POST(request: NextRequest) {
                             const report = JSON.parse(fs.readFileSync(reportFile, 'utf-8'))
                             const addedCount = report.summary?.added || 0
                             const updatedCount = report.summary?.updated || 0
-                            
+
                             // ОБНОВЛЯЕМ статистику ПЕРЕД отправкой ответа
                             stats.added = addedCount
                             stats.updated = updatedCount
                             stats.skipped = existingByUpc + existingByTitle
-                            
+
                             if (addedCount > 0 || updatedCount > 0) {
                               message = `Добавлено ${addedCount} новых релизов${updatedCount > 0 ? `, обновлено ${updatedCount} статусов` : ''}`
                             } else {
                               message = `Найдено ${stats.total} релизов, новых для добавления: ${newReleasesCount}`
                             }
-                            
+
                             console.log(`📊 Добавлено: ${addedCount}, Обновлено: ${updatedCount}`)
                           } catch (e) {
                             console.error('Ошибка чтения отчета добавления:', e)
@@ -421,7 +456,7 @@ export async function POST(request: NextRequest) {
               }
 
               // Проверка «модерация/отклонённые → доставлен» выполняется и при ошибке compare (файл Zvonko уже есть)
-              const markedDelivered = markModerationDeliveredAfterParse(parsersDir)
+              const markedDelivered = await markModerationDeliveredAfterParse(parsersDir)
               if (markedDelivered > 0) {
                 console.log(`✅ Zvonko: помечено как Доставлен (были на модерации): ${markedDelivered}`)
                 message = (message ? message + '. ' : '') + `${markedDelivered} релизов переведены в Доставлен`
@@ -461,31 +496,36 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-        
+
+        // Проверяем, есть ли критические ошибки
+        const hasCriticalErrors = stats.errors.length > 0 && stats.total === 0 && action === 'parse'
+        const isSuccess = !hasCriticalErrors
+
         // Автоматически создаём артистов для релизов без artistId (после всех скриптов)
         if (isSuccess && (action === 'parse' || action === 'add')) {
           try {
             console.log('🔍 Проверяем релизы без привязанного артиста...')
-            const allReleases = await loadReleases()
-            const releasesWithoutArtist = allReleases.filter(r => 
+            const allReleaseRows = await prisma.release.findMany({ orderBy: { updatedAt: "desc" } })
+            const allReleases = allReleaseRows.map(releaseFromPrisma)
+            const releasesWithoutArtist = allReleases.filter(r =>
               !r.artistId && (r as any).artistName && (r as any).artistName.trim().length > 0
             )
-            
+
             if (releasesWithoutArtist.length > 0) {
               console.log(`➕ Найдено ${releasesWithoutArtist.length} релизов без привязанного артиста`)
-              
+
               const createdArtists = new Map<string, string>() // artistName -> artistId
-              
+
               for (const release of releasesWithoutArtist) {
                 const artistName = ((release as any).artistName || '').trim()
-                
+
                 // Проверяем, не создали ли мы уже артиста с таким именем в этом цикле
                 let artistId = createdArtists.get(artistName)
-                
+
                 if (!artistId) {
                   // Проверяем, может артист уже существует в БД
                   const existingArtist = await findArtistByName(artistName)
-                  
+
                   if (existingArtist) {
                     artistId = existingArtist.id
                   } else {
@@ -506,16 +546,16 @@ export async function POST(request: NextRequest) {
                     })
                     artistId = newArtist.id
                     createdArtists.set(artistName, artistId)
-                    
+
                     await addActivity({
-                      type: 'artist_auto_created',
+                      type: 'artist_auto_created' as any,
                       userId: 'system',
                       userRole: 'admin',
                       title: 'Артист создан автоматически',
                       description: `Профиль артиста "${artistName}" создан парсером Zvonko`,
                       metadata: { artistId, source: 'zvonko' }
                     })
-                    
+
                     // Привязываем существующие релизы без артиста к новому артисту
                     try {
                       const assignedCount = await assignReleasesToNewArtist(artistId, artistName, username)
@@ -527,13 +567,13 @@ export async function POST(request: NextRequest) {
                     }
                   }
                 }
-                
+
                 // Обновляем релиз с привязкой к артисту
                 if (artistId) {
                   await updateRelease(release.id, { artistId })
                 }
               }
-              
+
               console.log(`✅ Создано ${createdArtists.size} новых артистов, обновлено ${releasesWithoutArtist.length} релизов`)
             }
           } catch (error) {
@@ -541,11 +581,7 @@ export async function POST(request: NextRequest) {
             // Не останавливаем весь процесс из-за этой ошибки
           }
         }
-        
-        // Проверяем, есть ли критические ошибки
-        const hasCriticalErrors = stats.errors.length > 0 && stats.total === 0 && action === 'parse'
-        const isSuccess = !hasCriticalErrors
-        
+
         // Сохраняем статус
         const status: ParserStatus = {
           lastRun: new Date().toISOString(),
@@ -555,11 +591,11 @@ export async function POST(request: NextRequest) {
           pagesProcessed,
           totalPages
         }
-        
+
         saveParserStatus(status)
-        
-        resolve(NextResponse.json({ 
-          success: isSuccess, 
+
+        resolve(NextResponse.json({
+          success: isSuccess,
           message: action === 'parse' ? (isSuccess ? 'Парсинг завершен успешно' : 'Парсинг завершен с ошибками') : message,
           stats,
           releases,
@@ -569,21 +605,21 @@ export async function POST(request: NextRequest) {
         }, { status: isSuccess ? 200 : 500 }))
       })
     })
-    
+
   } catch (error) {
     console.error('Ошибка Zvonko Parser:', error)
-    
+
     const errorStatus: ParserStatus = {
       lastRun: new Date().toISOString(),
       success: false,
       stats: { total: 0, added: 0, updated: 0, skipped: 0, errors: [String(error)] },
       message: String(error)
     }
-    
+
     saveParserStatus(errorStatus)
-    
-    return NextResponse.json({ 
-      success: false, 
+
+    return NextResponse.json({
+      success: false,
       error: 'Внутренняя ошибка сервера',
       stats: errorStatus.stats
     }, { status: 500 })

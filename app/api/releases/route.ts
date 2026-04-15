@@ -58,6 +58,16 @@ export async function POST(request: Request) {
         description: `Релиз "${createdRelease.title}" успешно добавлен`,
         metadata: { releaseId: createdRelease.id, releaseTitle: createdRelease.title }
       })
+      
+      // Дубликат для админа
+      await addActivity({
+        type: 'release_added',
+        userId: 'system',
+        userRole: 'admin',
+        title: 'Добавлен новый релиз',
+        description: `Релиз "${createdRelease.title}" добавлен (артист: ${artist.name || artist.username})`,
+        metadata: { releaseId: createdRelease.id, releaseTitle: createdRelease.title, artistId: artist.id, artistName: artist.name }
+      })
     }
     
     return NextResponse.json({ success: true, release: createdRelease })

@@ -114,64 +114,39 @@ class KoalaReleasesParser:
                     print("⚠️  Системный chromedriver не найден, пробуем webdriver-manager...")
                     service = Service(ChromeDriverManager().install())
             else:
-                # На Mac/Windows используем webdriver-manager для автоматической установки правильной версии
-                print("🍎 Mac: проверяем ChromeDriver...")
-                
-                # Сначала пробуем найти уже установленную версию 143
-                wdm_path = os.path.expanduser('~/.wdm/drivers/chromedriver')
-                chromedriver_path = None
-                
-                if os.path.exists(wdm_path):
-                    # Ищем версию 143.x
-                    for root, dirs, files in os.walk(wdm_path):
-                        if '143.' in root:
-                            for file in files:
-                                if file == 'chromedriver' or file == 'chromedriver-mac-arm64' or file == 'chromedriver-mac-x64':
-                                    full_path = os.path.join(root, file)
-                                    if os.access(full_path, os.X_OK):
-                                        chromedriver_path = full_path
-                                        print(f"✅ Найден ChromeDriver 143: {chromedriver_path}")
-                                        break
-                            if chromedriver_path:
-                                break
-                
-                if chromedriver_path:
-                    service = Service(chromedriver_path)
-                else:
-                    print("⚠️  ChromeDriver 143 не найден, устанавливаем через webdriver-manager...")
-                    try:
-                        # Устанавливаем с таймаутом через threading
-                        import threading
-                        driver_path_result = [None]
-                        exception_result = [None]
-                        
-                        def install_driver():
-                            try:
-                                driver_path_result[0] = ChromeDriverManager().install()
-                            except Exception as e:
-                                exception_result[0] = e
-                        
-                        thread = threading.Thread(target=install_driver)
-                        thread.daemon = True
-                        thread.start()
-                        thread.join(timeout=20)  # 20 секунд на установку
-                        
-                        if thread.is_alive():
-                            print("❌ ChromeDriverManager завис при установке")
-                            raise Exception("ChromeDriverManager завис")
-                        
-                        if exception_result[0]:
-                            raise exception_result[0]
-                        
-                        if driver_path_result[0]:
-                            print(f"✅ ChromeDriver установлен: {driver_path_result[0]}")
-                            service = Service(driver_path_result[0])
-                        else:
-                            raise Exception("ChromeDriver не установлен")
-                    except Exception as e:
-                        print(f"⚠️  Ошибка установки ChromeDriver: {e}")
-                        print("⚠️  Пробуем без указания пути...")
-                        service = Service()  # Пробуем без пути
+                # Mac/Windows: драйвер должен совпадать с установленным Chrome (major version).
+                # Не используем закэшированный старый chromedriver из ~/.wdm (раньше тут был хардкод 143).
+                print("🍎 Mac: ChromeDriver через webdriver-manager...")
+                try:
+                    import threading
+
+                    driver_path_result = [None]
+                    exception_result = [None]
+
+                    def install_driver():
+                        try:
+                            driver_path_result[0] = ChromeDriverManager().install()
+                        except Exception as e:
+                            exception_result[0] = e
+
+                    thread = threading.Thread(target=install_driver)
+                    thread.daemon = True
+                    thread.start()
+                    thread.join(timeout=60)
+
+                    if thread.is_alive():
+                        raise Exception("ChromeDriverManager: таймаут установки (60 с)")
+                    if exception_result[0]:
+                        raise exception_result[0]
+                    if not driver_path_result[0]:
+                        raise Exception("ChromeDriver не установлен")
+
+                    print(f"✅ ChromeDriver: {driver_path_result[0]}")
+                    service = Service(driver_path_result[0])
+                except Exception as e:
+                    print(f"⚠️  webdriver-manager: {e}")
+                    print("⚠️  Пробуем Selenium без явного пути (встроенный менеджер драйвера)...")
+                    service = Service()
             
             # Создаем драйвер
             print("🚀 Создаем WebDriver...")

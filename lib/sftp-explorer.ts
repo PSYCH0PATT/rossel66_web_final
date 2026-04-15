@@ -1,4 +1,11 @@
 import SftpClient from 'ssh2-sftp-client';
+import * as path from 'path';
+import {
+  resolveSftpRemoteDir,
+  sftpConnectOptions,
+  sftpRemoteDirCandidates,
+  withIpv4SocketIfRequested,
+} from '@/lib/sftp-connect';
 
 interface SftpConfig {
   host: string;
@@ -29,23 +36,30 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
     console.log(`👤 Пользователь: ${config.username}`);
     console.log(`📁 Целевая папка: ${config.remotePath}`);
     
-    await sftp.connect({
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      password: config.password,
-      readyTimeout: 20000,
-    });
+    const connectOpts = await withIpv4SocketIfRequested(
+      sftpConnectOptions({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        password: config.password,
+      })
+    );
+    await sftp.connect(connectOpts as any);
     
     console.log('✅ Подключение установлено');
+
+    const remoteBase =
+      (await resolveSftpRemoteDir(sftp, sftpRemoteDirCandidates(config.remotePath))) ||
+      config.remotePath;
+    console.log(`📁 Используемый путь на сервере: ${remoteBase}`);
     
     // Проверяем существование целевой папки
-    const remotePathExists = await sftp.exists(config.remotePath);
-    console.log(`📂 Папка "${config.remotePath}" существует: ${remotePathExists}`);
+    const remotePathExists = await sftp.exists(remoteBase);
+    console.log(`📂 Папка "${remoteBase}" существует: ${remotePathExists}`);
     
     let results: any = {
       connected: true,
-      remotePath: config.remotePath,
+      remotePath: remoteBase,
       remotePathExists: remotePathExists !== false,
       rootFiles: [],
       targetFolderFiles: [],
@@ -73,8 +87,8 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
     
     // Если целевая папка существует, смотрим её содержимое
     if (remotePathExists) {
-      console.log(`\n📋 Содержимое папки "${config.remotePath}":`);
-      const targetFiles = await sftp.list(config.remotePath);
+      console.log(`\n📋 Содержимое папки "${remoteBase}":`);
+      const targetFiles = await sftp.list(remoteBase);
       results.targetFolderFiles = targetFiles.map((file: any) => ({
         name: file.name,
         type: file.type,
@@ -92,9 +106,9 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
       });
       
       // Рекурсивно обходим подпапки (максимум 2 уровня вложенности)
-      results.structure = await exploreDirectory(sftp, config.remotePath, 0, 2);
+      results.structure = await exploreDirectory(sftp, remoteBase, 0, 2);
     } else {
-      console.log(`\n⚠️ Папка "${config.remotePath}" не существует`);
+      console.log(`\n⚠️ Папка "${remoteBase}" не существует`);
     }
     
     // Скачиваем несколько файлов для анализа
@@ -108,7 +122,7 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
       
       for (const file of sampleFiles) {
         try {
-          const remotePath = `${config.remotePath}/${file.name}`;
+          const remotePath = path.posix.join(remoteBase, file.name);
           const content = await sftp.get(remotePath);
           const textContent = content.toString('utf-8');
           
@@ -142,7 +156,7 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
       
       for (const file of sampleFiles) {
         try {
-          const filePath = `${config.remotePath}/${file.name}`;
+          const filePath = path.posix.join(remoteBase, file.name);
           console.log(`\n  📄 Анализирую: ${file.name}`);
           const fileContent = await sftp.get(filePath);
           const contentStr = fileContent.toString('utf-8');

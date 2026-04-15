@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { addUser, getUserByUsername, loadUsers, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity } from "@/lib/storage"
+import { addUser, getUserByUsername, loadUsers, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -117,16 +117,30 @@ export async function POST(request: Request) {
       })
     }
     
-    // Log each assigned release
+    // Log each assigned release (one notification per release)
     if (assignedReleases > 0) {
-      await addActivity({
-        type: 'release_added',
-        userId: newUser.id,
-        userRole: 'artist',
-        title: 'Релизы привязаны к артисту',
-        description: `Автоматически привязано ${assignedReleases} релиз(ов) к артисту "${newUser.name}"`,
-        metadata: { artistId: newUser.id, count: assignedReleases }
-      })
+      const artistReleases = await getReleasesByArtistId(newUser.id)
+      for (const release of artistReleases) {
+        // Уведомление для артиста
+        await addActivity({
+          type: 'release_added',
+          userId: newUser.id,
+          userRole: 'artist',
+          title: 'Добавлен релиз',
+          description: `Добавлен релиз "${release.title}"`,
+          metadata: { artistId: newUser.id, releaseId: release.id, releaseTitle: release.title }
+        })
+        
+        // Уведомление для админа
+        await addActivity({
+          type: 'release_added',
+          userId: 'system',
+          userRole: 'admin',
+          title: 'Добавлен релиз',
+          description: `Добавлен релиз "${release.title}" (артист: ${newUser.name || newUser.username})`,
+          metadata: { artistId: newUser.id, artistName: newUser.name, releaseId: release.id, releaseTitle: release.title }
+        })
+      }
     }
     
     // Log each assigned playlist

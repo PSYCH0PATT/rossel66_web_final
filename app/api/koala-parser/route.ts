@@ -386,6 +386,22 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
             status: koalaRelease.status
           }
         });
+        
+        // Дубликат для админа
+        await addActivity({
+          type: 'release_added',
+          userId: 'system',
+          userRole: 'admin',
+          title: 'Новый релиз добавлен',
+          description: `Добавлен релиз "${koalaRelease.title}" (артист: ${artist.name || artist.username})`,
+          metadata: {
+            releaseId: createdRelease.id,
+            koalaId: koalaRelease.koala_id,
+            status: koalaRelease.status,
+            artistId: artist.id,
+            artistName: artist.name
+          }
+        });
         console.log(`✅ Добавлен релиз "${koalaRelease.title}" для артиста ${artist.name}`);
         stats.added++;
       }

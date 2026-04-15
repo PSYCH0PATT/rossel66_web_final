@@ -6,9 +6,13 @@ import * as path from 'path'
 import { parseFlashCSV } from '@/lib/flash-parser'
 import { saveFlashRecords } from '@/lib/flash-storage'
 import { addActivity } from '@/lib/storage'
+import {
+  resolveFlashRemoteDir,
+  sftpConnectOptions,
+  withIpv4SocketIfRequested,
+} from '@/lib/sftp-connect'
 
 const CRON_SECRET = process.env.CRON_SECRET
-const REMOTE_PATH = 'rossel_flash'
 const DOWNLOADS_DIR = path.join(process.cwd(), 'sftp_downloads')
 
 const DAYS_BACK_DEFAULT = 7
@@ -65,17 +69,33 @@ export async function GET(request: NextRequest) {
     const sftp = new SftpClient()
     try {
       console.log(`🔌 Подключение к ${sftpConfig.host}:${sftpConfig.port}...`)
-      await sftp.connect({
-        host: sftpConfig.host,
-        port: sftpConfig.port,
-        username: sftpConfig.username,
-        password: sftpConfig.password,
-        readyTimeout: 20000,
-      })
+      const connectOpts = await withIpv4SocketIfRequested(
+        sftpConnectOptions({
+          host: sftpConfig.host,
+          port: sftpConfig.port,
+          username: sftpConfig.username,
+          password: sftpConfig.password,
+        })
+      )
+      // ssh2-sftp-client типы не совпадают с Record+sock из withIpv4SocketIfRequested
+      await sftp.connect(connectOpts as any)
       console.log('✅ Подключено к SFTP')
 
+      const flashDir = await resolveFlashRemoteDir(sftp)
+      if (!flashDir) {
+        await sftp.end().catch(() => {})
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'SFTP: не найден каталог rossel_flash (проверьте SFTP_REMOTE_FLASH_PATH и права)',
+          },
+          { status: 500 }
+        )
+      }
+      console.log(`📁 Каталог аналитики на сервере: ${flashDir}`)
+
       // Список файлов
-      const files = await sftp.list(REMOTE_PATH)
+      const files = await sftp.list(flashDir)
       const csvFiles = (files as any[])
         .filter((f: any) => f.type === '-' && f.name.endsWith('.csv'))
         .map((f: any) => {
@@ -91,7 +111,7 @@ export async function GET(request: NextRequest) {
         await sftp.end()
         return NextResponse.json({
           success: true,
-          message: 'Нет CSV файлов в rossel_flash',
+          message: `Нет CSV файлов в ${flashDir}`,
           stats: { downloaded: 0, parsed: 0, added: 0, skipped: 0 }
         })
       }
@@ -130,7 +150,7 @@ export async function GET(request: NextRequest) {
           const forceDownload = mode === '7days'
           if (forceDownload || !fs.existsSync(localPath)) {
             console.log(`⬇️  Скачиваю: ${file.name}...`)
-            await sftp.fastGet(`${REMOTE_PATH}/${file.name}`, localPath)
+            await sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
           } else {
             console.log(`📁 Уже скачан: ${file.name}`)
           }
@@ -168,24 +188,6 @@ export async function GET(request: NextRequest) {
       await sftp.end()
 
       const duration = Date.now() - startTime
-
-      // Логируем активность
-      const modeTitle = mode === 'all' ? 'Полный импорт аналитики Flash' : mode === '7days' ? 'Импорт аналитики Flash (7 дней)' : 'Импорт аналитики Flash'
-      addActivity({
-        type: 'analytics_import',
-        userId: 'system',
-        userRole: 'admin',
-        title: modeTitle,
-        description: `Обработано ${filesToProcess.length} файлов: добавлено ${totalAdded} записей, пропущено ${totalSkipped} дубликатов`,
-        metadata: {
-          mode,
-          filesProcessed: filesToProcess.length,
-          totalParsed,
-          totalAdded,
-          totalSkipped,
-          duration: `${duration}ms`,
-        },
-      })
 
       console.log('')
       console.log('═══════════════════════════════════════════════════')

@@ -8,6 +8,11 @@
 import SftpClient from 'ssh2-sftp-client'
 import * as fs from 'fs'
 import * as path from 'path'
+import {
+  resolveFlashRemoteDir,
+  sftpConnectOptions,
+  withIpv4SocketIfRequested,
+} from '../lib/sftp-connect'
 
 // ─── Env ────────────────────────────────────────────────────
 function loadEnvLocal() {
@@ -150,7 +155,6 @@ async function saveRecordsToDB(pool: Pool, records: FlashRecord[], artistMap: Ma
 
 // ─── Main ────────────────────────────────────────────────────
 
-const REMOTE_PATH = 'rossel_flash'
 const LOCAL_DIR = path.join(process.cwd(), 'sftp_downloads')
 
 async function main() {
@@ -188,11 +192,21 @@ async function main() {
   }
 
   console.log(`🔌 Подключение к SFTP ${sftpConfig.host}:${sftpConfig.port}...`)
-  await sftp.connect({ ...sftpConfig, readyTimeout: 20000 })
+  const connectOpts = await withIpv4SocketIfRequested(sftpConnectOptions(sftpConfig))
+  await sftp.connect(connectOpts as any)
   console.log('✅ SFTP подключен')
 
+  const flashDir = await resolveFlashRemoteDir(sftp)
+  if (!flashDir) {
+    console.error('❌ Не найден каталог rossel_flash')
+    await sftp.end().catch(() => {})
+    await pool.end()
+    process.exit(1)
+  }
+  console.log(`📁 Каталог аналитики: ${flashDir}`)
+
   // List files
-  const files = await sftp.list(REMOTE_PATH)
+  const files = await sftp.list(flashDir)
   const csvFiles = (files as any[])
     .filter((f: any) => f.type === '-' && f.name.endsWith('.csv'))
     .map((f: any) => {
@@ -202,7 +216,7 @@ async function main() {
     .filter(f => f.date)
     .sort((a, b) => a.date!.localeCompare(b.date!))
 
-  console.log(`📋 Найдено ${csvFiles.length} CSV файлов в rossel_flash`)
+  console.log(`📋 Найдено ${csvFiles.length} CSV файлов в ${flashDir}`)
 
   if (!fs.existsSync(LOCAL_DIR)) fs.mkdirSync(LOCAL_DIR, { recursive: true })
 
@@ -215,7 +229,7 @@ async function main() {
     // Скачиваем если нет
     if (!fs.existsSync(localPath)) {
       process.stdout.write(`⬇️  ${file.name}...`)
-      await sftp.fastGet(`${REMOTE_PATH}/${file.name}`, localPath)
+      await sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
       console.log(' скачано')
     } else {
       console.log(`📁 ${file.name} — уже скачан`)

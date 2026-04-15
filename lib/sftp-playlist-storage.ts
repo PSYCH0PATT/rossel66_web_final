@@ -14,17 +14,21 @@ export async function ensureSftpPlaylistDatabase(): Promise<void> {
 /**
  * Сохраняет список плейлистов в базу данных
  */
+export type AddedPlaylistInfo = { playlistName: string; artistName: string; artistId: string | null };
+
 export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
   added: number;
   updated: number;
   unchanged: number;
   errors: string[];
+  addedPlaylists: AddedPlaylistInfo[];
 }> {
   const stats = {
     added: 0,
     updated: 0,
     unchanged: 0,
-    errors: [] as string[]
+    errors: [] as string[],
+    addedPlaylists: [] as AddedPlaylistInfo[]
   };
   
   for (const playlist of playlists) {
@@ -123,6 +127,11 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
           }
           
           stats.added++;
+          stats.addedPlaylists.push({
+            playlistName: playlist.playlistName,
+            artistName,
+            artistId
+          });
         }
       }
     } catch (error) {

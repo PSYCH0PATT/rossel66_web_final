@@ -135,67 +135,49 @@ export async function GET(request: NextRequest) {
     
     const duration = Date.now() - startTime;
     
-    // Создаём активности для артистов, у которых обновились плейлисты
-    if (saveResult.added > 0 || saveResult.updated > 0) {
+    // Создаём уведомления ТОЛЬКО для добавленных плейлистов (по одному на плейлист)
+    if (saveResult.added > 0 && saveResult.addedPlaylists.length > 0) {
       try {
-        const users = await loadUsers();
-        const artistsMap = new Map<string, any>();
+        console.log(`📢 Создаём уведомления для ${saveResult.addedPlaylists.length} добавленных плейлистов...`);
         
-        // Собираем уникальных артистов из плейлистов
-        playlists.forEach(p => {
-          if (p.artistName) {
-            const artist = users.find(u => 
-              u.role === 'artist' && 
-              (u.name?.toLowerCase() === p.artistName.toLowerCase() || 
-               u.username?.toLowerCase() === p.artistName.toLowerCase())
-            );
-            if (artist && !artistsMap.has(artist.id)) {
-              artistsMap.set(artist.id, artist);
-            }
+        for (const added of saveResult.addedPlaylists) {
+          // Уведомление для артиста
+          if (added.artistId) {
+            addActivity({
+              type: 'playlist_found',
+              userId: added.artistId,
+              userRole: 'artist',
+              title: 'Добавлен плейлист',
+              description: `Добавлен плейлист «${added.playlistName}»`,
+              metadata: {
+                playlistName: added.playlistName,
+                artistName: added.artistName,
+                source: 'sftp'
+              }
+            });
           }
-        });
-
-        // Создаём активность для каждого артиста
-        for (const [artistId, artist] of artistsMap) {
-          const artistPlaylists = playlists.filter(p => 
-            p.artistName?.toLowerCase() === artist.name?.toLowerCase() ||
-            p.artistName?.toLowerCase() === artist.username?.toLowerCase()
-          );
           
+          // Уведомление для админа
           addActivity({
             type: 'playlist_found',
-            userId: artistId,
-            userRole: 'artist',
-            title: 'Обновлены плейлисты',
-            description: `Синхронизировано ${artistPlaylists.length} ${artistPlaylists.length === 1 ? 'плейлист' : artistPlaylists.length < 5 ? 'плейлиста' : 'плейлистов'}`,
+            userId: 'system',
+            userRole: 'admin',
+            title: 'Добавлен плейлист',
+            description: `Добавлен плейлист «${added.playlistName}» (артист: ${added.artistName})`,
             metadata: {
-              playlistCount: artistPlaylists.length,
+              playlistName: added.playlistName,
+              artistName: added.artistName,
+              artistId: added.artistId,
               source: 'sftp'
             }
           });
         }
         
-        console.log(`📢 Создано активностей для артистов: ${artistsMap.size}`);
+        console.log(`✅ Создано уведомлений: ${saveResult.addedPlaylists.length * 2}`);
       } catch (error) {
-        console.error('⚠️ Ошибка при создании активностей для артистов:', error);
+        console.error('⚠️ Ошибка при создании уведомлений:', error);
       }
     }
-    
-    // Логируем общую активность для админа
-    addActivity({
-      type: 'playlist_found',
-      userId: 'system',
-      userRole: 'admin',
-      title: 'Синхронизация плейлистов с SFTP',
-      description: `Скачано: ${syncResult.downloaded}, Добавлено: ${saveResult.added}, Обновлено: ${saveResult.updated}, Удалено: ${cleanupResult.removed}`,
-      metadata: {
-        downloaded: syncResult.downloaded,
-        added: saveResult.added,
-        updated: saveResult.updated,
-        removed: cleanupResult.removed,
-        duration: `${duration}ms`
-      }
-    });
     
     console.log('');
     console.log('═══════════════════════════════════════════════════');

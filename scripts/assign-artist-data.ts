@@ -8,7 +8,8 @@ import {
   getUserByUsername, 
   assignReportsToNewArtist, 
   assignReleasesToNewArtist,
-  addActivity 
+  addActivity,
+  getReleasesByArtistId
 } from '../lib/storage'
 
 async function assignArtistData(username: string) {
@@ -63,14 +64,28 @@ async function assignArtistData(username: string) {
   }
   
   if (assignedReleases > 0) {
-    addActivity({
-      type: 'release_added',
-      userId: artist.id,
-      userRole: 'artist',
-      title: 'Релизы привязаны к артисту',
-      description: `Вручную привязано ${assignedReleases} релиз(ов) к артисту "${artist.name}"`,
-      metadata: { artistId: artist.id, count: assignedReleases, manual: true }
-    })
+    const artistReleases = await getReleasesByArtistId(artist.id)
+    for (const release of artistReleases) {
+      // Уведомление для артиста
+      addActivity({
+        type: 'release_added',
+        userId: artist.id,
+        userRole: 'artist',
+        title: 'Добавлен релиз',
+        description: `Добавлен релиз "${release.title}"`,
+        metadata: { artistId: artist.id, releaseId: release.id, releaseTitle: release.title, manual: true }
+      })
+      
+      // Уведомление для админа
+      addActivity({
+        type: 'release_added',
+        userId: 'system',
+        userRole: 'admin',
+        title: 'Добавлен релиз',
+        description: `Добавлен релиз "${release.title}" (артист: ${artist.name || artist.username})`,
+        metadata: { artistId: artist.id, artistName: artist.name, releaseId: release.id, releaseTitle: release.title, manual: true }
+      })
+    }
   }
   
   if (assignedPlaylists > 0) {

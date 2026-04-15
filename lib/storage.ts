@@ -12,6 +12,7 @@ import {
   reportToPrismaCreate,
   activityToPrismaCreate
 } from './storage-adapters'
+import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
 
 export interface User {
   id: string
@@ -159,13 +160,12 @@ if (!fs.existsSync(ACTIVITIES_FILE)) {
 }
 
 export async function loadUsers(): Promise<User[]> {
-  try {
-    const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' } })
-    return users.map(userFromPrisma)
-  } catch (error) {
-    console.error('Error loading users:', error)
-    return []
-  }
+  const dbStart = performance.now()
+  const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' } })
+  const dbMs = Math.round(performance.now() - dbStart)
+  if (dbMs > 100) console.log(`[LOGIN_DEBUG] loadUsers prisma.user.findMany: ${dbMs}ms (медленно)`)
+  else console.log(`[LOGIN_DEBUG] loadUsers prisma.user.findMany: ${dbMs}ms`)
+  return users.map(userFromPrisma)
 }
 
 // saveUsers больше не нужна - используйте updateUser для изменений
@@ -278,12 +278,22 @@ export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'up
       id: Date.now().toString(),
     }
   })
+
+  await revalidateArtistDashboardsForArtistIds([
+    prismaRelease.artistId,
+    ...(prismaRelease.featuredArtistIds ?? []),
+  ])
   
   return releaseFromPrisma(prismaRelease)
 }
 
 export async function updateRelease(id: string, updates: Partial<Release>): Promise<Release | null> {
   try {
+    const existing = await prisma.release.findUnique({
+      where: { id },
+      select: { artistId: true, featuredArtistIds: true },
+    })
+
     let updateData: any = { ...updates }
     
     // Удаляем поля которых нет в схеме или которые не должны обновляться
@@ -299,6 +309,14 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
       where: { id },
       data: updateData
     })
+
+    const touchedIds = [
+      existing?.artistId,
+      ...(existing?.featuredArtistIds ?? []),
+      prismaRelease.artistId,
+      ...(prismaRelease.featuredArtistIds ?? []),
+    ]
+    await revalidateArtistDashboardsForArtistIds(touchedIds)
     
     return releaseFromPrisma(prismaRelease)
   } catch (error) {
@@ -309,7 +327,15 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
 
 export async function deleteRelease(id: string): Promise<boolean> {
   try {
+    const existing = await prisma.release.findUnique({
+      where: { id },
+      select: { artistId: true, featuredArtistIds: true },
+    })
     await prisma.release.delete({ where: { id } })
+    await revalidateArtistDashboardsForArtistIds([
+      existing?.artistId,
+      ...(existing?.featuredArtistIds ?? []),
+    ])
     return true
   } catch (error) {
     console.error('Error deleting release:', error)
@@ -350,46 +376,41 @@ export async function getAllUsers(): Promise<User[]> {
 
 // Helper function to get artist releases including featured releases
 export async function getArtistReleases(artistId: string): Promise<Release[]> {
-  const releases = await loadReleases()
-  return releases.filter(release => {
-    // Check if artist is main artist
+  const rows = await prisma.release.findMany({
+    where: {
+      OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
+    },
+    orderBy: { createdAt: "desc" },
+  })
+  const releases = rows.map(releaseFromPrisma)
+  return releases.filter((release) => {
     if (release.artistId === artistId) return true
-    
-    // Check if artist is featured in the release
     if (release.featuredArtistIds?.includes(artistId)) return true
-    
-    // Check if artist is featured in any track
-    return release.tracks.some(track => 
-      track.featuredArtistIds?.includes(artistId)
-    )
+    return release.tracks.some((track) => track.featuredArtistIds?.includes(artistId))
   })
 }
 
-// Helper function to get releases where artist is featured
+// Helper function to get releases where artist is featured (not as main artist)
 export async function getFeaturedReleases(artistId: string): Promise<Release[]> {
-  const releases = await loadReleases()
-  return releases.filter(release => {
-    // Check if artist is featured in the release (but not main artist)
-    if (release.artistId !== artistId && release.featuredArtistIds?.includes(artistId)) {
-      return true
-    }
-    
-    // Check if artist is featured in any track
-    return release.tracks.some(track => 
-      track.featuredArtistIds?.includes(artistId)
-    )
-  })
+  const all = await getArtistReleases(artistId)
+  return all.filter((r) => r.artistId !== artistId)
 }
 
 // Helper function to get all releases with their artist info
 export async function getReleasesWithArtists(): Promise<(Release & { artist: User | null })[]> {
-  const releases = await loadReleases()
-  const users = await loadUsers()
-  
-  return releases.map(release => ({
-    ...release,
-    artist: users.find(user => user.id === release.artistId) || null
-  }))
+  const [releaseRows, userRows] = await Promise.all([
+    prisma.release.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
+  ])
+  const users = userRows.map(userFromPrisma)
+  const userById = new Map(users.map((u) => [u.id, u]))
+  return releaseRows.map((r) => {
+    const release = releaseFromPrisma(r)
+    return {
+      ...release,
+      artist: release.artistId ? userById.get(release.artistId) ?? null : null,
+    }
+  })
 }
 
 // Assign existing unassigned reports to new artist by name matching
@@ -400,72 +421,79 @@ export function normalizeArtistName(name: string): string {
 
 // Find artist by name or username (case-insensitive)
 export async function findArtistByName(name: string): Promise<User | null> {
-  const users = await loadUsers()
   const normalized = normalizeArtistName(name)
-  return users.find(u => {
-    if (u.role !== 'artist') return false
-    if (normalizeArtistName(u.name) === normalized) return true
-    if (normalizeArtistName(u.username) === normalized) return true
-    return false
-  }) || null
+  const rows = await prisma.user.findMany({ where: { role: "artist" } })
+  for (const row of rows) {
+    const u = userFromPrisma(row)
+    if (normalizeArtistName(u.name) === normalized || normalizeArtistName(u.username) === normalized) {
+      return u
+    }
+  }
+  return null
 }
 
 // Assign existing unassigned reports to new artist by name matching
 export async function assignReportsToNewArtist(artistId: string, artistName: string): Promise<number> {
-  const reports = await loadReports()
   const normalizedName = normalizeArtistName(artistName)
-  const toUpdate = reports.filter(r =>
-    !r.artistId && r.artistName && normalizeArtistName(r.artistName) === normalizedName
+  const candidates = await prisma.report.findMany({
+    where: { artistId: null },
+  })
+  const toUpdate = candidates.filter(
+    (r) => r.artistName && normalizeArtistName(r.artistName) === normalizedName
   )
-  
   if (toUpdate.length === 0) return 0
-  
-  // Обновляем каждый отчёт
-  await Promise.all(
-    toUpdate.map(r =>
-      prisma.report.update({
-        where: { id: r.id },
-        data: { artistId, isRegistered: true }
-      })
-    )
-  )
-  
+
+  await prisma.report.updateMany({
+    where: { id: { in: toUpdate.map((r) => r.id) } },
+    data: { artistId, isRegistered: true },
+  })
+
   return toUpdate.length
 }
 
 // Assign existing releases to new artist by name matching
 export async function assignReleasesToNewArtist(artistId: string, artistName: string, username: string): Promise<number> {
-  const releases = await loadReleases()
+  const releaseRows = await prisma.release.findMany({ orderBy: { updatedAt: "desc" } })
+  const releases = releaseRows.map(releaseFromPrisma)
+  const artistIds = [...new Set(releases.map((r) => r.artistId).filter(Boolean))] as string[]
+  const existingRows =
+    artistIds.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: artistIds } } })
+      : []
+  const existingById = new Map(existingRows.map((row) => [row.id, userFromPrisma(row)]))
+
   const normalizedName = normalizeArtistName(artistName)
-  const normalizedUsername = normalizeArtistName(username)
-  
-  const toUpdate = releases.filter(release => {
-    if (release.artistId) return false
-    const releaseArtistName = (release as any).artistName || ''
+
+  const toUpdate = releases.filter((release) => {
+    const releaseArtistName = (release as { artistName?: string }).artistName || ""
     if (!releaseArtistName) return false
-    
-    // Разбиваем список артистов по запятой и проверяем первого (main artist)
-    const artists = releaseArtistName.split(',').map((a: string) => a.trim())
+
+    const artists = releaseArtistName.split(",").map((a: string) => a.trim())
     const mainArtist = artists[0]
     const normalizedMainArtist = normalizeArtistName(mainArtist)
-    
-    // Сравниваем с главным артистом из релиза
-    return normalizedMainArtist === normalizedName ||
-           normalizedMainArtist === normalizedUsername
+
+    if (normalizedMainArtist !== normalizedName) return false
+
+    if (release.artistId && existingById.has(release.artistId)) {
+      return false
+    }
+
+    return true
   })
-  
+
   if (toUpdate.length === 0) return 0
-  
-  // Обновляем каждый релиз
-  await Promise.all(
-    toUpdate.map(r =>
+
+  await prisma.$transaction(
+    toUpdate.map((r) =>
       prisma.release.update({
         where: { id: r.id },
-        data: { artistId }
+        data: { artistId },
       })
     )
   )
-  
+
+  await revalidateArtistDashboardsForArtistIds([artistId])
+
   return toUpdate.length
 }
 
@@ -631,27 +659,25 @@ export interface ReportData extends Report {
 
 // Функция для получения баланса артиста
 export async function getArtistBalance(artistId: string): Promise<ArtistBalance> {
-  const reports = (await loadReports()).filter(r => r.artistId === artistId)
-  
-  // Считаем общий баланс из всех отчетов
-  const totalBalance = reports.reduce((sum, report) => {
-    const amount = (report as any).totalAmount || 0
-    return sum + amount
-  }, 0)
-  
-  // Считаем уже выплаченную сумму
-  const paidAmount = reports
-    .filter(r => (r as any).isPaid === true)
-    .reduce((sum, report) => {
-      const amount = (report as any).totalAmount || 0
-      return sum + amount
-    }, 0)
-  
+  const [totalAgg, paidAgg] = await Promise.all([
+    prisma.report.aggregate({
+      where: { artistId },
+      _sum: { totalAmount: true },
+    }),
+    prisma.report.aggregate({
+      where: { artistId, isPaid: true },
+      _sum: { totalAmount: true },
+    }),
+  ])
+
+  const totalBalance = totalAgg._sum.totalAmount ?? 0
+  const paidAmount = paidAgg._sum.totalAmount ?? 0
+
   // Доступно к выплате = общий баланс минус выплаченное
   // Минимальная сумма для выплаты 3000 рублей
   const unpaidBalance = totalBalance - paidAmount
   const availableForPayout = unpaidBalance >= 3000 ? unpaidBalance : 0
-  
+
   return {
     artistId,
     totalBalance,
@@ -746,21 +772,27 @@ export async function getReleaseByKoalaId(koalaId: string): Promise<Release | nu
 
 // Функция для поиска артистов по именам
 export async function findArtistsByNames(artistNames: string[]): Promise<User[]> {
-  const users = await loadUsers()
+  if (artistNames.length === 0) return []
+  const rows = await prisma.user.findMany({
+    where: {
+      role: "artist",
+      OR: artistNames.map((n) => ({ name: { equals: n, mode: "insensitive" } })),
+    },
+  })
+  const users = rows.map(userFromPrisma)
   return artistNames
-    .map(name => users.find(u => 
-      u.role === 'artist' && 
-      u.name.toLowerCase() === name.toLowerCase()
-    ))
-    .filter((user): user is User => user !== undefined)
+    .map((name) => users.find((u) => u.name.toLowerCase() === name.toLowerCase()))
+    .filter((u): u is User => u !== undefined)
 }
 
 // Функция для поиска всех артистов по имени (частичное совпадение)
 export async function findArtistsByPartialName(partialName: string): Promise<User[]> {
-  const users = await loadUsers()
   const searchName = partialName.toLowerCase()
-  return users.filter(u => 
-    u.role === 'artist' && 
-    u.name.toLowerCase().includes(searchName)
-  )
+  const rows = await prisma.user.findMany({
+    where: {
+      role: "artist",
+      name: { contains: searchName, mode: "insensitive" },
+    },
+  })
+  return rows.map(userFromPrisma)
 }

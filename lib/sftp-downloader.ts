@@ -1,6 +1,12 @@
 import SftpClient from 'ssh2-sftp-client';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  resolveSftpRemoteDir,
+  sftpConnectOptions,
+  sftpRemoteDirCandidates,
+  withIpv4SocketIfRequested,
+} from '@/lib/sftp-connect';
 
 interface SftpConfig {
   host: string;
@@ -19,13 +25,15 @@ export async function downloadSftpFiles(
   try {
     console.log(`🔌 Подключаюсь к SFTP серверу: ${config.host}:${config.port}`);
     
-    await sftp.connect({
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      password: config.password,
-      readyTimeout: 20000,
-    });
+    const connectOpts = await withIpv4SocketIfRequested(
+      sftpConnectOptions({
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        password: config.password,
+      })
+    );
+    await sftp.connect(connectOpts as any);
     
     console.log('✅ Подключение установлено');
     
@@ -35,9 +43,11 @@ export async function downloadSftpFiles(
       console.log(`📁 Создана локальная директория: ${localDir}`);
     }
     
-    // Получаем список файлов
-    console.log(`📋 Получаю список файлов из "${config.remotePath}"...`);
-    const files = await sftp.list(config.remotePath);
+    const remoteBase =
+      (await resolveSftpRemoteDir(sftp, sftpRemoteDirCandidates(config.remotePath))) ||
+      config.remotePath;
+    console.log(`📋 Получаю список файлов из "${remoteBase}"...`);
+    const files = await sftp.list(remoteBase);
     
     const csvFiles = files.filter((file: any) => 
       file.type === '-' && file.name.endsWith('.csv')
@@ -51,7 +61,7 @@ export async function downloadSftpFiles(
     // Скачиваем каждый файл
     for (let i = 0; i < csvFiles.length; i++) {
       const file = csvFiles[i];
-      const remoteFilePath = `${config.remotePath}/${file.name}`;
+      const remoteFilePath = path.posix.join(remoteBase, file.name);
       const localFilePath = path.join(localDir, file.name);
       
       try {

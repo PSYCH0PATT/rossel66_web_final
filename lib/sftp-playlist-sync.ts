@@ -1,6 +1,11 @@
 import SftpClient from 'ssh2-sftp-client';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  resolvePlaylistRemoteDir,
+  sftpConnectOptions,
+  withIpv4SocketIfRequested,
+} from '@/lib/sftp-connect';
 
 interface SftpConfig {
   host: string;
@@ -84,11 +89,11 @@ function extractDateFromFilename(filename: string): string | null {
  */
 async function getNewFiles(
   sftp: SftpClient,
-  config: SftpConfig,
+  remoteBase: string,
   existingFiles: Set<string>
 ): Promise<Array<{ name: string; size: number; date: string | null }>> {
   try {
-    const files = await sftp.list(config.remotePath);
+    const files = await sftp.list(remoteBase);
     const csvFiles = files
       .filter((file: any) => file.type === '-' && file.name.endsWith('.csv'))
       .map((file: any) => ({
@@ -110,7 +115,7 @@ async function getNewFiles(
  */
 async function downloadNewFiles(
   sftp: SftpClient,
-  config: SftpConfig,
+  remoteBase: string,
   files: Array<{ name: string; size: number; date: string | null }>
 ): Promise<string[]> {
   const downloadedFiles: string[] = [];
@@ -121,7 +126,7 @@ async function downloadNewFiles(
   }
   
   for (const file of files) {
-    const remoteFilePath = `${config.remotePath}/${file.name}`;
+    const remoteFilePath = path.posix.join(remoteBase, file.name);
     const localFilePath = path.join(DOWNLOADS_DIR, file.name);
     
     try {
@@ -197,22 +202,34 @@ export async function syncSftpPlaylists(): Promise<SyncResult> {
         `🔌 Подключаюсь к SFTP серверу: ${config.host}:${config.port} (попытка ${attempt}/${SFTP_MAX_ATTEMPTS})`
       );
 
-      await sftp.connect({
-        host: config.host,
-        port: config.port,
-        username: config.username,
-        password: config.password,
-        readyTimeout: 20000,
-      });
+      const connectOpts = await withIpv4SocketIfRequested(
+        sftpConnectOptions({
+          host: config.host,
+          port: config.port,
+          username: config.username,
+          password: config.password,
+        })
+      );
+      await sftp.connect(connectOpts as any);
 
       console.log('✅ Подключение установлено');
+
+      const remoteBase = await resolvePlaylistRemoteDir(sftp);
+      if (!remoteBase) {
+        result.errors.push(
+          'SFTP: не найден каталог плейлистов (SFTP_REMOTE_PATH / rossel_playlist)'
+        );
+        await sftp.end().catch(() => {});
+        return result;
+      }
+      console.log(`📁 Каталог плейлистов на сервере: ${remoteBase}`);
 
       const index = loadSyncIndex();
       const existingFiles = new Set(index.downloadedFiles.map((f) => f.filename));
 
       console.log(`📋 Найдено уже скачанных файлов: ${existingFiles.size}`);
 
-      const newFiles = await getNewFiles(sftp, config, existingFiles);
+      const newFiles = await getNewFiles(sftp, remoteBase, existingFiles);
       console.log(`📊 Найдено новых файлов: ${newFiles.length}`);
 
       if (newFiles.length === 0) {
@@ -229,7 +246,7 @@ export async function syncSftpPlaylists(): Promise<SyncResult> {
         return result;
       }
 
-      const downloadedFiles = await downloadNewFiles(sftp, config, newFiles);
+      const downloadedFiles = await downloadNewFiles(sftp, remoteBase, newFiles);
       result.downloaded = downloadedFiles.length;
       result.files = downloadedFiles;
 
@@ -277,40 +294,72 @@ export function getUnprocessedFiles(): string[] {
 }
 
 /**
- * Получает последний (самый новый) CSV файл
+ * Возвращает количество строк данных в CSV (без заголовка).
+ * Пустой файл или только заголовок → 0.
+ */
+function countCsvDataRows(filePath: string): number {
+  try {
+    let content = fs.readFileSync(filePath, 'utf-8');
+    if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
+      content = content.slice(1);
+    }
+    const lines = content.split(/\r?\n/).filter((line) => line.trim());
+    // Первая строка — заголовок
+    return Math.max(0, lines.length - 1);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Получает последний (самый новый) CSV файл.
+ * Если он полностью пустой (только заголовок, без строк данных),
+ * возвращает последний непустой файл.
  */
 export function getLatestCsvFile(): string | null {
   try {
     if (!fs.existsSync(DOWNLOADS_DIR)) {
       return null;
     }
-    
-    const files = fs.readdirSync(DOWNLOADS_DIR)
-      .filter(f => f.endsWith('.csv'))
-      .map(f => ({
+
+    const files = fs
+      .readdirSync(DOWNLOADS_DIR)
+      .filter((f) => f.endsWith('.csv'))
+      .map((f) => ({
         name: f,
         path: path.join(DOWNLOADS_DIR, f),
-        stats: fs.statSync(path.join(DOWNLOADS_DIR, f))
+        stats: fs.statSync(path.join(DOWNLOADS_DIR, f)),
       }))
       .sort((a, b) => {
-        // Сортируем по дате в имени файла (rossel_playlist_YYYY_MM_DD.csv)
         const dateA = a.name.match(/(\d{4})_(\d{2})_(\d{2})/);
         const dateB = b.name.match(/(\d{4})_(\d{2})_(\d{2})/);
-        
+
         if (dateA && dateB) {
           const dateAStr = `${dateA[1]}-${dateA[2]}-${dateA[3]}`;
           const dateBStr = `${dateB[1]}-${dateB[2]}-${dateB[3]}`;
-          return dateBStr.localeCompare(dateAStr); // Новые первыми
+          return dateBStr.localeCompare(dateAStr); // новее первыми
         }
-        
-        // Если не удалось извлечь дату, сортируем по времени модификации
         return b.stats.mtime.getTime() - a.stats.mtime.getTime();
       });
-    
+
     if (files.length === 0) {
       return null;
     }
-    
+
+    // Если последний по дате файл пустой — берём последний непустой
+    for (const file of files) {
+      const dataRows = countCsvDataRows(file.path);
+      if (dataRows > 0) {
+        if (file.path !== files[0].path) {
+          console.log(
+            `📄 Последний файл "${files[0].name}" пустой, обрабатываю последний непустой: ${file.name} (${dataRows} строк)`
+          );
+        }
+        return file.path;
+      }
+    }
+
+    // Все файлы пустые — возвращаем самый новый (обработка даст 0 плейлистов)
     return files[0].path;
   } catch (error) {
     console.error('Ошибка получения последнего CSV файла:', error);
