@@ -26,8 +26,10 @@ const DAYS_BACK_DEFAULT = 7
  *
  * Query params:
  *   secret — секрет авторизации
- *   mode   — "7days" (по умолчанию) за последние 7 дней (площадки часто дополняются с задержкой),
- *            "latest" только последний файл, "all" все файлы
+ *   mode   — "7days" (по умолчанию) за последние 7 дней,
+ *            "latest" только последний файл, "all" все файлы,
+ *            "today" только файл за календарный сегодня (Europe/Moscow)
+ *   startDate, endDate — YYYY-MM-DD; если оба заданы, только файлы rossel_flash в этом диапазоне (приоритет над mode)
  *
  * Расписание: 20:00 MSK ежедневно (mode=7days)
  */
@@ -45,10 +47,14 @@ export async function GET(request: NextRequest) {
     }
 
     const mode = request.nextUrl.searchParams.get('mode') || '7days'
+    const startDate = request.nextUrl.searchParams.get('startDate')
+    const endDate = request.nextUrl.searchParams.get('endDate')
 
     console.log('')
     console.log('═══════════════════════════════════════════════════')
-    console.log(`📊 ANALYTICS FLASH IMPORT (mode: ${mode})`)
+    console.log(
+      `📊 ANALYTICS FLASH IMPORT (mode: ${mode}${startDate && endDate ? `, range ${startDate}…${endDate}` : ''})`
+    )
     console.log('═══════════════════════════════════════════════════')
     console.log(`📅 Время запуска: ${new Date().toISOString()}`)
 
@@ -121,11 +127,40 @@ export async function GET(request: NextRequest) {
       // Сортируем по дате (от старого к новому)
       csvFiles.sort((a, b) => a.date!.localeCompare(b.date!))
 
+      const isoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+
       let filesToProcess: typeof csvFiles
-      if (mode === 'all') {
+      if (startDate && endDate) {
+        if (!isoDate(startDate) || !isoDate(endDate)) {
+          await sftp.end().catch(() => {})
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Неверный формат startDate или endDate (нужен YYYY-MM-DD)',
+            },
+            { status: 400 }
+          )
+        }
+        if (startDate > endDate) {
+          await sftp.end().catch(() => {})
+          return NextResponse.json(
+            { success: false, error: 'startDate не может быть позже endDate' },
+            { status: 400 }
+          )
+        }
+        filesToProcess = csvFiles.filter((f) => f.date! >= startDate && f.date! <= endDate)
+      } else if (mode === 'all') {
         filesToProcess = csvFiles
       } else if (mode === 'latest') {
-        filesToProcess = [csvFiles[csvFiles.length - 1]]
+        filesToProcess = csvFiles.length > 0 ? [csvFiles[csvFiles.length - 1]] : []
+      } else if (mode === 'today') {
+        const todayMsk = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/Moscow',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date())
+        filesToProcess = csvFiles.filter((f) => f.date === todayMsk)
       } else {
         // 7days (по умолчанию): все файлы за последние N дней (площадки дополняются с задержкой)
         const cutoff = new Date()
@@ -134,6 +169,35 @@ export async function GET(request: NextRequest) {
         filesToProcess = csvFiles.filter((f) => f.date! >= cutoffStr)
       }
       console.log(`📋 Файлов для обработки: ${filesToProcess.length} из ${csvFiles.length}`)
+
+      if (filesToProcess.length === 0) {
+        await sftp.end().catch(() => {})
+        const duration = Date.now() - startTime
+        const statsMode =
+          startDate && endDate ? 'range' : mode === 'today' ? 'today' : mode
+        const hint =
+          mode === 'today'
+            ? 'За сегодня (МСК) на SFTP нет подходящего CSV.'
+            : startDate && endDate
+              ? 'В указанном диапазоне нет файлов rossel_flash.'
+              : 'Нет файлов для выбранного режима.'
+        return NextResponse.json({
+          success: true,
+          message: hint,
+          stats: {
+            mode: statsMode,
+            dateFrom: startDate && endDate ? startDate : undefined,
+            dateTo: startDate && endDate ? endDate : undefined,
+            filesProcessed: 0,
+            totalAvailable: csvFiles.length,
+            totalParsed: 0,
+            totalAdded: 0,
+            totalSkipped: 0,
+            files: [],
+          },
+          duration: `${duration}ms`,
+        })
+      }
 
       if (!fs.existsSync(DOWNLOADS_DIR)) {
         fs.mkdirSync(DOWNLOADS_DIR, { recursive: true })
@@ -148,8 +212,12 @@ export async function GET(request: NextRequest) {
         try {
           const localPath = path.join(DOWNLOADS_DIR, file.name)
 
-          // В режиме 7days всегда перекачиваем, чтобы подхватить дополненные площадки
-          const forceDownload = mode === '7days'
+          // Перекачивать, чтобы подхватить дополненные CSV и восстановление за период
+          const forceDownload =
+            mode === '7days' ||
+            mode === 'today' ||
+            mode === 'all' ||
+            !!(startDate && endDate)
           if (forceDownload || !fs.existsSync(localPath)) {
             console.log(`⬇️  Скачиваю: ${file.name}...`)
             await sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
@@ -197,11 +265,16 @@ export async function GET(request: NextRequest) {
       console.log(`   Файлов: ${filesToProcess.length}, Добавлено: ${totalAdded}, Пропущено: ${totalSkipped}`)
       console.log('═══════════════════════════════════════════════════')
 
+      const statsMode =
+        startDate && endDate ? 'range' : mode === 'today' ? 'today' : mode
+
       return NextResponse.json({
         success: true,
         message: `Импорт завершён: ${totalAdded} новых записей из ${filesToProcess.length} файлов`,
         stats: {
-          mode,
+          mode: statsMode,
+          dateFrom: startDate && endDate ? startDate : undefined,
+          dateTo: startDate && endDate ? endDate : undefined,
           filesProcessed: filesToProcess.length,
           totalAvailable: csvFiles.length,
           totalParsed,

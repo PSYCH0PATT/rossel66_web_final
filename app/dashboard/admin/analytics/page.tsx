@@ -6,6 +6,13 @@ import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { BarChart3, CalendarIcon, Loader2, TrendingUp } from "lucide-react"
@@ -56,6 +63,16 @@ interface AnalyticsData {
   totalStreams?: number
 }
 
+/** Календарная дата в Europe/Moscow (совпадает с именами rossel_flash_YYYY_MM_DD.csv). */
+function mskDateString(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
 function getDateRange(period: string): { startDate: string; endDate: string } {
   const end = new Date()
   const start = new Date()
@@ -86,6 +103,9 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [syncRangeStart, setSyncRangeStart] = useState("2026-03-01")
+  const [syncRangeEnd, setSyncRangeEnd] = useState(() => mskDateString())
   const [importResult, setImportResult] = useState<string | null>(null)
 
   const [artists, setArtists] = useState<ArtistOption[]>([])
@@ -220,8 +240,35 @@ export default function AdminAnalyticsPage() {
     }
   }
 
-  // Синхронизация из SFTP
-  const handleSync = async (mode: '7days' | 'latest' | 'all') => {
+  const describeSyncResult = (json: { stats?: Record<string, unknown>; message?: string }) => {
+    const stats = (json.stats || {}) as Record<string, unknown>
+    const mode = stats.mode as string | undefined
+    const fp = Number(stats.filesProcessed || 0)
+    const add = Number(stats.totalAdded || 0)
+    const sk = Number(stats.totalSkipped || 0)
+    if (mode === "range" && stats.dateFrom && stats.dateTo) {
+      return `Период ${stats.dateFrom}…${stats.dateTo}: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    }
+    if (mode === "today") {
+      if (fp === 0) {
+        return "Сегодня (МСК): на SFTP нет файла rossel_flash за этот день (0 файлов)."
+      }
+      return `Сегодня (МСК): файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    }
+    if (mode === "all") {
+      return `Полный импорт: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    }
+    if (mode === "7days") {
+      return `Последние 7 дней: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    }
+    if (mode === "latest") {
+      return `Последний файл: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    }
+    return `Готово: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+  }
+
+  /** Синхронизация rossel_flash с SFTP (прокси → /api/cron/analytics-flash). */
+  const runFlashSync = async (body: { mode?: string; startDate?: string; endDate?: string }) => {
     setSyncing(true)
     setImportResult(null)
 
@@ -229,32 +276,40 @@ export default function AdminAnalyticsPage() {
       const res = await fetch("/api/analytics/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
 
       if (json.success) {
-        const stats = json.stats || {}
-        const modeMsg = mode === 'all'
-          ? `Полный импорт: обработано ${stats.filesProcessed || 0} файлов, добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
-          : mode === '7days'
-            ? `Синхронизация (7 дней): обработано ${stats.filesProcessed || 0} файлов, добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
-            : `Синхронизация: добавлено ${stats.totalAdded || 0} записей, пропущено ${stats.totalSkipped || 0} дубликатов`
-        setImportResult(modeMsg)
+        setImportResult(describeSyncResult(json))
+        setSyncDialogOpen(false)
         loadData()
-        // Обновляем треки и артистов
         fetch("/api/analytics/artists").then(r => r.json()).then(d => { if (d.success) setArtists(d.artists) })
         const params = new URLSearchParams()
         if (selectedArtist !== "all") params.set("artistId", selectedArtist)
         fetch(`/api/analytics/tracks?${params}`).then(r => r.json()).then(d => { if (d.success) setTracks(d.tracks) })
       } else {
-        setImportResult(`Ошибка: ${json.error || json.details || 'Unknown'}`)
+        setImportResult(`Ошибка: ${json.error || json.details || "Unknown"}`)
       }
     } catch (err) {
       setImportResult(`Ошибка: ${err}`)
     } finally {
       setSyncing(false)
     }
+  }
+
+  const handleSyncRange = () => {
+    const s = syncRangeStart?.trim()
+    const e = syncRangeEnd?.trim()
+    if (!s || !e) {
+      setImportResult("Ошибка: укажите даты «с» и «по»")
+      return
+    }
+    if (s > e) {
+      setImportResult("Ошибка: дата «с» не может быть позже «по»")
+      return
+    }
+    void runFlashSync({ startDate: s, endDate: e })
   }
 
   if (!currentUser) {
@@ -286,13 +341,17 @@ export default function AdminAnalyticsPage() {
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight uppercase">АНАЛИТИКА</h1>
             <nav className="flex items-center gap-2 mt-2">
-              <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" onClick={() => handleSync('7days')} disabled={syncing}>
+              <Button
+                variant="ghost"
+                className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7"
+                onClick={() => {
+                  setSyncRangeEnd(mskDateString())
+                  setSyncDialogOpen(true)
+                }}
+                disabled={syncing}
+              >
                 {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                 Синхронизировать
-              </Button>
-              <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" onClick={() => handleSync('all')} disabled={syncing}>
-                {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
-                Импорт
               </Button>
               <label className="cursor-pointer">
                 <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
@@ -398,7 +457,110 @@ export default function AdminAnalyticsPage() {
           </div>
         </header>
 
+        <Dialog
+          open={syncDialogOpen}
+          onOpenChange={(open) => {
+            setSyncDialogOpen(open)
+            if (open) setSyncRangeEnd(mskDateString())
+          }}
+        >
+          <DialogContent className="max-w-md border border-white/10 bg-[#141414] text-white shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:rounded-2xl [&>button]:text-gray-400 [&>button]:hover:text-white">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl uppercase tracking-tight text-white">
+                Синхронизация SFTP
+              </DialogTitle>
+              <DialogDescription className="text-left text-xs font-mono uppercase tracking-widest text-gray-500">
+                Файлы <span className="text-gray-400">rossel_flash_YYYY_MM_DD.csv</span>. «Сегодня» — календарный день по Москве (как на сервере отчётов).
+              </DialogDescription>
+            </DialogHeader>
 
+            <div className="space-y-5 pt-1">
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  disabled={syncing}
+                  onClick={() => void runFlashSync({ mode: "today" })}
+                  className="rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5 disabled:opacity-50"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest text-white">Сегодня (МСК)</span>
+                  <span className="mt-1 block text-[11px] font-mono text-gray-500">
+                    Один дневной файл: {mskDateString()}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={syncing}
+                  onClick={() => void runFlashSync({ mode: "7days" })}
+                  className="rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 text-left transition-colors hover:border-emerald-500/20 hover:bg-emerald-500/5 disabled:opacity-50"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest text-white">Последние 7 дней</span>
+                  <span className="mt-1 block text-[11px] font-mono text-gray-500">
+                    Как в cron: все дни с задержкой дополнений по площадкам
+                  </span>
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+                <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white">
+                  <span className="h-5 w-1 rounded-full bg-accent-azure" aria-hidden />
+                  За период
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={syncRangeStart}
+                    onChange={(e) => setSyncRangeStart(e.target.value)}
+                    className="h-9 min-w-[9.5rem] rounded-lg border border-white/10 bg-[#0a0a0a] px-2 text-xs font-mono text-gray-200 focus:border-primary/40 focus:outline-none"
+                  />
+                  <span className="text-[10px] font-mono uppercase text-gray-600">—</span>
+                  <input
+                    type="date"
+                    value={syncRangeEnd}
+                    onChange={(e) => setSyncRangeEnd(e.target.value)}
+                    className="h-9 min-w-[9.5rem] rounded-lg border border-white/10 bg-[#0a0a0a] px-2 text-xs font-mono text-gray-200 focus:border-primary/40 focus:outline-none"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  disabled={syncing}
+                  onClick={handleSyncRange}
+                  className="mt-4 w-full bg-[#10b981] font-bold text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400 hover:scale-[1.02] transition-all"
+                >
+                  {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> : null}
+                  Импорт за период
+                </Button>
+              </div>
+
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  Полный импорт скачает и обработает все доступные даты на SFTP. Дубликаты в БД не создаются, но это долго и нагружает диск.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={syncing}
+                  onClick={() => void runFlashSync({ mode: "all" })}
+                  className="mt-3 w-full border-amber-500/30 bg-transparent text-[10px] font-mono uppercase tracking-widest text-amber-200/90 hover:bg-amber-500/10 hover:text-amber-100"
+                >
+                  Импорт всех файлов
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {importResult ? (
+          <div
+            role="status"
+            className={`rounded-xl border px-4 py-3 text-sm font-mono ${
+              importResult.startsWith('Ошибка')
+                ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+            }`}
+          >
+            {importResult}
+          </div>
+        ) : null}
 
         {/* HERO SUMMARY CARD */}
         <div className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-xl relative overflow-hidden p-6 flex items-center justify-between min-h-[100px]">
