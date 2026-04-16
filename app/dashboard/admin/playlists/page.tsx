@@ -927,16 +927,16 @@ export default function PlaylistsPage() {
             </div>
           </div>
 
-          <div className="self-center transform transition-transform group-hover:scale-110 duration-300 pointer-events-auto">
+          <div className="self-center pointer-events-auto">
             <a
               href={playlistUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-10 inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors hover:border-primary hover:bg-primary group/play"
+              className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors hover:border-primary hover:bg-primary group/play"
               onClick={(e) => e.stopPropagation()}
               aria-label="Открыть плейлист в новой вкладке"
             >
-              <span className="material-symbols-outlined text-3xl leading-none text-white group-hover/play:text-black">
+              <span className="material-symbols-outlined text-lg leading-none text-white group-hover/play:text-black">
                 open_in_new
               </span>
             </a>
@@ -956,8 +956,8 @@ export default function PlaylistsPage() {
 
         <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
           <h3 className="font-bold text-white text-lg truncate">{title}</h3>
-          <p className="text-xs text-gray-400 font-mono mt-1 truncate">
-            {platformName} · {artistName}
+          <p className="text-xs text-gray-400 font-mono mt-1 line-clamp-2 min-h-[2.5rem]">
+            {platformName} · {releaseNames?.trim() ? releaseNames : artistName}
           </p>
         </div>
       </div>
@@ -1094,7 +1094,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center gap-3 rounded-lg px-4 py-3">
                   <div className="rounded-lg p-2">
                     <img 
-                      src="data:image/png;base64,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" 
+                      src="/images/dsp-icons/vk-music.png" 
                       alt="VK Music" 
                       className="w-5 h-5"
                     />
@@ -1122,7 +1122,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center gap-3 rounded-lg px-4 py-3">
                   <div className="rounded-lg p-2">
                     <img 
-                      src="https://yastatic.net/s3/bandlink/bandlink-external-pages/1.250.0/_next/static/media/yandex-music.6fa872a7.svg" 
+                      src="/images/dsp-icons/yandex-music.svg" 
                       alt="Yandex Music" 
                       className="w-7 h-7"
                     />
@@ -1150,7 +1150,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center gap-3 rounded-lg px-4 py-3">
                   <div className="rounded-lg p-2">
                     <img 
-                      src="https://yastatic.net/s3/bandlink/bandlink-external-pages/1.250.0/_next/static/media/mts-music.d8720374.svg" 
+                      src="/images/dsp-icons/mts-music.svg" 
                       alt="MTS Music" 
                       className="w-7 h-7"
                     />
@@ -1178,7 +1178,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center gap-3 rounded-lg px-4 py-3">
                   <div className="rounded-lg p-2">
                     <img 
-                      src="/images/playlists/sber-music.png" 
+                      src="/images/dsp-icons/sber-music.svg" 
                       alt="Сбер Музыка" 
                       className="w-7 h-7 object-contain"
                     />

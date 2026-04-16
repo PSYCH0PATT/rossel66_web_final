@@ -81,6 +81,7 @@ export async function importPlaylistsFromCsvFile(
               playlistName: added.playlistName,
               artistName: added.artistName,
               source: "sftp",
+              ...(added.releaseName ? { releaseName: added.releaseName } : {}),
             },
           })
         }
@@ -95,6 +96,7 @@ export async function importPlaylistsFromCsvFile(
             artistName: added.artistName,
             artistId: added.artistId,
             source: "sftp",
+            ...(added.releaseName ? { releaseName: added.releaseName } : {}),
           },
         })
       }

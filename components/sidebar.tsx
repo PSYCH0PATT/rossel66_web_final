@@ -86,10 +86,18 @@ export default function Sidebar({ role, username }: SidebarProps) {
   const [currentUsername, setCurrentUsername] = useState(username || "")
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
-    if (userStr) {
-      const user = JSON.parse(userStr)
-      setCurrentUsername(user.username)
+    if (username) {
+      setCurrentUsername(username)
+      return
+    }
+    try {
+      const userStr = localStorage.getItem("user")
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        if (user?.username) setCurrentUsername(user.username)
+      }
+    } catch {
+      /* ignore */
     }
   }, [username])
 
@@ -161,12 +169,12 @@ export default function Sidebar({ role, username }: SidebarProps) {
             href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
             onClick={handleNavigation}
             aria-label="На главную дашборда"
-            className="flex items-center justify-center border-b border-white/5 px-3 py-2.5 lg:px-6 lg:py-3"
+            className="flex h-16 min-h-16 shrink-0 items-center justify-center border-b border-white/5 px-3 lg:px-6"
           >
             <img
               src="/images/logo.png"
               alt=""
-              className="h-6 w-auto max-h-6 shrink-0 object-contain lg:h-7 lg:max-h-7"
+              className="h-7 w-auto max-h-7 shrink-0 object-contain"
             />
           </Link>
 

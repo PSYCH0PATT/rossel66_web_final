@@ -4,6 +4,7 @@ import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { getPlatformPartnerIconSrc } from "@/lib/platform-partner-icon"
 import { getSessionUser } from "@/lib/server-auth"
 import Layout from "@/components/layout"
 
@@ -18,34 +19,23 @@ function firstTrackLabel(trackDataJson: string): string {
   }
 }
 
-function platformDotColor(platform: string): string {
-  switch (platform) {
-    case "Яндекс Музыка":
-      return "#FFCC00"
-    case "Spotify":
-      return "#1DB954"
-    case "VK Музыка":
-      return "#0077FF"
-    case "Apple Music":
-      return "#ffffff"
-    default:
-      return "#9ca3af"
+/** Подзаголовок карточки: предпочитаем название релиза из track_data */
+function firstReleaseLabel(trackDataJson: string): string {
+  try {
+    const arr = JSON.parse(trackDataJson || "[]") as {
+      albumTitle?: string
+      album_title?: string
+      trackTitle?: string
+      titleArtist?: string
+    }[]
+    const t = arr[0]
+    if (!t) return ""
+    const album = (t.albumTitle || t.album_title || "").trim()
+    if (album) return album
+    return (t.trackTitle || t.titleArtist || "").trim()
+  } catch {
+    return ""
   }
-}
-
-function relativeTimeLabel(dateRaw: string | Date | null | undefined): string {
-  if (!dateRaw) return "—"
-  const d = new Date(dateRaw)
-  const now = Date.now()
-  const diff = Math.max(0, now - d.getTime())
-  const mins = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-  if (mins < 60) return `${mins} мин назад`
-  if (hours < 24) return `${hours} ч назад`
-  if (days < 7) return `${days} дн назад`
-  if (days < 30) return `${Math.floor(days / 7)} нед назад`
-  return d.toLocaleDateString("ru-RU")
 }
 
 export default async function PlaylistsPage({ params }: { params: { username: string } }) {
@@ -96,59 +86,71 @@ export default async function PlaylistsPage({ params }: { params: { username: st
             {playlists.map((playlist) => {
               const cover = getPlaylistCoverUrl(playlist.platform)
               const trackLine = firstTrackLabel(playlist.track_data)
-              const dot = platformDotColor(playlist.platform)
-              const dateRaw = playlist.last_seen_date || playlist.first_seen_date
-              const dateLabel = dateRaw ? new Date(dateRaw).toLocaleDateString("ru-RU") : "—"
-              const rel = relativeTimeLabel(dateRaw)
+              const releaseLine = firstReleaseLabel(playlist.track_data)
+              const partnerIconSrc = getPlatformPartnerIconSrc(playlist.platform)
+              const isVkSquareLogo = partnerIconSrc.endsWith("/vk-music.png")
+              const subtitleLine = releaseLine || trackLine || "—"
 
               return (
-                <Link
-                  href={`/dashboard/artist/${params.username}/playlists/${playlist.id}`}
+                <a
                   key={playlist.id}
-                  className="playlist-card group relative aspect-square rounded-2xl overflow-hidden cursor-pointer card-glass block"
+                  href={playlist.playlist_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="artist-playlist-tile group relative aspect-square rounded-2xl overflow-hidden card-glass block outline-none ring-0 transition-[box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 isolate"
                 >
-                  <div className="absolute inset-0 z-0">
-                    <Image
-                      src={cover || "/placeholder.svg"}
-                      alt={playlist.playlist_name}
-                      fill
-                      className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    />
-                  </div>
-
-                  <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10">
-                    <div className="flex justify-start items-start">
-                      <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />
-                        {playlist.platform}
-                      </span>
+                  {/* Весь контент карточки размывается при hover */}
+                  <div className="absolute inset-0 z-0 transition-[filter] duration-300 ease-out group-hover:blur-[3px] group-hover:brightness-90">
+                    <div className="absolute inset-0 z-0">
+                      <Image
+                        src={cover || "/placeholder.svg"}
+                        alt={playlist.playlist_name}
+                        fill
+                        className="object-cover brightness-[0.88] grayscale-[12%]"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
                     </div>
-                    <div className="self-center transform transition-transform group-hover:scale-110 duration-300">
-                      <div
-                        className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors group-hover:border-primary group-hover:bg-primary"
-                        aria-hidden
-                      >
-                        <span className="material-symbols-outlined text-3xl leading-none text-white group-hover:text-black">
-                          open_in_new
-                        </span>
+                    <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/95 via-black/35 to-black/25" />
+
+                    <div className="pointer-events-none absolute left-[12px] top-[12px] z-[3] aspect-square w-[12%] min-w-[1.25rem] max-w-[2rem] sm:max-w-[2.25rem]">
+                      <div className="relative h-full w-full overflow-hidden rounded-full border border-white/30 bg-white/[0.14] shadow-[0_4px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+                        <Image
+                          src={partnerIconSrc}
+                          alt=""
+                          fill
+                          className={
+                            isVkSquareLogo
+                              ? "object-cover"
+                              : "object-contain p-[14%]"
+                          }
+                          sizes="(max-width: 640px) 12vw, 6vw"
+                          unoptimized={partnerIconSrc.endsWith(".svg")}
+                        />
                       </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{playlist.playlist_name}</h3>
-                      <p className="text-xs text-gray-400 font-mono line-clamp-2">
-                        {trackLine || "Трек из плейлиста"} · {rel}
+
+                    <div className="absolute bottom-0 left-0 right-0 z-[3] p-3">
+                      <h3 className="font-bold text-white text-base sm:text-lg leading-snug line-clamp-2">
+                        {playlist.playlist_name}
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-400 font-mono leading-snug line-clamp-2">
+                        {subtitleLine}
                       </p>
                     </div>
                   </div>
 
-                  <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] transition-opacity duration-300">
-                    <h3 className="font-bold text-white text-lg truncate">{playlist.playlist_name}</h3>
-                    <p className="text-xs text-gray-400 font-mono mt-1">
-                      {playlist.platform} · {dateLabel}
-                    </p>
+                  {/* По центру — только при hover, без размытия */}
+                  <div
+                    className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden
+                  >
+                    <span className="flex aspect-square w-[18%] min-w-[2.25rem] max-w-[3rem] items-center justify-center rounded-full border border-white/35 bg-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-2xl sm:max-w-[3.25rem]">
+                      <span className="material-symbols-outlined text-2xl leading-none text-white sm:text-[26px]">
+                        open_in_new
+                      </span>
+                    </span>
                   </div>
-                </Link>
+                </a>
               )
             })}
           </div>

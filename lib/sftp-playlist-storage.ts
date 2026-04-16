@@ -16,7 +16,13 @@ export async function ensureSftpPlaylistDatabase(): Promise<void> {
 /**
  * Сохраняет список плейлистов в базу данных
  */
-export type AddedPlaylistInfo = { playlistName: string; artistName: string; artistId: string | null };
+export type AddedPlaylistInfo = {
+  playlistName: string
+  artistName: string
+  artistId: string | null
+  /** Первый релиз из треков плейлиста (для активности / UI) */
+  releaseName?: string
+}
 
 export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
   added: number;
@@ -145,10 +151,17 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
           }
           
           stats.added++;
+          const firstTrack = artistTracks[0]
+          const releaseName =
+            firstTrack &&
+            ((firstTrack.albumTitle || "").trim() ||
+              (firstTrack.trackTitle || "").trim() ||
+              (firstTrack.titleArtist || "").trim())
           stats.addedPlaylists.push({
             playlistName: playlist.playlistName,
             artistName,
-            artistId
+            artistId,
+            ...(releaseName ? { releaseName } : {}),
           });
         }
       }

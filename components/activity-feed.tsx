@@ -119,6 +119,14 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
     }
   }
 
+  /** Вторая строка справа: релиз / контекст вместо заглушки «Date» */
+  const secondaryContextLabel = (activity: Activity, metric: { label: string }): string => {
+    const m = activity.metadata
+    if (m && typeof m.releaseName === 'string' && m.releaseName.trim()) return m.releaseName.trim()
+    if (m && typeof m.playlistName === 'string' && m.playlistName.trim()) return m.playlistName.trim()
+    return metric.label
+  }
+
   /** Simplified description for artist role */
   const descriptionForDisplay = (activity: Activity): string => {
     if (role !== 'artist') return activity.description
@@ -210,14 +218,18 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
             </div>
 
             {/* Metric — right side, same as HTML prototype */}
-            <div className="text-right flex-shrink-0">
-              <p className="text-white font-mono text-sm">{formatDate(activity.createdAt)}</p>
-              <p className="text-gray-500 text-[10px] uppercase">Date</p>
+            <div className="text-right flex-shrink-0 min-w-0 max-w-[28%] sm:max-w-[36%]">
+              <p className="text-white font-mono text-sm truncate">{formatDate(activity.createdAt)}</p>
+              <p className="text-gray-500 text-[10px] uppercase tracking-wider truncate" title={secondaryContextLabel(activity, metric)}>
+                {secondaryContextLabel(activity, metric)}
+              </p>
             </div>
 
-            {/* Chevron */}
-            <div className="text-gray-600 group-hover:text-white transition-colors flex-shrink-0">
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-500 group-hover:border-primary/30 group-hover:text-primary transition-colors"
+              aria-hidden
+            >
+              <span className="material-symbols-outlined text-[16px] leading-none">chevron_right</span>
             </div>
           </div>
         )

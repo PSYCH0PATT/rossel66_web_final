@@ -234,7 +234,7 @@ html body [data-radix-dialog-content],
   opacity: 1;
 }
 .dashboard-theme .playlist-card:hover .playlist-cover-img {
-  transform: scale(1.05);
+  transform: none;
 }
 .dashboard-theme .playlist-card:hover .playlist-default-footer {
   opacity: 0;

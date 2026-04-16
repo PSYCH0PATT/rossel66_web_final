@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <circle cx="12" cy="12" r="11" fill="#21A038"/>
+  <path
+    d="M12 4.25v9.2c-.52-.3-1.12-.48-1.75-.48-1.94 0-3.5 1.56-3.5 3.5s1.56 3.5 3.5 3.5 3.5-1.56 3.5-3.5V7.1l3.25-.95v-1.9h-4.5z"
+    fill="white"
+    fill-opacity="0.95"
+  />
+</svg>

@@ -21,10 +21,18 @@ export default function TopNav({ role, username }: TopNavProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
-    if (userStr) {
-      const user = JSON.parse(userStr)
-      setCurrentUsername(user.username)
+    if (username) {
+      setCurrentUsername(username)
+      return
+    }
+    try {
+      const userStr = localStorage.getItem("user")
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        if (user?.username) setCurrentUsername(user.username)
+      }
+    } catch {
+      /* ignore */
     }
   }, [username])
 
