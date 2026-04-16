@@ -166,7 +166,7 @@ export default function AdminArtistsClient() {
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
           <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-            Dashboard
+            ДАШБОРД
           </Link>
           <span className="material-symbols-outlined text-[10px]">chevron_right</span>
           <span className="text-white">Артисты</span>
@@ -389,8 +389,11 @@ export default function AdminArtistsClient() {
                           <img src={artist.avatarUrl} alt="" className="w-full h-full object-cover" />
                         </div>
                       ) : (
-                        <div className="rounded-full flex items-center justify-center flex-shrink-0 w-[45.5%] aspect-square border-2 border-primary/60 bg-white/5">
-                          <span className="material-symbols-outlined text-white w-1/2 h-1/2 flex items-center justify-center text-[clamp(1rem,4vw,2.5rem)]">
+                        <div className="relative flex flex-shrink-0 items-center justify-center rounded-full border-2 border-primary/60 bg-white/5 aspect-square w-[45.5%]">
+                          <span
+                            className="material-symbols-outlined pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 leading-none text-white text-[clamp(1.25rem,5vw,2.75rem)]"
+                            style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
+                          >
                             person
                           </span>
                         </div>

@@ -137,7 +137,7 @@ export default function KoalaParserPage() {
         <div className="space-y-4">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              Dashboard
+              ДАШБОРД
             </Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <Link href="/dashboard/admin/releases" className="hover:text-primary">
@@ -146,7 +146,7 @@ export default function KoalaParserPage() {
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <span className="text-white">Koala Parser</span>
           </div>
-          <div className="border-b border-white/5 pb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="border-b border-white/5 pb-8 flex flex-col gap-4 lg:flex-row items-start lg:items-end lg:justify-between">
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
                 Koala Music Parser

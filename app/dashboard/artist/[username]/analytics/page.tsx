@@ -175,14 +175,14 @@ export default function ArtistAnalyticsPage() {
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
 
   return layoutShell(
-    <div className="p-0 md:p-0 max-w-full pb-24">
+    <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
           <Link
             href={`/dashboard/artist/${username}/dashboard`}
             className="hover:text-[#10b981] cursor-pointer transition-colors"
           >
-            Dashboard
+            ДАШБОРД
           </Link>
           <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
             chevron_right
@@ -190,7 +190,7 @@ export default function ArtistAnalyticsPage() {
           <span className="text-white">Аналитика</span>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-white/5 pb-8">
           <div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">АНАЛИТИКА</h1>
             <p className="text-sm text-gray-400 font-light max-w-md">
@@ -198,29 +198,57 @@ export default function ArtistAnalyticsPage() {
             </p>
           </div>
 
-        <div className="flex flex-row flex-wrap items-center gap-2">
-
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:contents">
           {/* Track select — pill style */}
           <Select value={selectedTrack} onValueChange={setSelectedTrack}>
-            <SelectTrigger className={`h-9 px-3 text-[10px] font-bold uppercase tracking-widest border rounded-lg transition-colors bg-[#141414] w-auto min-w-[120px] ${
+            <SelectTrigger className={`h-10 px-3 text-[10px] font-bold uppercase tracking-widest rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-colors data-[placeholder]:text-gray-500 w-full min-w-0 md:h-9 md:w-auto md:min-w-[120px] ${
               selectedTrack !== "all"
-                ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                : "text-gray-500 border-white/5 hover:text-emerald-400 hover:border-white/15"
+                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
+                : "border-white/10 bg-white/5 text-gray-300 hover:border-white/15 hover:bg-white/[0.07] hover:text-emerald-400"
             }`}>
               <SelectValue placeholder="Все треки" />
             </SelectTrigger>
-            <SelectContent className="bg-[#141414] border-white/10 text-white">
-              <SelectItem value="all" className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">Все треки</SelectItem>
+            <SelectContent>
+              <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest">
+                Все треки
+              </SelectItem>
               {tracks.map(t => (
-                <SelectItem key={t.isrc} value={t.isrc} className="text-[10px] uppercase tracking-widest font-bold text-gray-400 focus:text-emerald-400 focus:bg-emerald-500/10">
+                <SelectItem key={t.isrc} value={t.isrc} className="text-[10px] font-bold uppercase tracking-widest">
                   {t.trackName}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {/* Period pills */}
-          <div className="flex bg-[#141414] rounded-lg p-1 border border-white/5">
+          <div className="min-w-0 md:hidden">
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 text-[10px] font-bold uppercase tracking-widest text-gray-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-colors hover:border-white/15 hover:bg-white/[0.07] data-[placeholder]:text-gray-500 md:h-9">
+                <SelectValue placeholder="Период" />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  { value: "7d", label: "7 дней" },
+                  { value: "30d", label: "30 дней" },
+                  { value: "90d", label: "90 дней" },
+                  { value: "180d", label: "180 дней" },
+                  { value: "365d", label: "Год" },
+                  { value: "custom", label: "Свой период" },
+                ].map((p) => (
+                  <SelectItem
+                    key={p.value}
+                    value={p.value}
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          </div>
+
+          <div className="hidden rounded-xl border border-white/10 bg-white/5 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:flex">
             {[
               { value: "7d", label: "7Д" },
               { value: "30d", label: "30Д" },
@@ -231,10 +259,11 @@ export default function ArtistAnalyticsPage() {
             ].map((p) => (
               <button
                 key={p.value}
+                type="button"
                 onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 min-w-[max-content] text-[10px] font-bold uppercase tracking-widest transition-colors rounded-md ${
+                className={`min-w-[max-content] rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
                   period === p.value
-                    ? "text-emerald-400 bg-emerald-500/10"
+                    ? "bg-emerald-500/10 text-emerald-400"
                     : "text-gray-500 hover:text-emerald-400"
                 }`}
               >
@@ -244,7 +273,7 @@ export default function ArtistAnalyticsPage() {
           </div>
 
           {period === "custom" && (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
@@ -275,7 +304,7 @@ export default function ArtistAnalyticsPage() {
 
       <div className="space-y-6">
       {/* HERO SUMMARY CARD */}
-      <div className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-xl relative overflow-hidden p-6 flex items-center justify-between min-h-[100px]">
+      <div className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-xl relative overflow-hidden p-4 sm:p-6 flex min-h-[100px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         {/* Animated waveform bars */}
         <div className="absolute inset-0 flex items-end justify-center gap-[3px] px-6 pb-0 pointer-events-none overflow-hidden opacity-[0.07]">
           {Array.from({ length: 48 }).map((_, i) => (
@@ -298,26 +327,31 @@ export default function ArtistAnalyticsPage() {
         `}</style>
 
         {/* Left — total */}
-        <div className="relative z-10">
+        <div className="relative z-10 min-w-0 shrink">
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Общее число стримов</h3>
-          <div className="flex items-center gap-3">
-            <span className="text-4xl font-black text-white font-display uppercase tracking-tight leading-none drop-shadow-[0_2px_15px_rgba(255,255,255,0.1)]">{totalStreams.toLocaleString("ru-RU")}</span>
-            <span className="text-emerald-400 flex items-center">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="text-3xl font-black leading-none text-white font-display uppercase tracking-tight drop-shadow-[0_2px_15px_rgba(255,255,255,0.1)] tabular-nums sm:text-4xl">
+              {totalStreams.toLocaleString("ru-RU")}
+            </span>
+            <span className="flex shrink-0 items-center text-emerald-400">
               <span className="material-symbols-outlined text-[14px] leading-none">trending_up</span>
             </span>
           </div>
         </div>
 
-        {/* Right — paid / free */}
-        <div className="relative z-10 flex items-center gap-6">
-          <div className="text-right">
+        <div className="relative z-10 flex w-full min-w-0 flex-wrap items-stretch justify-between gap-4 border-t border-white/5 pt-4 sm:w-auto sm:justify-end sm:border-t-0 sm:pt-0">
+          <div className="min-w-0 flex-1 sm:flex-none sm:text-right">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Платные</p>
-            <p className="text-2xl font-black text-emerald-400 font-display leading-none">{totalPaid.toLocaleString("ru-RU")}</p>
+            <p className="text-xl font-black leading-none text-emerald-400 font-display tabular-nums sm:text-2xl">
+              {totalPaid.toLocaleString("ru-RU")}
+            </p>
           </div>
-          <div className="w-px h-10 bg-white/10" />
-          <div className="text-right">
+          <div className="hidden w-px self-stretch bg-white/10 sm:block" aria-hidden />
+          <div className="min-w-0 flex-1 text-right sm:flex-none">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Бесплатные</p>
-            <p className="text-2xl font-black text-gray-400 font-display leading-none">{totalFree.toLocaleString("ru-RU")}</p>
+            <p className="text-xl font-black leading-none text-gray-400 font-display tabular-nums sm:text-2xl">
+              {totalFree.toLocaleString("ru-RU")}
+            </p>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import fs from 'fs'
 import { addActivity, findArtistByName, addUser, updateRelease, getUserByUsername, assignReleasesToNewArtist } from '@/lib/storage'
 import type { Release } from '@/lib/storage'
 import { nicknameToUsername } from '@/lib/utils'
+import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names'
 import { prisma } from '@/lib/prisma'
 import { releaseFromPrisma, userFromPrisma } from '@/lib/storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard'
@@ -517,60 +518,80 @@ export async function POST(request: NextRequest) {
               const createdArtists = new Map<string, string>() // artistName -> artistId
 
               for (const release of releasesWithoutArtist) {
-                const artistName = ((release as any).artistName || '').trim()
+                const fullArtistField = ((release as any).artistName || "").trim()
+                const nameParts = splitCollaboratingArtistDisplayNames(fullArtistField)
+                if (nameParts.length === 0) continue
 
-                // Проверяем, не создали ли мы уже артиста с таким именем в этом цикле
-                let artistId = createdArtists.get(artistName)
+                const resolvedIds: string[] = []
+                for (const artistName of nameParts) {
+                  let artistId = createdArtists.get(artistName)
 
-                if (!artistId) {
-                  // Проверяем, может артист уже существует в БД
-                  const existingArtist = await findArtistByName(artistName)
+                  if (!artistId) {
+                    const existingArtist = await findArtistByName(artistName)
 
-                  if (existingArtist) {
-                    artistId = existingArtist.id
-                  } else {
-                    // Создаём нового артиста
-                    const baseLogin = nicknameToUsername(artistName)
-                    let username = baseLogin
-                    if (await getUserByUsername(username)) {
-                      username = baseLogin + '_' + Date.now().toString(36)
-                    }
-                    console.log(`  ➕ Создаём артиста: ${artistName} (логин: ${username})`)
-                    const newArtist = await addUser({
-                      username,
-                      name: artistName,
-                      email: '',
-                      role: 'artist',
-                      password: Math.random().toString(36).slice(-12),
-                      verified: false
-                    })
-                    artistId = newArtist.id
-                    createdArtists.set(artistName, artistId)
-
-                    await addActivity({
-                      type: 'artist_auto_created' as any,
-                      userId: 'system',
-                      userRole: 'admin',
-                      title: 'Артист создан автоматически',
-                      description: `Профиль артиста "${artistName}" создан парсером Zvonko`,
-                      metadata: { artistId, source: 'zvonko' }
-                    })
-
-                    // Привязываем существующие релизы без артиста к новому артисту
-                    try {
-                      const assignedCount = await assignReleasesToNewArtist(artistId, artistName, username)
-                      if (assignedCount > 0) {
-                        console.log(`  ✅ Привязано ${assignedCount} релиз(ов) к артисту ${artistName}`)
+                    if (existingArtist) {
+                      artistId = existingArtist.id
+                      createdArtists.set(artistName, artistId)
+                    } else {
+                      const baseLogin = nicknameToUsername(artistName)
+                      let username = baseLogin
+                      if (await getUserByUsername(username)) {
+                        username = baseLogin + "_" + Date.now().toString(36)
                       }
-                    } catch (error) {
-                      console.error(`  ⚠️ Ошибка привязки релизов к артисту ${artistName}:`, error)
+                      console.log(`  ➕ Создаём артиста: ${artistName} (логин: ${username})`)
+                      const newArtist = await addUser({
+                        username,
+                        name: artistName,
+                        email: "",
+                        role: "artist",
+                        password: Math.random().toString(36).slice(-12),
+                        verified: false,
+                      })
+                      artistId = newArtist.id
+                      createdArtists.set(artistName, artistId)
+
+                      await addActivity({
+                        type: "artist_auto_created" as any,
+                        userId: "system",
+                        userRole: "admin",
+                        title: "Артист создан автоматически",
+                        description: `Профиль артиста "${artistName}" создан парсером Zvonko`,
+                        metadata: { artistId, source: "zvonko" },
+                      })
+
+                      try {
+                        const assignedCount = await assignReleasesToNewArtist(
+                          artistId,
+                          artistName,
+                          username
+                        )
+                        if (assignedCount > 0) {
+                          console.log(
+                            `  ✅ Привязано ${assignedCount} релиз(ов) к артисту ${artistName}`
+                          )
+                        }
+                      } catch (error) {
+                        console.error(
+                          `  ⚠️ Ошибка привязки релизов к артисту ${artistName}:`,
+                          error
+                        )
+                      }
                     }
                   }
+
+                  resolvedIds.push(artistId)
                 }
 
-                // Обновляем релиз с привязкой к артисту
-                if (artistId) {
-                  await updateRelease(release.id, { artistId })
+                const primaryId = resolvedIds[0]
+                const featuredArtistIds =
+                  resolvedIds.length > 1 ? resolvedIds.slice(1) : undefined
+                if (primaryId) {
+                  await updateRelease(release.id, {
+                    artistId: primaryId,
+                    ...(featuredArtistIds?.length
+                      ? { featuredArtistIds }
+                      : {}),
+                  })
                 }
               }
 

@@ -129,7 +129,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           <div className="space-y-4 min-w-0">
             <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
               <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-                Dashboard
+                ДАШБОРД
               </Link>
               <span className="material-symbols-outlined text-[10px]">chevron_right</span>
               <Link href="/dashboard/admin/releases" className="hover:text-primary">

@@ -170,7 +170,7 @@ export default function ZvonkoParserPage() {
         <div className="space-y-4">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              Dashboard
+              ДАШБОРД
             </Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <Link href="/dashboard/admin/releases" className="hover:text-primary">
@@ -186,7 +186,7 @@ export default function ZvonkoParserPage() {
             <p className="text-sm text-gray-400 font-light max-w-lg mt-2">
               Парсинг, сравнение и добавление релизов из Zvonko Digital.
             </p>
-            <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 mt-6">
+            <div className="flex flex-col xl:flex-row items-start xl:items-end xl:justify-between gap-4 mt-6">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="pages" className="text-xs text-gray-500 font-mono uppercase tracking-widest">

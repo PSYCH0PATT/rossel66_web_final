@@ -2,7 +2,6 @@
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { usePathname } from "next/navigation"
-import { ChevronRight, User } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import type { UserRole } from "@/lib/data"
@@ -20,7 +19,6 @@ export default function TopNav({ role, username }: TopNavProps) {
   const [currentUsername, setCurrentUsername] = useState(username || "")
   const [currentUserName, setCurrentUserName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -29,15 +27,6 @@ export default function TopNav({ role, username }: TopNavProps) {
       setCurrentUsername(user.username)
     }
   }, [username])
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   // Загружаем данные пользователя включая аватарку
   useEffect(() => {
@@ -109,16 +98,15 @@ export default function TopNav({ role, username }: TopNavProps) {
   }
 
   return (
-    <header className="md:hidden h-16 bg-black/80 glass-panel border-b border-white/10 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-lg">
-      <div className="flex items-center">
-        <span className="material-symbols-outlined text-primary">graphic_eq</span>
-        <span className="font-display font-bold text-lg tracking-widest text-white ml-2">ROSSEL</span>
+    <header className="md:hidden relative z-40 h-16 bg-black/80 glass-panel border-b border-white/10 backdrop-blur-lg grid grid-cols-[minmax(3rem,3.5rem)_1fr_minmax(3rem,3.5rem)] items-center px-1">
+      {/* Spacer: reserves horizontal space for fixed hamburger (sidebar) so logo stays visually centered */}
+      <div className="shrink-0" aria-hidden />
+
+      <div className="flex min-w-0 items-center justify-center">
+        <img src="/images/logo.png" alt="" className="h-7 w-auto max-w-[min(200px,55vw)] shrink-0 object-contain object-center" />
       </div>
 
-      {/* Search Input / Left Area Breadcrumbs — hidden on mobile anyway, but keeping for structural similarity if needed, though HTML only has menu button */}
-
-      <div className="flex items-center gap-4">
-        {/* We can keep the User Dropdown here for mobile users so they can still log out */}
+      <div className="flex shrink-0 items-center justify-end pr-1">
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-800 border border-primary/50 text-white text-sm font-bold">
@@ -150,8 +138,6 @@ export default function TopNav({ role, username }: TopNavProps) {
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Note: The physical hamburger menu button is actually rendered inside components/sidebar.tsx as fixed position, so we don't need it here to avoid duplication. */}
       </div>
     </header>
   )

@@ -66,14 +66,14 @@ export default async function PlaylistsPage({ params }: { params: { username: st
 
   return (
     <Layout role="artist" requiredRole="artist" username={params.username}>
-      <div className="p-0 md:p-0 max-w-full pb-24">
+      <div className="max-w-full p-0 pb-6 md:pb-0">
         <div className="flex flex-col gap-6 mb-8">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link
               href={`/dashboard/artist/${params.username}/dashboard`}
               className="hover:text-[#10b981] cursor-pointer transition-colors"
             >
-              Dashboard
+              ДАШБОРД
             </Link>
             <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
               chevron_right
@@ -81,7 +81,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
             <span className="text-white">Плейлисты</span>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ПЛЕЙЛИСТЫ</h1>
               <p className="text-sm text-gray-400 font-light max-w-md">
@@ -92,7 +92,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
         </div>
 
         {playlists.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
             {playlists.map((playlist) => {
               const cover = getPlaylistCoverUrl(playlist.platform)
               const trackLine = firstTrackLabel(playlist.track_data)
@@ -125,9 +125,12 @@ export default async function PlaylistsPage({ params }: { params: { username: st
                       </span>
                     </div>
                     <div className="self-center transform transition-transform group-hover:scale-110 duration-300">
-                      <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors">
-                        <span className="material-symbols-outlined text-3xl text-white group-hover:text-black ml-1">
-                          play_arrow
+                      <div
+                        className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors group-hover:border-primary group-hover:bg-primary"
+                        aria-hidden
+                      >
+                        <span className="material-symbols-outlined text-3xl leading-none text-white group-hover:text-black">
+                          open_in_new
                         </span>
                       </div>
                     </div>
@@ -159,7 +162,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
           </div>
         )}
 
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/5 pt-6 text-sm">
+        <div className="mt-12 mb-6 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-6 text-sm sm:flex-row md:mb-0">
           <div className="text-gray-500 font-mono flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-primary inline-block animate-pulse" />
             System Operational

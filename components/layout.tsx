@@ -21,7 +21,7 @@ export default function Layout({ children, role, requiredRole, username }: Layou
         {/* TopNav is mobile only, Sidebar acts as desktop nav. See TopNav component. */}
         <TopNav role={role} username={username} />
         <main className="flex-1 overflow-y-auto relative">
-          <div className="p-6 md:p-10 max-w-7xl mx-auto pb-24">
+          <div className="mx-auto max-w-7xl p-6 pb-20 md:p-10 md:pb-24">
             {children}
           </div>
         </main>

@@ -213,7 +213,7 @@ export default function AdminActivityPage() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              Dashboard
+              ДАШБОРД
             </Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <span className="text-white">Активность</span>

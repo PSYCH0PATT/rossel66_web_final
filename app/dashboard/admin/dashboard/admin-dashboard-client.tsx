@@ -9,6 +9,8 @@ import { StreamingChart } from "@/components/streaming-chart"
 import type { Activity } from "@/lib/storage"
 import type { AdminDashboardPayload, PublicUser } from "@/lib/cached-dashboard"
 import type { Release } from "@/lib/data"
+import { formatRubExact, formatRubKpiShort } from "@/lib/format-dashboard-rub"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type StreamDay = { date: string; streams: number }
 
@@ -53,13 +55,13 @@ export default function AdminDashboardClient({
 
   return (
     <Layout role="admin" requiredRole="admin">
-      <div className="flex flex-col gap-6 mb-12">
+      <div className="mb-8 flex flex-col gap-3 md:mb-12 md:gap-6">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-primary cursor-pointer transition-colors">Dashboard</span>
+          <span className="hover:text-primary cursor-pointer transition-colors">ДАШБОРД</span>
           <span className="material-symbols-outlined text-[10px]">chevron_right</span>
           <span className="text-white">Обзор</span>
         </div>
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col items-start gap-4 border-b border-white/5 pb-4 md:flex-row md:items-end md:justify-between md:gap-6 md:pb-8">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-tight uppercase">
               ДАШБОРД
@@ -91,6 +93,7 @@ export default function AdminDashboardClient({
         </div>
       </div>
 
+      <TooltipProvider delayDuration={200}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
         <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
@@ -154,30 +157,37 @@ export default function AdminDashboardClient({
 
         <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">payments</span>
+            <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">currency_ruble</span>
           </div>
           <div className="flex flex-col h-full justify-between relative z-10">
             <div className="mb-4">
               <span className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 border border-purple-500/20">
-                <span className="material-symbols-outlined text-xl">account_balance_wallet</span>
+                <span className="material-symbols-outlined text-xl">currency_ruble</span>
               </span>
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Выплаты</h3>
             </div>
-            <div className="flex items-end justify-between">
-              <p className="text-4xl font-bold text-white font-display">
-                {metrics.totalPayments >= 1_000_000
-                  ? `${(metrics.totalPayments / 1_000_000).toFixed(1)}M₽`
-                  : metrics.totalPayments >= 1000
-                    ? `${Math.round(metrics.totalPayments / 1000)}K₽`
-                    : `${Math.round(metrics.totalPayments)}₽`}
-              </p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple">
+            <div className="flex items-end justify-between gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="min-w-0 cursor-default truncate whitespace-nowrap text-4xl font-bold text-white font-display tabular-nums">
+                    {formatRubKpiShort(metrics.totalPayments)}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="z-[250] max-w-xs border border-white/10 bg-[rgba(15,15,15,0.96)] px-3 py-2 text-xs font-mono text-white shadow-lg"
+                >
+                  {formatRubExact(metrics.totalPayments)}
+                </TooltipContent>
+              </Tooltip>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple shrink-0">
                 +{metrics.pendingPayments} <span className="material-symbols-outlined">add</span>
               </span>
             </div>
           </div>
         </div>
       </div>
+      </TooltipProvider>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
         <div>

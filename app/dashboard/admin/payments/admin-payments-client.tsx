@@ -91,12 +91,12 @@ export default function AdminPaymentsClient() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
           <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-            Dashboard
+            ДАШБОРД
           </Link>
           <span className="material-symbols-outlined text-[10px]">chevron_right</span>
           <span className="text-white">Выплаты</span>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-white/5 pb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end sm:justify-between gap-4 border-b border-white/5 pb-8">
           <div>
             <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Выплаты</h1>
             <p className="text-sm text-gray-400 font-light mt-2">Отчёты и статусы выплат артистам</p>

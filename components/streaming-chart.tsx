@@ -133,9 +133,6 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
             <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Monthly Performance</p>
             <div className="h-9 w-32 bg-white/5 rounded animate-pulse" />
           </div>
-          <div className="bg-white/5 p-2 rounded-lg border border-white/10">
-            <span className="material-symbols-outlined text-gray-400">show_chart</span>
-          </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-gray-500">
@@ -154,9 +151,6 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
           <div>
             <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Monthly Performance</p>
             <h3 className="text-3xl font-display font-bold text-white">—</h3>
-          </div>
-          <div className="bg-white/5 p-2 rounded-lg border border-white/10">
-            <span className="material-symbols-outlined text-gray-400">show_chart</span>
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-600">
@@ -180,9 +174,6 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
               {changeStr}
             </span>
           </h3>
-        </div>
-        <div className="bg-white/5 p-2 rounded-lg border border-white/10">
-          <span className="material-symbols-outlined text-gray-400">show_chart</span>
         </div>
       </div>
 

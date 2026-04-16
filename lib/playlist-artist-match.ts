@@ -1,7 +1,7 @@
 import { normalizeArtistName } from "@/lib/storage"
+import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 
-/** Разделители фичерингов / коллабов в поле артиста плейлиста (как в CSV). */
-const COLLAB_SPLIT = /\s*(?:,|&|\/|\+|\s+(?:feat|ft)\.?\s+)\s*/i
+/** Разделители внутри сегмента (редко в CSV). */
 const AND_SPLIT = /\s+(?:и|and)\s+/i
 
 export function tokenizeCollaborationArtistField(raw: string): string[] {
@@ -9,7 +9,7 @@ export function tokenizeCollaborationArtistField(raw: string): string[] {
   if (!s) return []
   const set = new Set<string>()
   set.add(normalizeArtistName(s))
-  for (const piece of s.split(COLLAB_SPLIT)) {
+  for (const piece of splitCollaboratingArtistDisplayNames(s)) {
     for (const sub of piece.split(AND_SPLIT)) {
       const n = normalizeArtistName(sub)
       if (n) set.add(n)

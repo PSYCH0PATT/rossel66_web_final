@@ -297,7 +297,7 @@ export function getUnprocessedFiles(): string[] {
  * Возвращает количество строк данных в CSV (без заголовка).
  * Пустой файл или только заголовок → 0.
  */
-function countCsvDataRows(filePath: string): number {
+export function countCsvDataRows(filePath: string): number {
   try {
     let content = fs.readFileSync(filePath, 'utf-8');
     if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
@@ -385,4 +385,156 @@ function formatBytes(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+export type LocalCsvInfo = {
+  name: string
+  path: string
+  dataRows: number
+  sizeBytes: number
+  mtimeISO: string
+}
+
+/** CSV в `sftp_downloads/` (для ручного выбора в админке). */
+export function listLocalPlaylistCsvFiles(): LocalCsvInfo[] {
+  try {
+    if (!fs.existsSync(DOWNLOADS_DIR)) {
+      return []
+    }
+    const names = fs.readdirSync(DOWNLOADS_DIR).filter((f) => f.toLowerCase().endsWith('.csv'))
+    const rows: LocalCsvInfo[] = []
+    for (const name of names) {
+      const fp = path.join(DOWNLOADS_DIR, name)
+      try {
+        const st = fs.statSync(fp)
+        rows.push({
+          name,
+          path: fp,
+          dataRows: countCsvDataRows(fp),
+          sizeBytes: st.size,
+          mtimeISO: st.mtime.toISOString(),
+        })
+      } catch {
+        continue
+      }
+    }
+    rows.sort((a, b) => b.mtimeISO.localeCompare(a.mtimeISO))
+    return rows
+  } catch {
+    return []
+  }
+}
+
+export type DownloadLatestCsvResult = {
+  ok: boolean
+  localPath: string | null
+  filename: string | null
+  errors: string[]
+}
+
+/**
+ * Скачивает с SFTP самый новый CSV (по дате в имени или по mtime на сервере), перезаписывая локальный файл.
+ */
+export async function downloadLatestCsvFromSftp(): Promise<DownloadLatestCsvResult> {
+  const errors: string[] = []
+  const username = process.env.SFTP_USERNAME
+  const password = process.env.SFTP_PASSWORD
+
+  if (!username || !password) {
+    return {
+      ok: false,
+      localPath: null,
+      filename: null,
+      errors: ['SFTP: не заданы SFTP_USERNAME или SFTP_PASSWORD'],
+    }
+  }
+
+  const sftp = new SftpClient()
+  try {
+    const connectOpts = await withIpv4SocketIfRequested(
+      sftpConnectOptions({
+        host: process.env.SFTP_HOST || 'sftp1.sp-digital.ru',
+        port: parseInt(process.env.SFTP_PORT || '22', 10),
+        username,
+        password,
+      })
+    )
+    await sftp.connect(connectOpts as any)
+
+    const remoteBase = await resolvePlaylistRemoteDir(sftp)
+    if (!remoteBase) {
+      await sftp.end().catch(() => {})
+      return {
+        ok: false,
+        localPath: null,
+        filename: null,
+        errors: ['SFTP: не найден каталог плейлистов (SFTP_REMOTE_PATH / rossel_playlist)'],
+      }
+    }
+
+    const list = await sftp.list(remoteBase)
+    const csvRows = list.filter(
+      (file: { type?: string; name?: string }) => file.type === '-' && (file.name || '').endsWith('.csv')
+    ) as Array<{ name: string; modifyTime?: number }>
+
+    if (csvRows.length === 0) {
+      await sftp.end().catch(() => {})
+      return { ok: true, localPath: null, filename: null, errors: ['На SFTP нет CSV файлов'] }
+    }
+
+    const sorted = [...csvRows].sort((a, b) => {
+      const da = extractDateFromFilename(a.name)
+      const db = extractDateFromFilename(b.name)
+      if (da && db) return db.localeCompare(da)
+      const ma = typeof a.modifyTime === 'number' ? a.modifyTime : 0
+      const mb = typeof b.modifyTime === 'number' ? b.modifyTime : 0
+      return mb - ma
+    })
+
+    const chosen = sorted[0]
+    if (!fs.existsSync(DOWNLOADS_DIR)) {
+      fs.mkdirSync(DOWNLOADS_DIR, { recursive: true })
+    }
+    const localPath = path.join(DOWNLOADS_DIR, chosen.name)
+    const remoteFilePath = path.posix.join(remoteBase, chosen.name)
+    await sftp.fastGet(remoteFilePath, localPath)
+
+    const index = loadSyncIndex()
+    const now = new Date().toISOString()
+    const dateStr = extractDateFromFilename(chosen.name) || ''
+    const hit = index.downloadedFiles.find((f) => f.filename === chosen.name)
+    if (hit) {
+      hit.downloadedAt = now
+      hit.processed = false
+      if (dateStr) hit.date = dateStr
+    } else {
+      index.downloadedFiles.push({
+        filename: chosen.name,
+        date: dateStr,
+        downloadedAt: now,
+        processed: false,
+      })
+    }
+    index.lastSync = now
+    saveSyncIndex(index)
+
+    try {
+      await Promise.race([
+        sftp.end(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
+      ])
+    } catch {
+      sftp.end().catch(() => {})
+    }
+
+    return { ok: true, localPath, filename: chosen.name, errors: [] }
+  } catch (e: any) {
+    await sftp.end().catch(() => {})
+    return {
+      ok: false,
+      localPath: null,
+      filename: null,
+      errors: [e?.message || String(e)],
+    }
+  }
 }

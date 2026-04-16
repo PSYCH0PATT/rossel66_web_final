@@ -69,7 +69,7 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
       case 'release_added': return 'library_music'
       case 'playlist_found': return 'queue_music'
       case 'report_received': return 'analytics'
-      case 'payment_sent': return 'payments'
+      case 'payment_sent': return 'currency_ruble'
       case 'user_data_updated': return 'manage_accounts'
       case 'reports_generated': return 'task'
       case 'artist_added': return 'person_add'

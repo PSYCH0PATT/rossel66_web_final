@@ -129,6 +129,12 @@ function StatusBadge({ status }: { status?: string }) {
   )
 }
 
+function primaryIsrc(tracks: any[] | undefined): string | undefined {
+  if (!Array.isArray(tracks)) return undefined
+  const t = tracks.find((x) => x?.isrc)
+  return t?.isrc as string | undefined
+}
+
 function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
   if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
   const pages: (number | "...")[] = []
@@ -225,7 +231,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
   }
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-24">
+    <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         {/* Breadcrumb */}
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
@@ -233,7 +239,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
             href={`/dashboard/artist/${username}/dashboard`}
             className="hover:text-[#10b981] cursor-pointer transition-colors"
           >
-            Dashboard
+            ДАШБОРД
           </Link>
           <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
             chevron_right
@@ -242,7 +248,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
         </div>
 
         {/* Page header */}
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
           <div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
               РЕЛИЗЫ
@@ -252,14 +258,14 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
             </p>
           </div>
 
-          <div className="flex w-full md:w-auto justify-end">
-            <div className="relative group">
+          <div className="w-full md:w-auto md:shrink-0 md:flex md:justify-end">
+            <div className="relative group w-full md:w-64">
               <input
                 type="text"
                 value={q}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Поиск по названию или UPC..."
-                className="bg-black/40 border border-white/10 text-white text-sm rounded-lg focus:ring-[#10b981] focus:border-[#10b981] block w-full min-w-0 md:w-64 p-2.5 pl-10 placeholder-gray-600 font-mono transition-all group-hover:border-white/20 outline-none"
+                className="block w-full min-w-0 rounded-lg border border-white/10 bg-black/40 p-2.5 pl-10 font-mono text-sm text-white outline-none transition-all placeholder-gray-600 focus:border-[#10b981] focus:ring-[#10b981] group-hover:border-white/20"
               />
               <span
                 className="material-symbols-outlined absolute left-3 top-2.5 text-gray-600 group-hover:text-gray-400 transition-colors"
@@ -277,7 +283,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
         {/* Top gradient accent line */}
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
 
-        <div className="overflow-x-auto">
+        <div>
           {loading && releases.length === 0 ? (
             <div className="flex justify-center items-center py-20">
               <span className="material-symbols-outlined animate-spin text-[#10b981] text-4xl">sync</span>
@@ -288,6 +294,69 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
               <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">No releases found</p>
             </div>
           ) : (
+            <>
+              {/* Mobile: карточки вместо таблицы */}
+              <div className="space-y-3 p-3 md:hidden">
+                {releases.map((release) => {
+                  const isrc = primaryIsrc(release.tracks)
+                  return (
+                    <Link
+                      key={release.id}
+                      href={`/dashboard/artist/${username}/releases/${release.id}`}
+                      className="block rounded-xl border border-white/5 bg-[#0a0a0a]/50 p-4 backdrop-blur-sm transition-colors hover:border-white/10"
+                    >
+                      <div className="flex gap-3">
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10">
+                          {release.coverUrl ? (
+                            <Image
+                              src={release.coverUrl}
+                              alt={release.title}
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a]">
+                              <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 28 }}>
+                                album
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold leading-snug text-white">{release.title}</div>
+                          {release.type ? (
+                            <div className="mt-0.5 font-mono text-xs uppercase tracking-wider text-gray-500">
+                              {release.type}
+                            </div>
+                          ) : null}
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <p className="text-sm text-gray-300 truncate">{release.artistDisplay}</p>
+                            <div className="shrink-0">
+                              <StatusBadge status={release.status} />
+                            </div>
+                          </div>
+                        </div>
+                        <span className="material-symbols-outlined shrink-0 text-gray-500" style={{ fontSize: 22 }}>
+                          chevron_right
+                        </span>
+                      </div>
+                      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 border-t border-white/5 pt-3 text-[11px] font-mono">
+                        <dt className="text-gray-500 uppercase tracking-wider">Дата</dt>
+                        <dd className="text-right text-gray-200 tabular-nums">
+                          {release.releaseDate ? formatDate(release.releaseDate) : "—"}
+                        </dd>
+                        <dt className="text-gray-500 uppercase tracking-wider">UPC</dt>
+                        <dd className="break-all text-right text-gray-300">{release.upc || "—"}</dd>
+                        <dt className="text-gray-500 uppercase tracking-wider">ISRC</dt>
+                        <dd className="break-all text-right text-gray-300">{isrc || "—"}</dd>
+                      </dl>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
@@ -297,7 +366,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                   <th className="px-6 py-5 font-mono">UPC</th>
                   <th className="px-6 py-5 font-mono">Date</th>
                   <th className="px-6 py-5 font-mono">Status</th>
-                  <th className="px-6 py-5 font-mono text-center">Tracks</th>
                   <th className="px-6 py-5 font-mono text-right">Action</th>
                 </tr>
               </thead>
@@ -318,7 +386,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                             className="object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                          <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
                             <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
                           </div>
                         )}
@@ -360,11 +428,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                       <StatusBadge status={release.status} />
                     </td>
 
-                    {/* Tracks */}
-                    <td className="px-6 py-4 text-center text-gray-400 font-mono">
-                      {release.tracks?.length ?? 0}
-                    </td>
-
                     {/* Action */}
                     <td className="px-6 py-4 text-right">
                       <Link
@@ -378,6 +441,8 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                 ))}
               </tbody>
             </table>
+              </div>
+            </>
           )}
         </div>
 
@@ -446,7 +511,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
       </div>
 
       {/* Footer status line */}
-      <div className="mt-12 flex justify-between items-center pt-6 text-sm">
+      <div className="mt-12 mb-6 flex justify-between items-center pt-6 text-sm md:mb-0">
         <div className="text-gray-500 font-mono flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#10b981] inline-block animate-pulse" />
           System Online

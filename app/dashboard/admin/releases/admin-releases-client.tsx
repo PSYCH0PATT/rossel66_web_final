@@ -250,12 +250,12 @@ export default function AdminReleasesClient() {
   }
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-24">
+    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       {/* Header section */}
       <div className="flex flex-col gap-6 mb-8">
         {/* Breadcrumb */}
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-[#10b981] cursor-pointer transition-colors">Dashboard</span>
+          <span className="hover:text-[#10b981] cursor-pointer transition-colors">ДАШБОРД</span>
           <span className="material-symbols-outlined" style={{ fontSize: 10 }}>chevron_right</span>
           <span className="text-white">Релизы</span>
         </div>

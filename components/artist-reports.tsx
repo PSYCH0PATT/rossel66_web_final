@@ -50,7 +50,7 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
             href={`/dashboard/artist/${username}/dashboard`}
             className="hover:text-[#10b981] cursor-pointer transition-colors"
           >
-            Dashboard
+            ДАШБОРД
           </Link>
           <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
             chevron_right
@@ -58,7 +58,7 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
           <span className="text-white">Отчёты</span>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
           <div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ОТЧЁТЫ</h1>
             <p className="text-sm text-gray-400 font-light max-w-md">

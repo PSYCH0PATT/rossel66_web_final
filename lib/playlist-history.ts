@@ -53,7 +53,15 @@ export async function cleanupRemovedPlaylists(
   currentPlaylistKeys: Set<string>
 ): Promise<{ removed: number; errors: string[] }> {
   const result = { removed: 0, errors: [] as string[] };
-  
+
+  /** Пустой снимок = нет валидного CSV / парсинг дал 0 плейлистов — нельзя считать «все удалены с SFTP». */
+  if (currentPlaylistKeys.size === 0) {
+    console.warn(
+      "⚠️  cleanupRemovedPlaylists: пропуск — пустой набор ключей (иначе удалились бы все плейлисты в БД)"
+    );
+    return result;
+  }
+
   try {
     // Получаем все плейлисты из Supabase
     const allPlaylists = await prisma.playlist.findMany({

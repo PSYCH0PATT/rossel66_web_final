@@ -139,18 +139,20 @@ export default function Sidebar({ role, username }: SidebarProps) {
     <>
       <button
         type="button"
-        className="md:hidden fixed top-4 left-4 z-50 text-gray-300"
+        className="md:hidden fixed left-2 top-0 z-[120] flex h-16 w-11 items-center justify-center text-gray-300 tap-highlight-transparent [-webkit-tap-highlight-color:transparent]"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        aria-label="Toggle menu"
+        aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
       >
-        <div className={`transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-90' : 'rotate-0'}`}>
-          <span className="material-symbols-outlined text-3xl">{isMobileMenuOpen ? 'close' : 'menu'}</span>
-        </div>
+        <span
+          className={`material-symbols-outlined text-3xl leading-none transition-transform duration-300 ${isMobileMenuOpen ? "rotate-90" : "rotate-0"}`}
+        >
+          {isMobileMenuOpen ? "close" : "menu"}
+        </span>
       </button>
 
       {/* Main Sidebar (Desktop & Mobile when open) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 bg-black/60 glass-panel border-r border-white/5 flex flex-col justify-between h-full backdrop-blur-xl transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-[110] w-64 flex-shrink-0 bg-black/70 glass-panel border-r border-white/5 flex flex-col justify-between h-full backdrop-blur-xl transform transition-transform duration-300 ease-in-out md:z-40 md:translate-x-0 md:static md:bg-black/60 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div>
@@ -158,19 +160,18 @@ export default function Sidebar({ role, username }: SidebarProps) {
           <Link
             href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
             onClick={handleNavigation}
-            className="h-24 flex items-center justify-center lg:justify-start lg:px-8 border-b border-white/5"
+            aria-label="На главную дашборда"
+            className="flex items-center justify-center border-b border-white/5 px-3 py-2.5 lg:px-6 lg:py-3"
           >
-            <span className="material-symbols-outlined text-3xl text-primary lg:mr-3">graphic_eq</span>
-            <span className="font-display font-bold text-xl tracking-[0.2em] hidden lg:block text-white">
-              ROSSEL
-            </span>
-            <span className="font-display font-bold text-xl tracking-[0.2em] lg:hidden text-white ml-2">
-              R66
-            </span>
+            <img
+              src="/images/logo.png"
+              alt=""
+              className="h-6 w-auto max-h-6 shrink-0 object-contain lg:h-7 lg:max-h-7"
+            />
           </Link>
 
           {/* Navigation Links */}
-          <nav className="mt-10 px-2 lg:px-4 space-y-1">
+          <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
             <div className="px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">
               {role === "artist" ? "Artist Panel" : "Control Panel"}
             </div>
@@ -215,8 +216,9 @@ export default function Sidebar({ role, username }: SidebarProps) {
       {/* Mobile Overlay Backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden
         />
       )}
     </>

@@ -103,6 +103,14 @@ export default function PlaylistsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [sftpConfirmOpen, setSftpConfirmOpen] = useState(false)
   const [clearResultsOpen, setClearResultsOpen] = useState(false)
+  /** Локальные CSV (sftp_downloads) и настройки импорта */
+  const [sftpLocalFiles, setSftpLocalFiles] = useState<
+    { name: string; dataRows: number; mtimeISO: string; sizeBytes: number }[]
+  >([])
+  const [sftpHints, setSftpHints] = useState<{ host?: string; remotePath?: string } | null>(null)
+  const [selectedSftpCsv, setSelectedSftpCsv] = useState("")
+  const [sftpCleanupRemoved, setSftpCleanupRemoved] = useState(false)
+  const [sftpToolsBusy, setSftpToolsBusy] = useState(false)
 
   useEffect(() => {
     loadArtists()
@@ -112,7 +120,31 @@ export default function PlaylistsPage() {
     checkCookiesNotification()
     loadParsingHistory()
     loadVkCookiesStatus()
+    void loadSftpLocalCsvList()
   }, [])
+
+  const appendSftpLog = (line: string) => {
+    setParsingOutput((prev) => (prev ? `${prev}\n${line}` : line))
+  }
+
+  const loadSftpLocalCsvList = async () => {
+    try {
+      const res = await fetch("/api/playlists/sftp-admin")
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        return
+      }
+      const files = data.files || []
+      setSftpLocalFiles(files)
+      setSftpHints(data.hints || null)
+      setSelectedSftpCsv((cur) => {
+        if (cur && files.some((f: { name: string }) => f.name === cur)) return cur
+        return files[0]?.name || ""
+      })
+    } catch {
+      /* ignore */
+    }
+  }
 
   const loadArtists = async () => {
     try {
@@ -219,38 +251,148 @@ export default function PlaylistsPage() {
   
   const runManualParser = async () => {
     setIsSftpSyncing(true)
-    setParsingOutput('🔄 Запуск синхронизации SFTP...\n')
-    
+    setParsingOutput("🔄 Полный цикл SFTP (новые файлы + применение последнего CSV)...\n")
+
     try {
-      setParsingOutput(prev => prev + '📥 Подключение к SFTP серверу...\n')
-      
-      // Эндпоинт сам подставляет CRON_SECRET на сервере — с клиента секрет не передаём
-      const response = await fetch('/api/playlists/sync-sftp')
-      
+      appendSftpLog("📥 Подключение к SFTP и обработка...")
+      const q = sftpCleanupRemoved ? "?cleanupRemoved=1" : ""
+      const response = await fetch(`/api/playlists/sync-sftp${q}`)
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Нужна сессия администратора (войдите заново)")
+        }
+        throw new Error(`HTTP ${response.status}`)
       }
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
-        setParsingOutput(prev => prev + `✅ Синхронизация завершена\n`)
-        setParsingOutput(prev => prev + `📥 Скачано файлов: ${data.stats?.downloaded || 0}\n`)
-        setParsingOutput(prev => prev + `➕ Добавлено плейлистов: ${data.stats?.added || 0}\n`)
-        setParsingOutput(prev => prev + `🔄 Обновлено плейлистов: ${data.stats?.updated || 0}\n`)
-        setParsingOutput(prev => prev + `🗑️  Удалено плейлистов: ${data.stats?.removed || 0}\n`)
+        appendSftpLog("✅ Синхронизация завершена")
+        appendSftpLog(`📥 Скачано новых файлов: ${data.stats?.downloaded ?? 0}`)
+        appendSftpLog(`➕ Добавлено: ${data.stats?.added ?? 0}`)
+        appendSftpLog(`🔄 Обновлено: ${data.stats?.updated ?? 0}`)
+        if (data.stats?.unchanged != null) {
+          appendSftpLog(`⏸ Без изменений: ${data.stats.unchanged}`)
+        }
+        appendSftpLog(`🗑️ Удалено (только если включена очистка): ${data.stats?.removed ?? 0}`)
+        if (data.errors?.length) {
+          appendSftpLog(`⚠️ ${data.errors.join("; ")}`)
+        }
+        await loadSftpLocalCsvList()
         loadResults()
       } else {
-        setParsingOutput(prev => prev + `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}\n`)
-        if (data.details) {
-          setParsingOutput(prev => prev + `Детали: ${data.details}\n`)
-        }
+        appendSftpLog(`❌ ${data.error || "Ошибка"}`)
+        if (data.errors?.length) appendSftpLog(data.errors.join("\n"))
       }
-    } catch (error: any) {
-      console.error('Ошибка SFTP синхронизации:', error)
-      setParsingOutput(prev => prev + `❌ Ошибка запроса: ${error?.message || String(error)}\n`)
+    } catch (error: unknown) {
+      console.error("Ошибка SFTP синхронизации:", error)
+      appendSftpLog(`❌ ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsSftpSyncing(false)
+    }
+  }
+
+  const sftpAdminPost = async (body: object) => {
+    const res = await fetch("/api/playlists/sftp-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`)
+    }
+    return data
+  }
+
+  const runSftpDownloadNew = async () => {
+    setSftpToolsBusy(true)
+    appendSftpLog("📥 Скачать только новые CSV с SFTP...")
+    try {
+      const data = await sftpAdminPost({ op: "download_new" })
+      appendSftpLog(`Скачано файлов: ${data.downloaded ?? 0}`)
+      if (data.files?.length) appendSftpLog(`Файлы: ${data.files.join(", ")}`)
+      if (data.errors?.length) appendSftpLog(`⚠️ ${data.errors.join("; ")}`)
+      await loadSftpLocalCsvList()
+    } catch (e: unknown) {
+      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setSftpToolsBusy(false)
+    }
+  }
+
+  const runSftpDownloadLatest = async () => {
+    setSftpToolsBusy(true)
+    appendSftpLog("📥 Скачать последний CSV с SFTP (перезапись локально)...")
+    try {
+      const data = await sftpAdminPost({ op: "download_latest" })
+      if (data.filename) {
+        appendSftpLog(`Файл: ${data.filename}`)
+      } else {
+        appendSftpLog(data.errors?.[0] || "Нет файла на сервере")
+      }
+      if (data.errors?.length && !data.filename) {
+        appendSftpLog(data.errors.join("; "))
+      }
+      await loadSftpLocalCsvList()
+    } catch (e: unknown) {
+      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setSftpToolsBusy(false)
+    }
+  }
+
+  const runSftpApplySelected = async () => {
+    if (!selectedSftpCsv) {
+      appendSftpLog("⚠️ Выберите CSV в списке")
+      return
+    }
+    setSftpToolsBusy(true)
+    appendSftpLog(`💾 Применить к БД: ${selectedSftpCsv} (cleanup=${sftpCleanupRemoved ? "да" : "нет"})`)
+    try {
+      const data = await sftpAdminPost({
+        op: "apply",
+        filename: selectedSftpCsv,
+        cleanupRemoved: sftpCleanupRemoved,
+      })
+      const imp = data.import
+      if (imp) {
+        appendSftpLog(`Плейлистов в файле: ${imp.playlistsParsed}, +${imp.added} / ~${imp.updated} / удалено ${imp.removed}`)
+        if (imp.errors?.length) appendSftpLog(imp.errors.join("; "))
+      }
+      loadResults()
+    } catch (e: unknown) {
+      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setSftpToolsBusy(false)
+    }
+  }
+
+  const onSftpCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setSftpToolsBusy(true)
+    appendSftpLog(`📤 Загрузка и импорт: ${file.name}`)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("cleanupRemoved", sftpCleanupRemoved ? "1" : "0")
+      const res = await fetch("/api/playlists/sftp-admin", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      appendSftpLog(`Сохранено как ${data.savedAs}`)
+      const imp = data.import
+      if (imp) {
+        appendSftpLog(`+${imp.added} / ~${imp.updated} / удалено ${imp.removed}`)
+      }
+      await loadSftpLocalCsvList()
+      loadResults()
+    } catch (err: unknown) {
+      appendSftpLog(`❌ ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setSftpToolsBusy(false)
     }
   }
 
@@ -790,10 +932,13 @@ export default function PlaylistsPage() {
               href={playlistUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-10 w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-colors group/play"
+              className="relative z-10 inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors hover:border-primary hover:bg-primary group/play"
               onClick={(e) => e.stopPropagation()}
+              aria-label="Открыть плейлист в новой вкладке"
             >
-              <span className="material-symbols-outlined text-3xl text-white group-hover/play:text-black ml-1">play_arrow</span>
+              <span className="material-symbols-outlined text-3xl leading-none text-white group-hover/play:text-black">
+                open_in_new
+              </span>
             </a>
           </div>
 
@@ -855,7 +1000,7 @@ export default function PlaylistsPage() {
         <div className="space-y-4 mb-2">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              Dashboard
+              ДАШБОРД
             </Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
             <span className="text-white">Плейлисты</span>
@@ -1208,7 +1353,125 @@ export default function PlaylistsPage() {
                   <span className="material-symbols-outlined text-primary align-middle mr-2 text-lg">info</span>
                   По умолчанию плейлисты синхронизируются с SFTP сервером автоматически в 16:00 и 00:30 ежедневно. Система
                   подключается к SFTP серверу, скачивает CSV файлы и парсит их автоматически.
+                  {sftpHints && (
+                    <span className="block mt-2 font-mono text-[11px] text-gray-500">
+                      Ожидаемый хост: {sftpHints.host} · каталог: {sftpHints.remotePath}
+                    </span>
+                  )}
                 </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+                  <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Импорт по шагам</p>
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <label className="text-xs text-gray-500 font-mono uppercase tracking-wider">Локальный CSV</label>
+                      {sftpLocalFiles.length === 0 ? (
+                        <div
+                          className={`${inputCls} flex items-center text-gray-500 text-sm cursor-not-allowed opacity-80`}
+                        >
+                          Нет файлов в sftp_downloads — скачайте с SFTP или загрузите CSV
+                        </div>
+                      ) : (
+                        <Select value={selectedSftpCsv} onValueChange={setSelectedSftpCsv} disabled={sftpToolsBusy}>
+                          <SelectTrigger className={inputCls}>
+                            <SelectValue placeholder="Выберите файл" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64 border border-white/10 bg-[#141414] text-white">
+                            {sftpLocalFiles.map((f) => (
+                              <SelectItem key={f.name} value={f.name} className="font-mono text-xs">
+                                {f.name} · {f.dataRows} строк · {new Date(f.mtimeISO).toLocaleString("ru-RU")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={sftpToolsBusy}
+                      onClick={() => void loadSftpLocalCsvList()}
+                      className="border-white/10 text-gray-400 hover:text-primary font-mono text-xs uppercase tracking-widest shrink-0"
+                    >
+                      Обновить список
+                    </Button>
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <Checkbox
+                      id="sftp-cleanup"
+                      checked={sftpCleanupRemoved}
+                      onCheckedChange={(c) => setSftpCleanupRemoved(c === true)}
+                      disabled={sftpToolsBusy}
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm text-gray-400 leading-snug">
+                      <span className="text-white font-medium group-hover:text-primary transition-colors">
+                        Удалять из БД плейлисты, которых нет в выбранном CSV
+                      </span>
+                      <span className="block text-xs text-gray-500 mt-1">
+                        По умолчанию выключено: пустой или чужой файл не сотрёт каталог. Включайте только если CSV — полный снимок дистрибуции.
+                      </span>
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={sftpToolsBusy || isSftpSyncing}
+                      onClick={() => void runSftpDownloadNew()}
+                      className="border-white/10 text-gray-300 hover:text-primary font-mono text-xs uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-base mr-1 align-middle">download</span>
+                      Скачать новые с SFTP
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={sftpToolsBusy || isSftpSyncing}
+                      onClick={() => void runSftpDownloadLatest()}
+                      className="border-white/10 text-gray-300 hover:text-primary font-mono text-xs uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-base mr-1 align-middle">cloud_download</span>
+                      Скачать последний CSV
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={sftpToolsBusy || isSftpSyncing || !selectedSftpCsv}
+                      onClick={() => void runSftpApplySelected()}
+                      className="border-primary/30 text-primary hover:bg-primary/10 font-mono text-xs uppercase tracking-wider sm:col-span-2"
+                    >
+                      <span className="material-symbols-outlined text-base mr-1 align-middle">database_upload</span>
+                      Применить выбранный CSV к базе
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      id="sftp-csv-upload"
+                      onChange={(e) => void onSftpCsvUpload(e)}
+                      disabled={sftpToolsBusy || isSftpSyncing}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={sftpToolsBusy || isSftpSyncing}
+                      className="border-white/10 text-gray-400 hover:text-white font-mono text-xs uppercase tracking-widest"
+                      onClick={() => document.getElementById("sftp-csv-upload")?.click()}
+                    >
+                      <span className="material-symbols-outlined text-base mr-1 align-middle">upload_file</span>
+                      Загрузить CSV с компьютера
+                    </Button>
+                  </div>
+                </div>
+
                 <Button
                   onClick={() => setSftpConfirmOpen(true)}
                   disabled={isSftpSyncing}
@@ -1635,7 +1898,7 @@ export default function PlaylistsPage() {
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase">Синхронизация SFTP</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Запустить синхронизацию плейлистов с SFTP? Операция может занять несколько минут.
+              Скачает только новые CSV с SFTP и применит к базе последний непустой файл из папки sftp_downloads. Учитывается галочка «Удалять из БД…» на странице. Операция может занять несколько минут.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">

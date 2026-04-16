@@ -13,6 +13,7 @@ import {
   assignReleasesToNewArtist
 } from '@/lib/storage';
 import { nicknameToUsername } from '@/lib/utils';
+import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names';
 
 // Интерфейс для результата парсинга
 interface KoalaRelease {
@@ -252,12 +253,14 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
   
   for (const koalaRelease of koalaReleases) {
     try {
-      // Парсим список артистов из строки
-      const artistNames = koalaRelease.artist
-        .split(/[,&]/)
-        .map(name => name.trim())
-        .filter(name => name.length > 0);
-      
+      // Парсим список артистов: запятая, &, feat/ft/featuring, x, и/and
+      const artistNames = splitCollaboratingArtistDisplayNames(koalaRelease.artist || "");
+      if (artistNames.length === 0) {
+        stats.errors.push(`${koalaRelease.title}: пустое поле артиста`);
+        stats.skipped++;
+        continue;
+      }
+
       // Ищем артистов в системе, создаём если не найдены
       const validArtists = [];
       for (const artistName of artistNames) {
@@ -328,6 +331,10 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         if (koalaRelease.artist) {
           updates.artistName = koalaRelease.artist;
         }
+
+        if (validArtists.length > 1) {
+          updates.featuredArtistIds = validArtists.slice(1).map((a) => a.id);
+        }
         
         await updateRelease(existingRelease.id, updates);
         console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
@@ -359,10 +366,13 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         }
         
         const normalizedStatus = normalizeStatus(koalaRelease.status);
+        const featuredArtistIds =
+          validArtists.length > 1 ? validArtists.slice(1).map((a) => a.id) : undefined;
         const newReleaseData: any = {
           title: koalaRelease.title,
           artistId: artist.id,
           artistName: koalaRelease.artist,
+          ...(featuredArtistIds?.length ? { featuredArtistIds } : {}),
           releaseDate,
           type: tracks.length > 1 ? 'album' : 'single' as 'single' | 'album' | 'ep',
           coverUrl: koalaRelease.cover_url || '',
