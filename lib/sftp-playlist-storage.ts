@@ -4,6 +4,7 @@ import { normalizeArtistName } from '@/lib/storage';
 import { tokenizeCollaborationArtistField } from '@/lib/playlist-artist-match';
 import { userFromPrisma } from '@/lib/storage-adapters';
 import { prisma } from './prisma';
+import { findManyPlaylistRows } from '@/lib/prisma-playlist-read';
 
 /**
  * Инициализирует базу данных (заглушка для обратной совместимости)
@@ -179,97 +180,85 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
  * Получает все плейлисты
  */
 export async function getAllPlaylists(opts?: { take?: number; skip?: number }): Promise<any[]> {
-  try {
-    const take = opts?.take !== undefined ? Math.min(opts.take, 5000) : undefined
-    const skip = opts?.skip !== undefined ? Math.max(0, opts.skip) : undefined
-    const playlists = await prisma.playlist.findMany({
-      orderBy: { updatedAt: 'desc' },
-      ...(take !== undefined ? { take } : {}),
-      ...(skip !== undefined ? { skip } : {}),
-    });
-    
-    return playlists.map(p => ({
-      id: p.id,
-      playlist_url: p.playlistUrl,
-      playlist_name: p.playlistName,
-      platform: p.platform,
-      artist_name: p.artistName,
-      artist_id: p.artistId,
-      track_data: JSON.stringify(p.trackData),
-      first_seen_date: p.firstSeenDate,
-      last_seen_date: p.lastSeenDate,
-      created_at: p.createdAt.toISOString(),
-      updated_at: p.updatedAt.toISOString()
-    }));
-  } catch (error) {
-    console.error('❌ Ошибка получения плейлистов:', error);
-    return [];
-  }
+  const take = opts?.take !== undefined ? Math.min(opts.take, 5000) : undefined
+  const skip = opts?.skip !== undefined ? Math.max(0, opts.skip) : undefined
+  const playlists = await findManyPlaylistRows({
+    orderBy: { updatedAt: 'desc' },
+    ...(take !== undefined ? { take } : {}),
+    ...(skip !== undefined ? { skip } : {}),
+  })
+
+  return playlists.map((p) => ({
+    id: p.id,
+    playlist_url: p.playlistUrl,
+    playlist_name: p.playlistName,
+    platform: p.platform,
+    artist_name: p.artistName,
+    artist_id: p.artistId,
+    track_data: JSON.stringify(p.trackData),
+    first_seen_date: p.firstSeenDate,
+    last_seen_date: p.lastSeenDate,
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+    cover_url: p.coverUrl ?? null,
+  }))
 }
 
 /**
  * Получает плейлисты по имени артиста
  */
 export async function getPlaylistsByArtist(artistName: string): Promise<any[]> {
-  try {
-    const normalized = normalizeArtistName(artistName);
-    
-    const playlists = await prisma.playlist.findMany({
-      where: {
-        artistName: {
-          contains: normalized,
-          mode: 'insensitive'
-        }
+  const normalized = normalizeArtistName(artistName)
+
+  const playlists = await findManyPlaylistRows({
+    where: {
+      artistName: {
+        contains: normalized,
+        mode: 'insensitive',
       },
-      orderBy: { updatedAt: 'desc' }
-    });
-    
-    return playlists.map(p => ({
-      id: p.id,
-      playlist_url: p.playlistUrl,
-      playlist_name: p.playlistName,
-      platform: p.platform,
-      artist_name: p.artistName,
-      artist_id: p.artistId,
-      track_data: JSON.stringify(p.trackData),
-      first_seen_date: p.firstSeenDate,
-      last_seen_date: p.lastSeenDate,
-      created_at: p.createdAt.toISOString(),
-      updated_at: p.updatedAt.toISOString()
-    }));
-  } catch (error) {
-    console.error('❌ Ошибка получения плейлистов по артисту:', error);
-    return [];
-  }
+    },
+    orderBy: { updatedAt: 'desc' },
+  })
+
+  return playlists.map((p) => ({
+    id: p.id,
+    playlist_url: p.playlistUrl,
+    playlist_name: p.playlistName,
+    platform: p.platform,
+    artist_name: p.artistName,
+    artist_id: p.artistId,
+    track_data: JSON.stringify(p.trackData),
+    first_seen_date: p.firstSeenDate,
+    last_seen_date: p.lastSeenDate,
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+    cover_url: p.coverUrl ?? null,
+  }))
 }
 
 /**
  * Получает плейлисты по ID артиста
  */
 export async function getPlaylistsByArtistId(artistId: string): Promise<any[]> {
-  try {
-    const playlists = await prisma.playlist.findMany({
-      where: { artistId },
-      orderBy: { updatedAt: 'desc' }
-    });
-    
-    return playlists.map(p => ({
-      id: p.id,
-      playlist_url: p.playlistUrl,
-      playlist_name: p.playlistName,
-      platform: p.platform,
-      artist_name: p.artistName,
-      artist_id: p.artistId,
-      track_data: JSON.stringify(p.trackData),
-      first_seen_date: p.firstSeenDate,
-      last_seen_date: p.lastSeenDate,
-      created_at: p.createdAt.toISOString(),
-      updated_at: p.updatedAt.toISOString()
-    }));
-  } catch (error) {
-    console.error('❌ Ошибка получения плейлистов по ID артиста:', error);
-    return [];
-  }
+  const playlists = await findManyPlaylistRows({
+    where: { artistId },
+    orderBy: { updatedAt: 'desc' },
+  })
+
+  return playlists.map((p) => ({
+    id: p.id,
+    playlist_url: p.playlistUrl,
+    playlist_name: p.playlistName,
+    platform: p.platform,
+    artist_name: p.artistName,
+    artist_id: p.artistId,
+    track_data: JSON.stringify(p.trackData),
+    first_seen_date: p.firstSeenDate,
+    last_seen_date: p.lastSeenDate,
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+    cover_url: p.coverUrl ?? null,
+  }))
 }
 
 /**
@@ -350,7 +339,8 @@ export async function assignPlaylistsToArtist(
             ]
           }
         ]
-      }
+      },
+      select: { id: true },
     });
     
     if (playlists.length === 0) {

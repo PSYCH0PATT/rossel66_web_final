@@ -9,6 +9,7 @@ import {
 } from "@/lib/playlist-artist-match"
 import { getActivitiesFiltered, type Activity, type Report, type User } from "@/lib/storage"
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
+import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 
 /** Серверный кеш дашбордов и тяжёлых агрегатов — 10 минут */
 export const DASHBOARD_REVALIDATE_SEC = 600
@@ -58,6 +59,7 @@ export type ArtistDashboardPayload = {
     last_seen_date: string | null
     created_at: string
     updated_at: string
+    cover_url: string | null
   }>
 }
 
@@ -154,7 +156,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
 
 export const getCachedArtistDashboard = unstable_cache(
   async (username: string) => loadArtistDashboardUncached(username),
-  ["artist-dashboard-v3"],
+  ["artist-dashboard-v4"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 
@@ -344,6 +346,7 @@ export type ArtistPlaylistItem = {
   last_seen_date: string | null
   created_at: string
   updated_at: string
+  cover_url: string | null
 }
 
 async function loadArtistReportsUncached(artistId: string): Promise<ArtistReportItem[]> {
@@ -389,33 +392,7 @@ export const getCachedArtistReleases = unstable_cache(
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 
-const artistPlaylistSelect = {
-  id: true,
-  playlistUrl: true,
-  playlistName: true,
-  platform: true,
-  artistName: true,
-  artistId: true,
-  trackData: true,
-  firstSeenDate: true,
-  lastSeenDate: true,
-  createdAt: true,
-  updatedAt: true,
-} as const
-
-function mapPrismaPlaylistToArtistItem(p: {
-  id: string
-  playlistUrl: string
-  playlistName: string
-  platform: string
-  artistName: string
-  artistId: string | null
-  trackData: unknown
-  firstSeenDate: string | null
-  lastSeenDate: string | null
-  createdAt: Date
-  updatedAt: Date
-}): ArtistPlaylistItem {
+function mapPrismaPlaylistToArtistItem(p: PlaylistListRow): ArtistPlaylistItem {
   return {
     id: p.id,
     playlist_url: p.playlistUrl,
@@ -428,6 +405,7 @@ function mapPrismaPlaylistToArtistItem(p: {
     last_seen_date: p.lastSeenDate,
     created_at: p.createdAt.toISOString(),
     updated_at: p.updatedAt.toISOString(),
+    cover_url: p.coverUrl ?? null,
   }
 }
 
@@ -438,10 +416,9 @@ async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlay
   })
   if (!user) return []
 
-  const assigned = await prisma.playlist.findMany({
+  const assigned = await findManyPlaylistRows({
     where: { artistId: user.id },
     orderBy: { updatedAt: "desc" },
-    select: artistPlaylistSelect,
   })
 
   const orContains: Array<{ artistName: { contains: string; mode: "insensitive" } }> = []
@@ -457,12 +434,11 @@ async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlay
     orContains.push({ artistName: { contains: nameTrim, mode: "insensitive" } })
   }
 
-  let loose: typeof assigned = []
+  let loose: PlaylistListRow[] = []
   if (orContains.length > 0) {
-    loose = await prisma.playlist.findMany({
+    loose = await findManyPlaylistRows({
       where: { artistId: null, OR: orContains },
       orderBy: { updatedAt: "desc" },
-      select: artistPlaylistSelect,
     })
   }
 
@@ -483,7 +459,7 @@ async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlay
 
 export const getCachedArtistPlaylists = unstable_cache(
   async (artistId: string) => loadArtistPlaylistsUncached(artistId),
-  ["artist-playlists-v2"],
+  ["artist-playlists-v3"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 

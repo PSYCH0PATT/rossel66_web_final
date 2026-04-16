@@ -4,7 +4,6 @@ import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
-import { getPlatformPartnerIconSrc } from "@/lib/platform-partner-icon"
 import { getSessionUser } from "@/lib/server-auth"
 import Layout from "@/components/layout"
 
@@ -84,11 +83,9 @@ export default async function PlaylistsPage({ params }: { params: { username: st
         {playlists.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
             {playlists.map((playlist) => {
-              const cover = getPlaylistCoverUrl(playlist.platform)
+              const cover = getPlaylistCoverUrl(playlist.platform, playlist.cover_url)
               const trackLine = firstTrackLabel(playlist.track_data)
               const releaseLine = firstReleaseLabel(playlist.track_data)
-              const partnerIconSrc = getPlatformPartnerIconSrc(playlist.platform)
-              const isVkSquareLogo = partnerIconSrc.endsWith("/vk-music.png")
               const subtitleLine = releaseLine || trackLine || "—"
 
               return (
@@ -97,45 +94,35 @@ export default async function PlaylistsPage({ params }: { params: { username: st
                   href={playlist.playlist_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="artist-playlist-tile group relative aspect-square rounded-2xl overflow-hidden card-glass block outline-none ring-0 transition-[box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 isolate"
+                  className="artist-playlist-tile group relative aspect-square rounded-2xl overflow-hidden block outline-none ring-0 transition-[box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 isolate"
                 >
-                  {/* Весь контент карточки размывается при hover */}
-                  <div className="absolute inset-0 z-0 transition-[filter] duration-300 ease-out group-hover:blur-[3px] group-hover:brightness-90">
-                    <div className="absolute inset-0 z-0">
-                      <Image
-                        src={cover || "/placeholder.svg"}
-                        alt={playlist.playlist_name}
-                        fill
-                        className="object-cover brightness-[0.88] grayscale-[12%]"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
-                    </div>
-                    <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/95 via-black/35 to-black/25" />
-
-                    <div className="pointer-events-none absolute left-[12px] top-[12px] z-[3] aspect-square w-[12%] min-w-[1.25rem] max-w-[2rem] sm:max-w-[2.25rem]">
-                      <div className="relative h-full w-full overflow-hidden rounded-full border border-white/30 bg-white/[0.14] shadow-[0_4px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+                  {/* Рамка/градиент — не на том же слое, что blur (иначе у border-box иногда «просвечивают» прямые углы). */}
+                  <div
+                    className="pointer-events-none absolute inset-0 z-0 rounded-2xl card-glass"
+                    aria-hidden
+                  />
+                  {/* clip-path + overflow: blur не вылезает за скругление; bg-card закрывает субпиксельные щели */}
+                  <div className="absolute inset-0 z-[1] overflow-hidden rounded-2xl bg-card [clip-path:inset(0_round_1rem)] [transform:translateZ(0)]">
+                    <div className="absolute inset-0 z-0 transition-[filter] duration-300 ease-out group-hover:blur-[3px] group-hover:brightness-90 [transform:translateZ(0)]">
+                      <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
                         <Image
-                          src={partnerIconSrc}
-                          alt=""
+                          src={cover || "/placeholder.svg"}
+                          alt={playlist.playlist_name}
                           fill
-                          className={
-                            isVkSquareLogo
-                              ? "object-cover"
-                              : "object-contain p-[14%]"
-                          }
-                          sizes="(max-width: 640px) 12vw, 6vw"
-                          unoptimized={partnerIconSrc.endsWith(".svg")}
+                          className="object-cover brightness-[0.88] grayscale-[12%] rounded-2xl"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       </div>
-                    </div>
+                      <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/95 via-black/35 to-black/25" />
 
-                    <div className="absolute bottom-0 left-0 right-0 z-[3] p-3">
-                      <h3 className="font-bold text-white text-base sm:text-lg leading-snug line-clamp-2">
-                        {playlist.playlist_name}
-                      </h3>
-                      <p className="mt-1 text-xs text-gray-400 font-mono leading-snug line-clamp-2">
-                        {subtitleLine}
-                      </p>
+                      <div className="absolute bottom-0 left-0 right-0 z-[3] p-3">
+                        <h3 className="font-bold text-white text-base sm:text-lg leading-snug line-clamp-2">
+                          {playlist.playlist_name}
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-400 font-mono leading-snug line-clamp-2">
+                          {subtitleLine}
+                        </p>
+                      </div>
                     </div>
                   </div>
 

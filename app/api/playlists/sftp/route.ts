@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
   try {
     const artistId = request.nextUrl.searchParams.get('artistId');
     const artistName = request.nextUrl.searchParams.get('artistName');
-    const take = Math.min(Number(request.nextUrl.searchParams.get('take') || '50') || 50, 5000);
+    /** По умолчанию 2000 — админка и отчёты ожидают полный список; при необходимости передавайте take/skip */
+    const take = Math.min(Number(request.nextUrl.searchParams.get('take') || '2000') || 2000, 5000);
     const skip = Math.max(0, Number(request.nextUrl.searchParams.get('skip') || '0') || 0);
 
     let playlists;
@@ -30,10 +31,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Преобразуем в формат, совместимый с существующим API
-    const formattedPlaylists = playlists.map((playlist: any) => {
+    const formattedPlaylists = playlists.flatMap((playlist: any) => {
+      try {
       // Группируем треки по артистам для отображения
       const tracksByArtist = new Map<string, any[]>();
-      const tracks = JSON.parse(playlist.track_data || '[]');
+      let tracks: any[] = []
+      try {
+        const raw = playlist.track_data || "[]"
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw
+        tracks = Array.isArray(parsed) ? parsed : []
+      } catch {
+        tracks = []
+      }
 
       tracks.forEach((track: any) => {
         const artistKey = track.artistName || 'Unknown';
@@ -60,13 +69,13 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Формируем результат (обложка по платформе — в таблицах с SFTP нет ссылок на картинки)
+      // Формируем результат (обложка: реальная из БД или фоллбэк по платформе)
       const result: any = {
         id: playlist.id,
         playlist_name: playlist.playlist_name,
         playlist_url: playlist.playlist_url,
         platform: playlist.platform,
-        playlist_cover_url: getPlaylistCoverUrl(playlist.platform),
+        playlist_cover_url: getPlaylistCoverUrl(playlist.platform, playlist.cover_url ?? null),
         artist_name: mainArtistName,
         artist_id: playlist.artist_id,
         parsed_at: playlist.last_seen_date,
@@ -123,7 +132,26 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      return result;
+      return [result]
+      } catch (rowErr) {
+        console.error("Ошибка форматирования плейлиста", playlist?.id, rowErr)
+        return [
+          {
+            id: playlist?.id,
+            playlist_name: playlist?.playlist_name ?? "—",
+            playlist_url: playlist?.playlist_url ?? "",
+            platform: playlist?.platform ?? "",
+            playlist_cover_url: getPlaylistCoverUrl(playlist?.platform, playlist?.cover_url ?? null),
+            artist_name: playlist?.artist_name ?? "",
+            artist_id: playlist?.artist_id ?? null,
+            parsed_at: playlist?.last_seen_date,
+            added_at: playlist?.first_seen_date,
+            tracks_count: 0,
+            tracks_by_artist: {},
+            multiple_tracks: false,
+          },
+        ]
+      }
     });
 
     // Для artistId убираем дубликаты по одному и тому же плейлисту (url + название)

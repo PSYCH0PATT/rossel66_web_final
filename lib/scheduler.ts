@@ -11,7 +11,8 @@ let isSchedulerInitialized = false;
  * Инициализация планировщика
  * 
  * Koala Parser: 12:00 и 20:00 по Москве
- * Playlist Parsers: Пт 00:30, Сб 16:00, Вс 16:00, Пн 16:00 по Москве
+ * Обложки плейлистов (VK/Яндекс): суббота 06:00 МСК → GET /api/cron/playlist-covers
+ * Playlist Parsers (legacy): см. runPlaylistParsers() для ручного запуска
  */
 export function initScheduler() {
   // Предотвращаем повторную инициализацию
@@ -37,6 +38,7 @@ export function initScheduler() {
   console.log('   • 00:30 MSK ежедневно');
   console.log('📊 Analytics Flash Import: 20:00 MSK ежедневно');
   console.log('🧹 Analytics Cleanup: 1 января 00:00 MSK');
+  console.log('🖼  Playlist covers (VK/Яндекс): суббота 06:00 MSK → /api/cron/playlist-covers');
   console.log('═══════════════════════════════════════════════════');
   console.log('');
   
@@ -106,6 +108,18 @@ export function initScheduler() {
     timezone: 'Europe/Moscow'
   });
   
+  // ============================================================
+  // PLAYLIST COVER SCRAPER - каждую субботу в 06:00 МСК
+  // ============================================================
+
+  cron.schedule('0 6 * * 6', async () => {
+    console.log('');
+    console.log('🖼  [Sat 06:00 MSK] Playlist Cover Scraper...');
+    await runPlaylistCoverScraper();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+
   // ============================================================
   // LEGACY PLAYLIST PARSERS - оставлено для ручного запуска
   // ============================================================
@@ -456,6 +470,33 @@ async function runAnalyticsCleanup() {
     }
   } catch (error) {
     console.error('❌ Ошибка запуска Analytics Cleanup:', error);
+  }
+}
+
+/**
+ * Запускает парсинг обложек плейлистов VK и Яндекс
+ */
+async function runPlaylistCoverScraper() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET не задан — пропуск playlist cover scraper');
+      return;
+    }
+
+    const response = await fetch(`${baseUrl}/api/cron/playlist-covers?secret=${cronSecret}`);
+    const result = await response.json();
+
+    if (result.success) {
+      const s = result.stats || {};
+      console.log(`✅ Cover Scraper завершен: обработано ${s.processed ?? 0}, найдено ${s.found ?? 0}, ошибок ${s.errors ?? 0}`);
+    } else {
+      console.error(`❌ Cover Scraper ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка запуска playlist cover scraper:', error);
   }
 }
 

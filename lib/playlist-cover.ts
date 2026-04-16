@@ -1,6 +1,5 @@
 /**
- * Обложки плейлистов по платформам (плейсхолдеры, пока в таблицах нет ссылок на картинки).
- * Позже можно заменить на парсинг реальных ссылок.
+ * Обложки плейлистов по платформам (плейсхолдеры — фоллбэк, когда coverUrl не распарсен).
  */
 const COVER_BY_PLATFORM: Record<string, string> = {
   'Яндекс Музыка': '/images/playlists/yandex-music.png',
@@ -13,16 +12,21 @@ const COVER_BY_PLATFORM: Record<string, string> = {
   'Spotify': '/placeholder.svg',
   'Apple Music': '/placeholder.svg',
   'YouTube Music': '/placeholder.svg',
-};
+}
 
 /**
- * Возвращает URL обложки плейлиста по названию платформы.
- * Если платформа не в списке — возвращает общий плейсхолдер.
+ * Возвращает URL обложки плейлиста.
+ *
+ * Порядок приоритетов:
+ *   1. coverUrl из БД (реальная обложка, распарсенная скрапером)
+ *   2. Статический плейсхолдер по платформе
+ *   3. /placeholder.svg
  */
-export function getPlaylistCoverUrl(platform: string | null | undefined): string {
-  if (!platform || !platform.trim()) {
-    return '/placeholder.svg';
-  }
-  const normalized = platform.trim();
-  return COVER_BY_PLATFORM[normalized] ?? '/placeholder.svg';
+export function getPlaylistCoverUrl(
+  platform: string | null | undefined,
+  coverUrl?: string | null
+): string {
+  if (coverUrl && coverUrl.trim()) return coverUrl.trim()
+  if (!platform || !platform.trim()) return '/placeholder.svg'
+  return COVER_BY_PLATFORM[platform.trim()] ?? '/placeholder.svg'
 }

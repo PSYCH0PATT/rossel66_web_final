@@ -21,6 +21,31 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
+/** Строка платформы из CSV может не совпадать с канонич. «Яндекс Музыка» — группируем по подстроке */
+function platformNorm(p: string | undefined) {
+  return (p || "").trim().toLowerCase()
+}
+function isVkMusicPlatform(platform: string | undefined) {
+  const n = platformNorm(platform)
+  return n.includes("vk") || n.includes("вк")
+}
+function isYandexMusicPlatform(platform: string | undefined) {
+  const n = platformNorm(platform)
+  return n.includes("yandex") || n.includes("яндекс")
+}
+function isMtsMusicPlatform(platform: string | undefined) {
+  const n = platformNorm(platform)
+  return n.includes("mts") || n.includes("мтс")
+}
+function isSberMusicPlatform(platform: string | undefined) {
+  const n = platformNorm(platform)
+  return n.includes("sber") || n.includes("сбер")
+}
+function isOdnoklassnikiPlatform(platform: string | undefined) {
+  const n = platformNorm(platform)
+  return n.includes("одноклассник") || n.includes("odnoklassniki")
+}
+
 interface Artist {
   id: string
   name: string
@@ -173,11 +198,15 @@ export default function PlaylistsPage() {
   const loadResults = async () => {
     try {
       // Загружаем только SFTP плейлисты из Supabase
-      const response = await fetch('/api/playlists/sftp')
+      const response = await fetch("/api/playlists/sftp?take=5000")
       const data = await response.json()
-      
+
       if (!data.success) {
-        console.error('Ошибка загрузки SFTP плейлистов:', data.error)
+        console.error("Ошибка загрузки SFTP плейлистов:", data.error, data.details)
+        setActionBanner({
+          type: "err",
+          text: `Не удалось загрузить плейлисты: ${data.error || "ошибка API"}${data.details ? ` (${String(data.details).slice(0, 200)})` : ""}`,
+        })
         return
       }
       
@@ -203,7 +232,7 @@ export default function PlaylistsPage() {
         
         const platform = (p.platform || '').trim()
         
-        if (platform === 'VK Музыка') {
+        if (isVkMusicPlatform(platform)) {
           vkFormatted.push({
             id: p.id,
             artist_url: '',
@@ -693,19 +722,30 @@ export default function PlaylistsPage() {
   // Группировка плейлистов по платформам с фильтрацией и сортировкой
   const vkPlaylists = filterAndSortPlaylists(vkResults, selectedArtistFilter)
   const yandexPlaylists = filterAndSortPlaylists(
-    bandlinkResults.filter(p => p.platform === 'Яндекс Музыка'), 
+    bandlinkResults.filter((p) => isYandexMusicPlatform(p.platform)),
     selectedArtistFilter
   )
   const mtsPlaylists = filterAndSortPlaylists(
-    bandlinkResults.filter(p => p.platform === 'МТС Музыка'), 
+    bandlinkResults.filter((p) => isMtsMusicPlatform(p.platform)),
     selectedArtistFilter
   )
   const sberPlaylists = filterAndSortPlaylists(
-    bandlinkResults.filter(p => p.platform === 'Сбер Музыка'), 
+    bandlinkResults.filter((p) => isSberMusicPlatform(p.platform)),
     selectedArtistFilter
   )
   const okPlaylists = filterAndSortPlaylists(
-    bandlinkResults.filter(p => p.platform === 'Одноклассники'), 
+    bandlinkResults.filter((p) => isOdnoklassnikiPlatform(p.platform)),
+    selectedArtistFilter
+  )
+  /** Spotify, Apple и т.д. — не теряем из-за неточного названия платформы в CSV */
+  const otherPlaylists = filterAndSortPlaylists(
+    bandlinkResults.filter(
+      (p) =>
+        !isYandexMusicPlatform(p.platform) &&
+        !isMtsMusicPlatform(p.platform) &&
+        !isSberMusicPlatform(p.platform) &&
+        !isOdnoklassnikiPlatform(p.platform)
+    ),
     selectedArtistFilter
   )
 
@@ -790,13 +830,13 @@ export default function PlaylistsPage() {
 
   // Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.)
   const getPlatformBadgeStyle = (platform: string) => {
-    const p = (platform || '').trim()
-    if (p === 'VK Музыка') return { bg: '#0077FF', color: '#FFFFFF' }
-    if (p === 'Яндекс Музыка') return { bg: '#FFCC00', color: '#000000' }
-    if (p === 'МТС Музыка' || p === 'MTS Music') return { bg: '#E30611', color: '#FFFFFF' }
-    if (p === 'Сбер Музыка' || p === 'Sber Music') return { bg: '#21A038', color: '#FFFFFF' }
-    if (p === 'Одноклассники') return { bg: '#EE8208', color: '#FFFFFF' }
-    return { bg: '#6b7280', color: '#FFFFFF' }
+    const n = platformNorm(platform)
+    if (n.includes("vk") || n.includes("вк")) return { bg: "#0077FF", color: "#FFFFFF" }
+    if (n.includes("yandex") || n.includes("яндекс")) return { bg: "#FFCC00", color: "#000000" }
+    if (n.includes("mts") || n.includes("мтс")) return { bg: "#E30611", color: "#FFFFFF" }
+    if (n.includes("sber") || n.includes("сбер")) return { bg: "#21A038", color: "#FFFFFF" }
+    if (n.includes("одноклассник") || n.includes("odnoklassniki")) return { bg: "#EE8208", color: "#FFFFFF" }
+    return { bg: "#6b7280", color: "#FFFFFF" }
   }
 
   const inputCls =
@@ -969,7 +1009,8 @@ export default function PlaylistsPage() {
     yandexPlaylists.length +
     mtsPlaylists.length +
     sberPlaylists.length +
-    okPlaylists.length
+    okPlaylists.length +
+    otherPlaylists.length
 
   return (
     <Layout role="admin" requiredRole="admin">
@@ -1227,7 +1268,24 @@ export default function PlaylistsPage() {
               </div>
             )}
 
-            {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && sberPlaylists.length === 0 && okPlaylists.length === 0 && (
+            {otherPlaylists.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
+                  <div className="rounded-lg p-2">
+                    <span className="material-symbols-outlined text-2xl text-gray-400">library_music</span>
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Другие площадки</h2>
+                  <Badge className="border-0 bg-white/15 text-gray-200">{otherPlaylists.length}</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {otherPlaylists.map((playlist) => (
+                    <PlaylistCard key={`other-${playlist.id}`} playlist={playlist} type="bandlink" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && sberPlaylists.length === 0 && okPlaylists.length === 0 && otherPlaylists.length === 0 && (
               <div className="card-glass rounded-2xl border border-dashed border-white/15 flex flex-col items-center justify-center py-16 px-4">
                 <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">queue_music</span>
                 <h3 className="text-xl font-bold text-white mb-2">Нет плейлистов</h3>
@@ -1257,7 +1315,7 @@ export default function PlaylistsPage() {
               const artist = artists.find(a => a.name === artistName)
               const artistVKPlaylists = vkResults.filter(p => p.artist_name === artistName)
               const artistBandlinkPlaylists = bandlinkResults.filter(
-                p => p.artist_name === artistName && p.platform !== 'VK Музыка'
+                (p) => p.artist_name === artistName && !isVkMusicPlatform(p.platform)
               )
               const totalPlaylists = artistVKPlaylists.length + artistBandlinkPlaylists.length
 
