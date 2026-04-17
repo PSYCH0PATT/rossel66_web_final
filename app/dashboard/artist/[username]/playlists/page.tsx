@@ -110,7 +110,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
                           alt={playlist.playlist_name}
                           fill
                           className="object-cover brightness-[0.88] grayscale-[12%] rounded-2xl"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          sizes="(max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
                         />
                       </div>
                       <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/95 via-black/35 to-black/25" />

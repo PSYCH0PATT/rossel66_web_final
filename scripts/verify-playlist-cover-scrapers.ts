@@ -6,6 +6,9 @@
  *
  * Запуск:
  *   SKIP_COVER_SCRAPER_DELAY=1 npx tsx scripts/verify-playlist-cover-scrapers.ts
+ *
+ * Отдельно проверить VK-токен (audio.getPlaylistById):
+ *   pnpm run verify:vk-playlist-token
  */
 
 import {

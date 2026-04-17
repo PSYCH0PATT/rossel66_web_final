@@ -13,7 +13,9 @@
     "spec:validate": "openspec validate --specs --strict",
     "spec:show": "openspec show",
     "verify:playlist-covers": "SKIP_COVER_SCRAPER_DELAY=1 npx tsx scripts/verify-playlist-cover-scrapers.ts",
+    "verify:vk-playlist-token": "npx tsx scripts/test-vk-playlist-cover-token.ts",
     "db:backfill-yandex-covers": "SKIP_COVER_SCRAPER_DELAY=1 npx tsx scripts/backfill-yandex-playlist-covers.ts",
+    "db:backfill-vk-covers": "npx tsx scripts/backfill-vk-playlist-covers.ts",
     "db:backup": "npx tsx scripts/backup-db-json.ts",
     "db:backup:pg": "bash scripts/backup-supabase-db.sh"
   },

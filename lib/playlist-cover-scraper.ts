@@ -49,29 +49,48 @@ function randomDelay(minMs = 3000, maxMs = 8000): Promise<void> {
 
 // ─── VK Music ───────────────────────────────────────────────────────────────
 
-/** owner_id и id плейлиста из URL вида …/music/playlist/-2000123_456789 */
+/** owner_id и id плейлиста из URL вида:
+ *  - vk.com/music/playlist/-147845620_456789
+ *  - boom.ru/redirect/playlist/vk-147845620_456789
+ *  - boom.ru/redirect/playlist/vk147845620_456789 (положительный owner)
+ */
 export function parseVkMusicPlaylistIdsFromUrl(playlistUrl: string): {
   ownerId: string
   playlistId: string
 } | null {
-  const m = playlistUrl.match(/\/music\/playlist\/(-?\d+)_(\d+)/i)
-  if (!m) return null
-  return { ownerId: m[1], playlistId: m[2] }
+  // vk.com/music/playlist/-147845620_456789
+  const vkMatch = playlistUrl.match(/\/music\/playlist\/(-?\d+)_(\d+)/i)
+  if (vkMatch) return { ownerId: vkMatch[1], playlistId: vkMatch[2] }
+
+  // boom.ru/redirect/playlist/vk-147845620_456789  или  vk147845620_456789
+  const boomMatch = playlistUrl.match(/\/playlist\/vk(-?\d+)_(\d+)/i)
+  if (boomMatch) return { ownerId: boomMatch[1], playlistId: boomMatch[2] }
+
+  return null
 }
 
 function pickBestVkPhotoUrl(photo: Record<string, unknown> | null | undefined): string | null {
   if (!photo || typeof photo !== "object") return null
+
+  // Формат VK API: плоские поля photo_1200, photo_600, photo_300, …
+  // Сначала ~300px для UI-карточек (подписанный URL нельзя «ужать» query size=).
+  const FLAT_SIZES_PREFERRED = [300, 270, 600, 135, 68, 34, 1200]
+  for (const size of FLAT_SIZES_PREFERRED) {
+    const v = photo[`photo_${size}`]
+    if (typeof v === "string" && v.startsWith("http")) return v
+  }
+
+  // Формат с массивом sizes (устаревший / фото-API)
   const sizes = photo["sizes"] as Array<{ url?: string; width?: number; height?: number }> | undefined
   if (Array.isArray(sizes) && sizes.length > 0) {
     const withUrl = sizes.filter((s) => s && typeof s.url === "string" && s.url.length > 0)
-    if (withUrl.length === 0) return null
-    withUrl.sort((a, b) => {
-      const ar = (a.width || 0) * (a.height || 0)
-      const br = (b.width || 0) * (b.height || 0)
-      return br - ar
-    })
-    return withUrl[0]!.url!
+    if (withUrl.length > 0) {
+      withUrl.sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))
+      return withUrl[0]!.url!
+    }
   }
+
+  // Формат с thumbs (массив строк или объектов)
   const thumbs = photo["thumbs"] as unknown
   if (Array.isArray(thumbs) && thumbs.length > 0) {
     const last = thumbs[thumbs.length - 1]
@@ -80,21 +99,51 @@ function pickBestVkPhotoUrl(photo: Record<string, unknown> | null | undefined): 
       return (last as { url: string }).url
     }
   }
+
   const url = photo["url"] as string | undefined
   if (url && url.startsWith("http")) return url
   return null
 }
 
-/**
- * Обложка через официальный VK API (нужен токен с доступом к audio, например пользовательский).
- * Токен не логируем.
- */
-async function fetchVkPlaylistCoverViaApi(playlistUrl: string, accessToken: string): Promise<string | null> {
-  const ids = parseVkMusicPlaylistIdsFromUrl(playlistUrl)
-  if (!ids) {
-    console.warn(`${LOG_PREFIX_VK} API: не удалось разобрать owner_id / playlist_id из URL`)
-    return null
+/** Результат проверки токена для `audio.getPlaylistById` (скрипт диагностики + общий путь API). */
+export type VkPlaylistCoverProbe =
+  | { ok: true; coverUrl: string; ownerId: string; playlistId: string }
+  | { ok: false; kind: "bad_playlist_url" }
+  | { ok: false; kind: "fetch_error"; message: string }
+  | { ok: false; kind: "http"; status: number }
+  | { ok: false; kind: "invalid_json" }
+  | { ok: false; kind: "vk_error"; code: number; message: string }
+  | { ok: false; kind: "empty_response" }
+  | { ok: false; kind: "no_photo" }
+
+/** Подсказка по `error_code` VK для диагностики (без токена в выводе). */
+export function vkPlaylistCoverProbeHint(code: number): string {
+  switch (code) {
+    case 5:
+      return "Неверный или просроченный access_token. «Защищённый ключ» приложения — это не access_token; в параметр нужен сервисный ключ доступа или пользовательский токен."
+    case 15:
+      return "Доступ запрещён. Для audio.* часто нужен пользовательский токен с правом на аудиозаписи; сервисного ключа может быть недостаточно."
+    case 100:
+      return "Неверные параметры (owner_id / playlist_id или формат URL)."
+    case 27:
+      return "Лимит запросов (flood control), повторите позже."
+    case 28:
+      return "Метод недоступен с сервисным ключом доступа — нужен пользовательский access_token (OAuth), выданный для того же приложения, со scope на аудиозаписи (audio)."
+    default:
+      return "См. error_msg выше; для обложки плейлиста обычно нужен валидный access_token с доступом к методу."
   }
+}
+
+/**
+ * Один запрос `audio.getPlaylistById` — для скрипта проверки токена и для скрейпера.
+ * Токен в лог не пишем.
+ */
+export async function probeVkPlaylistCoverApi(
+  playlistUrl: string,
+  accessToken: string
+): Promise<VkPlaylistCoverProbe> {
+  const ids = parseVkMusicPlaylistIdsFromUrl(playlistUrl)
+  if (!ids) return { ok: false, kind: "bad_playlist_url" }
 
   const params = new URLSearchParams({
     access_token: accessToken,
@@ -104,9 +153,6 @@ async function fetchVkPlaylistCoverViaApi(playlistUrl: string, accessToken: stri
   })
 
   const apiUrl = `https://api.vk.com/method/audio.getPlaylistById?${params.toString()}`
-  console.log(
-    `${LOG_PREFIX_VK} API: audio.getPlaylistById owner_id=${ids.ownerId} playlist_id=${ids.playlistId}`
-  )
 
   const controller = new AbortController()
   const t = setTimeout(() => controller.abort(), 15_000)
@@ -115,45 +161,84 @@ async function fetchVkPlaylistCoverViaApi(playlistUrl: string, accessToken: stri
     res = await fetch(apiUrl, { signal: controller.signal })
   } catch (e) {
     clearTimeout(t)
-    console.error(`${LOG_PREFIX_VK} API: fetch error`, e)
-    return null
+    const msg = (e as Error).message || String(e)
+    return { ok: false, kind: "fetch_error", message: msg }
   }
   clearTimeout(t)
 
-  if (!res.ok) {
-    console.warn(`${LOG_PREFIX_VK} API: HTTP ${res.status}`)
-    return null
-  }
+  if (!res.ok) return { ok: false, kind: "http", status: res.status }
 
   let json: unknown
   try {
     json = await res.json()
   } catch {
-    console.error(`${LOG_PREFIX_VK} API: ответ не JSON`)
-    return null
+    return { ok: false, kind: "invalid_json" }
   }
 
   const root = json as Record<string, unknown>
   if (root["error"]) {
     const err = root["error"] as Record<string, unknown>
-    console.warn(
-      `${LOG_PREFIX_VK} API: error ${err["error_code"]} — ${err["error_msg"]} (проверьте scope audio и токен)`
-    )
-    return null
+    const code = Number(err["error_code"])
+    const message = String(err["error_msg"] ?? "")
+    return {
+      ok: false,
+      kind: "vk_error",
+      code: Number.isFinite(code) ? code : 0,
+      message,
+    }
   }
 
   const response = root["response"] as Record<string, unknown> | undefined
-  if (!response) return null
+  if (!response) return { ok: false, kind: "empty_response" }
 
   const playlist = (response["playlist"] as Record<string, unknown> | undefined) ?? response
   const photo = playlist["photo"] as Record<string, unknown> | undefined
-  const url = pickBestVkPhotoUrl(photo)
-  if (url) {
-    console.log(`${LOG_PREFIX_VK} API: ✅ обложка из photo`)
-    return url
+  const coverUrl = pickBestVkPhotoUrl(photo)
+  if (coverUrl) {
+    return { ok: true, coverUrl, ownerId: ids.ownerId, playlistId: ids.playlistId }
   }
 
-  console.warn(`${LOG_PREFIX_VK} API: в ответе нет photo / sizes`)
+  return { ok: false, kind: "no_photo" }
+}
+
+/**
+ * Обложка через официальный VK API (нужен токен с доступом к audio, например пользовательский).
+ * Токен не логируем.
+ */
+async function fetchVkPlaylistCoverViaApi(playlistUrl: string, accessToken: string): Promise<string | null> {
+  const r = await probeVkPlaylistCoverApi(playlistUrl, accessToken)
+  if (r.ok) {
+    console.log(
+      `${LOG_PREFIX_VK} API: audio.getPlaylistById owner_id=${r.ownerId} playlist_id=${r.playlistId}`
+    )
+    console.log(`${LOG_PREFIX_VK} API: ✅ обложка из photo`)
+    return r.coverUrl
+  }
+
+  switch (r.kind) {
+    case "bad_playlist_url":
+      console.warn(`${LOG_PREFIX_VK} API: не удалось разобрать owner_id / playlist_id из URL`)
+      break
+    case "fetch_error":
+      console.error(`${LOG_PREFIX_VK} API: fetch error`, r.message)
+      break
+    case "http":
+      console.warn(`${LOG_PREFIX_VK} API: HTTP ${r.status}`)
+      break
+    case "invalid_json":
+      console.error(`${LOG_PREFIX_VK} API: ответ не JSON`)
+      break
+    case "vk_error":
+      console.warn(
+        `${LOG_PREFIX_VK} API: error ${r.code} — ${r.message} (проверьте scope audio и токен)`
+      )
+      break
+    case "empty_response":
+      break
+    case "no_photo":
+      console.warn(`${LOG_PREFIX_VK} API: в ответе нет photo / sizes`)
+      break
+  }
   return null
 }
 
@@ -165,18 +250,37 @@ async function fetchVkPlaylistCoverViaApi(playlistUrl: string, accessToken: stri
  *
  * Returns null if the cover cannot be extracted or on hard errors (403/429).
  */
+/** Если URL — редирект boom.ru/redirect/playlist/vkOWNER_ID, строим настоящий vk.com URL */
+function resolveVkPlaylistUrl(playlistUrl: string): string {
+  const ids = parseVkMusicPlaylistIdsFromUrl(playlistUrl)
+  if (!ids) return playlistUrl
+  // Уже нативный VK URL — возвращаем как есть
+  if (/vk\.com|vkontakte\.ru/i.test(playlistUrl)) return playlistUrl
+  // boom.ru и прочие редиректы — строим канонический VK URL
+  return `https://vk.com/music/playlist/${ids.ownerId}_${ids.playlistId}`
+}
+
 export async function scrapeVkPlaylistCover(playlistUrl: string): Promise<string | null> {
   console.log(`${LOG_PREFIX_VK} Starting scrape for: ${playlistUrl}`)
 
+  // boom.ru/redirect/... → https://vk.com/music/playlist/...
+  const vkUrl = resolveVkPlaylistUrl(playlistUrl)
+  if (vkUrl !== playlistUrl) {
+    console.log(`${LOG_PREFIX_VK} Resolved to VK URL: ${vkUrl}`)
+  }
+
   const token = process.env.VK_PLAYLIST_COVER_ACCESS_TOKEN?.trim()
   if (token) {
-    const fromApi = await fetchVkPlaylistCoverViaApi(playlistUrl, token)
+    const fromApi = await fetchVkPlaylistCoverViaApi(vkUrl, token)
     if (fromApi) return fromApi
     console.warn(`${LOG_PREFIX_VK} API не вернул обложку — fallback на HTML`)
   }
 
-  const attempt = async (delayOnRetry: number): Promise<string | null> => {
-    const ua = randomUA()
+  // VK рендерит больше SSR-контента для мобильных UA — всегда пробуем iPhone первым
+  const VK_MOBILE_UA =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+
+  const attempt = async (delayOnRetry: number, ua: string = VK_MOBILE_UA): Promise<string | null> => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
 
@@ -184,7 +288,7 @@ export async function scrapeVkPlaylistCover(playlistUrl: string): Promise<string
 
     let res: Response
     try {
-      res = await fetch(playlistUrl, {
+      res = await fetch(vkUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent': ua,
@@ -221,7 +325,7 @@ export async function scrapeVkPlaylistCover(playlistUrl: string): Promise<string
       console.warn(`${LOG_PREFIX_VK} Non-OK status ${res.status}; ${delayOnRetry > 0 ? 'will retry' : 'giving up'}`)
       if (delayOnRetry > 0) {
         await new Promise((r) => setTimeout(r, delayOnRetry))
-        return attempt(0)
+        return attempt(0, randomUA())
       }
       return null
     }
@@ -229,13 +333,21 @@ export async function scrapeVkPlaylistCover(playlistUrl: string): Promise<string
     const html = await res.text()
     console.log(`${LOG_PREFIX_VK} Got HTML (${html.length} bytes); parsing…`)
 
-    const coverUrl = extractVkCoverFromHtml(html, playlistUrl)
+    const coverUrl = extractVkCoverFromHtml(html, vkUrl)
     if (coverUrl) {
       console.log(`${LOG_PREFIX_VK} ✅ Cover found: ${coverUrl}`)
-    } else {
-      console.warn(`${LOG_PREFIX_VK} Cover NOT found in HTML`)
+      return coverUrl
     }
-    return coverUrl
+
+    // Если iPhone UA не дал результата в первый раз — пробуем десктоп UA
+    if (ua === VK_MOBILE_UA && delayOnRetry > 0) {
+      console.warn(`${LOG_PREFIX_VK} Mobile UA: cover not found, retrying with desktop UA…`)
+      await new Promise((r) => setTimeout(r, 2000))
+      return attempt(0, randomUA())
+    }
+
+    console.warn(`${LOG_PREFIX_VK} Cover NOT found in HTML`)
+    return null
   }
 
   try {
@@ -278,42 +390,57 @@ function extractVkCoverFromHtml(html: string, sourceUrl: string): string | null 
     return ensureAbsoluteUrl(ogRaw[1], "https://vk.com")
   }
 
-  // Strategy 3: JSON-LD or page script with cover URL containing pp.userapi.com or sun9
-  const coverPatterns = [
-    /["']?(https?:\/\/(?:pp\.userapi\.com|sun\d+\.userapi\.com|vk\.com\/images)[^"'\s,]+\.(?:jpg|jpeg|png|webp))["']?/gi,
-    /["']?(https?:\/\/[^"'\s,]*\/playlist_covers[^"'\s,]+)["']?/gi,
+  // Strategy 3: JSON data embedded by VK SPA — ищем поля photo_600/photo_300/photo_max
+  // в инлайн-скриптах (VK кладёт начальное состояние в window.__INITIAL_STATE__ или подобное)
+  const jsonPhotoPatterns = [
+    // "photo_600":"https://sun9-..."  или  "photo_300":"https://..."
+    /"photo_(?:max|600|300|200)"\s*:\s*"(https?:\/\/[^"]+)"/g,
+    // "photo":"https://sun9-..."  — упрощённая форма в некоторых версиях
+    /"photo"\s*:\s*"(https?:\/\/(?:pp\.userapi\.com|sun\d+\.userapi\.com)[^"]+)"/g,
+    // "thumb":"https://..."
+    /"thumb"\s*:\s*"(https?:\/\/(?:pp\.userapi\.com|sun\d+\.userapi\.com)[^"]+)"/g,
+    // явный путь /playlist_covers/ или /c…/…/
+    /["'](https?:\/\/[^"'\s,]*\/(?:playlist_covers|c\d+\/)[^"'\s,]+\.(?:jpg|jpeg|png|webp))["']/gi,
   ]
   const scripts = $('script:not([src])').toArray()
   for (const script of scripts) {
     const text = $(script).html() || ""
-    for (const pattern of coverPatterns) {
+    for (const pattern of jsonPhotoPatterns) {
       pattern.lastIndex = 0
       const match = pattern.exec(text)
       if (match && match[1]) {
-        console.log(`${LOG_PREFIX_VK} Strategy 3 (script url): ${match[1]}`)
+        console.log(`${LOG_PREFIX_VK} Strategy 3 (script json photo): ${match[1]}`)
         return match[1]
       }
     }
   }
 
-  // Strategy 3b: весь HTML (inline JSON в SPA)
-  for (const pattern of coverPatterns) {
+  // Strategy 3b: то же, но по всему HTML (данные могут быть вне <script>)
+  for (const pattern of jsonPhotoPatterns) {
     pattern.lastIndex = 0
     const match = pattern.exec(html)
     if (match && match[1]) {
-      console.log(`${LOG_PREFIX_VK} Strategy 3b (full html url): ${match[1]}`)
+      console.log(`${LOG_PREFIX_VK} Strategy 3b (full html json): ${match[1]}`)
       return match[1]
     }
   }
 
-  // Strategy 4: any <img> whose src looks like a playlist/album cover
+  // Strategy 4: <img> с userapi.com src, но только если это явно изображение обложки
+  // (исключаем иконки/логотипы по характерным признакам)
+  const ICON_BLOCKLIST = [
+    'dTxtHF9uF1M',   // Opera logo, появляется на VK mobile как реклама браузера
+    '/images/deactivated',
+    '/images/camera',
+    '/images/question',
+  ]
   const imgs = $('img').toArray()
   for (const img of imgs) {
     const src = $(img).attr('src') || ''
     if (
       src &&
       !src.startsWith('data:') &&
-      (src.includes('pp.userapi.com') || src.includes('sun') && src.includes('userapi.com'))
+      (src.includes('pp.userapi.com') || (src.includes('sun') && src.includes('userapi.com'))) &&
+      !ICON_BLOCKLIST.some((b) => src.includes(b))
     ) {
       console.log(`${LOG_PREFIX_VK} Strategy 4 (img src): ${src}`)
       return ensureAbsoluteUrl(src, 'https://vk.com')

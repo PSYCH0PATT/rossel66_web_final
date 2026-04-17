@@ -22,7 +22,7 @@ const STALE_DAYS = 7
  *  - coverUrl IS NULL (never scraped), OR
  *  - coverFetchedAt older than STALE_DAYS days
  *
- * Schedule: Saturdays 06:00 MSK (defined in lib/scheduler.ts)
+ * Schedule: Saturdays and Sundays 06:00 MSK (lib/scheduler.ts), до BATCH_LIMIT за вызов.
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now()

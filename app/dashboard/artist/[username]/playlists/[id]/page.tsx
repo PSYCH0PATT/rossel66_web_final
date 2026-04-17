@@ -52,7 +52,7 @@ export default async function ArtistPlaylistDetailPage({
   if (!allowed) notFound()
 
   const tracks = (playlist.trackData as unknown as ParsedTrack[]) || []
-  const cover = getPlaylistCoverUrl(playlist.platform)
+  const cover = getPlaylistCoverUrl(playlist.platform, playlist.coverUrl)
   const listHref = `/dashboard/artist/${params.username}/playlists`
   const nameShort =
     playlist.playlistName.length > 40 ? `${playlist.playlistName.slice(0, 40)}…` : playlist.playlistName

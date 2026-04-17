@@ -11,7 +11,7 @@ let isSchedulerInitialized = false;
  * Инициализация планировщика
  * 
  * Koala Parser: 12:00 и 20:00 по Москве
- * Обложки плейлистов (VK/Яндекс): суббота 06:00 МСК → GET /api/cron/playlist-covers
+ * Обложки плейлистов (VK/Яндекс): суббота и воскресенье 06:00 МСК → GET /api/cron/playlist-covers (по 20 за запуск)
  * Playlist Parsers (legacy): см. runPlaylistParsers() для ручного запуска
  */
 export function initScheduler() {
@@ -38,7 +38,7 @@ export function initScheduler() {
   console.log('   • 00:30 MSK ежедневно');
   console.log('📊 Analytics Flash Import: 20:00 MSK ежедневно');
   console.log('🧹 Analytics Cleanup: 1 января 00:00 MSK');
-  console.log('🖼  Playlist covers (VK/Яндекс): суббота 06:00 MSK → /api/cron/playlist-covers');
+  console.log('🖼  Playlist covers (VK/Яндекс): сб + вс 06:00 MSK → /api/cron/playlist-covers (до 20/день)');
   console.log('═══════════════════════════════════════════════════');
   console.log('');
   
@@ -109,12 +109,21 @@ export function initScheduler() {
   });
   
   // ============================================================
-  // PLAYLIST COVER SCRAPER - каждую субботу в 06:00 МСК
+  // PLAYLIST COVER SCRAPER — суббота и воскресенье 06:00 МСК (по 20 кандидатов за вызов API)
+  // После первого прогона у строк обновляется coverFetchedAt → второй день берёт следующих 20.
   // ============================================================
 
   cron.schedule('0 6 * * 6', async () => {
     console.log('');
     console.log('🖼  [Sat 06:00 MSK] Playlist Cover Scraper...');
+    await runPlaylistCoverScraper();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+
+  cron.schedule('0 6 * * 0', async () => {
+    console.log('');
+    console.log('🖼  [Sun 06:00 MSK] Playlist Cover Scraper...');
     await runPlaylistCoverScraper();
   }, {
     timezone: 'Europe/Moscow'
