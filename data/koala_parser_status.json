@@ -1,12 +1,12 @@
 {
-  "lastRun": "2026-04-15T20:38:06.958Z",
+  "lastRun": "2026-04-18T13:27:39.210Z",
   "success": true,
   "stats": {
-    "total": 20,
-    "added": 12,
-    "updated": 8,
+    "total": 19,
+    "added": 0,
+    "updated": 19,
     "skipped": 0,
     "errors": []
   },
-  "message": "Обработано 20 релизов"
+  "message": "Обработано 19 релизов"
 }

@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { builtinModules } from 'module';
 
 // Для __dirname в ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -38,14 +39,60 @@ const nextConfig = {
   // Включаем instrumentation для запуска планировщика при старте сервера
   experimental: {
     instrumentationHook: true,
+    // RSC / server bundles: не тащить эти пакеты в webpack (иначе ломаются Node builtins в dev instrumentation)
+    serverComponentsExternalPackages: [
+      '@sentry/node',
+      '@prisma/client',
+      '@prisma/adapter-pg',
+      'pg',
+      'pg-native',
+    ],
   },
   // Transpile recharts и victory-vendor для корректной работы графиков в production
   transpilePackages: ['recharts', 'victory-vendor'],
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.alias['@'] = path.resolve(__dirname);
     // Фиксим n.scalePoint is not a function и кривые линий: подменяем victory-vendor на d3-пакеты
     config.resolve.alias['victory-vendor/d3-scale'] = path.resolve(__dirname, 'node_modules/d3-scale');
     config.resolve.alias['victory-vendor/d3-shape'] = path.resolve(__dirname, 'node_modules/d3-shape');
+    // instrumentation бандлится webpack'ом отдельным compiler'ом и не получает автоматический
+    // externalize для Node builtins и серверных пакетов. Маркируем их как CommonJS require —
+    // рантайм Node подтянет их из node_modules, не раздувая client.js / чанков instrumentation.
+    if (isServer) {
+      const NODE_BUILTINS = new Set(builtinModules);
+      const SERVER_PKGS = new Set([
+        '@sentry/node',
+        '@prisma/client',
+        '@prisma/adapter-pg',
+        'pg',
+        'pgpass',
+        'pg-native',
+      ]);
+      const ext = ({ request }, callback) => {
+        if (request && request.startsWith('node:')) {
+          return callback(undefined, `commonjs ${request.slice('node:'.length)}`);
+        }
+        if (request && NODE_BUILTINS.has(request)) {
+          return callback(undefined, `commonjs ${request}`);
+        }
+        if (
+          request &&
+          (SERVER_PKGS.has(request) ||
+            [...SERVER_PKGS].some((p) => request.startsWith(p + '/')))
+        ) {
+          return callback(undefined, `commonjs ${request}`);
+        }
+        callback();
+      };
+      if (Array.isArray(config.externals)) {
+        config.externals.push(ext);
+      } else if (typeof config.externals === 'function') {
+        const prev = config.externals;
+        config.externals = [prev, ext];
+      } else {
+        config.externals = [config.externals, ext].filter(Boolean);
+      }
+    }
     return config;
   },
   // Если у вас есть другие специфичные для проекта настройки Next.js,

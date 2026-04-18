@@ -10,7 +10,7 @@ export async function register() {
     return
   }
 
-  if (process.env.SENTRY_DSN) {
+  if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
     try {
       const Sentry = await import('@sentry/node')
       Sentry.init({
@@ -23,6 +23,9 @@ export async function register() {
     }
   }
 
-  const { initScheduler } = await import('./lib/scheduler')
-  initScheduler()
+  // Не импортировать scheduler по умолчанию: модуль тянет Prisma/node-cron и ломает dev-бандл instrumentation.
+  if (process.env.ENABLE_IN_PROCESS_SCHEDULER === 'true') {
+    const { initScheduler } = await import('./lib/scheduler')
+    initScheduler()
+  }
 }
