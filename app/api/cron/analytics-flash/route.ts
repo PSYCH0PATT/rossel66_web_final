@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import {
+  flashImportNewRunId,
   releaseFlashImportLock,
   runAnalyticsFlashSftpImport,
   tryAcquireFlashImportLock,
@@ -24,13 +25,14 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
+  const runId = flashImportNewRunId()
   let lockHeld = false
   try {
     if (!isCronAuthorized(request)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    lockHeld = await tryAcquireFlashImportLock()
+    lockHeld = await tryAcquireFlashImportLock(runId)
     if (!lockHeld) {
       return NextResponse.json(
         { success: false, error: 'Импорт уже выполняется (advisory lock)' },
@@ -55,12 +57,13 @@ export async function GET(request: NextRequest) {
     console.log(`🔌 Подключение к ${sftpHost}:${sftpPort}...`)
 
     const { status, body } = await runAnalyticsFlashSftpImport(
-      { mode, startDate, endDate },
+      { mode, startDate, endDate, runId },
       startTime
     )
     return NextResponse.json(body, { status })
   } catch (error) {
     const duration = Date.now() - startTime
+    console.error('[flash-import] cron route ERROR', { runId, durationMs: duration, err: String(error) })
     console.error('❌ Analytics Flash cron error:', error)
 
     return NextResponse.json(
@@ -74,7 +77,12 @@ export async function GET(request: NextRequest) {
     )
   } finally {
     if (lockHeld) {
-      await releaseFlashImportLock()
+      console.log('[flash-import]', 'cron route finally → releaseFlashImportLock', {
+        runId,
+        elapsedMs: Date.now() - startTime,
+      })
+      await releaseFlashImportLock(runId)
+      console.log('[flash-import]', 'cron route finally done', { runId })
     }
   }
 }

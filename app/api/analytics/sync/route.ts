@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/server-auth'
 import { analyticsSyncBodySchema } from '@/lib/api-schemas'
 import {
+  flashImportNewRunId,
   releaseFlashImportLock,
   runAnalyticsFlashSftpImport,
   tryAcquireFlashImportLock,
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
+  const runId = flashImportNewRunId()
   let lockHeld = false
   try {
     const denied = await requireAdmin(request)
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
     const body = parsed.data
     const mode = body.mode || '7days'
 
-    lockHeld = await tryAcquireFlashImportLock()
+    lockHeld = await tryAcquireFlashImportLock(runId)
     if (!lockHeld) {
       return NextResponse.json(
         { success: false, error: 'Импорт уже выполняется (advisory lock)' },
@@ -40,21 +42,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(
-      `[analytics/sync] direct import ${body.startDate?.trim() && body.endDate?.trim() ? `range ${body.startDate}…${body.endDate}` : `mode=${mode}`}`
-    )
+    console.log('[flash-import] analytics/sync import', {
+      runId,
+      kind: body.startDate?.trim() && body.endDate?.trim()
+        ? `range ${body.startDate}…${body.endDate}`
+        : `mode=${mode}`,
+    })
 
     const { status, body: result } = await runAnalyticsFlashSftpImport(
       {
         mode,
         startDate: body.startDate,
         endDate: body.endDate,
+        runId,
       },
       startTime
     )
-    console.log(`[analytics/sync] done status=${status} success=${result.success}`)
+    console.log('[flash-import] analytics/sync done', {
+      runId,
+      status,
+      success: result.success,
+      elapsedMs: Date.now() - startTime,
+    })
     return NextResponse.json(result, { status })
   } catch (error) {
+    console.error('[flash-import] analytics/sync ERROR', { runId, err: String(error) })
     console.error('❌ Ошибка ручной синхронизации аналитики:', error)
     return NextResponse.json(
       {
@@ -66,7 +78,12 @@ export async function POST(request: NextRequest) {
     )
   } finally {
     if (lockHeld) {
-      await releaseFlashImportLock()
+      console.log('[flash-import]', 'analytics/sync finally → releaseFlashImportLock', {
+        runId,
+        elapsedMs: Date.now() - startTime,
+      })
+      await releaseFlashImportLock(runId)
+      console.log('[flash-import]', 'analytics/sync finally done', { runId })
     }
   }
 }

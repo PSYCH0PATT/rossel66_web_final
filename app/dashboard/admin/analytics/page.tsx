@@ -246,25 +246,42 @@ export default function AdminAnalyticsPage() {
     const fp = Number(stats.filesProcessed || 0)
     const add = Number(stats.totalAdded || 0)
     const sk = Number(stats.totalSkipped || 0)
+    const truncated = stats.truncated === true
+    const newestAvailable =
+      typeof stats.newestAvailable === "string" ? stats.newestAvailable : null
+    const serverLagDays =
+      typeof stats.serverLagDays === "number" ? stats.serverLagDays : null
+    const lagSuffix =
+      newestAvailable && serverLagDays !== null && serverLagDays > 0
+        ? ` (SFTP отстаёт на ${serverLagDays} дн., новейший файл — ${newestAvailable})`
+        : ""
+    const truncSuffix = truncated ? " — обработка прервана по общему таймауту" : ""
+
     if (mode === "range" && stats.dateFrom && stats.dateTo) {
-      return `Период ${stats.dateFrom}…${stats.dateTo}: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+      if (fp === 0) {
+        return `Период ${stats.dateFrom}…${stats.dateTo}: файлов на SFTP нет${lagSuffix}.`
+      }
+      return `Период ${stats.dateFrom}…${stats.dateTo}: файлов ${fp}, добавлено ${add}, пропущено ${sk}${truncSuffix}`
     }
     if (mode === "today") {
       if (fp === 0) {
-        return "Сегодня (МСК): на SFTP нет файла rossel_flash за этот день (0 файлов)."
+        return `Сегодня (МСК): на SFTP нет файла rossel_flash за этот день${lagSuffix}.`
       }
-      return `Сегодня (МСК): файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+      return `Сегодня (МСК): файлов ${fp}, добавлено ${add}, пропущено ${sk}${truncSuffix}`
     }
     if (mode === "all") {
-      return `Полный импорт: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+      return `Полный импорт: файлов ${fp}, добавлено ${add}, пропущено ${sk}${truncSuffix}`
     }
     if (mode === "7days") {
-      return `Последние 7 дней: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+      if (fp === 0) {
+        return `Последние 7 дней: подходящих файлов нет${lagSuffix}.`
+      }
+      return `Последние 7 дней: файлов ${fp}, добавлено ${add}, пропущено ${sk}${lagSuffix}${truncSuffix}`
     }
     if (mode === "latest") {
-      return `Последний файл: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+      return `Последний файл: файлов ${fp}, добавлено ${add}, пропущено ${sk}${truncSuffix}`
     }
-    return `Готово: файлов ${fp}, добавлено ${add}, пропущено ${sk}`
+    return `Готово: файлов ${fp}, добавлено ${add}, пропущено ${sk}${truncSuffix}`
   }
 
   /** Синхронизация rossel_flash с SFTP (прокси → /api/cron/analytics-flash). */

@@ -12,8 +12,83 @@ import {
 import { prisma } from '@/lib/prisma'
 
 const FAST_GET_TIMEOUT_MS = 120_000
+const SFTP_END_TIMEOUT_MS = 5_000
+const UNLOCK_TIMEOUT_MS = 5_000
+const OVERALL_TIMEOUT_MS_DEFAULT = 180_000
 const DOWNLOADS_DIR = path.join(process.cwd(), 'sftp_downloads')
 export const DAYS_BACK_DEFAULT = 7
+
+/** Единый префикс — grep по логам: `flash-import` */
+const LOG = '[flash-import]'
+
+/** Сквозной id запуска (передавайте из route в lock → import → unlock). */
+export function flashImportNewRunId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function elapsed(startTime: number): number {
+  return Date.now() - startTime
+}
+
+/**
+ * Race промиса с таймаутом.
+ * Возвращает результат promise, либо `null`, если таймаут сработал раньше.
+ * Никогда не throw — используется для «best-effort» операций
+ * (sftp.end, pg_advisory_unlock), где висящий await убивает handler.
+ */
+async function withTimeout<T>(
+  p: Promise<T>,
+  ms: number,
+  label: string,
+  runId?: string
+): Promise<T | null> {
+  let timer: NodeJS.Timeout | null = null
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(LOG, 'TIMEOUT (handler продолжит без ожидания)', {
+        op: label,
+        maxMs: ms,
+        runId,
+        hint:
+          label.includes('sftp.end')
+            ? 'Раньше здесь залипали при 0 файлов — ssh2-sftp-client'
+            : label.includes('unlock')
+              ? 'Pooler/Postgres не ответил на pg_advisory_unlock'
+              : undefined,
+      })
+      resolve(null)
+    }, ms)
+  })
+  try {
+    return await Promise.race<T | null>([
+      p.catch((err) => {
+        console.warn(LOG, 'op rejected', { op: label, runId, err: String(err) })
+        return null
+      }),
+      timeout,
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+/** Закрытие SFTP-сессии с жёстким ограничением по времени. */
+async function safeEndSftp(
+  sftp: SftpClient,
+  runId: string,
+  reason: string,
+  runStartedAt: number
+): Promise<void> {
+  const t0 = Date.now()
+  console.log(LOG, 'sftp.end START', {
+    runId,
+    reason,
+    maxMs: SFTP_END_TIMEOUT_MS,
+    elapsedSinceRunStartMs: elapsed(runStartedAt),
+  })
+  await withTimeout(sftp.end(), SFTP_END_TIMEOUT_MS, 'sftp.end()', runId)
+  console.log(LOG, 'sftp.end DONE', { runId, reason, ms: Date.now() - t0 })
+}
 
 /** Сегодня по календарю Europe/Moscow (как в именах rossel_flash_YYYY_MM_DD.csv). */
 export function mskTodayYmd(): string {
@@ -32,10 +107,23 @@ export function addDaysToYmd(ymd: string, deltaDays: number): string {
   return u.toISOString().slice(0, 10)
 }
 
+/** Разница в календарных днях между двумя YYYY-MM-DD (a - b). */
+function diffDaysYmd(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number)
+  const [by, bm, bd] = b.split('-').map(Number)
+  const au = Date.UTC(ay, am - 1, ad)
+  const bu = Date.UTC(by, bm - 1, bd)
+  return Math.round((au - bu) / (24 * 60 * 60 * 1000))
+}
+
 export type FlashImportParams = {
   mode: string
   startDate?: string | null
   endDate?: string | null
+  /** Общий лимит на весь импорт (мс). По умолчанию 180 000. */
+  maxDurationMs?: number
+  /** Корреляция логов с advisory lock в route */
+  runId?: string
 }
 
 export type FlashImportHttpResult = {
@@ -43,19 +131,37 @@ export type FlashImportHttpResult = {
   body: Record<string, unknown>
 }
 
-export async function tryAcquireFlashImportLock(): Promise<boolean> {
+export async function tryAcquireFlashImportLock(runId?: string): Promise<boolean> {
+  const t0 = Date.now()
+  console.log(LOG, 'pg_try_advisory_lock START', { runId })
   const lockRows = await prisma.$queryRaw<{ ok: boolean }[]>`
     SELECT pg_try_advisory_lock(88442201, 103) AS ok
   `
-  return lockRows[0]?.ok === true
+  const ok = lockRows[0]?.ok === true
+  console.log(LOG, 'pg_try_advisory_lock DONE', {
+    runId,
+    acquired: ok,
+    ms: Date.now() - t0,
+  })
+  return ok
 }
 
-export async function releaseFlashImportLock(): Promise<void> {
-  try {
-    await prisma.$executeRaw`SELECT pg_advisory_unlock(88442201, 103)`
-  } catch {
-    /* ignore */
-  }
+/**
+ * Освобождение advisory lock с таймаутом 5s.
+ * Если Postgres/pooler молчит — не блокируем handler.
+ */
+export async function releaseFlashImportLock(runId?: string): Promise<void> {
+  const t0 = Date.now()
+  console.log(LOG, 'pg_advisory_unlock START', { runId, maxMs: UNLOCK_TIMEOUT_MS })
+  await withTimeout(
+    prisma.$executeRaw`SELECT pg_advisory_unlock(88442201, 103)`.then(
+      () => undefined
+    ),
+    UNLOCK_TIMEOUT_MS,
+    'pg_advisory_unlock',
+    runId
+  )
+  console.log(LOG, 'pg_advisory_unlock DONE', { runId, ms: Date.now() - t0 })
 }
 
 /**
@@ -66,9 +172,11 @@ export async function runAnalyticsFlashSftpImport(
   params: FlashImportParams,
   startTime: number
 ): Promise<FlashImportHttpResult> {
+  const runId = params.runId ?? flashImportNewRunId()
   const mode = params.mode || '7days'
   const startDate = params.startDate?.trim() || null
   const endDate = params.endDate?.trim() || null
+  const maxDurationMs = params.maxDurationMs ?? OVERALL_TIMEOUT_MS_DEFAULT
 
   const sftpConfig = {
     host: process.env.SFTP_HOST || 'sftp1.sp-digital.ru',
@@ -77,7 +185,22 @@ export async function runAnalyticsFlashSftpImport(
     password: process.env.SFTP_PASSWORD || '',
   }
 
+  console.log(LOG, 'pipeline START', {
+    runId,
+    mode,
+    startDate,
+    endDate,
+    maxDurationMs,
+    host: sftpConfig.host,
+    port: sftpConfig.port,
+    pid: process.pid,
+    ipv4Only: process.env.SFTP_IPV4_ONLY === 'true',
+    remoteFlashPath: process.env.SFTP_REMOTE_FLASH_PATH || '(default rossel_flash)',
+    elapsedMs: elapsed(startTime),
+  })
+
   if (!sftpConfig.username || !sftpConfig.password) {
+    console.warn(LOG, 'abort: SFTP credentials missing', { runId })
     return {
       status: 500,
       body: { success: false, error: 'SFTP credentials not configured' },
@@ -86,6 +209,8 @@ export async function runAnalyticsFlashSftpImport(
 
   const sftp = new SftpClient()
   try {
+    console.log(LOG, 'sftp.connect START', { runId, elapsedMs: elapsed(startTime) })
+    const tConnect = Date.now()
     const connectOpts = await withIpv4SocketIfRequested(
       sftpConnectOptions({
         host: sftpConfig.host,
@@ -95,11 +220,23 @@ export async function runAnalyticsFlashSftpImport(
       })
     )
     await sftp.connect(connectOpts as any)
+    console.log(LOG, 'sftp.connect DONE', {
+      runId,
+      ms: Date.now() - tConnect,
+      elapsedMs: elapsed(startTime),
+    })
     console.log('✅ Подключено к SFTP')
 
+    console.log(LOG, 'resolveFlashRemoteDir START', { runId })
+    const tDir = Date.now()
     const flashDir = await resolveFlashRemoteDir(sftp)
+    console.log(LOG, 'resolveFlashRemoteDir DONE', {
+      runId,
+      flashDir,
+      ms: Date.now() - tDir,
+    })
     if (!flashDir) {
-      await sftp.end().catch(() => {})
+      await safeEndSftp(sftp, runId, 'flash_dir_not_found', startTime)
       return {
         status: 500,
         body: {
@@ -111,9 +248,14 @@ export async function runAnalyticsFlashSftpImport(
     }
     console.log(`📁 Каталог аналитики на сервере: ${flashDir}`)
 
+    console.log(LOG, 'sftp.list START', { runId, flashDir })
+    const tList = Date.now()
     const files = await sftp.list(flashDir)
-    const csvFiles = (files as { type?: string; name: string }[])
-      .filter((f) => f.type === '-' && f.name.toLowerCase().endsWith('.csv'))
+    const rawEntries = (files as { type?: string; name: string }[]).length
+    const csvRows = (files as { type?: string; name: string }[]).filter(
+      (f) => f.type === '-' && f.name.toLowerCase().endsWith('.csv')
+    )
+    const csvFiles = csvRows
       .map((f) => {
         const m = f.name.match(/rossel_flash_(\d{4})_(\d{2})_(\d{2})\.csv$/i)
         return {
@@ -122,27 +264,43 @@ export async function runAnalyticsFlashSftpImport(
         }
       })
       .filter((f) => f.date)
+    const csvSkippedName = csvRows.length - csvFiles.length
+    console.log(LOG, 'sftp.list DONE', {
+      runId,
+      ms: Date.now() - tList,
+      rawEntries,
+      csvFilesMatchingPattern: csvFiles.length,
+      csvRowsButWrongName: csvSkippedName,
+      elapsedMs: elapsed(startTime),
+    })
 
     if (csvFiles.length === 0) {
-      await sftp.end()
+      await safeEndSftp(sftp, runId, 'no_csv_in_dir', startTime)
       return {
         status: 200,
         body: {
           success: true,
           message: `Нет CSV файлов в ${flashDir}`,
-          stats: { downloaded: 0, parsed: 0, added: 0, skipped: 0 },
+          stats: { downloaded: 0, parsed: 0, added: 0, skipped: 0, runId },
         },
       }
     }
 
     csvFiles.sort((a, b) => a.date!.localeCompare(b.date!))
+    const newestAvailable = csvFiles[csvFiles.length - 1]?.date ?? null
+    const oldestAvailable = csvFiles[0]?.date ?? null
+    const todayMsk = mskTodayYmd()
+    const serverLagDays =
+      newestAvailable ? Math.max(0, diffDaysYmd(todayMsk, newestAvailable)) : null
 
     const isoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
 
     let filesToProcess: typeof csvFiles
+    let selectionBranch = 'unknown'
     if (startDate && endDate) {
+      selectionBranch = 'range'
       if (!isoDate(startDate) || !isoDate(endDate)) {
-        await sftp.end().catch(() => {})
+        await safeEndSftp(sftp, runId, 'bad_range_dates', startTime)
         return {
           status: 400,
           body: {
@@ -152,7 +310,7 @@ export async function runAnalyticsFlashSftpImport(
         }
       }
       if (startDate > endDate) {
-        await sftp.end().catch(() => {})
+        await safeEndSftp(sftp, runId, 'range_start_after_end', startTime)
         return {
           status: 400,
           body: { success: false, error: 'startDate не может быть позже endDate' },
@@ -162,38 +320,85 @@ export async function runAnalyticsFlashSftpImport(
         (f) => f.date! >= startDate && f.date! <= endDate
       )
     } else if (mode === 'all') {
+      selectionBranch = 'all'
       filesToProcess = csvFiles
     } else if (mode === 'latest') {
+      selectionBranch = 'latest'
       filesToProcess =
         csvFiles.length > 0 ? [csvFiles[csvFiles.length - 1]] : []
     } else if (mode === 'today') {
-      const todayMsk = mskTodayYmd()
+      selectionBranch = 'today'
       filesToProcess = csvFiles.filter((f) => f.date === todayMsk)
     } else {
-      // Последние N календарных дней по МСК (даты в имени файла — отчётный день МСК)
-      const todayMsk = mskTodayYmd()
-      const cutoffStr = addDaysToYmd(todayMsk, -DAYS_BACK_DEFAULT)
+      selectionBranch = '7days'
+      // Последние N календарных дней, но cutoff — от самого свежего файла на SFTP,
+      // а не от «сегодня». Иначе, если отчёты отстают (обычная ситуация),
+      // cron будет каждый день забирать 0 файлов.
+      const anchor = newestAvailable ?? todayMsk
+      const cutoffStr = addDaysToYmd(anchor, -(DAYS_BACK_DEFAULT - 1))
       filesToProcess = csvFiles.filter((f) => f.date! >= cutoffStr)
-      const newest = csvFiles[csvFiles.length - 1]?.date
+      console.log(LOG, '7days window (MSK)', {
+        runId,
+        today: todayMsk,
+        newest: newestAvailable,
+        oldestOnSftp: oldestAvailable,
+        cutoff: cutoffStr,
+        anchor,
+        serverLagDays,
+        picked: filesToProcess.length,
+      })
       console.log(
-        `📅 Режим 7days (МСК): сегодня=${todayMsk}, cutoff>=${cutoffStr}, новейший файл на SFTP=${newest ?? '—'}`
+        `📅 Режим 7days (МСК): сегодня=${todayMsk}, новейший на SFTP=${newestAvailable ?? '—'}, cutoff>=${cutoffStr}${
+          serverLagDays !== null ? `, отставание SFTP=${serverLagDays} дн.` : ''
+        }`
       )
+      if (serverLagDays !== null && serverLagDays > 1) {
+        console.warn(LOG, 'SFTP lag vs today (MSK)', {
+          runId,
+          lagDays: serverLagDays,
+          todayMsk,
+          newestAvailable,
+        })
+      }
     }
 
+    console.log(LOG, 'file selection', {
+      runId,
+      branch: selectionBranch,
+      toProcess: filesToProcess.length,
+      totalCsvOnSftp: csvFiles.length,
+      sample: filesToProcess.slice(0, 3).map((f) => f.name),
+    })
     console.log(`📋 Файлов для обработки: ${filesToProcess.length} из ${csvFiles.length}`)
 
     if (filesToProcess.length === 0) {
-      await sftp.end().catch(() => {})
+      console.log(LOG, 'early return: 0 files after filter', {
+        runId,
+        branch: selectionBranch,
+        todayMsk,
+        newestAvailable,
+        serverLagDays,
+        nextStep: 'sftp.end (was hanging here before timeout wrap)',
+      })
+      await safeEndSftp(sftp, runId, 'zero_files_after_filter', startTime)
       const duration = Date.now() - startTime
       const statsMode =
         startDate && endDate ? 'range' : mode === 'today' ? 'today' : mode
       const hint =
         mode === 'today'
-          ? 'За сегодня (МСК) на SFTP нет подходящего CSV.'
+          ? `За сегодня (МСК ${todayMsk}) на SFTP нет файла. Новейший доступный: ${newestAvailable ?? '—'}${
+              serverLagDays !== null && serverLagDays > 0
+                ? ` (отставание ${serverLagDays} дн.)`
+                : ''
+            }`
           : startDate && endDate
-            ? 'В указанном диапазоне нет файлов rossel_flash.'
+            ? `В диапазоне ${startDate}…${endDate} нет файлов rossel_flash. Новейший на SFTP: ${newestAvailable ?? '—'}`
             : mode === '7days'
-              ? `Нет CSV за последние ${DAYS_BACK_DEFAULT} календарных дней (МСК). Попробуйте режим «Все» или укажите период.`
+              ? `Нет CSV за последние ${DAYS_BACK_DEFAULT} дн. относительно новейшего файла на SFTP (${newestAvailable ?? '—'}).${
+                  serverLagDays !== null && serverLagDays > 0
+                    ? ` SFTP отстаёт от сегодня на ${serverLagDays} дн.`
+                    : ''
+                }`
               : 'Нет файлов для выбранного режима.'
       return {
         status: 200,
@@ -209,6 +414,9 @@ export async function runAnalyticsFlashSftpImport(
             totalParsed: 0,
             totalAdded: 0,
             totalSkipped: 0,
+            newestAvailable,
+            serverLagDays,
+            runId,
             files: [],
           },
           duration: `${duration}ms`,
@@ -218,11 +426,13 @@ export async function runAnalyticsFlashSftpImport(
 
     if (!fs.existsSync(DOWNLOADS_DIR)) {
       fs.mkdirSync(DOWNLOADS_DIR, { recursive: true })
+      console.log(LOG, 'mkdir downloads', { runId, dir: DOWNLOADS_DIR })
     }
 
     let totalParsed = 0
     let totalAdded = 0
     let totalSkipped = 0
+    let truncated = false
     const fileResults: Array<{
       name: string
       date: string
@@ -231,7 +441,26 @@ export async function runAnalyticsFlashSftpImport(
       skipped: number
     }> = []
 
-    for (const file of filesToProcess) {
+    const totalFiles = filesToProcess.length
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i]
+      if (Date.now() - startTime > maxDurationMs) {
+        truncated = true
+        console.warn(LOG, 'OVERALL maxDurationMs exceeded — stopping loop', {
+          runId,
+          maxDurationMs,
+          processedFiles: fileResults.length,
+          totalPlanned: totalFiles,
+          elapsedMs: elapsed(startTime),
+        })
+        break
+      }
+      console.log(LOG, `file ${i + 1}/${totalFiles} START`, {
+        runId,
+        name: file.name,
+        date: file.date,
+        elapsedMs: elapsed(startTime),
+      })
       try {
         const localPath = path.join(DOWNLOADS_DIR, file.name)
         const forceDownload =
@@ -240,7 +469,14 @@ export async function runAnalyticsFlashSftpImport(
           mode === 'all' ||
           !!(startDate && endDate)
         if (forceDownload || !fs.existsSync(localPath)) {
+          console.log(LOG, 'fastGet START', {
+            runId,
+            remote: path.posix.join(flashDir, file.name),
+            localPath,
+            maxMs: FAST_GET_TIMEOUT_MS,
+          })
           console.log(`⬇️  Скачиваю: ${file.name}...`)
+          const tDl = Date.now()
           const dl = sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
           const timeout = new Promise<never>((_, rej) =>
             setTimeout(
@@ -250,12 +486,36 @@ export async function runAnalyticsFlashSftpImport(
             )
           )
           await Promise.race([dl, timeout])
+          console.log(LOG, 'fastGet DONE', {
+            runId,
+            name: file.name,
+            ms: Date.now() - tDl,
+          })
         } else {
+          console.log(LOG, 'skip download (cached file)', { runId, localPath })
           console.log(`📁 Уже скачан: ${file.name}`)
         }
 
+        console.log(LOG, 'parseFlashCSV START', { runId, name: file.name })
+        const tParse = Date.now()
         const records = parseFlashCSV(localPath)
+        console.log(LOG, 'parseFlashCSV DONE', {
+          runId,
+          name: file.name,
+          rows: records.length,
+          ms: Date.now() - tParse,
+        })
+
+        console.log(LOG, 'saveFlashRecords START', { runId, name: file.name })
+        const tSave = Date.now()
         const saveResult = await saveFlashRecords(records)
+        console.log(LOG, 'saveFlashRecords DONE', {
+          runId,
+          name: file.name,
+          added: saveResult.added,
+          skipped: saveResult.skipped,
+          ms: Date.now() - tSave,
+        })
 
         console.log(
           `   📊 ${file.name}: ${records.length} записей → добавлено ${saveResult.added}, пропущено ${saveResult.skipped}`
@@ -272,7 +532,17 @@ export async function runAnalyticsFlashSftpImport(
           added: saveResult.added,
           skipped: saveResult.skipped,
         })
+        console.log(LOG, `file ${i + 1}/${totalFiles} DONE`, {
+          runId,
+          name: file.name,
+          elapsedMs: elapsed(startTime),
+        })
       } catch (fileError) {
+        console.error(LOG, `file ${i + 1}/${totalFiles} ERROR`, {
+          runId,
+          name: file.name,
+          err: String(fileError),
+        })
         console.error(`❌ Ошибка обработки ${file.name}:`, fileError)
         fileResults.push({
           name: file.name,
@@ -284,17 +554,34 @@ export async function runAnalyticsFlashSftpImport(
       }
     }
 
-    await sftp.end()
+    console.log(LOG, 'loop finished — closing SFTP', {
+      runId,
+      truncated,
+      processed: fileResults.length,
+      planned: totalFiles,
+      elapsedMs: elapsed(startTime),
+    })
+    await safeEndSftp(sftp, runId, 'normal_after_loop', startTime)
 
     const duration = Date.now() - startTime
     const statsMode =
       startDate && endDate ? 'range' : mode === 'today' ? 'today' : mode
 
+    console.log(LOG, 'pipeline DONE', {
+      runId,
+      truncated,
+      durationMs: duration,
+      filesProcessed: fileResults.length,
+      totalAdded,
+      totalSkipped,
+    })
     console.log('')
     console.log('═══════════════════════════════════════════════════')
-    console.log(`✅ Импорт завершён за ${duration}ms`)
     console.log(
-      `   Файлов: ${filesToProcess.length}, Добавлено: ${totalAdded}, Пропущено: ${totalSkipped}`
+      `${truncated ? '⚠️  Импорт прерван по общему таймауту' : '✅ Импорт завершён'} за ${duration}ms`
+    )
+    console.log(
+      `   Файлов: ${fileResults.length}/${filesToProcess.length}, Добавлено: ${totalAdded}, Пропущено: ${totalSkipped}`
     )
     console.log('═══════════════════════════════════════════════════')
 
@@ -302,27 +589,34 @@ export async function runAnalyticsFlashSftpImport(
       status: 200,
       body: {
         success: true,
-        message: `Импорт завершён: ${totalAdded} новых записей из ${filesToProcess.length} файлов`,
+        message: truncated
+          ? `Импорт частично завершён (таймаут): ${totalAdded} новых из ${fileResults.length}/${filesToProcess.length} файлов`
+          : `Импорт завершён: ${totalAdded} новых записей из ${filesToProcess.length} файлов`,
         stats: {
           mode: statsMode,
           dateFrom: startDate && endDate ? startDate : undefined,
           dateTo: startDate && endDate ? endDate : undefined,
-          filesProcessed: filesToProcess.length,
+          filesProcessed: fileResults.length,
           totalAvailable: csvFiles.length,
           totalParsed,
           totalAdded,
           totalSkipped,
+          newestAvailable,
+          serverLagDays,
+          truncated,
+          runId,
           files: fileResults,
         },
         duration: `${duration}ms`,
       },
     }
   } catch (sftpError) {
-    try {
-      await sftp.end()
-    } catch {
-      /* ignore */
-    }
+    console.error(LOG, 'pipeline THROW — closing SFTP then rethrow', {
+      runId,
+      err: String(sftpError),
+      elapsedMs: elapsed(startTime),
+    })
+    await safeEndSftp(sftp, runId, 'error_path', startTime)
     throw sftpError
   }
 }
