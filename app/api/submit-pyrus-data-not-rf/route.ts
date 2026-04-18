@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-// import { TEST_PYRUS_API_KEY } from '../submit-pyrus-catalog-upload/route'; // Удаляем этот импорт
+import { getPyrusApiKey, getPyrusAccessToken } from '@/lib/pyrus'
+import { guardPublicFormRateLimit, pyrusDataNotRfSchema } from '@/lib/pyrus-public-schemas'
 
 const PYRUS_FORM_ID = 1554517;
-const PYRUS_LOGIN_EMAIL = "rossel66.music@gmail.com";
-const PYRUS_API_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Прямое определение ключа
 
 interface FormDataNotRF {
   nickname: string;
@@ -29,38 +28,19 @@ interface FormDataNotRF {
   bankKpp?: string;
 }
 
-async function getPyrusAccessToken(apiKey: string): Promise<string | null> {
-  try {
-    const response = await fetch("https://api.pyrus.com/v4/auth", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        login: PYRUS_LOGIN_EMAIL,
-        security_key: apiKey,
-      }),
-    });
-    const data = await response.json();
-    return data.access_token || null;
-  } catch (error) {
-    console.error("Pyrus auth error:", error);
-    return null;
-  }
-}
-
 export async function POST(request: Request) {
-  const pyrusApiKey = PYRUS_API_KEY; // Используем локально определенный ключ
+  const rl = guardPublicFormRateLimit(request)
+  if (rl) return rl
 
-  if (!pyrusApiKey) {
-    console.error("Pyrus API Key (TEST_PYRUS_API_KEY) is not configured."); // Updated log message
+  if (!getPyrusApiKey()) {
+    console.error("Pyrus API Key не настроен (PYRUS_API_KEY).");
     return NextResponse.json(
       { message: "Ошибка сервера: Ключ API Pyrus не настроен." },
       { status: 500 }
     );
   }
 
-  const accessToken = await getPyrusAccessToken(pyrusApiKey);
+  const accessToken = await getPyrusAccessToken();
   if (!accessToken) {
     return NextResponse.json(
       { message: "Ошибка аутентификации Pyrus." },
@@ -69,7 +49,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const formData: FormDataNotRF = await request.json();
+    const rawBody: unknown = await request.json().catch(() => null)
+    const validated = pyrusDataNotRfSchema.safeParse(rawBody)
+    if (!validated.success) {
+      return NextResponse.json(
+        { message: 'Некорректные поля формы.', details: validated.error.flatten() },
+        { status: 400 }
+      )
+    }
+    const formData: FormDataNotRF = validated.data as FormDataNotRF
 
     const fields = [
       { id: 1, value: formData.nickname }, // Ваш никнейм

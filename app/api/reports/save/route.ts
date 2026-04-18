@@ -90,8 +90,7 @@ export async function POST(request: Request) {
 
       const filePath = path.join(quarterDir, fileName)
       const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-      fs.writeFileSync(filePath, buffer)
+      fs.writeFileSync(filePath, new Uint8Array(arrayBuffer))
 
       counter++
       const reportId = `r${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 7)}`

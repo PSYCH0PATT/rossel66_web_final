@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const fileBuffer = fs.readFileSync(filepath)
     
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${backup.filename}"`,

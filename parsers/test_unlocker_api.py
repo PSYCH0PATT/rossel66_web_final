@@ -4,6 +4,7 @@
 Тест Bright Data Web Unlocker API для решения Yandex SmartCaptcha
 """
 
+import os
 import requests
 import json
 import logging
@@ -15,8 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Данные из панели Bright Data
-API_KEY = "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70"
+# Данные из панели Bright Data (ключ только через окружение)
+API_KEY = (os.environ.get("BRIGHT_DATA_API_KEY") or "").strip()
 ZONE = "web_unlocker1"
 BASE_URL = "https://api.brightdata.com/request"
 
@@ -167,6 +168,9 @@ def test_bandlink_search():
 
 def main():
     """Главная функция"""
+    if not API_KEY:
+        logger.error("Установите переменную окружения BRIGHT_DATA_API_KEY")
+        sys.exit(1)
     logger.info("🚀 Запуск тестов Web Unlocker API")
     logger.info("")
     

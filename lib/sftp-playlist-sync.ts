@@ -474,8 +474,9 @@ export async function downloadLatestCsvFromSftp(): Promise<DownloadLatestCsvResu
 
     const list = await sftp.list(remoteBase)
     const csvRows = list.filter(
-      (file: { type?: string; name?: string }) => file.type === '-' && (file.name || '').endsWith('.csv')
-    ) as Array<{ name: string; modifyTime?: number }>
+      (file): file is { name: string; modifyTime?: number; type: string } =>
+        file.type === "-" && (file.name || "").endsWith(".csv")
+    )
 
     if (csvRows.length === 0) {
       await sftp.end().catch(() => {})

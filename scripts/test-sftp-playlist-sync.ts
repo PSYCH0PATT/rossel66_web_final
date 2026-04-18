@@ -64,7 +64,7 @@ async function main() {
   console.log('Последний CSV файл:', latestFile ?? '(нет)');
 
   if (latestFile) {
-    const playlists = processCsvFiles([latestFile]);
+    const playlists = await processCsvFiles([latestFile]);
     console.log('Плейлистов после processCsvFiles:', playlists.length);
     playlists.forEach((p, i) => {
       console.log(`  Плейлист [${i + 1}]: "${p.playlistName}" (${p.platform}), треков: ${p.tracks.length}`);

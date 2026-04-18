@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
+import { getSessionUser, requireAuth, requireAdmin } from '@/lib/server-auth'
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'release_added',
@@ -16,11 +17,19 @@ const ACTIVITY_TYPES: ActivityType[] = [
 // GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+
+    const session = getSessionUser()
     const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId') || undefined
+    let userId = searchParams.get('userId') || undefined
     const role = (searchParams.get('role') as 'artist' | 'admin') || undefined
+
+    if (session?.role === 'artist') {
+      userId = session.id
+    }
     const typeParam = searchParams.getAll('type').filter(Boolean)
-    const types: ActivityType[] = typeParam.length
+    const types: ActivityType[] | undefined = typeParam.length
       ? typeParam.filter((t): t is ActivityType => ACTIVITY_TYPES.includes(t as ActivityType))
       : undefined
     const dateFrom = searchParams.get('dateFrom') || undefined
@@ -49,6 +58,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/activities
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { type, userId, userRole, title, description, metadata } = body

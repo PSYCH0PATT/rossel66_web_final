@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAvailableArtists } from '@/lib/flash-storage'
+import { requireAdmin } from '@/lib/server-auth'
 
 /**
  * GET /api/analytics/artists
@@ -8,6 +9,9 @@ import { getAvailableArtists } from '@/lib/flash-storage'
  */
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     const { searchParams } = new URL(request.url)
     const take = Math.min(Number(searchParams.get('take') || '100') || 100, 2000)
     const skip = Math.max(0, Number(searchParams.get('skip') || '0') || 0)

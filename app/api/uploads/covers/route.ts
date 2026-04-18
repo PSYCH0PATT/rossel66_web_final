@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
+import { requireAdmin } from "@/lib/server-auth"
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     const formData = await request.formData()
     const file = formData.get('file') as unknown as File | null
     if (!file) {
@@ -13,7 +17,6 @@ export async function POST(request: Request) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
 
     const dir = path.join(process.cwd(), 'public', 'uploads', 'covers')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -24,7 +27,7 @@ export async function POST(request: Request) {
     const ext = allowedExtensions.includes(rawExt.toLowerCase()) ? rawExt.toLowerCase() : '.jpg'
     const filename = `cover_${Date.now()}${ext}`
     const filepath = path.join(dir, filename)
-    fs.writeFileSync(filepath, buffer)
+    fs.writeFileSync(filepath, new Uint8Array(arrayBuffer))
 
     const url = `/uploads/covers/${filename}`
     return NextResponse.json({ success: true, url })

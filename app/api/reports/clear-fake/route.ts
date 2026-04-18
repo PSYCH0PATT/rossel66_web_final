@@ -2,9 +2,13 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import * as fs from "fs"
 import * as path from "path"
+import { requireAdmin } from "@/lib/server-auth"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     // Находим фейковые отчеты (незарегистрированные артисты)
     const fakeReports = await prisma.report.findMany({
       where: {

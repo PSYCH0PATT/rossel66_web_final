@@ -18,7 +18,11 @@ set -euo pipefail
 
 # Конфигурация
 BASE_URL="${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}"
-CRON_SECRET="${CRON_SECRET:-x7Kp9mN2vQ8sL4wR}"
+
+if [ -z "${CRON_SECRET:-}" ]; then
+  echo "Ошибка: задайте CRON_SECRET в окружении (никаких значений по умолчанию в репозитории)."
+  exit 1
+fi
 
 echo "═══════════════════════════════════════════════════"
 echo "📊 Настройка cron задач для аналитики Flash"

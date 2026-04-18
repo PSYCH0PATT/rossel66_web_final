@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as path from 'path';
 import { syncSftpPlaylists, getLatestCsvFile } from '@/lib/sftp-playlist-sync';
 import { importPlaylistsFromCsvFile } from '@/lib/playlist-sftp-pipeline';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic'
 
-// Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
 const CRON_SECRET = process.env.CRON_SECRET;
 
 if (!CRON_SECRET) {
@@ -24,13 +24,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Проверяем авторизацию
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = request.nextUrl.searchParams.get('secret');
-
-    const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
-
-    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       console.log('❌ Cron Playlists SFTP: Неверный секрет авторизации или CRON_SECRET не настроен');
       return NextResponse.json({
         success: false,

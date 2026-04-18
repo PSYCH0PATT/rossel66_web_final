@@ -170,7 +170,7 @@ async function migrateReleases() {
           tracks: r.tracks || [],
           featuredArtistIds: r.featuredArtistIds || [],
           featuredArtistNames: r.featuredArtistNames || [],
-          metadata: Object.keys(extra).length > 0 ? extra : null,
+          metadata: Object.keys(extra).length > 0 ? extra : undefined,
         },
       })
       created++
@@ -264,7 +264,7 @@ async function migrateActivities() {
           userRole: act.userRole,
           title: act.title,
           description: act.description,
-          metadata: act.metadata || null,
+          metadata: act.metadata ?? undefined,
           createdAt: act.createdAt ? new Date(act.createdAt) : new Date(),
         },
       })

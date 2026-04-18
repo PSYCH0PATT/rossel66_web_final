@@ -356,7 +356,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                         const mainArtist = users.find(u => u.id === release.artistId)
                         const mainArtistName = mainArtist?.name || ''
                         const featuredArtists = [
-                          ...(track.featuredArtistIds || []).map(id => {
+                          ...(track.featuredArtistIds || []).map((id: string) => {
                             const artist = users.find(u => u.id === id)
                             return artist?.name || id
                           }),
@@ -367,8 +367,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
 
                         if (!hasMultipleArtists) return null
 
-                        const royaltyShares = track.royaltyShares || {}
-                        const totalShare = Object.values(royaltyShares).reduce((sum, val) => sum + (Number(val) || 0), 0)
+                        const royaltyShares = (track.royaltyShares || {}) as Record<string, number>
+                        const totalShare = Object.values(royaltyShares).reduce(
+                          (sum, val) => sum + (Number(val) || 0),
+                          0
+                        )
                         const isValid = totalShare === 100 || totalShare === 0
 
                         return (

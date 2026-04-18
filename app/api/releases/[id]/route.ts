@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server"
-import { updateRelease, deleteRelease, getUserById } from "@/lib/storage"
+import { updateRelease, deleteRelease, getUserById, type Release } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
 import { releaseFromPrisma } from "@/lib/storage-adapters"
+import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { releasePutSchema } from "@/lib/api-schemas"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+    const session = getSessionUser()!
+
     const { id } = params
     const raw = await prisma.release.findUnique({ where: { id } })
     if (!raw) {
@@ -12,6 +18,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const release = releaseFromPrisma(raw)
+    if (session.role !== "admin" && release.artistId !== session.id) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    }
     const artist = release.artistId ? await getUserById(release.artistId) : null
     const releaseWithArtist = {
       ...release,
@@ -27,10 +36,30 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = params
-    const updates = await request.json()
+    const denied = await requireAuth(request)
+    if (denied) return denied
+    const session = getSessionUser()!
 
-    const updatedRelease = await updateRelease(id, updates)
+    const { id } = params
+    const raw = await prisma.release.findUnique({ where: { id }, select: { artistId: true } })
+    if (!raw) {
+      return NextResponse.json({ success: false, error: "Release not found" }, { status: 404 })
+    }
+    if (session.role !== "admin" && raw.artistId !== session.id) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const parsed = releasePutSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Некорректные данные", details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+    const updates = parsed.data
+
+    const updatedRelease = await updateRelease(id, updates as Partial<Release>)
 
     if (updatedRelease) {
       return NextResponse.json({ success: true, message: "Release updated successfully" })
@@ -45,7 +74,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+    const session = getSessionUser()!
+
     const { id } = params
+    const raw = await prisma.release.findUnique({ where: { id }, select: { artistId: true } })
+    if (!raw) {
+      return NextResponse.json({ success: false, error: "Release not found" }, { status: 404 })
+    }
+    if (session.role !== "admin" && raw.artistId !== session.id) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    }
 
     const success = await deleteRelease(id)
 

@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import type { UserRole } from "@/lib/data"
+import type { UserRole } from "@/lib/storage"
 
 interface AuthCheckProps {
   children: React.ReactNode

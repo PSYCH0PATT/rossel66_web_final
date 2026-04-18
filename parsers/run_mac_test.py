@@ -14,10 +14,15 @@ def setup_test_environment():
     """Настраивает тестовое окружение"""
     print("🔧 Настройка тестового окружения для Mac...")
     
+    captcha_key = os.environ.get("TWOCAPTCHA_API_KEY", "").strip()
+    if not captcha_key:
+        print("❌ Задайте TWOCAPTCHA_API_KEY в окружении")
+        sys.exit(1)
+
     # Создаем тестовый конфиг со всеми артистами
     test_config = {
         "target_artists": ["Wide Pie", "Sour Diesel", "Lover"],  # Все артисты
-        "captcha_api_key": "1dadad5f5bfe4dbb89a806b52118ad45"
+        "captcha_api_key": captcha_key,
     }
     
     config_path = "temp_bandlink_config.json"

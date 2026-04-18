@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aggregateAndCleanup } from '@/lib/flash-storage'
 import { addActivity } from '@/lib/storage'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
-
-const CRON_SECRET = process.env.CRON_SECRET
 
 /**
  * GET /api/cron/analytics-cleanup
@@ -17,12 +16,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // Проверяем авторизацию
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = request.nextUrl.searchParams.get('secret')
-    const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret
-
-    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -36,7 +30,7 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime
 
     // Логируем активность
-    addActivity({
+    await addActivity({
       type: 'analytics_cleanup',
       userId: 'system',
       userRole: 'admin',

@@ -68,8 +68,7 @@ export async function POST(request: Request) {
         // Сохраняем файл в директорию квартала
         const filePath = path.join(quarterDir, fileName)
         const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        fs.writeFileSync(filePath, buffer)
+        fs.writeFileSync(filePath, new Uint8Array(arrayBuffer))
 
         // Анализируем файл для получения дополнительной информации
         const workbook = XLSX.read(arrayBuffer)
@@ -80,13 +79,13 @@ export async function POST(request: Request) {
         const dataSheet = workbook.SheetNames.find((name) => name !== "Итог") || workbook.SheetNames[0]
         if (dataSheet) {
           const worksheet = workbook.Sheets[dataSheet]
-          const jsonData = XLSX.utils.sheet_to_json(worksheet)
+          const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[]
 
           // Ищем итоговую строку
-          const totalRow = jsonData.find((row: any) => row["Код"] === "Итого" || row[0] === "Итого")
+          const totalRow = jsonData.find((row) => row["Код"] === "Итого" || row[0] === "Итого")
           if (totalRow) {
-            totalPlays = totalRow["Количество"] || totalRow[4] || 0
-            totalAmount = totalRow["Сумма, руб."] || totalRow[5] || 0
+            totalPlays = Number(totalRow["Количество"] ?? totalRow[4] ?? 0)
+            totalAmount = Number(totalRow["Сумма, руб."] ?? totalRow[5] ?? 0)
           }
         }
 
@@ -101,7 +100,10 @@ export async function POST(request: Request) {
 
         // Создаем запись отчета с правильным ID артиста
         const reportId = `r${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-        const artist = users.find((user) => user.id === artistId)
+        const artistRow = await prisma.user.findUnique({
+          where: { id: artistId },
+          select: { name: true },
+        })
 
         // Относительный путь для БД
         const relativeFilePath = `uploads/reports/${quarter}/${fileName}`
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
           data: {
             id: reportId,
             artistId: artistId,
-            artistName: artist?.name || artistNameFromFile,
+            artistName: artistRow?.name || artistNameFromFile,
             quarter: quarter,
             year: year,
             fileName: fileName,
@@ -129,7 +131,7 @@ export async function POST(request: Request) {
 
         processedFiles.push({
           name: fileName,
-          artist: artist?.name || artistNameFromFile,
+          artist: artistRow?.name || artistNameFromFile,
           artistId,
         })
       } catch (error) {

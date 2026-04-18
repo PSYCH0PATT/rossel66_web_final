@@ -180,7 +180,7 @@ function parseCsvLine(line: string): string[] {
 /**
  * Группирует записи по плейлистам
  */
-export function groupByPlaylist(records: CsvRecord[]): Map<string, ParsedPlaylist> {
+export async function groupByPlaylist(records: CsvRecord[]): Promise<Map<string, ParsedPlaylist>> {
   const playlists = new Map<string, ParsedPlaylist>();
   
   for (const record of records) {
@@ -198,7 +198,7 @@ export function groupByPlaylist(records: CsvRecord[]): Map<string, ParsedPlaylis
     
     const playlist = playlists.get(key)!;
     const artistName = normalizeArtistName(extractArtistName(record.title_artist));
-    const artist = findArtistByName(artistName);
+    const artist = await findArtistByName(artistName);
     
     playlist.tracks.push({
       titleArtist: record.title_artist,
@@ -225,7 +225,7 @@ export function groupByPlaylist(records: CsvRecord[]): Map<string, ParsedPlaylis
 /**
  * Обрабатывает все CSV файлы и возвращает плейлисты
  */
-export function processCsvFiles(filePaths: string[]): ParsedPlaylist[] {
+export async function processCsvFiles(filePaths: string[]): Promise<ParsedPlaylist[]> {
   const allPlaylists = new Map<string, ParsedPlaylist>();
   
   console.log(`📊 Начинаю обработку ${filePaths.length} CSV файлов...`);
@@ -241,7 +241,7 @@ export function processCsvFiles(filePaths: string[]): ParsedPlaylist[] {
         continue;
       }
       
-      const playlists = groupByPlaylist(records);
+      const playlists = await groupByPlaylist(records);
       console.log(`   Сгруппировано плейлистов: ${playlists.size}`);
       
       // Объединяем плейлисты (если плейлист уже есть, добавляем треки)

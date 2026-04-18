@@ -1,5 +1,5 @@
 import { parseVkMusicArtistPage } from "./vk-parser"
-import { users } from "./data"
+import { prisma } from "./prisma"
 
 // Флаг для включения/отключения периодического парсинга
 let isScheduledCrawlingEnabled = false
@@ -34,11 +34,49 @@ async function fetchHtml(url: string): Promise<string | null> {
   }
 }
 
+function persistPlaylistsJson(artistId: string, artistName: string, playlists: ReturnType<typeof parseVkMusicArtistPage>): void {
+  if (typeof window === "undefined") {
+    console.log(
+      `[playlist-crawler] Skipping localStorage (SSR): would store ${playlists.length} playlists for ${artistName} (${artistId})`
+    )
+    return
+  }
+  try {
+    const playlistsStr = localStorage.getItem("playlists")
+    const existingPlaylists = playlistsStr ? JSON.parse(playlistsStr) : []
+
+    const newPlaylists = playlists.map((playlist, index) => ({
+      id: `pl_vk_${Date.now()}_${index}`,
+      name: playlist.name,
+      platform: "VK Музыка",
+      imageUrl: playlist.imageUrl,
+      trackId: "",
+      artistId,
+      addedDate: new Date().toISOString().split("T")[0],
+      description: "Плейлист из ВК Музыки (автоматически добавлен)",
+      externalUrl: playlist.playlistUrl,
+    }))
+
+    const filteredPlaylists = existingPlaylists.filter(
+      (p: { artistId?: string; platform?: string; externalUrl?: string }) =>
+        !(p.artistId === artistId && p.platform === "VK Музыка" && p.externalUrl && p.externalUrl.includes("vk.com"))
+    )
+
+    const updatedPlaylists = [...filteredPlaylists, ...newPlaylists]
+    localStorage.setItem("playlists", JSON.stringify(updatedPlaylists))
+    console.log(`Successfully updated ${newPlaylists.length} playlists for ${artistName}`)
+  } catch (error) {
+    console.error("Error saving playlists to localStorage:", error)
+  }
+}
+
 // Функция для парсинга плейлистов артиста
 export async function crawlArtistPlaylists(artistId: string): Promise<void> {
   try {
-    // Найти артиста
-    const artist = users.find((user) => user.id === artistId)
+    const artist = await prisma.user.findFirst({
+      where: { id: artistId, role: "artist" },
+      select: { id: true, name: true, vkMusicUrl: true },
+    })
     if (!artist || !artist.vkMusicUrl) {
       console.log(`Skipping artist ${artist?.name || artistId}: No VK Music URL`)
       return
@@ -46,16 +84,13 @@ export async function crawlArtistPlaylists(artistId: string): Promise<void> {
 
     console.log(`Crawling playlists for artist: ${artist.name} (${artist.vkMusicUrl})`)
 
-    // Получить HTML-код страницы артиста
     const html = await fetchHtml(artist.vkMusicUrl)
 
-    // Если не удалось получить HTML, пропускаем этого артиста
     if (!html) {
       console.log(`Could not fetch HTML for artist ${artist.name}, skipping`)
       return
     }
 
-    // Парсить HTML и извлечь плейлисты
     const playlists = parseVkMusicArtistPage(html)
 
     console.log(`Found ${playlists.length} playlists for ${artist.name}`)
@@ -64,43 +99,7 @@ export async function crawlArtistPlaylists(artistId: string): Promise<void> {
       return
     }
 
-    // Сохранить плейлисты в localStorage (или в базу данных в реальном приложении)
-    let existingPlaylists = []
-    try {
-      const playlistsStr = localStorage.getItem("playlists")
-      existingPlaylists = playlistsStr ? JSON.parse(playlistsStr) : []
-    } catch (error) {
-      console.error("Error parsing playlists from localStorage:", error)
-      existingPlaylists = []
-    }
-
-    // Удалить старые плейлисты этого артиста из VK Music
-    const filteredPlaylists = existingPlaylists.filter(
-      (p: any) =>
-        !(p.artistId === artistId && p.platform === "VK Музыка" && p.externalUrl && p.externalUrl.includes("vk.com")),
-    )
-
-    // Добавить новые плейлисты
-    const newPlaylists = playlists.map((playlist, index) => ({
-      id: `pl_vk_${Date.now()}_${index}`,
-      name: playlist.name,
-      platform: "VK Музыка",
-      imageUrl: playlist.imageUrl,
-      trackId: "", // Пустой trackId
-      artistId,
-      addedDate: new Date().toISOString().split("T")[0],
-      description: "Плейлист из ВК Музыки (автоматически добавлен)",
-      externalUrl: playlist.playlistUrl,
-    }))
-
-    const updatedPlaylists = [...filteredPlaylists, ...newPlaylists]
-
-    try {
-      localStorage.setItem("playlists", JSON.stringify(updatedPlaylists))
-      console.log(`Successfully updated ${newPlaylists.length} playlists for ${artist.name}`)
-    } catch (error) {
-      console.error("Error saving playlists to localStorage:", error)
-    }
+    persistPlaylistsJson(artist.id, artist.name, playlists)
   } catch (error) {
     console.error(`Error crawling playlists for artist ${artistId}:`, error)
   }
@@ -110,20 +109,22 @@ export async function crawlArtistPlaylists(artistId: string): Promise<void> {
 export async function crawlAllArtistsPlaylists(): Promise<void> {
   console.log("Starting playlist crawling for all artists...")
 
-  // Получить всех артистов с URL VK Music
-  const artistsWithVkMusic = users.filter((user) => user.role === "artist" && user.vkMusicUrl)
+  const artistsWithVkMusic = await prisma.user.findMany({
+    where: {
+      role: "artist",
+      AND: [{ vkMusicUrl: { not: null } }, { vkMusicUrl: { not: "" } }],
+    },
+    select: { id: true, name: true, vkMusicUrl: true },
+  })
   console.log(`Found ${artistsWithVkMusic.length} artists with VK Music URLs`)
 
-  // Для каждого артиста выполнить парсинг плейлистов
   for (const artist of artistsWithVkMusic) {
     try {
       await crawlArtistPlaylists(artist.id)
     } catch (error) {
       console.error(`Error processing artist ${artist.name} (ID: ${artist.id}):`, error)
-      // Продолжаем с следующим артистом
     }
 
-    // Добавляем небольшую задержку, чтобы не перегружать сервер VK
     await new Promise((resolve) => setTimeout(resolve, 2000))
   }
 
@@ -137,20 +138,16 @@ export function startScheduledCrawling(intervalHours = 3): void {
   console.log(`Scheduled playlist crawling enabled, interval: ${intervalHours} hours`)
   isScheduledCrawlingEnabled = true
 
-  // Запустить периодический парсинг
   const intervalMs = intervalHours * 60 * 60 * 1000
 
-  // Очищаем предыдущий интервал, если он был
   if (crawlingInterval) {
     clearInterval(crawlingInterval)
   }
 
-  // Запускаем парсинг сразу при старте
-  crawlAllArtistsPlaylists()
+  void crawlAllArtistsPlaylists()
 
-  // Устанавливаем интервал для периодического парсинга
   crawlingInterval = setInterval(() => {
-    crawlAllArtistsPlaylists()
+    void crawlAllArtistsPlaylists()
   }, intervalMs)
 }
 

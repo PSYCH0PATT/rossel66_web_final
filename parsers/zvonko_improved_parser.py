@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 import time
 import re
 import traceback
@@ -33,8 +34,12 @@ class ZvonkoImprovedParser:
     def __init__(self):
         self.base_url = "https://account.zvonkodigital.com"
         self.releases_url = "https://account.zvonkodigital.com/music/releases"
-        self.username = "rossel_66"
-        self.password = "rossel_66_27122023"
+        self.username = (os.environ.get("ZVONKO_USERNAME") or "").strip()
+        if not self.username:
+            raise ValueError("ZVONKO_USERNAME environment variable is required")
+        self.password = os.environ.get("ZVONKO_PASSWORD")
+        if not self.password:
+            raise ValueError("Задайте переменную окружения ZVONKO_PASSWORD")
         self.driver = None
     
     def setup_driver(self):

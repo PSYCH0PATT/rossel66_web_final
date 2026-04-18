@@ -30,9 +30,9 @@ export async function importPlaylistsFromCsvFile(
   const filename = path.basename(absolutePath)
   const errors: string[] = []
 
-  let playlists: ReturnType<typeof processCsvFiles> = []
+  let playlists: Awaited<ReturnType<typeof processCsvFiles>> = []
   try {
-    playlists = processCsvFiles([absolutePath])
+    playlists = await processCsvFiles([absolutePath])
   } catch (e: any) {
     return {
       success: false,

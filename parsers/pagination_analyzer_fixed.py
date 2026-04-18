@@ -4,6 +4,8 @@
 Анализатор пагинации Zvonko с правильными селекторами
 """
 
+import os
+import sys
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -12,6 +14,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 def main():
+    zpwd = os.environ.get("ZVONKO_PASSWORD")
+    if not zpwd:
+        print("Задайте ZVONKO_PASSWORD", file=sys.stderr)
+        sys.exit(1)
+    zuser = os.environ.get("ZVONKO_USERNAME", "").strip()
+    if not zuser:
+        print("Задайте ZVONKO_USERNAME", file=sys.stderr)
+        sys.exit(1)
     print("🔍 Анализ пагинации Zvonko с правильными селекторами...")
     
     # Настройка Chrome
@@ -37,10 +47,10 @@ def main():
         password_input = driver.find_element(By.NAME, "password")
         
         username_input.clear()
-        username_input.send_keys("rossel_66")
+        username_input.send_keys(zuser)
         
         password_input.clear()
-        password_input.send_keys("rossel_66_27122023")
+        password_input.send_keys(zpwd)
         
         submit_input = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
         submit_input.submit()

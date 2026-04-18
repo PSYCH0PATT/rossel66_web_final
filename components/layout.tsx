@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 import Sidebar from "./sidebar"
 import TopNav from "./top-nav"
-import type { UserRole } from "@/lib/data"
+import type { UserRole } from "@/lib/storage"
 import AuthCheck from "./auth-check"
 
 interface LayoutProps {

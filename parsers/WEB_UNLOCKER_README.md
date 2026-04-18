@@ -31,7 +31,7 @@
 Создайте/обновите `.env.local`:
 
 ```bash
-BRIGHT_DATA_API_KEY=4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70
+BRIGHT_DATA_API_KEY=your_bright_data_api_key_here
 ```
 
 ### На сервере (Timeweb/GitHub Actions)
@@ -43,7 +43,7 @@ BRIGHT_DATA_API_KEY=4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb07
 
 ```
 Name: BRIGHT_DATA_API_KEY
-Value: 4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70
+Value: <secret from Bright Data dashboard>
 ```
 
 ## 📦 Зависимости

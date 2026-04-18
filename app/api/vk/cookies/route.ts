@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import sqlite3 from 'sqlite3';
+import { requireAdmin } from '@/lib/server-auth';
 
 // Путь к БД
 const DB_PATH = path.join(process.cwd(), 'vk_playlists.db');
@@ -132,6 +133,9 @@ function parseCookies(input: string): { name: string; value: string }[] {
 
 // GET: Получение текущих cookies
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   const db = getDb();
   
   try {
@@ -183,6 +187,9 @@ export async function GET(request: NextRequest) {
 
 // POST: Обновление cookies из curl команды или строки
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   const db = getDb();
   
   try {
@@ -259,6 +266,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Удаление всех cookies
 export async function DELETE(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   const db = getDb();
   
   try {

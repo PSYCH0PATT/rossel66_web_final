@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAvailableTracks } from '@/lib/flash-storage'
+import { getSessionUser, requireAuth } from '@/lib/server-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +13,15 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+    const session = getSessionUser()!
+
     const { searchParams } = new URL(request.url)
-    const artistId = searchParams.get('artistId') || undefined
+    let artistId = searchParams.get('artistId') || undefined
+    if (session.role === 'artist') {
+      artistId = session.id
+    }
     const take = Math.min(Number(searchParams.get('take') || '100') || 100, 2000)
     const skip = Math.max(0, Number(searchParams.get('skip') || '0') || 0)
     const tracks = await getAvailableTracks(artistId, { take, skip })

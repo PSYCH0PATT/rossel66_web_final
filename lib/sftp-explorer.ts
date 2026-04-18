@@ -162,7 +162,7 @@ export async function exploreSftpServer(config: SftpConfig): Promise<any> {
           const contentStr = fileContent.toString('utf-8');
           
           // Анализируем структуру CSV
-          const lines = contentStr.split('\n').filter(l => l.trim());
+          const lines = contentStr.split('\n').filter((l: string) => l.trim());
           const headers = lines[0]?.split(',') || [];
           const sampleRows = lines.slice(1, Math.min(4, lines.length));
           

@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
-  PYRUS_API_KEY,
+  getPyrusApiKey,
   getPyrusAccessToken,
   uploadFileToPyrus,
   getPyrusErrorMessage,
 } from "@/lib/pyrus";
+import {
+  guardPublicFormRateLimit,
+  safeParseFormJsonString,
+  pyrusReleaseUploadClientSchema,
+} from "@/lib/pyrus-public-schemas";
 
 const PYRUS_FORM_ID_RELEASE_UPLOAD = 1534238;
 
@@ -147,14 +152,17 @@ function buildPyrusFieldsFromClientData(
 }
 
 export async function POST(request: NextRequest) {
-  if (!PYRUS_API_KEY) {
+  const rl = guardPublicFormRateLimit(request);
+  if (rl) return rl;
+
+  if (!getPyrusApiKey()) {
     return NextResponse.json(
       { message: "Ошибка сервера: Ключ API Pyrus не настроен." },
       { status: 500 }
     );
   }
 
-  const accessToken = await getPyrusAccessToken(PYRUS_API_KEY);
+  const accessToken = await getPyrusAccessToken();
   if (!accessToken) {
     return NextResponse.json(
       { message: "Ошибка аутентификации Pyrus." },
@@ -169,8 +177,15 @@ export async function POST(request: NextRequest) {
     let trackGuids: { audioGuid: string | null; lyricsGuid: string | null }[] = [];
 
     if (contentType.includes("application/json")) {
-      const body = await request.json();
-      clientData = body as ReleaseUploadAPIData;
+      const body: unknown = await request.json().catch(() => null);
+      const v = pyrusReleaseUploadClientSchema.safeParse(body);
+      if (!v.success) {
+        return NextResponse.json(
+          { message: "Некорректные поля формы.", details: v.error.flatten() },
+          { status: 400 }
+        );
+      }
+      clientData = v.data as unknown as ReleaseUploadAPIData;
       coverGuid = clientData.coverArtGuid ?? null;
       trackGuids = clientData.tracks.map((t) => ({
         audioGuid: t.audioGuid ?? null,
@@ -179,13 +194,9 @@ export async function POST(request: NextRequest) {
     } else {
       const formDataFromRequest = await request.formData();
       const formJsonString = formDataFromRequest.get("form_data_json") as string | null;
-      if (!formJsonString) {
-        return NextResponse.json(
-          { message: "Отсутствуют основные данные формы." },
-          { status: 400 }
-        );
-      }
-      clientData = JSON.parse(formJsonString) as ReleaseUploadAPIData;
+      const parsed = safeParseFormJsonString(formJsonString, pyrusReleaseUploadClientSchema);
+      if (!parsed.ok) return parsed.response;
+      clientData = parsed.data as unknown as ReleaseUploadAPIData;
 
       const coverArtFile = formDataFromRequest.get("coverArtFile") as File | null;
       if (coverArtFile && coverArtFile instanceof File) {

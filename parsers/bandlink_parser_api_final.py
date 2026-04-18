@@ -6,6 +6,7 @@ Bandlink Parser с прямым API Bright Data Web Unlocker
 """
 
 import json
+import os
 import time
 import requests
 import logging
@@ -146,14 +147,16 @@ class BrightDataDirectAPI:
 
 class BandlinkParserAPIFinal:
     def __init__(self):
-        # API ключ из скриншота
-        self.api_key = "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70"
+        self.api_key = (os.environ.get("BRIGHT_DATA_API_KEY") or "").strip()
         self.api_client = None
         self.init_api()
     
     def init_api(self):
         """Инициализирует API клиент"""
         try:
+            if not self.api_key:
+                logger.error("❌ Установите переменную окружения BRIGHT_DATA_API_KEY")
+                return
             logger.info("🔧 Инициализация Bright Data API клиента...")
             self.api_client = BrightDataDirectAPI(self.api_key)
             logger.info("✅ API клиент инициализирован")

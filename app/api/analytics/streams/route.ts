@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStreamAnalytics } from '@/lib/flash-storage'
+import { getSessionUser, requireAuth } from '@/lib/server-auth'
 
 export const dynamic = "force-dynamic"
 
@@ -16,10 +17,19 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+    const session = getSessionUser()!
+
     const { searchParams } = new URL(request.url)
 
+    let artistId = searchParams.get('artistId') || undefined
+    if (session.role === 'artist') {
+      artistId = session.id
+    }
+
     const filters = {
-      artistId: searchParams.get('artistId') || undefined,
+      artistId,
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
       trackName: searchParams.get('trackName') || undefined,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import sqlite3 from 'sqlite3';
+import { requireAdmin } from '@/lib/server-auth';
 
 // Путь к БД
 const DB_PATH = path.join(process.cwd(), 'bandlink_playlists.db');
@@ -21,6 +22,9 @@ const dbGet = (db: sqlite3.Database, sql: string, params?: any[]) => {
 
 // GET: Проверка уведомлений о необходимости новых cookies
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   const db = getDb();
   
   try {

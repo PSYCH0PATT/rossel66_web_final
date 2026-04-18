@@ -147,4 +147,5 @@ model StreamAnalytics {
   @@index([year, month])
   @@index([artistId, date])
   @@index([artistId, isMonthlyAggregate, year, month])
+  @@unique([date, isrc, dsp, length, source, isMonthlyAggregate], map: "stream_analytics_flash_row_key")
 }

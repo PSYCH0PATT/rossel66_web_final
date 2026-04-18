@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseFlashCSVFromBuffer } from '@/lib/flash-parser'
 import { saveFlashRecords } from '@/lib/flash-storage'
+import { requireAdmin } from '@/lib/server-auth'
 
 /**
  * POST /api/analytics/import-flash
  * Ручной импорт CSV файла из rossel_flash.
  */
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null

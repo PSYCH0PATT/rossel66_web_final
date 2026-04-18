@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { pushProgress } from '../progress-stream';
+import { getPyrusApiKey, getPyrusAccessToken, uploadFileToPyrus } from '@/lib/pyrus';
+import {
+  guardPublicFormRateLimit,
+  safeParseFormJsonString,
+  pyrusDistributionClientSchema,
+} from '@/lib/pyrus-public-schemas';
 
 const PYRUS_FORM_ID_DISTRIBUTION = 2320361;
-const PYRUS_LOGIN_EMAIL = "rossel66.music@gmail.com";
-const PYRUS_API_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Прямое определение ключа
 
 // --- Interfaces (should match client-side state) ---
 interface TrackReleaseData {
@@ -50,66 +54,15 @@ interface DistributionAPIData {
   // coverArtFile is handled as File object from FormData
 }
 
-async function getPyrusAccessToken(apiKey: string): Promise<string | null> {
-  try {
-    const response = await fetch("https://api.pyrus.com/v4/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login: PYRUS_LOGIN_EMAIL, security_key: apiKey }),
-    });
-    const data = await response.json();
-    return data.access_token || null;
-  } catch (error) {
-    console.error("Pyrus auth error:", error);
-    return null;
-  }
-}
-
-async function uploadFileToPyrus(file: File, accessToken: string): Promise<{ guid: string } | null> {
-  try {
-    const pyrusFileFormData = new FormData();
-    pyrusFileFormData.append('file', file);
-
-    const fileResponse = await fetch("https://api.pyrus.com/v4/files/upload", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${accessToken}` },
-      body: pyrusFileFormData,
-    });
-
-    if (!fileResponse.ok) {
-      const errorText = await fileResponse.text();
-      console.error(`Pyrus file upload HTTP error for ${file.name}: ${fileResponse.status} ${fileResponse.statusText}`, errorText);
-      return null;
-    }
-
-    const responseText = await fileResponse.text();
-    try {
-      const fileResult = JSON.parse(responseText);
-      if (fileResult && fileResult.guid) {
-        return { guid: fileResult.guid };
-      } else {
-        console.error(`Pyrus file upload error for ${file.name} (parsed, but no guid):`, fileResult);
-        return null;
-      }
-    } catch (e) {
-      console.error(`Pyrus file upload JSON parse error for ${file.name}. Response text:`, responseText, e);
-      return null;
-    }
-
-  } catch (error) {
-    console.error(`Exception during Pyrus file upload for ${file.name}:`, error);
-    return null;
-  }
-}
-
 export async function POST(request: NextRequest) {
-  const pyrusApiKey = PYRUS_API_KEY; // Используем локально определенный ключ
+  const rl = guardPublicFormRateLimit(request);
+  if (rl) return rl;
 
-  if (!pyrusApiKey) {
+  if (!getPyrusApiKey()) {
     return NextResponse.json({ message: "Ошибка сервера: Ключ API Pyrus не настроен." }, { status: 500 });
   }
 
-  const accessToken = await getPyrusAccessToken(pyrusApiKey);
+  const accessToken = await getPyrusAccessToken();
   if (!accessToken) {
     return NextResponse.json({ message: "Ошибка аутентификации Pyrus." }, { status: 500 });
   }
@@ -119,10 +72,9 @@ export async function POST(request: NextRequest) {
     const formJsonString = formDataFromRequest.get('form_data_json') as string | null;
     const uploadId = formDataFromRequest.get('upload_id') as string | null;
     
-    if (!formJsonString) {
-      return NextResponse.json({ message: "Отсутствуют основные данные формы." }, { status: 400 });
-    }
-    const clientData: DistributionAPIData = JSON.parse(formJsonString);
+    const parsedForm = safeParseFormJsonString(formJsonString, pyrusDistributionClientSchema);
+    if (!parsedForm.ok) return parsedForm.response;
+    const clientData = parsedForm.data as unknown as DistributionAPIData;
 
     // ---- Calculate total file count for progress ---
     let totalFilesToUpload = 1; // cover art

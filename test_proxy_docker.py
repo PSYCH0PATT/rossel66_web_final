@@ -7,10 +7,10 @@ import sys
 import os
 
 # Данные прокси
-PROXY_HOST = os.getenv('PROXY_HOST', '94.154.188.161')
-PROXY_USER = os.getenv('BRIGHT_DATA_RESIDENTIAL_USERNAME', 'HYRrWAXb')
-PROXY_PASS = os.getenv('BRIGHT_DATA_RESIDENTIAL_PASSWORD', 'Dfi5FeEC')
-PROXY_PORT = int(os.getenv('PROXY_PORT', '63194'))
+PROXY_HOST = os.getenv('PROXY_HOST', '127.0.0.1')
+PROXY_USER = os.getenv('BRIGHT_DATA_RESIDENTIAL_USERNAME', '')
+PROXY_PASS = os.getenv('BRIGHT_DATA_RESIDENTIAL_PASSWORD', '')
+PROXY_PORT = int(os.getenv('PROXY_PORT', '1080'))
 
 def test_proxy():
     """Проверка прокси через requests"""

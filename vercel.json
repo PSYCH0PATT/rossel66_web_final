@@ -1,27 +1,27 @@
 {
   "crons": [
     {
-      "path": "/api/cron/koala?secret=koala-parser-secret-2024",
+      "path": "/api/cron/koala",
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/cron/koala?secret=koala-parser-secret-2024",
+      "path": "/api/cron/koala",
       "schedule": "0 20 * * *"
     },
     {
-      "path": "/api/cron/playlists?secret=x7Kp9mN2vQ8sL4wR",
+      "path": "/api/cron/playlists",
       "schedule": "30 21 * * 4"
     },
     {
-      "path": "/api/cron/playlists?secret=x7Kp9mN2vQ8sL4wR",
+      "path": "/api/cron/playlists",
       "schedule": "0 13 * * 6"
     },
     {
-      "path": "/api/cron/playlists?secret=x7Kp9mN2vQ8sL4wR",
+      "path": "/api/cron/playlists",
       "schedule": "0 13 * * 0"
     },
     {
-      "path": "/api/cron/playlists?secret=x7Kp9mN2vQ8sL4wR",
+      "path": "/api/cron/playlists",
       "schedule": "0 13 * * 1"
     }
   ]

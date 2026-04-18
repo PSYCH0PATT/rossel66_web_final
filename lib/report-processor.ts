@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as XLSX from 'xlsx'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -205,7 +204,7 @@ export async function processReportFile(
     
     for (const [artistName, tracks] of Object.entries(artistsTracks)) {
       // Ищем артиста в системе
-      const artist = findArtistByName(artistName)
+      const artist = await findArtistByName(artistName)
       const isRegistered = !!artist
       
       console.log(`Обрабатываем артиста: ${artistName}, зарегистрирован: ${isRegistered}`)
@@ -232,7 +231,7 @@ export async function processReportFile(
       // Добавляем информацию о созданном файле
       reports.push({
         id: `report_${Date.now()}_${Math.random()}`,
-        artistId: artist?.id,
+        artistId: artist?.id ?? '',
         artistName,
         quarter,
         year,
@@ -240,6 +239,8 @@ export async function processReportFile(
         filePath: isRegistered 
           ? `data/artists/${artist!.id}/reports/${quarter}/${artistName}_${quarter}_${year}.xlsx`
           : `data/unregistered-reports/${quarter}/${artistName}_${quarter}_${year}.xlsx`,
+        uploadedAt: new Date().toISOString(),
+        processed: true,
         uploadDate: new Date().toISOString(),
         status: 'processed',
         totalPlays,
@@ -283,7 +284,7 @@ async function createArtistReportFile(
   const workbook = XLSX.utils.book_new()
   
   // Создаем лист с данными артиста
-  const worksheetData = [
+  const worksheetData: (string | number)[][] = [
     ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %']
   ]
   
@@ -340,7 +341,7 @@ async function createUnregisteredReportFile(
   const workbook = XLSX.utils.book_new()
   
   // Создаем лист с данными артиста
-  const worksheetData = [
+  const worksheetData: (string | number)[][] = [
     ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %']
   ]
   
@@ -378,6 +379,6 @@ async function createUnregisteredReportFile(
 }
 
 // Функция для автоматического назначения отчетов при создании кабинета артиста
-export function assignReportsToNewArtist(artistId: string, artistName: string): void {
-  assignReportsToArtist(artistId, artistName)
+export async function assignReportsToNewArtist(artistId: string, artistName: string): Promise<void> {
+  await assignReportsToArtist(artistId, artistName)
 }

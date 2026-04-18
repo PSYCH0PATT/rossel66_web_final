@@ -147,14 +147,8 @@ def create_parser_config(artists):
     """Создание временного конфига для парсера"""
     config = {
         "target_artists": artists,
-        "bright_data_proxy_username": os.environ.get(
-            'BRIGHT_DATA_RESIDENTIAL_USERNAME', 
-            'brd-customer-hl_94d02fd9-zone-residential_proxy1'
-        ),
-        "bright_data_proxy_password": os.environ.get(
-            'BRIGHT_DATA_RESIDENTIAL_PASSWORD', 
-            'juze73q9d91q'
-        ),
+        "bright_data_proxy_username": os.environ.get('BRIGHT_DATA_RESIDENTIAL_USERNAME', ''),
+        "bright_data_proxy_password": os.environ.get('BRIGHT_DATA_RESIDENTIAL_PASSWORD', ''),
         "proxy_host": "brd.superproxy.io",
         "proxy_port": 33335
     }

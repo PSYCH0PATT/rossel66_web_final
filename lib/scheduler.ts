@@ -4,8 +4,36 @@ import path from 'path';
 import fs from 'fs';
 import { prisma } from '@/lib/prisma';
 import { releaseFromPrisma } from '@/lib/storage-adapters';
+import { internalCronFetchJsonHeaders } from '@/lib/cron-auth';
 
 let isSchedulerInitialized = false;
+
+const CRON_FETCH_MS = 120_000;
+
+function cronBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  ).replace(/\/$/, '');
+}
+
+/** GET к /api/cron/* с Bearer и таймаутом (без secret в query). */
+async function fetchCronGet(pathAndQuery: string): Promise<Response> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error('CRON_SECRET missing');
+  const path = pathAndQuery.startsWith('/') ? pathAndQuery : `/${pathAndQuery}`;
+  const url = `${cronBaseUrl()}${path}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CRON_FETCH_MS);
+  try {
+    return await fetch(url, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Инициализация планировщика
@@ -23,6 +51,12 @@ export function initScheduler() {
   
   // Проверяем, что мы на сервере
   if (typeof window !== 'undefined') {
+    return;
+  }
+
+  if (process.env.ENABLE_IN_PROCESS_SCHEDULER !== 'true') {
+    console.log('⏰ [Scheduler] Встроенный node-cron отключён (задайте ENABLE_IN_PROCESS_SCHEDULER=true для включения)');
+    isSchedulerInitialized = true;
     return;
   }
   
@@ -293,15 +327,12 @@ async function processKoalaResults(releases: any[]) {
  */
 async function runSftpPlaylistSync() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
+    if (!process.env.CRON_SECRET) {
       console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
       return;
     }
     
-    const response = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${cronSecret}`);
+    const response = await fetchCronGet('/api/cron/playlists-sftp');
     const result = await response.json();
     
     if (result.success) {
@@ -354,7 +385,7 @@ async function runPlaylistParsers() {
     try {
       const bandlinkResponse = await fetch(`${baseUrl}/api/parsers/bandlink`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalCronFetchJsonHeaders(),
         body: JSON.stringify({ 
           artists: artistsToScan.map(a => a.username) 
         })
@@ -381,7 +412,7 @@ async function runPlaylistParsers() {
     try {
       const vkResponse = await fetch(`${baseUrl}/api/parsers/vk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalCronFetchJsonHeaders(),
         body: JSON.stringify({ 
           artists: artistsToScan.map(a => a.username) 
         })
@@ -435,15 +466,12 @@ async function runPlaylistParsers() {
  */
 async function runAnalyticsFlashImport() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
+    if (!process.env.CRON_SECRET) {
       console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
       return;
     }
-    
-    const response = await fetch(`${baseUrl}/api/cron/analytics-flash?secret=${cronSecret}`);
+
+    const response = await fetchCronGet('/api/cron/analytics-flash');
     const result = await response.json();
     
     if (result.success) {
@@ -461,15 +489,12 @@ async function runAnalyticsFlashImport() {
  */
 async function runAnalyticsCleanup() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
+    if (!process.env.CRON_SECRET) {
+      console.error('❌ CRON_SECRET не задан — пропуск analytics cleanup');
       return;
     }
     
-    const response = await fetch(`${baseUrl}/api/cron/analytics-cleanup?secret=${cronSecret}`);
+    const response = await fetchCronGet('/api/cron/analytics-cleanup');
     const result = await response.json();
     
     if (result.success) {
@@ -487,15 +512,12 @@ async function runAnalyticsCleanup() {
  */
 async function runPlaylistCoverScraper() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
+    if (!process.env.CRON_SECRET) {
       console.error('❌ CRON_SECRET не задан — пропуск playlist cover scraper');
       return;
     }
 
-    const response = await fetch(`${baseUrl}/api/cron/playlist-covers?secret=${cronSecret}`);
+    const response = await fetchCronGet('/api/cron/playlist-covers');
     const result = await response.json();
 
     if (result.success) {

@@ -39,6 +39,8 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   parser_playlist_found: "Парсер: плейлист найден",
   analytics_import: "Импорт аналитики",
   analytics_cleanup: "Очистка аналитики",
+  artist_auto_created: "Артист создан автоматически",
+  report_status_changed: "Статус отчёта изменён",
 }
 
 function activityIcon(type: ActivityType): { name: string; className: string } {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlaylistHistory } from '@/lib/playlist-history';
-import { loadUsers } from '@/lib/storage';
+import { requireAdmin } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic'
 
@@ -18,8 +18,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Проверка авторизации (можно добавить проверку роли админа)
-    // Пока оставляем открытым, но в production нужно добавить проверку
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
 
     const startDate = request.nextUrl.searchParams.get('startDate');
     const endDate = request.nextUrl.searchParams.get('endDate');

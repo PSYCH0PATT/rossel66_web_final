@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
-import { getSessionUser } from "@/lib/server-auth"
+import { requireAuth, requireSelfOrAdmin } from "@/lib/server-auth"
 import { getCachedArtistDashboard } from "@/lib/cached-dashboard"
 
 export const dynamic = "force-dynamic"
 
-export async function GET(_request: Request, { params }: { params: { username: string } }) {
+export async function GET(request: Request, { params }: { params: { username: string } }) {
   try {
-    const sessionUser = getSessionUser()
-    if (!sessionUser) {
-      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
-    }
+    const deniedAuth = await requireAuth(request)
+    if (deniedAuth) return deniedAuth
 
     const { username } = params
 
@@ -21,9 +19,8 @@ export async function GET(_request: Request, { params }: { params: { username: s
 
     const { data } = result
 
-    if (sessionUser.role === "artist" && sessionUser.id !== data.artist.id) {
-      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
-    }
+    const deniedScope = await requireSelfOrAdmin(request, data.artist.id)
+    if (deniedScope) return deniedScope
 
     return NextResponse.json({
       success: true,

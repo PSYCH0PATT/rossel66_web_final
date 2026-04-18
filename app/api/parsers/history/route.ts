@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
+import { requireAdminOrCron } from '@/lib/server-auth';
 
 // Пути к БД
 const BANDLINK_DB_PATH = path.join(process.cwd(), 'bandlink_playlists.db');
@@ -58,6 +59,9 @@ async function ensureParsingHistoryTable(dbPath: string, tableName: string) {
 
 // GET: Получение истории парсинга
 export async function GET(request: NextRequest) {
+  const denied = await requireAdminOrCron(request);
+  if (denied) return denied;
+
   const parserType = request.nextUrl.searchParams.get('type') || 'all'; // 'bandlink', 'vk', 'all'
   const limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
   
@@ -115,6 +119,9 @@ export async function GET(request: NextRequest) {
 
 // POST: Создание записи истории парсинга
 export async function POST(request: NextRequest) {
+  const denied = await requireAdminOrCron(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { parserType, artists, playlistsFound = 0, playlistsAdded = 0, errors, status = 'completed' } = body;

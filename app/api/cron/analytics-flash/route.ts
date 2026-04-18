@@ -11,10 +11,12 @@ import {
   sftpConnectOptions,
   withIpv4SocketIfRequested,
 } from '@/lib/sftp-connect'
+import { isCronAuthorized } from '@/lib/cron-auth'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-const CRON_SECRET = process.env.CRON_SECRET
+const FAST_GET_TIMEOUT_MS = 120_000
 const DOWNLOADS_DIR = path.join(process.cwd(), 'sftp_downloads')
 
 const DAYS_BACK_DEFAULT = 7
@@ -36,14 +38,21 @@ const DAYS_BACK_DEFAULT = 7
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
+  let advisoryHeld = false
   try {
-    // Проверяем авторизацию
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = request.nextUrl.searchParams.get('secret')
-    const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret
-
-    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const lockRows = await prisma.$queryRaw<{ ok: boolean }[]>`
+      SELECT pg_try_advisory_lock(88442201, 103) AS ok
+    `
+    advisoryHeld = lockRows[0]?.ok === true
+    if (!advisoryHeld) {
+      return NextResponse.json(
+        { success: false, error: 'Импорт уже выполняется (advisory lock)' },
+        { status: 409 }
+      )
     }
 
     const mode = request.nextUrl.searchParams.get('mode') || '7days'
@@ -220,7 +229,11 @@ export async function GET(request: NextRequest) {
             !!(startDate && endDate)
           if (forceDownload || !fs.existsSync(localPath)) {
             console.log(`⬇️  Скачиваю: ${file.name}...`)
-            await sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
+            const dl = sftp.fastGet(path.posix.join(flashDir, file.name), localPath)
+            const timeout = new Promise<never>((_, rej) =>
+              setTimeout(() => rej(new Error(`SFTP fastGet timeout (${FAST_GET_TIMEOUT_MS}ms)`)), FAST_GET_TIMEOUT_MS)
+            )
+            await Promise.race([dl, timeout])
           } else {
             console.log(`📁 Уже скачан: ${file.name}`)
           }
@@ -300,6 +313,14 @@ export async function GET(request: NextRequest) {
       details: String(error),
       duration: `${duration}ms`,
     }, { status: 500 })
+  } finally {
+    if (advisoryHeld) {
+      try {
+        await prisma.$executeRaw`SELECT pg_advisory_unlock(88442201, 103)`
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 

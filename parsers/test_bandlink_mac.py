@@ -186,10 +186,15 @@ def test_sour_diesel():
     logger.info(f"⏰ Время начала: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Инициализируем Web Unlocker API с debug-логами и рендерингом JS
-    unlocker = BrightDataUnlockerAPI(
-        username="brd-customer-hl_94d02fd9-zone-web_unlocker1-render-js-debug-full",
-        password="bp8k2m4ji12a"
+    u = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_USERNAME") or os.environ.get(
+        "BRIGHT_DATA_RESIDENTIAL_USERNAME", ""
     )
+    p = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_PASSWORD") or os.environ.get(
+        "BRIGHT_DATA_RESIDENTIAL_PASSWORD", ""
+    )
+    if not u or not p:
+        raise SystemExit("Задайте BRIGHT_DATA_WEB_UNLOCKER_* или BRIGHT_DATA_RESIDENTIAL_* в окружении")
+    unlocker = BrightDataUnlockerAPI(username=u, password=p)
     
     # Тестируем артиста Sour Diesel
     artist_name = "Sour Diesel"

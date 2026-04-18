@@ -100,8 +100,7 @@ export async function POST(request: Request) {
       // Сохраняем файл на диск
       const filePath = path.join(uploadsDir, report.fileName)
       const arrayBuffer = await reportFile.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-      fs.writeFileSync(filePath, buffer)
+      fs.writeFileSync(filePath, new Uint8Array(arrayBuffer))
 
       // Относительный путь для БД
       const relativeFilePath = `uploads/reports/${quarter}/${report.fileName}`

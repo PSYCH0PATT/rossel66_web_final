@@ -42,8 +42,12 @@ class ZvonkoLinuxParser:
         self.releases_url = "https://account.zvonkodigital.com/music/releases"
         self.moderating_url = "https://account.zvonkodigital.com/music/moderating"
         self.editing_url = "https://account.zvonkodigital.com/music/editing"
-        self.username = "rossel_66"
-        self.password = "rossel_66_27122023"
+        self.username = (os.environ.get("ZVONKO_USERNAME") or "").strip()
+        if not self.username:
+            raise ValueError("ZVONKO_USERNAME environment variable is required")
+        self.password = os.environ.get("ZVONKO_PASSWORD")
+        if not self.password:
+            raise ValueError("Задайте переменную окружения ZVONKO_PASSWORD")
         self.driver = None
         self.max_pages = max_pages
         self.results: List[Dict] = []

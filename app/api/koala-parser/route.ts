@@ -7,13 +7,15 @@ import {
   findArtistByName,
   addActivity,
   updateRelease,
-  addRelease,
+  addReleaseWithActivities,
   addUser,
   getUserByUsername,
   assignReleasesToNewArtist
 } from '@/lib/storage';
 import { nicknameToUsername } from '@/lib/utils';
 import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names';
+import { requireAdminOrCron } from '@/lib/server-auth';
+import { rateLimitParser } from '@/lib/rate-limit';
 
 // Интерфейс для результата парсинга
 interface KoalaRelease {
@@ -69,6 +71,20 @@ function loadParserStatus() {
 
 // POST - запуск парсинга
 export async function POST(request: NextRequest) {
+  const denied = await requireAdminOrCron(request);
+  if (denied) return denied;
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+  const rl = rateLimitParser(ip);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { success: false, error: 'Слишком много запросов' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec ?? 60) } }
+    );
+  }
+
   console.log('🚀 Запуск Koala Parser...');
   
   try {
@@ -190,7 +206,10 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - получить статус последнего парсинга
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await requireAdminOrCron(request);
+  if (denied) return denied;
+
   try {
     const status = loadParserStatus();
     
@@ -326,11 +345,6 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         if (koalaRelease.bandlink_url) {
           updates.bandlinkUrl = koalaRelease.bandlink_url;
         }
-        
-        // Обновляем artistName из парсера (если есть)
-        if (koalaRelease.artist) {
-          updates.artistName = koalaRelease.artist;
-        }
 
         if (validArtists.length > 1) {
           updates.featuredArtistIds = validArtists.slice(1).map((a) => a.id);
@@ -350,19 +364,21 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
           }
         }
         
-        const tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
+        let tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
           id: `track_${Date.now()}_${index}`,
           title: koalaRelease.title,
           duration: '0:00',
-          isrc
+          isrc: isrc || undefined,
         }));
         if (tracks.length === 0) {
-          tracks.push({
-            id: `track_${Date.now()}_0`,
-            title: koalaRelease.title,
-            duration: '0:00',
-            isrc: undefined
-          });
+          tracks = [
+            {
+              id: `track_${Date.now()}_0`,
+              title: koalaRelease.title,
+              duration: '0:00',
+              isrc: undefined,
+            },
+          ];
         }
         
         const normalizedStatus = normalizeStatus(koalaRelease.status);
@@ -383,35 +399,34 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
           upc: koalaRelease.upc || undefined
         };
         
-        const createdRelease = await addRelease(newReleaseData);
-        await addActivity({
-          type: 'release_added',
-          userId: artist.id,
-          userRole: 'artist',
-          title: 'Новый релиз добавлен',
-          description: `Добавлен релиз "${koalaRelease.title}"`,
-          metadata: {
-            releaseId: createdRelease.id,
-            koalaId: koalaRelease.koala_id,
-            status: koalaRelease.status
+        await addReleaseWithActivities(newReleaseData, (createdRelease) => [
+          {
+            type: 'release_added',
+            userId: artist.id,
+            userRole: 'artist',
+            title: 'Новый релиз добавлен',
+            description: `Добавлен релиз "${koalaRelease.title}"`,
+            metadata: {
+              releaseId: createdRelease.id,
+              koalaId: koalaRelease.koala_id,
+              status: koalaRelease.status
+            }
+          },
+          {
+            type: 'release_added',
+            userId: 'system',
+            userRole: 'admin',
+            title: 'Новый релиз добавлен',
+            description: `Добавлен релиз "${koalaRelease.title}" (артист: ${artist.name || artist.username})`,
+            metadata: {
+              releaseId: createdRelease.id,
+              koalaId: koalaRelease.koala_id,
+              status: koalaRelease.status,
+              artistId: artist.id,
+              artistName: artist.name
+            }
           }
-        });
-        
-        // Дубликат для админа
-        await addActivity({
-          type: 'release_added',
-          userId: 'system',
-          userRole: 'admin',
-          title: 'Новый релиз добавлен',
-          description: `Добавлен релиз "${koalaRelease.title}" (артист: ${artist.name || artist.username})`,
-          metadata: {
-            releaseId: createdRelease.id,
-            koalaId: koalaRelease.koala_id,
-            status: koalaRelease.status,
-            artistId: artist.id,
-            artistName: artist.name
-          }
-        });
+        ]);
         console.log(`✅ Добавлен релиз "${koalaRelease.title}" для артиста ${artist.name}`);
         stats.added++;
       }

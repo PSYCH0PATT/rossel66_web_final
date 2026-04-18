@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Сохраняем основной файл
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const ab = await file.arrayBuffer()
     const tempFilePath = path.join(uploadsDir, 'temp_upload.xlsx')
-    fs.writeFileSync(tempFilePath, buffer)
+    fs.writeFileSync(tempFilePath, new Uint8Array(ab))
 
     console.log(`Файл сохранен: ${tempFilePath}`)
 

@@ -1,4 +1,10 @@
-import type { User as PrismaUser, Release as PrismaRelease, Report as PrismaReport, Activity as PrismaActivity } from '@prisma/client'
+import type {
+  User as PrismaUser,
+  Release as PrismaRelease,
+  Report as PrismaReport,
+  Activity as PrismaActivity,
+  Prisma,
+} from '@prisma/client'
 import type { User, Release, Report, Activity, Track } from './storage'
 
 /**
@@ -29,7 +35,7 @@ export function userFromPrisma(prismaUser: PrismaUser): User {
 }
 
 export function releaseFromPrisma(prismaRelease: PrismaRelease): Release {
-  const tracks = prismaRelease.tracks as Track[]
+  const tracks = prismaRelease.tracks as unknown as Track[]
   const metadata = prismaRelease.metadata as Record<string, any> | null
   
   return {
@@ -78,8 +84,8 @@ export function reportFromPrisma(prismaReport: PrismaReport): Report {
 export function activityFromPrisma(prismaActivity: PrismaActivity): Activity {
   return {
     id: prismaActivity.id,
-    type: prismaActivity.type,
-    userId: prismaActivity.userId ?? undefined,
+    type: prismaActivity.type as Activity['type'],
+    userId: prismaActivity.userId ?? '',
     userRole: prismaActivity.userRole as 'artist' | 'admin',
     title: prismaActivity.title,
     description: prismaActivity.description,
@@ -129,10 +135,13 @@ export function releaseToPrismaCreate(release: Omit<Release, 'id' | 'createdAt' 
     status,
     koalaId,
     bandlinkUrl,
-    tracks: tracks as any,
+    tracks: tracks as unknown as Prisma.InputJsonValue,
     featuredArtistIds: featuredArtistIds || [],
     featuredArtistNames: featuredArtistNames || [],
-    metadata: Object.keys(metadata).length > 0 ? metadata : null,
+    metadata:
+      Object.keys(metadata).length > 0
+        ? (metadata as Prisma.InputJsonValue)
+        : undefined,
   }
 }
 

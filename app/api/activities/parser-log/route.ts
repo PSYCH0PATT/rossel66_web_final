@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { addActivity } from "@/lib/storage"
 import type { ActivityType } from "@/lib/storage"
+import { requireAdmin } from "@/lib/server-auth"
 
 export async function POST(request: Request) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     const body = await request.json()
     const { type, title, description, metadata, userId, userRole } = body
 

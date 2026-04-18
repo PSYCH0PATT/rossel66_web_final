@@ -4,6 +4,8 @@
 Простой анализатор DOM для ручного анализа структуры Zvonko
 """
 
+import os
+import sys
 import time
 import json
 from selenium import webdriver
@@ -87,10 +89,10 @@ def main():
         if login_input and password_input:
             print("⌨️ Ввод данных...")
             login_input.clear()
-            login_input.send_keys("rossel_66")
+            login_input.send_keys(zuser)
             
             password_input.clear()
-            password_input.send_keys("rossel_66_27122023")
+            password_input.send_keys(zpwd)
             
             # Ищем кнопку входа или input submit
             submit_inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='submit']")

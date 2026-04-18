@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { crawlAllArtistsPlaylists } from "@/lib/playlist-crawler"
+import { requireAdmin } from "@/lib/server-auth"
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     // Запускаем парсинг плейлистов
     console.log("[SERVER] Starting playlist crawling for all artists...")
 

@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import type { UserRole } from "@/lib/data"
+import type { UserRole } from "@/lib/storage"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 

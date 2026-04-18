@@ -1,15 +1,19 @@
-const PYRUS_LOGIN_EMAIL = "rossel66.music@gmail.com";
-const PYRUS_API_KEY =
-  "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w";
+import { getPyrusApiKey, getPyrusLoginEmail } from "./pyrus-env";
 
-export { PYRUS_LOGIN_EMAIL, PYRUS_API_KEY };
+export { getPyrusLoginEmail, getPyrusApiKey, assertPyrusConfigured } from "./pyrus-env";
 
-export async function getPyrusAccessToken(apiKey: string): Promise<string | null> {
+export async function getPyrusAccessToken(apiKey?: string): Promise<string | null> {
+  const key = apiKey ?? getPyrusApiKey();
+  const login = getPyrusLoginEmail();
+  if (!key || !login) {
+    console.error("Pyrus: не заданы PYRUS_LOGIN_EMAIL/PYRUS_LOGIN и PYRUS_API_KEY/PYRUS_SECRET_KEY");
+    return null;
+  }
   try {
     const response = await fetch("https://api.pyrus.com/v4/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login: PYRUS_LOGIN_EMAIL, security_key: apiKey }),
+      body: JSON.stringify({ login, security_key: key }),
     });
     const data = await response.json();
     return data.access_token || null;

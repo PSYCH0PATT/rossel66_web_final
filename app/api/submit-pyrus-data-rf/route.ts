@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getPyrusAccessToken } from "@/lib/pyrus";
+import { guardPublicFormRateLimit, pyrusDataRfSchema } from "@/lib/pyrus-public-schemas";
 
 // Интерфейс для данных, приходящих с фронтенда
 interface FormDataRF {
@@ -47,54 +49,30 @@ const PYRUS_FIELD_IDS = { // Этот блок должен быть АКТИВ�
   bankKpp: "23",
 };
 
-const PYRUS_LOGIN = "rossel66.music@gmail.com";
-//const PYRUS_SECURITY_KEY = process.env.PYRUS_API_KEY;
-const PYRUS_SECURITY_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Возвращаем чтение из process.env
-// const PYRUS_SECURITY_KEY = "HxiuebPcNiPfJLM7wGDHI~8BgKzZbZ3KqhCJhr52f8QvLhdiHGI4dGNLYxCGXB-beBsOnh7yvTS6M8z6V2PnwNnZ6DX7DQ4w"; // Комментируем временный ключ
 const PYRUS_FORM_ID = 1553991;
-
-async function getPyrusAccessToken() {
-  if (!PYRUS_SECURITY_KEY) {
-    console.error("Pyrus Security Key (PYRUS_API_KEY in .env.local) is not configured.");
-    throw new Error("Ошибка конфигурации сервера: Секретный ключ Pyrus не найден.");
-  }
-
-  const authResponse = await fetch("https://api.pyrus.com/v4/auth", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      login: PYRUS_LOGIN,
-      security_key: PYRUS_SECURITY_KEY,
-    }),
-  });
-
-  if (!authResponse.ok) {
-    let errorData;
-    try {
-      errorData = await authResponse.json();
-    } catch (e) {
-        // Если тело ответа не JSON, или пустое
-        errorData = { error: "Unknown Pyrus auth error", details: await authResponse.text() };
-    }
-    console.error("Pyrus auth error:", errorData);
-    throw new Error(errorData.error_description || errorData.error || `Ошибка аутентификации Pyrus: ${authResponse.status}`);
-  }
-
-  const authData = await authResponse.json();
-  if (!authData.access_token) {
-    console.error("Pyrus auth response did not contain access_token:", authData);
-    throw new Error("Не удалось получить access_token от Pyrus.");
-  }
-  return authData.access_token;
-}
 
 export async function POST(request: Request) {
   try {
-    const accessToken = await getPyrusAccessToken();
+    const rl = guardPublicFormRateLimit(request);
+    if (rl) return rl;
 
-    const formData: FormDataRF = await request.json();
+    const accessToken = await getPyrusAccessToken();
+    if (!accessToken) {
+      return NextResponse.json(
+        { message: "Pyrus не настроен: задайте PYRUS_LOGIN и PYRUS_API_KEY в окружении." },
+        { status: 500 }
+      );
+    }
+
+    const rawBody: unknown = await request.json().catch(() => null);
+    const validated = pyrusDataRfSchema.safeParse(rawBody);
+    if (!validated.success) {
+      return NextResponse.json(
+        { message: "Некорректные поля формы.", details: validated.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const formData: FormDataRF = validated.data as FormDataRF;
 
     const pyrusFields = Object.entries(formData)
       .map(([key, value]) => {

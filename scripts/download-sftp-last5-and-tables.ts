@@ -124,8 +124,8 @@ async function main() {
     const csvFiles = files
       .filter((f: any) => f.type === '-' && f.name.endsWith('.csv'))
       .map((f: any) => ({ name: f.name, date: dateFromFilename(f.name) }))
-      .filter((f: { date: string | null }) => f.date)
-      .sort((a: { date: string }, b: { date: string }) => b.date.localeCompare(a.date))
+      .filter((f): f is { name: string; date: string } => f.date != null && f.date !== '')
+      .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 5);
 
     if (csvFiles.length === 0) {

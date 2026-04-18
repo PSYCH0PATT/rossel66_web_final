@@ -5,10 +5,15 @@ import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToN
 import { prisma } from "@/lib/prisma"
 import * as fs from "fs"
 import * as path from "path"
+import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
+import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
 
 export const dynamic = "force-dynamic"
 
 export async function POST(request: Request) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const contentType = request.headers.get("content-type")
     let username: string, password: string, name: string, email: string, avatarUrl: string | undefined
@@ -17,14 +22,21 @@ export async function POST(request: Request) {
     if (contentType?.includes("application/json")) {
       // Handle JSON data
       const data = await request.json()
-      username = data.username
-      password = data.password
-      name = data.name
-      email = data.email
-      avatarUrl = data.avatarUrl
-      vkMusicUrl = data.vkMusicUrl
-      yandexMusicUrl = data.yandexMusicUrl
-      spotifyUrl = data.spotifyUrl
+      const parsed = artistPostSchema.safeParse(data)
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: "Некорректные данные", details: parsed.error.flatten() },
+          { status: 400 }
+        )
+      }
+      username = parsed.data.username
+      password = parsed.data.password
+      name = parsed.data.name
+      email = parsed.data.email ?? ''
+      avatarUrl = parsed.data.avatarUrl
+      vkMusicUrl = parsed.data.vkMusicUrl
+      yandexMusicUrl = parsed.data.yandexMusicUrl
+      spotifyUrl = parsed.data.spotifyUrl
     } else {
       // Handle FormData (legacy)
       const data = await request.formData()
@@ -183,6 +195,9 @@ export async function POST(request: Request) {
 const ARTIST_PAGE_SIZES = new Set([20, 50, 100])
 
 export async function GET(request: Request) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const verifiedParam = searchParams.get("verified")
@@ -271,6 +286,19 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const data = await request.json()
+    const parsed = artistPutSchema.safeParse(data)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Некорректные данные", details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+    const session = getSessionUser()
+    if (!session) {
+      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+    }
+    const deniedPut = await requireSelfOrAdmin(request, parsed.data.id)
+    if (deniedPut) return deniedPut
     const {
       id,
       username,
@@ -287,12 +315,7 @@ export async function PUT(request: Request) {
       contract,
       percentage,
       verified,
-    } = data
-
-    // Validate required field (only ID is required)
-    if (!id) {
-      return NextResponse.json({ error: "ID is required" }, { status: 400 })
-    }
+    } = parsed.data
 
     if (username) {
       const existingUser = await prisma.user.findFirst({
@@ -308,7 +331,13 @@ export async function PUT(request: Request) {
       if (!existingUser) {
         return NextResponse.json({ error: "Artist not found" }, { status: 404 })
       }
-      if (currentPassword) {
+      if (session.role !== "admin") {
+        if (!currentPassword) {
+          return NextResponse.json(
+            { error: "Для смены пароля укажите currentPassword" },
+            { status: 400 }
+          )
+        }
         const match = await bcrypt.compare(currentPassword, existingUser.password)
         if (!match) {
           return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 401 })
@@ -317,7 +346,7 @@ export async function PUT(request: Request) {
     }
 
     // Build update data object with only provided fields
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     
     if (username !== undefined) updateData.username = username
     if (name !== undefined) updateData.name = name
@@ -332,9 +361,9 @@ export async function PUT(request: Request) {
     if (fioShort !== undefined) updateData.fioShort = fioShort
     if (contract !== undefined) updateData.contract = contract
     if (percentage !== undefined) updateData.percentage = percentage
-    if (verified !== undefined) updateData.verified = verified
+    if (verified !== undefined && session.role === "admin") updateData.verified = verified
 
-    const updatedUser = await updateUser(id, updateData)
+    const updatedUser = await updateUser(id, updateData as Parameters<typeof updateUser>[1])
 
     if (!updatedUser) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
@@ -379,6 +408,9 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const deniedDel = await requireAdmin(request)
+  if (deniedDel) return deniedDel
+
   try {
     const { searchParams } = new URL(request.url)
     const artistId = searchParams.get('id')

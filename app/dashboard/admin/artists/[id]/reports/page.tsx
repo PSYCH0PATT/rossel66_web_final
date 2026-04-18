@@ -1,13 +1,12 @@
-import { getArtistReports } from "@/lib/data"
-import { users } from "@/lib/data"
+import { prisma } from "@/lib/prisma"
+import { reportFromPrisma } from "@/lib/storage-adapters"
 import Layout from "@/components/layout"
 import ArtistReports from "@/components/artist-reports"
 
-export default function AdminArtistReportsPage({ params }: { params: { id: string } }) {
-  // Находим артиста по ID
-  const artist = users.find((user) => user.id === params.id)
+export default async function AdminArtistReportsPage({ params }: { params: { id: string } }) {
+  const artist = await prisma.user.findUnique({ where: { id: params.id } })
 
-  if (!artist) {
+  if (!artist || artist.role !== "artist") {
     return (
       <Layout role="admin" requiredRole="admin">
         <div className="text-center py-8 text-gray-400">Артист не найден</div>
@@ -15,8 +14,11 @@ export default function AdminArtistReportsPage({ params }: { params: { id: strin
     )
   }
 
-  // Получаем отчеты артиста
-  const reports = getArtistReports(artist.id)
+  const reportRows = await prisma.report.findMany({
+    where: { artistId: params.id },
+    orderBy: [{ year: "desc" }, { quarter: "desc" }],
+  })
+  const reports = reportRows.map(reportFromPrisma)
 
   return (
     <Layout role="admin" requiredRole="admin">

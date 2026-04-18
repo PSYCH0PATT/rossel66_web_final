@@ -4,10 +4,9 @@ import {
   scrapeVkPlaylistCover,
   scrapeYandexPlaylistCover,
 } from '@/lib/playlist-cover-scraper'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
-
-const CRON_SECRET = process.env.CRON_SECRET
 
 const BATCH_LIMIT = 20
 const STALE_DAYS = 7
@@ -27,11 +26,7 @@ const STALE_DAYS = 7
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
-  const authHeader = request.headers.get('authorization')
-  const secretParam = request.nextUrl.searchParams.get('secret')
-  const provided = authHeader?.replace('Bearer ', '') || secretParam
-
-  if (!CRON_SECRET || provided !== CRON_SECRET) {
+  if (!isCronAuthorized(request)) {
     console.log('[CoverCron] ❌ Unauthorized request')
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }

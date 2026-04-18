@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { assignPlaylistToArtistManually } from "@/lib/sftp-playlist-storage"
 import { addActivity, getUserById } from "@/lib/storage"
+import { requireAdmin } from "@/lib/server-auth"
 
 export async function POST(request: Request) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     const body = await request.json()
     const { playlistId, artistId } = body
 

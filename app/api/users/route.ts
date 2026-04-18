@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
+import { requireAdmin } from "@/lib/server-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -16,11 +17,13 @@ const userSelect = {
   vkMusicUrl: true,
   yandexMusicUrl: true,
   spotifyUrl: true,
-  password: true,
   createdAt: true,
 } as const
 
 export async function GET(request: Request) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")

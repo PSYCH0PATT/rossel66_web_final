@@ -4,8 +4,8 @@
 # Устанавливает cron задачу для автоматического парсинга релизов
 # Расписание: 12:00 и 20:00 каждый день
 
-# Конфигурация
-CRON_SECRET="${CRON_SECRET:-koala-parser-secret-2024}"
+# Конфигурация (обязательно задайте CRON_SECRET в окружении)
+CRON_SECRET="${CRON_SECRET:?Set CRON_SECRET (same as production / Vercel)}"
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 
 echo "🔧 Настройка Koala Parser Cron..."

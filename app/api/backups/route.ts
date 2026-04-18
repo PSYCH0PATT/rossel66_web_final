@@ -6,9 +6,13 @@ import {
   getBackupFilePath
 } from '@/lib/backup'
 import fs from 'fs'
+import { requireAdmin } from '@/lib/server-auth'
 
 // GET - Get list of backups
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const backups = loadBackupsMetadata()
     return NextResponse.json({ success: true, backups })
@@ -43,6 +47,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Delete a backup
 export async function DELETE(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const backupId = searchParams.get('id')

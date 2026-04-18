@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import type { Report } from "@/lib/data"
+import type { Report } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 
@@ -16,7 +16,11 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
 
-  const years = [...new Set(reports.map((report) => report.year))].sort((a, b) => b - a)
+  const years = [
+    ...new Set(
+      reports.map((report) => report.year).filter((y): y is number => typeof y === "number")
+    ),
+  ].sort((a, b) => b - a)
 
   const reportsByQuarter = reports
     .filter((report) => report.year === currentYear)

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import sqlite3 from 'sqlite3'
-import { promisify } from 'util'
+import { requireAdminOrCron } from '@/lib/server-auth'
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
+    const denied = await requireAdminOrCron(request)
+    if (denied) return denied
+
     const { id, type } = await request.json()
 
     if (!id || !type) {
@@ -19,10 +23,13 @@ export async function DELETE(request: Request) {
 
     // Подключаемся к базе данных
     const db = new sqlite3.Database(dbPath)
-    const dbRun = promisify(db.run.bind(db))
 
-    // Удаляем плейлист
-    await dbRun(`DELETE FROM ${tableName} WHERE id = ?`, [id])
+    await new Promise<void>((resolve, reject) => {
+      db.run(`DELETE FROM ${tableName} WHERE id = ?`, [id], (err) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
 
     db.close()
 

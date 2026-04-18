@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import path from 'path';
 import fs from 'fs';
+import { requireAdminOrCron } from '@/lib/server-auth';
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
+    const denied = await requireAdminOrCron(request);
+    if (denied) return denied;
+
     const sqlite3 = require('sqlite3').verbose();
     
     // Очищаем VK результаты

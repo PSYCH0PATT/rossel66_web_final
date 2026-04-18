@@ -9,6 +9,8 @@ import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names'
 import { prisma } from '@/lib/prisma'
 import { releaseFromPrisma, userFromPrisma } from '@/lib/storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard'
+import { requireAdminOrCron } from '@/lib/server-auth'
+import { rateLimitParser } from '@/lib/rate-limit'
 
 interface ParseStats {
   total: number
@@ -102,7 +104,7 @@ async function markModerationDeliveredAfterParse(parsersDir: string): Promise<nu
     for (const release of markedReleases) {
       const artist = release.artistId ? userById.get(release.artistId) : undefined
 
-      addActivity({
+      await addActivity({
         type: 'release_status_updated',
         userId: release.artistId,
         userRole: 'artist',
@@ -112,7 +114,7 @@ async function markModerationDeliveredAfterParse(parsersDir: string): Promise<nu
       })
 
       // Дубликат для админа
-      addActivity({
+      await addActivity({
         type: 'release_status_updated',
         userId: 'system',
         userRole: 'admin',
@@ -157,7 +159,9 @@ function loadParserStatus(): ParserStatus | null {
   return null
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await requireAdminOrCron(request)
+  if (denied) return denied
   try {
     const status = loadParserStatus()
 
@@ -184,6 +188,19 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireAdminOrCron(request)
+  if (denied) return denied
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  const rl = rateLimitParser(ip)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { success: false, error: 'Слишком много запросов' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec ?? 60) } }
+    )
+  }
   console.log('🚀 Запуск Zvonko Parser...')
 
   try {

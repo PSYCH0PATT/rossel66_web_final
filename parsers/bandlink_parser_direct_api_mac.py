@@ -6,6 +6,7 @@ Bandlink Parser для Mac с прямым доступом к Bright Data API
 """
 
 import json
+import os
 import time
 import requests
 import logging
@@ -121,11 +122,10 @@ class BandlinkParserDirectAPIMac:
 
     def init_direct_api(self):
         """Инициализирует прямой API Bright Data"""
-        api_key = self.config.get('bright_data_api_key')
+        api_key = (self.config.get('bright_data_api_key') or os.environ.get('BRIGHT_DATA_API_KEY') or '').strip()
         if not api_key:
-            # Используем API ключ из кода
-            api_key = "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70"
-            logger.info("🔑 Используем API ключ из кода")
+            logger.error("❌ Задайте bright_data_api_key в конфиге или переменную окружения BRIGHT_DATA_API_KEY")
+            api_key = None
         
         try:
             self.direct_api = BrightDataDirectAPI(api_key)

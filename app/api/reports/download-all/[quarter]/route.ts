@@ -1,16 +1,27 @@
 import { NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
-import * as JSZip from "jszip"
+import JSZip from "jszip"
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
+import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import type { Prisma } from "@prisma/client"
 
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+
+    const session = getSessionUser()!
     const quarter = params.quarter
 
+    const where: Prisma.ReportWhereInput = { quarter }
+    if (session.role === "artist") {
+      where.artistId = session.id
+    }
+
     const raw = await prisma.report.findMany({
-      where: { quarter },
+      where,
       orderBy: { uploadedAt: "desc" },
     })
     const quarterReports = raw.map(reportFromPrisma)
@@ -37,7 +48,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
       }
       
       const fileData = fs.readFileSync(filePath)
-      zip.file(report.fileName, fileData)
+      zip.file(report.fileName, new Uint8Array(fileData))
     }
 
     // Генерируем ZIP-архив
@@ -48,7 +59,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     headers.set("Content-Type", "application/zip")
     headers.set("Content-Disposition", `attachment; filename="${quarter}_reports.zip"`)
 
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers,
     })

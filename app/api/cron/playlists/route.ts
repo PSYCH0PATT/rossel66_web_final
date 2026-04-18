@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { addActivity } from '@/lib/storage';
 import { prisma } from '@/lib/prisma';
 import { releaseFromPrisma } from '@/lib/storage-adapters';
+import { isCronAuthorized, internalCronFetchJsonHeaders } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic'
 
-// Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
 const CRON_SECRET = process.env.CRON_SECRET;
 
 if (!CRON_SECRET) {
@@ -31,15 +31,9 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Проверяем авторизацию
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = request.nextUrl.searchParams.get('secret');
     const source = request.nextUrl.searchParams.get('source'); // 'parser' для ручного парсинга
 
-    // Проверяем секрет (через заголовок или query параметр)
-    const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
-
-    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       console.log('❌ Cron Playlists: Неверный секрет авторизации или CRON_SECRET не настроен');
       return NextResponse.json({
         success: false,
@@ -56,8 +50,8 @@ export async function GET(request: NextRequest) {
         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
       try {
-        const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp?secret=${CRON_SECRET}`, {
-          headers: authHeader ? { 'Authorization': authHeader } : {}
+        const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp`, {
+          headers: { Authorization: `Bearer ${CRON_SECRET}` },
         });
 
         const sftpResult = await sftpResponse.json();
@@ -112,7 +106,7 @@ export async function GET(request: NextRequest) {
     try {
       const bandlinkResponse = await fetch(`${baseUrl}/api/parsers/bandlink`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalCronFetchJsonHeaders(),
         body: JSON.stringify({
           artists: artistsToScan.map(a => a.username)
         })
@@ -139,7 +133,7 @@ export async function GET(request: NextRequest) {
     try {
       const vkResponse = await fetch(`${baseUrl}/api/parsers/vk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalCronFetchJsonHeaders(),
         body: JSON.stringify({
           artists: artistsToScan.map(a => a.username)
         })
@@ -163,7 +157,7 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime;
 
     // Логируем активность
-    addActivity({
+    await addActivity({
       type: 'playlist_found',
       userId: 'system',
       userRole: 'admin',

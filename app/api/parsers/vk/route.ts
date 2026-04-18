@@ -4,8 +4,26 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { addActivity, getUserByUsername } from '@/lib/storage';
+import { requireAdmin, requireAdminOrCron } from '@/lib/server-auth';
+import { rateLimitParser } from '@/lib/rate-limit';
+import { isCronAuthorized, internalCronFetchJsonHeaders, internalCronAuthHeaderOnly } from '@/lib/cron-auth';
 
 export async function POST(request: NextRequest) {
+  const denied = await requireAdminOrCron(request);
+  if (denied) return denied;
+  if (!isCronAuthorized(request)) {
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rl = rateLimitParser(ip);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Слишком много запросов' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec ?? 60) } }
+      );
+    }
+  }
   try {
     const { artists } = await request.json();
     
@@ -130,10 +148,11 @@ export async function POST(request: NextRequest) {
             }
             
             // Создаем активность для каждого найденного артиста
+            const resultsArr = results as any[];
             for (const artist of artists) {
-              const artistData = getUserByUsername(artist);
+              const artistData = await getUserByUsername(artist);
               if (artistData) {
-                const artistPlaylists = results.filter((r: any) => r.artist_name === artistData.name);
+                const artistPlaylists = resultsArr.filter((r: any) => r.artist_name === artistData.name);
                 if (artistPlaylists.length > 0) {
                   // Группируем плейлисты и составляем описание
                   const playlistNames = artistPlaylists.map((p: any) => `"${p.playlist_name}"`).slice(0, 3);
@@ -147,7 +166,7 @@ export async function POST(request: NextRequest) {
                     }
                   }
                   
-                  addActivity({
+                  await addActivity({
                     type: 'playlist_found',
                     userId: artistData.id,
                     userRole: 'artist',
@@ -185,7 +204,7 @@ export async function POST(request: NextRequest) {
           try {
             await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parsers/history`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: internalCronFetchJsonHeaders(),
               body: JSON.stringify({
                 parserType: 'vk',
                 artists: artists,
@@ -297,8 +316,11 @@ async function readVKResults() {
   }
 }
 
-export async function GET(request?: NextRequestType) {
+export async function GET(request: NextRequestType) {
   try {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
     // Проверяем, использовать ли SFTP данные (по умолчанию)
     const useSftpSync = process.env.USE_SFTP_SYNC !== 'false';
     
@@ -306,7 +328,8 @@ export async function GET(request?: NextRequestType) {
       // Используем данные из SFTP
       try {
         const sftpResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/playlists/sftp`
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/playlists/sftp`,
+          { headers: internalCronAuthHeaderOnly() }
         );
         const sftpData = await sftpResponse.json();
         

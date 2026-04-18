@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic'
 
-// Секрет для авторизации cron запросов (ОБЯЗАТЕЛЬНО установите в переменных окружения!)
 const CRON_SECRET = process.env.CRON_SECRET;
 
 if (!CRON_SECRET) {
@@ -18,14 +18,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Проверяем авторизацию
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = request.nextUrl.searchParams.get('secret');
-
-    // Проверяем секрет (через заголовок или query параметр)
-    const providedSecret = authHeader?.replace('Bearer ', '') || cronSecret;
-
-    if (!CRON_SECRET || providedSecret !== CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       console.log('❌ Cron Koala: Неверный секрет авторизации или CRON_SECRET не настроен');
       return NextResponse.json({
         success: false,
@@ -35,17 +28,16 @@ export async function GET(request: NextRequest) {
 
     console.log('🚀 Cron Koala: Запуск парсера...');
 
-    // Определяем базовый URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-      'http://localhost:3000';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-    // Вызываем API парсера
     const response = await fetch(`${baseUrl}/api/koala-parser`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${CRON_SECRET}`,
+      },
     });
 
     const result = await response.json();

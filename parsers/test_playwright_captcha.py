@@ -5,6 +5,7 @@
 """
 
 import logging
+import os
 import sys
 
 # Настройка логирования
@@ -22,10 +23,26 @@ except ImportError:
     logger.error("Затем: playwright install")
     sys.exit(1)
 
-# Данные из панели Bright Data
-# Добавляем -country-us для использования США (обход блокировки .ru)
-AUTH = 'brd-customer-hl_94d02fd9-zone-web_unlocker1-country-us:bp8k2m4ji12a'
-SBR_WS_CDP = f'wss://{AUTH}@brd.superproxy.io:9222'
+def _bright_data_auth() -> str:
+    direct = (os.environ.get("BRIGHT_DATA_PROXY_AUTH") or "").strip()
+    if direct:
+        return direct
+    u = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_USERNAME") or os.environ.get(
+        "BRIGHT_DATA_RESIDENTIAL_USERNAME", ""
+    )
+    p = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_PASSWORD") or os.environ.get(
+        "BRIGHT_DATA_RESIDENTIAL_PASSWORD", ""
+    )
+    suffix = os.environ.get("BRIGHT_DATA_PROXY_COUNTRY_SUFFIX", "-country-us")
+    if u and p:
+        return f"{u}{suffix}:{p}"
+    raise SystemExit(
+        "Задайте BRIGHT_DATA_PROXY_AUTH (user:pass) или WEB_UNLOCKER/RESIDENTIAL USERNAME+PASSWORD"
+    )
+
+
+AUTH = _bright_data_auth()
+SBR_WS_CDP = f"wss://{AUTH}@brd.superproxy.io:9222"
 
 def test_captcha_demo():
     """Тестирует решение капчи на демо-странице Yandex"""

@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server"
 import { getUserByUsername } from "@/lib/storage"
 import { buildSessionCookieValue } from "@/lib/server-auth"
+import { rateLimitLogin } from "@/lib/rate-limit"
 import bcrypt from "bcryptjs"
+import { z } from "zod"
+
+const loginBodySchema = z.object({
+  username: z.string().min(1).max(128),
+  password: z.string().min(1).max(256),
+})
 
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  const rl = rateLimitLogin(ip)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { success: false, error: "Слишком много попыток входа. Подождите минуту." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 60) } }
+    )
+  }
+
   const debugStart = performance.now()
   const debugLog = (phase: string, start: number) => {
     const ms = Math.round(performance.now() - start)
@@ -11,14 +30,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { username, password } = await request.json()
-
-    if (!username || !password) {
+    const json = await request.json().catch(() => null)
+    const parsed = loginBodySchema.safeParse(json)
+    if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "Логин и пароль обязательны" },
         { status: 400 }
       )
     }
+    const { username, password } = parsed.data
 
     const tLoadUser = performance.now()
     let user

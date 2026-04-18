@@ -1,8 +1,4 @@
 {
-  "target_artists": [
-    "Wide Pie",
-    "Sour Diesel",
-    "Lover"
-  ],
-  "captcha_api_key": "1dadad5f5bfe4dbb89a806b52118ad45"
+  "target_artists": ["Wide Pie", "Sour Diesel", "Lover"],
+  "captcha_api_key": ""
 }

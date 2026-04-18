@@ -3,28 +3,53 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { users } from "@/lib/data"
 import { CheckCircle, AlertCircle, Clock } from "lucide-react"
 
+type ArtistRow = {
+  id: string
+  name: string
+  vkMusicUrl?: string | null
+}
+
 export function PlaylistCrawlerStatus() {
-  const [artistsWithVkMusic, setArtistsWithVkMusic] = useState<any[]>([])
+  const [artistsWithVkMusic, setArtistsWithVkMusic] = useState<ArtistRow[]>([])
   const [urlStatus, setUrlStatus] = useState<
     Record<string, { status: "valid" | "invalid" | "checking"; message?: string }>
   >({})
 
   useEffect(() => {
-    // Получаем всех артистов с URL VK Music
-    const artistsWithVk = users.filter((user) => user.role === "artist" && user.vkMusicUrl)
-    setArtistsWithVkMusic(artistsWithVk)
+    let cancelled = false
 
-    // Проверяем статус URL для каждого артиста
+    async function loadArtists() {
+      try {
+        const res = await fetch("/api/users?role=artist&pageSize=100&page=1", { credentials: "include" })
+        const j = await res.json().catch(() => ({}))
+        const users = (j.users || []) as ArtistRow[]
+        if (!cancelled) {
+          setArtistsWithVkMusic(users.filter((u) => !!u.vkMusicUrl))
+        }
+      } catch {
+        if (!cancelled) setArtistsWithVkMusic([])
+      }
+    }
+
+    void loadArtists()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (artistsWithVkMusic.length === 0) return
+
     const checkUrls = async () => {
       const statusMap: Record<string, { status: "valid" | "invalid" | "checking"; message?: string }> = {}
 
-      for (const artist of artistsWithVk) {
+      for (const artist of artistsWithVkMusic) {
         if (!artist.vkMusicUrl) continue
 
         statusMap[artist.id] = { status: "checking" }
+        setUrlStatus({ ...statusMap })
 
         try {
           const response = await fetch(artist.vkMusicUrl, {
@@ -54,8 +79,8 @@ export function PlaylistCrawlerStatus() {
       setUrlStatus(statusMap)
     }
 
-    checkUrls()
-  }, [])
+    void checkUrls()
+  }, [artistsWithVkMusic])
 
   return (
     <Card className="bg-card border-border text-card-foreground">
@@ -73,7 +98,7 @@ export function PlaylistCrawlerStatus() {
                   <div>
                     <p className="font-medium">{artist.name}</p>
                     <a
-                      href={artist.vkMusicUrl}
+                      href={artist.vkMusicUrl!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-400 hover:underline"
@@ -81,21 +106,23 @@ export function PlaylistCrawlerStatus() {
                       {artist.vkMusicUrl}
                     </a>
                   </div>
-                  <div>
-                    {!urlStatus[artist.id] ? (
-                      <Badge variant="outline" className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    {urlStatus[artist.id]?.status === "checking" && (
+                      <Badge variant="outline" className="gap-1">
                         <Clock className="h-3 w-3" />
                         Проверка...
                       </Badge>
-                    ) : urlStatus[artist.id].status === "valid" ? (
-                      <Badge variant="outline" className="bg-green-500/20 text-green-500 flex items-center gap-1">
+                    )}
+                    {urlStatus[artist.id]?.status === "valid" && (
+                      <Badge className="bg-emerald-600 gap-1">
                         <CheckCircle className="h-3 w-3" />
-                        Доступен
+                        OK
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-red-500/20 text-red-500 flex items-center gap-1">
+                    )}
+                    {urlStatus[artist.id]?.status === "invalid" && (
+                      <Badge variant="destructive" className="gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        Недоступен
+                        Ошибка
                       </Badge>
                     )}
                   </div>

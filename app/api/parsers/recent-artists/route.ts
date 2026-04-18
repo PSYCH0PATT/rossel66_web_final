@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { releaseFromPrisma } from "@/lib/storage-adapters"
+import { requireAdminOrCron } from "@/lib/server-auth"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAdminOrCron(request)
+    if (denied) return denied
+
     const twoWeeksAgo = new Date()
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
     const minDate = twoWeeksAgo.toISOString().split("T")[0]

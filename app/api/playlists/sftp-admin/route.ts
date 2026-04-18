@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
     }
     const name = `upload_${Date.now()}.csv`
     const dest = path.join(DOWNLOADS_DIR, name)
-    const buf = Buffer.from(await file.arrayBuffer())
-    fs.writeFileSync(dest, buf)
+    const ab = await file.arrayBuffer()
+    fs.writeFileSync(dest, new Uint8Array(ab))
 
     const result = await importPlaylistsFromCsvFile(dest, {
       cleanupRemoved,

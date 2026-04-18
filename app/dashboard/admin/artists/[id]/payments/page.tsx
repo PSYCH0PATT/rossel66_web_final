@@ -4,53 +4,84 @@ import { useState, useEffect } from "react"
 import Layout from "@/components/layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { payments, users } from "@/lib/data"
 import { DollarSign, Calendar, CheckCircle, Clock, Plus, Edit, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
+type UiPayment = {
+  id: string
+  quarter: string
+  year: number
+  amount: number
+  date: string
+  status: "completed" | "pending"
+}
+
 export default function ArtistPaymentsPage({ params }: { params: { id: string } }) {
   const artistId = params.id
-  const [artist, setArtist] = useState<any>(null)
-  const [artistPayments, setArtistPayments] = useState<any[]>([])
+  const [artist, setArtist] = useState<{ id: string; name: string; username: string } | null>(null)
+  const [artistPayments, setArtistPayments] = useState<UiPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
-  // Загрузка данных артиста и его выплат
   useEffect(() => {
-    // Проверяем статичных артистов
-    const staticArtist = users.find((user) => user.id === artistId && user.role === "artist")
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError("")
+      try {
+        const uRes = await fetch(`/api/users?id=${encodeURIComponent(artistId)}`, { credentials: "include" })
+        const uJson = await uRes.json().catch(() => ({}))
+        if (!uRes.ok || !uJson.users?.[0]) {
+          if (!cancelled) setError("Артист не найден")
+          return
+        }
+        const u = uJson.users[0]
+        if (u.role !== "artist") {
+          if (!cancelled) setError("Артист не найден")
+          return
+        }
+        setArtist({ id: u.id, name: u.name, username: u.username })
 
-    if (staticArtist) {
-      setArtist(staticArtist)
-      // Получаем выплаты артиста из статичных данных
-      const artistPayments = payments.filter((payment) => payment.artistId === artistId)
-      setArtistPayments(artistPayments)
-      setLoading(false)
-      return
+        const pRes = await fetch(
+          `/api/payments?artistId=${encodeURIComponent(artistId)}&pageSize=100&page=1`,
+          { credentials: "include" }
+        )
+        const pJson = await pRes.json().catch(() => ({}))
+        if (!pRes.ok) {
+          if (!cancelled) setError(pJson.error || "Не удалось загрузить выплаты")
+          return
+        }
+        const raw = (pJson.payments || []) as Array<{
+          id: string
+          quarter: string
+          year: number
+          amount: number | null
+          date: string | null
+          isPaid: boolean | null
+        }>
+        const mapped: UiPayment[] = raw.map((p) => ({
+          id: p.id,
+          quarter: p.quarter,
+          year: p.year,
+          amount: p.amount ?? 0,
+          date: p.date || "",
+          status: p.isPaid ? "completed" : "pending",
+        }))
+        if (!cancelled) setArtistPayments(mapped)
+      } catch {
+        if (!cancelled) setError("Ошибка загрузки")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-
-    // Проверяем динамически добавленных артистов
-    const dynamicUsersStr = localStorage.getItem("dynamicUsers")
-    const dynamicUsers = dynamicUsersStr ? JSON.parse(dynamicUsersStr) : []
-    const dynamicArtist = dynamicUsers.find((user: any) => user.id === artistId && user.role === "artist")
-
-    if (dynamicArtist) {
-      setArtist(dynamicArtist)
-
-      // Получаем выплаты артиста из localStorage
-      const dynamicPaymentsStr = localStorage.getItem(`payments_${artistId}`)
-      const dynamicPayments = dynamicPaymentsStr ? JSON.parse(dynamicPaymentsStr) : []
-      setArtistPayments(dynamicPayments)
-    } else {
-      setError("Артист не найден")
+    void load()
+    return () => {
+      cancelled = true
     }
-
-    setLoading(false)
   }, [artistId])
 
-  // Group payments by year
   const paymentsByYear = artistPayments.reduce(
     (acc, payment) => {
       if (!acc[payment.year]) {
@@ -59,10 +90,9 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
       acc[payment.year].push(payment)
       return acc
     },
-    {} as Record<number, typeof payments>,
+    {} as Record<number, UiPayment[]>
   )
 
-  // Sort years in descending order
   const years = Object.keys(paymentsByYear)
     .map(Number)
     .sort((a, b) => b - a)
@@ -141,9 +171,8 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                 <div className="space-y-3">
                   {paymentsByYear[year]
                     .sort((a, b) => {
-                      // Sort by quarter (Q1, Q2, Q3, Q4)
-                      const quarterA = Number.parseInt(a.quarter.substring(1))
-                      const quarterB = Number.parseInt(b.quarter.substring(1))
+                      const quarterA = Number.parseInt(a.quarter.substring(1), 10)
+                      const quarterB = Number.parseInt(b.quarter.substring(1), 10)
                       return quarterB - quarterA
                     })
                     .map((payment) => (
@@ -162,7 +191,11 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                                 </h4>
                                 <div className="text-sm text-gray-400 flex items-center gap-2 mt-1">
                                   <Calendar className="h-4 w-4" />
-                                  <span>{new Date(payment.date).toLocaleDateString()}</span>
+                                  <span>
+                                    {payment.date
+                                      ? new Date(payment.date).toLocaleDateString()
+                                      : "—"}
+                                  </span>
                                 </div>
                               </div>
                             </div>

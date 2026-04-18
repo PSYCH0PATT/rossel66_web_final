@@ -41,12 +41,20 @@ class BrightDataBrowserAPI:
     
     def __init__(self, api_key: str):
         self.api_key = api_key
-        # Данные из панели Bright Data для Web Unlocker (прокси-сервер)
-        # Это НЕ Browser API, а Web Unlocker через прокси!
-        self.host = "brd.superproxy.io"
-        self.port = "33335"  # Правильный порт из панели управления
-        self.username = "brd-customer-hl_94d02fd9-zone-web_unlocker1"
-        self.password = "bp8k2m4ji12a"
+        # Bright Data Web Unlocker — только из окружения (см. BRIGHT_DATA_SETUP.md)
+        self.host = os.environ.get("PROXY_HOST", "brd.superproxy.io")
+        self.port = os.environ.get("PROXY_PORT", "33335")
+        self.username = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_USERNAME") or os.environ.get(
+            "BRIGHT_DATA_RESIDENTIAL_USERNAME", ""
+        )
+        self.password = os.environ.get("BRIGHT_DATA_WEB_UNLOCKER_PASSWORD") or os.environ.get(
+            "BRIGHT_DATA_RESIDENTIAL_PASSWORD", ""
+        )
+        if not self.username or not self.password:
+            raise ValueError(
+                "Задайте BRIGHT_DATA_WEB_UNLOCKER_USERNAME/PASSWORD "
+                "или BRIGHT_DATA_RESIDENTIAL_USERNAME/PASSWORD"
+            )
         # Формат прокси URL для Selenium
         self.proxy_url = f"http://{self.username}:{self.password}@{self.host}:{self.port}"
         self.max_attempts = 3
@@ -136,11 +144,10 @@ class BandlinkParserBrowserAPIMac:
 
     def init_browser_api(self):
         """Инициализирует Bright Data Browser API"""
-        api_key = self.config.get('bright_data_api_key')
+        api_key = (self.config.get('bright_data_api_key') or os.environ.get('BRIGHT_DATA_API_KEY') or '').strip()
         if not api_key:
-            # Используем API ключ из кода
-            api_key = "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70"
-            logger.info("🔑 Используем API ключ из кода")
+            logger.error("❌ Задайте bright_data_api_key в конфиге или переменную окружения BRIGHT_DATA_API_KEY")
+            api_key = None
         
         try:
             self.browser_api = BrightDataBrowserAPI(api_key)

@@ -34,8 +34,12 @@ logger = logging.getLogger(__name__)
 class ZvonkoAnalyzer:
     def __init__(self):
         self.driver = None
-        self.login = "rossel_66"
-        self.password = "rossel_66_27122023"
+        self.login = (os.environ.get("ZVONKO_USERNAME") or "").strip()
+        if not self.login:
+            raise ValueError("ZVONKO_USERNAME environment variable is required")
+        self.password = os.environ.get("ZVONKO_PASSWORD")
+        if not self.password:
+            raise ValueError("Задайте переменную окружения ZVONKO_PASSWORD")
         self.base_url = "https://account.zvonkodigital.com"
         self.releases_url = "https://account.zvonkodigital.com/music/releases"
         

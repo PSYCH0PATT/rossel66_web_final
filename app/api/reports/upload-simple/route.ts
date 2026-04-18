@@ -4,6 +4,15 @@ import { requireAdmin } from "@/lib/server-auth"
 import * as XLSX from 'xlsx'
 import * as fs from 'fs'
 import * as path from 'path'
+import { z } from "zod"
+
+const fieldsSchema = z.object({
+  artistName: z.string().min(1).max(500),
+  quarter: z.string().min(1).max(32),
+  year: z.string().regex(/^\d{4}$/),
+  totalAmount: z.string().max(64).optional(),
+  totalPlays: z.string().max(64).optional(),
+})
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin(request)
@@ -11,19 +20,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData()
-    const file = formData.get('file') as File
-    const artistName = formData.get('artistName') as string
-    const quarter = formData.get('quarter') as string
-    const year = formData.get('year') as string
-    const totalAmount = formData.get('totalAmount') as string
-    const totalPlays = formData.get('totalPlays') as string
-
-    if (!file || !artistName || !quarter || !year) {
-      return NextResponse.json({
-        success: false,
-        message: "Отсутствуют обязательные поля"
-      }, { status: 400 })
+    const file = formData.get('file') as File | null
+    const parsedFields = fieldsSchema.safeParse({
+      artistName: String(formData.get("artistName") ?? ""),
+      quarter: String(formData.get("quarter") ?? ""),
+      year: String(formData.get("year") ?? ""),
+      totalAmount: formData.get("totalAmount") != null ? String(formData.get("totalAmount")) : undefined,
+      totalPlays: formData.get("totalPlays") != null ? String(formData.get("totalPlays")) : undefined,
+    })
+    if (!parsedFields.success || !file || typeof (file as any).arrayBuffer !== "function") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Отсутствуют обязательные поля или неверный формат",
+          issues: parsedFields.success ? undefined : parsedFields.error.flatten(),
+        },
+        { status: 400 }
+      )
     }
+    const { artistName, quarter, year, totalAmount, totalPlays } = parsedFields.data
 
     // Читаем Excel файл
     const buffer = await file.arrayBuffer()
@@ -99,8 +114,7 @@ export async function POST(request: NextRequest) {
     // Сохраняем файл на диск
     const fileName = `${reportId}_${file.name}`
     const filePath = path.join(uploadsDir, fileName)
-    const fileBuffer = Buffer.from(buffer)
-    fs.writeFileSync(filePath, fileBuffer)
+    fs.writeFileSync(filePath, new Uint8Array(buffer))
     
     // Относительный путь для БД
     const relativeFilePath = `uploads/reports/${quarter}/${fileName}`

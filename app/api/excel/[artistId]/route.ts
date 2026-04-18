@@ -1,43 +1,68 @@
 import { NextResponse } from "next/server"
 import * as XLSX from "xlsx"
-import { generateArtistExcelData, users } from "@/lib/data"
+import { prisma } from "@/lib/prisma"
+import { releaseFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
+import { getSessionUser, requireAuth } from "@/lib/server-auth"
 
 export async function GET(request: Request, { params }: { params: { artistId: string } }) {
-  try {
-    const artistId = params.artistId
+  const denied = await requireAuth(request)
+  if (denied) return denied
 
-    // Check if artist exists
-    const artist = users.find((user) => user.id === artistId && user.role === "artist")
-    if (!artist) {
+  const session = getSessionUser()!
+  const artistId = params.artistId
+
+  if (session.role !== "admin" && session.id !== artistId) {
+    return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+  }
+
+  try {
+    const userRow = await prisma.user.findUnique({ where: { id: artistId } })
+    if (!userRow || userRow.role !== "artist") {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }
 
-    // Generate Excel data
-    const excelData = generateArtistExcelData(artistId)
+    const artist = userFromPrisma(userRow)
+    const releaseRows = await prisma.release.findMany({
+      where: { artistId },
+      orderBy: { releaseDate: "desc" },
+    })
+    const releases = releaseRows.map(releaseFromPrisma)
 
-    // Create workbook
+    const excelData: Record<string, string | number | undefined>[] = []
+    for (const release of releases) {
+      for (const track of release.tracks) {
+        excelData.push({
+          "Никнейм артиста": artist.name,
+          "Название релиза": release.title,
+          "Название трека": track.title,
+          Дата: new Date(release.releaseDate).toLocaleDateString(),
+          UPC: release.upc,
+          ISRC: track.isrc || "Не присвоен",
+          Длительность: track.duration,
+          Статус: String(release.status ?? ""),
+        })
+      }
+    }
+
     const workbook = XLSX.utils.book_new()
     const worksheet = XLSX.utils.json_to_sheet(excelData)
 
-    // Set column widths
     const colWidths = [
-      { wch: 20 }, // Никнейм артиста
-      { wch: 25 }, // Название релиза
-      { wch: 25 }, // Название трека
-      { wch: 15 }, // Дата
-      { wch: 15 }, // UPC
-      { wch: 15 }, // ISRC
-      { wch: 10 }, // Длительность
-      { wch: 15 }, // Статус
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 15 },
     ]
     worksheet["!cols"] = colWidths
 
     XLSX.utils.book_append_sheet(workbook, worksheet, "Релизы и треки")
 
-    // Convert to buffer
     const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
 
-    // Return as downloadable file
     return new Response(excelBuffer, {
       headers: {
         "Content-Disposition": `attachment; filename="${artist.username}_tracks.xlsx"`,

@@ -23,8 +23,8 @@ pip install requests beautifulsoup4 urllib3
     "Wide Pie",
     "PLVT"
   ],
-  "bright_data_proxy_username": "brd-customer-hl_94d02fd9-zone-web_unlocker1",
-  "bright_data_proxy_password": "bp8k2m4ji1za"
+  "bright_data_proxy_username": "brd-customer-<id>-zone-web_unlocker1",
+  "bright_data_proxy_password": "YOUR_BRIGHT_DATA_PROXY_PASSWORD"
 }
 ```
 
@@ -40,8 +40,8 @@ pip install requests beautifulsoup4 urllib3
 2. Перейдите в раздел **Web Unlocker**
 3. Найдите раздел **"Прямой доступ к API"**
 4. Скопируйте:
-   - **Имя пользователя** (Username) - например: `brd-customer-hl_94d02fd9-zone-web_unlocker1`
-   - **Пароль** (Password) - например: `bp8k2m4ji1za`
+   - **Имя пользователя** (Username) - например: `brd-customer-<id>-zone-web_unlocker1`
+   - **Пароль** (Password) - из панели (не коммитить в репозиторий)
 
 ## 🚀 Запуск
 
@@ -65,7 +65,7 @@ http://{username}-country-{country}:{password}@brd.superproxy.io:33335
 
 Пример:
 ```
-http://brd-customer-hl_94d02fd9-zone-web_unlocker1-country-us:bp8k2m4ji1za@brd.superproxy.io:33335
+http://brd-customer-<id>-zone-web_unlocker1-country-us:YOUR_PASSWORD@brd.superproxy.io:33335
 ```
 
 ### 3. **Параметры геотаргетинга**
@@ -138,7 +138,7 @@ response = requests.get(url, proxies=proxies, verify=False)
 
 ```bash
 curl -i --proxy brd.superproxy.io:33335 \
-  --proxy-user brd-customer-hl_94d02fd9-zone-web_unlocker1:bp8k2m4ji1za \
+  --proxy-user brd-customer-<id>-zone-web_unlocker1:YOUR_PASSWORD \
   -k "https://geo.brdtest.com/welcome.txt?product=unlocker&method=native"
 ```
 

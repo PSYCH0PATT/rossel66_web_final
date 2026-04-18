@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getSessionUser } from "@/lib/server-auth"
+import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import { reportFromPrisma } from "@/lib/storage-adapters"
 import { Prisma } from "@prisma/client"
 
@@ -14,11 +14,10 @@ const PAGE_SIZES = new Set([20, 50, 100])
  */
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
-    const sessionUser = getSessionUser()
-    if (!sessionUser) {
-      return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
-    }
+    const denied = await requireAuth(request)
+    if (denied) return denied
 
+    const sessionUser = getSessionUser()!
     const quarter = params.quarter
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
@@ -51,7 +50,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
         ) deduped
       `
     )
-    const total = Number(countRows[0]?.c ?? 0n)
+    const total = Number(countRows[0]?.c ?? 0)
 
     const idRows = await prisma.$queryRaw<{ id: string }[]>(
       Prisma.sql`

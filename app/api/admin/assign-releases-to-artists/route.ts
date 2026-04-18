@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { assignReleasesToNewArtist } from '@/lib/storage';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/server-auth';
 
 /**
  * POST /api/admin/assign-releases-to-artists
  * Привязывает релизы без artistId ко всем артистам по имени
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
   try {
     console.log('🔍 Загрузка списка артистов...');
     const artists = await prisma.user.findMany({

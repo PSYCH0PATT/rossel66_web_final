@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createBackup } from '@/lib/backup'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 
 // This endpoint will be called by a cron job every 3 days at 3:00 AM
 export async function GET(request: NextRequest) {
   try {
-    // Проверка авторизации (ОБЯЗАТЕЛЬНО установите CRON_SECRET в переменных окружения!)
-    const authHeader = request.headers.get('authorization')
-    const expectedAuth = process.env.CRON_SECRET
-    
-    if (!expectedAuth || authHeader !== `Bearer ${expectedAuth}`) {
+    if (!isCronAuthorized(request)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

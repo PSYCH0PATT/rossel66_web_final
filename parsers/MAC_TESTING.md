@@ -101,7 +101,7 @@ Mac-версия открывает браузер, поэтому вы може
     "Sour Diesel",
     "Test Artist"
   ],
-  "captcha_api_key": "1dadad5f5bfe4dbb89a806b52118ad45"
+  "captcha_api_key": "YOUR_2CAPTCHA_API_KEY"
 }
 ```
 

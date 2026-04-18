@@ -8,7 +8,7 @@ interface FileAnalysis {
   columns: string[];
   sampleRows: any[];
   date: string | null;
-  uniqueValues: Record<string, Set<string>>;
+  uniqueValues: Record<string, string[]>;
 }
 
 function parseDateFromFilename(filename: string): string | null {

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/server-auth'
+import { analyticsSyncBodySchema } from '@/lib/api-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,16 +13,23 @@ export const dynamic = 'force-dynamic'
  *   mode — "7days" | "latest" | "all" | "today"
  *   startDate, endDate — опционально YYYY-MM-DD; если оба заданы, импорт только файлов за этот период (приоритет над mode)
  *
- * Базовый URL: сначала loopback (надёжно из Docker за reverse-proxy), иначе NEXT_PUBLIC_BASE_URL,
- * иначе заголовки запроса.
+ * Базовый URL: `INTERNAL_CRON_BASE_URL` или `http://127.0.0.1:${PORT}`.
+ * На проде за nginx при необходимости задайте INTERNAL_CRON_BASE_URL на реальный loopback:порт приложения.
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as {
-      mode?: string
-      startDate?: string
-      endDate?: string
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
+    const raw = await request.json().catch(() => ({}))
+    const parsed = analyticsSyncBodySchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Некорректное тело запроса', details: parsed.error.flatten() },
+        { status: 400 }
+      )
     }
+    const body = parsed.data
     const mode = body.mode || '7days'
     const cronSecret = process.env.CRON_SECRET
 
@@ -40,7 +49,6 @@ export async function POST(request: NextRequest) {
     )
 
     const q = new URLSearchParams()
-    q.set('secret', cronSecret)
     const sd = body.startDate?.trim()
     const ed = body.endDate?.trim()
     if (sd && ed) {
@@ -51,13 +59,39 @@ export async function POST(request: NextRequest) {
     }
     const cronUrl = `${baseUrl}/api/cron/analytics-flash?${q.toString()}`
     console.log(
-      `[analytics/sync] ${sd && ed ? `range ${sd}…${ed}` : `mode=${mode}`} → GET ${cronUrl.replace(cronSecret, '***')}`
+      `[analytics/sync] ${sd && ed ? `range ${sd}…${ed}` : `mode=${mode}`} → GET ${cronUrl} (Authorization: Bearer ***)`
     )
 
-    const res = await fetch(cronUrl, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    })
+    const CRON_FETCH_MS = 90_000
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), CRON_FETCH_MS)
+    let res: Response
+    try {
+      res = await fetch(cronUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${cronSecret}`,
+        },
+        signal: controller.signal,
+      })
+    } catch (err) {
+      clearTimeout(timer)
+      const name = err instanceof Error ? err.name : ''
+      if (name === 'AbortError') {
+        console.error('[analytics/sync] cron fetch aborted (timeout)')
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Cron timeout (>90s)',
+            hint: 'Проверьте SFTP и INTERNAL_CRON_BASE_URL; при большом объёме CSV импорт может занять дольше.',
+          },
+          { status: 504 }
+        )
+      }
+      throw err
+    }
+    clearTimeout(timer)
 
     const text = await res.text()
     let result: Record<string, unknown>

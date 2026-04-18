@@ -171,11 +171,10 @@ class BandlinkParserBrightDataMac:
 
     def init_bright_data(self):
         """Инициализирует Bright Data Web Unlocker"""
-        api_key = self.config.get('bright_data_api_key')
+        api_key = (self.config.get('bright_data_api_key') or os.environ.get('BRIGHT_DATA_API_KEY') or '').strip()
         if not api_key:
-            # Используем API ключ из кода
-            api_key = "4d65b7184094d3f99a670ab198fe0e8ce2116d52c66b05887aafe6fecb075a70"
-            logger.info("🔑 Используем API ключ из кода")
+            logger.error("❌ Задайте bright_data_api_key в конфиге или переменную окружения BRIGHT_DATA_API_KEY")
+            api_key = None
         
         try:
             self.bright_data = BrightDataWebUnlocker(api_key)

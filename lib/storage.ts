@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import bcrypt from 'bcryptjs'
+import type { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { 
   userFromPrisma, 
@@ -14,12 +15,14 @@ import {
 } from './storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
 
+export type UserRole = 'admin' | 'artist'
+
 export interface User {
   id: string
   username: string
   name: string
   email: string
-  role: 'admin' | 'artist'
+  role: UserRole
   password: string
   createdAt: string
   avatarUrl?: string
@@ -117,6 +120,8 @@ export type ActivityType =
   | 'analytics_import'
   | 'analytics_cleanup'
   | 'parser_playlist_found'
+  | 'artist_auto_created'
+  | 'report_status_changed'
 
 export interface Activity {
   id: string
@@ -206,23 +211,44 @@ export async function addUser(user: Omit<User, 'id' | 'createdAt'>): Promise<Use
   return userFromPrisma(prismaUser)
 }
 
+function toUserUpdateInput(updates: Partial<User>): Prisma.UserUpdateInput {
+  const data: Prisma.UserUpdateInput = {}
+  if (updates.username !== undefined) data.username = updates.username
+  if (updates.name !== undefined) data.name = updates.name
+  if (updates.email !== undefined) data.email = updates.email
+  if (updates.role !== undefined) data.role = updates.role
+  if (updates.avatarUrl !== undefined) data.avatarUrl = updates.avatarUrl
+  if (updates.vkMusicUrl !== undefined) data.vkMusicUrl = updates.vkMusicUrl
+  if (updates.yandexMusicUrl !== undefined) data.yandexMusicUrl = updates.yandexMusicUrl
+  if (updates.spotifyUrl !== undefined) data.spotifyUrl = updates.spotifyUrl
+  if (updates.fio !== undefined) data.fio = updates.fio
+  if (updates.fioShort !== undefined) data.fioShort = updates.fioShort
+  if (updates.contract !== undefined) data.contract = updates.contract
+  if (updates.percentage !== undefined) data.percentage = updates.percentage
+  if (updates.verified !== undefined) data.verified = updates.verified
+  if (updates.password !== undefined) {
+    data.password = updates.password.startsWith('$2')
+      ? updates.password
+      : bcrypt.hashSync(updates.password, 10)
+  }
+  return data
+}
+
 export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
   try {
-    // Хешируем пароль если он обновляется и ещё не захеширован
-    let updateData: any = { ...updates }
-    if (updates.password && !updates.password.startsWith('$2')) {
-      updateData.password = bcrypt.hashSync(updates.password, 10)
+    const data = toUserUpdateInput(updates)
+    if (Object.keys(data).length === 0) {
+      const u = await prisma.user.findUnique({ where: { id } })
+      return u ? userFromPrisma(u) : null
     }
-    
-    // Удаляем поля которых нет в схеме Prisma
-    delete updateData.id
-    delete updateData.createdAt
-    
+
     const prismaUser = await prisma.user.update({
       where: { id },
-      data: updateData
+      data,
     })
-    
+
+    await revalidateArtistDashboardsForArtistIds([id])
+
     return userFromPrisma(prismaUser)
   } catch (error) {
     console.error('Error updating user:', error)
@@ -287,27 +313,90 @@ export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'up
   return releaseFromPrisma(prismaRelease)
 }
 
+/** Атомарно: создать релиз и записи activity (без частичного состояния). */
+export async function addReleaseWithActivities(
+  release: Omit<Release, 'id' | 'createdAt' | 'updatedAt'>,
+  buildActivities: (created: Release) => Omit<Activity, 'id' | 'createdAt'>[]
+): Promise<Release> {
+  const releaseId = `release_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  const data = releaseToPrismaCreate(release)
+  const prismaRelease = await prisma.$transaction(async (tx) => {
+    const createdRow = await tx.release.create({
+      data: { ...data, id: releaseId },
+    })
+    const created = releaseFromPrisma(createdRow)
+    let idx = 0
+    for (const act of buildActivities(created)) {
+      const ad = activityToPrismaCreate(act)
+      await tx.activity.create({
+        data: {
+          ...ad,
+          id: `activity_${Date.now()}_${idx++}_${Math.random().toString(36).slice(2, 9)}`,
+        },
+      })
+    }
+    return createdRow
+  })
+
+  await revalidateArtistDashboardsForArtistIds([
+    prismaRelease.artistId,
+    ...(prismaRelease.featuredArtistIds ?? []),
+  ])
+  await trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
+
+  return releaseFromPrisma(prismaRelease)
+}
+
+function toReleaseUpdateInput(updates: Partial<Release>): Prisma.ReleaseUpdateInput {
+  const data: Prisma.ReleaseUpdateInput = {}
+  if (updates.title !== undefined) data.title = updates.title
+  if (updates.artistId !== undefined) data.artistId = updates.artistId || null
+  if (updates.releaseDate !== undefined) data.releaseDate = updates.releaseDate
+  if (updates.type !== undefined) data.type = updates.type
+  if (updates.coverUrl !== undefined) data.coverUrl = updates.coverUrl
+  if (updates.tracks !== undefined)
+    data.tracks = updates.tracks as unknown as Prisma.InputJsonValue
+  if (updates.upc !== undefined) data.upc = updates.upc
+  if (updates.status !== undefined) data.status = updates.status
+  if (updates.featuredArtistIds !== undefined) data.featuredArtistIds = updates.featuredArtistIds
+  if (updates.featuredArtistNames !== undefined) data.featuredArtistNames = updates.featuredArtistNames
+  if (updates.koalaId !== undefined) data.koalaId = updates.koalaId
+  if (updates.bandlinkUrl !== undefined) data.bandlinkUrl = updates.bandlinkUrl
+  return data
+}
+
 export async function updateRelease(id: string, updates: Partial<Release>): Promise<Release | null> {
   try {
     const existing = await prisma.release.findUnique({
       where: { id },
-      select: { artistId: true, featuredArtistIds: true },
+      select: { artistId: true, featuredArtistIds: true, metadata: true },
     })
 
-    let updateData: any = { ...updates }
-    
-    // Удаляем поля которых нет в схеме или которые не должны обновляться
-    delete updateData.id
-    delete updateData.createdAt
-    
-    // Если есть tracks, преобразуем в JSON
-    if (updateData.tracks) {
-      updateData.tracks = updateData.tracks as any
+    const data = toReleaseUpdateInput(updates)
+
+    const known = new Set([
+      'title', 'artistId', 'releaseDate', 'type', 'coverUrl', 'tracks', 'upc', 'status',
+      'featuredArtistIds', 'featuredArtistNames', 'koalaId', 'bandlinkUrl', 'id', 'createdAt', 'updatedAt',
+    ])
+    const metaPatch: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(updates as Record<string, unknown>)) {
+      if (!known.has(k) && k !== 'artistName' && v !== undefined) {
+        metaPatch[k] = v
+      }
     }
-    
+    if (Object.keys(metaPatch).length > 0) {
+      const prev = (existing?.metadata as Record<string, unknown> | null) || {}
+      data.metadata = { ...prev, ...metaPatch } as Prisma.InputJsonValue
+    }
+
+    if (Object.keys(data).length === 0) {
+      const r = await prisma.release.findUnique({ where: { id } })
+      return r ? releaseFromPrisma(r) : null
+    }
+
     const prismaRelease = await prisma.release.update({
       where: { id },
-      data: updateData
+      data,
     })
 
     const touchedIds = [
@@ -646,14 +735,14 @@ export interface ArtistBalance {
 }
 
 // Расширенный интерфейс отчета с дополнительными полями
-export interface ReportData extends Report {
+export interface ReportData extends Omit<Report, 'status'> {
   year?: number
   totalPlays?: number
   totalAmount?: number
   isPaid?: boolean
   isSigned?: boolean
   isRegistered?: boolean
-  status?: string
+  status?: Report['status']
   uploadDate?: string
 }
 

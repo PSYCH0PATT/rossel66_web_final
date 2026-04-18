@@ -86,14 +86,18 @@ export async function saveFlashRecords(records: FlashRecord[]): Promise<SaveFlas
         month: null,
         year: null,
       })
+      existingKeys.add(key)
     }
 
     // Batch insert (разбиваем на куски по 500)
     const BATCH_SIZE = 500
     for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
       const batch = toInsert.slice(i, i + BATCH_SIZE)
-      await prisma.streamAnalytics.createMany({ data: batch })
-      result.added += batch.length
+      const r = await prisma.streamAnalytics.createMany({
+        data: batch,
+        skipDuplicates: true,
+      })
+      result.added += r.count
     }
 
   } catch (error) {
@@ -416,8 +420,11 @@ export async function aggregateAndCleanup(): Promise<{
     const BATCH_SIZE = 500
     for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
       const batch = toInsert.slice(i, i + BATCH_SIZE)
-      await prisma.streamAnalytics.createMany({ data: batch })
-      result.aggregated += batch.length
+      const r = await prisma.streamAnalytics.createMany({
+        data: batch,
+        skipDuplicates: true,
+      })
+      result.aggregated += r.count
     }
 
     // Удаляем дневные записи за прошлый год

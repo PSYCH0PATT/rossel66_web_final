@@ -15,7 +15,7 @@ import {
 async function assignArtistData(username: string) {
   console.log(`🔍 Поиск артиста: ${username}`)
   
-  const artist = getUserByUsername(username)
+  const artist = await getUserByUsername(username)
   
   if (!artist) {
     console.error(`❌ Артист с username "${username}" не найден`)
@@ -32,12 +32,12 @@ async function assignArtistData(username: string) {
   
   // Привязываем отчёты
   console.log(`\n📊 Привязка отчётов...`)
-  const assignedReports = assignReportsToNewArtist(artist.id, artist.name)
+  const assignedReports = await assignReportsToNewArtist(artist.id, artist.name)
   console.log(`✅ Привязано отчётов: ${assignedReports}`)
   
   // Привязываем релизы
   console.log(`\n🎵 Привязка релизов...`)
-  const assignedReleases = assignReleasesToNewArtist(artist.id, artist.name, username)
+  const assignedReleases = await assignReleasesToNewArtist(artist.id, artist.name, username)
   console.log(`✅ Привязано релизов: ${assignedReleases}`)
   
   // Привязываем плейлисты
@@ -53,7 +53,7 @@ async function assignArtistData(username: string) {
   
   // Логируем активность
   if (assignedReports > 0) {
-    addActivity({
+    await addActivity({
       type: 'report_received',
       userId: artist.id,
       userRole: 'artist',
@@ -67,7 +67,7 @@ async function assignArtistData(username: string) {
     const artistReleases = await getReleasesByArtistId(artist.id)
     for (const release of artistReleases) {
       // Уведомление для артиста
-      addActivity({
+      await addActivity({
         type: 'release_added',
         userId: artist.id,
         userRole: 'artist',
@@ -77,7 +77,7 @@ async function assignArtistData(username: string) {
       })
       
       // Уведомление для админа
-      addActivity({
+      await addActivity({
         type: 'release_added',
         userId: 'system',
         userRole: 'admin',
@@ -89,7 +89,7 @@ async function assignArtistData(username: string) {
   }
   
   if (assignedPlaylists > 0) {
-    addActivity({
+    await addActivity({
       type: 'playlist_found',
       userId: artist.id,
       userRole: 'artist',

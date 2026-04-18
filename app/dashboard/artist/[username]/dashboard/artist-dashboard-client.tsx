@@ -7,7 +7,7 @@ import { ActivityFeed } from "@/components/activity-feed"
 import { StreamingChart } from "@/components/streaming-chart"
 import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
-import type { Release } from "@/lib/data"
+import type { Release } from "@/lib/storage"
 import { formatRubKpiShort, formatRubPlain } from "@/lib/format-dashboard-rub"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllPlaylists, getPlaylistsByArtist, getPlaylistsByArtistId } from '@/lib/sftp-playlist-storage';
 import { getPlaylistCoverUrl } from '@/lib/playlist-cover';
 import { extractTrackTitle } from '@/lib/sftp-playlist-parser';
+import { requireAdmin } from '@/lib/server-auth';
 
 export const dynamic = "force-dynamic"
 
@@ -15,6 +16,9 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAdmin(request);
+    if (denied) return denied;
+
     const artistId = request.nextUrl.searchParams.get('artistId');
     const artistName = request.nextUrl.searchParams.get('artistName');
     /** По умолчанию 2000 — админка и отчёты ожидают полный список; при необходимости передавайте take/skip */

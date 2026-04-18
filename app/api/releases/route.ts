@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { addRelease, addActivity, getUserById } from "@/lib/storage"
-import { prisma } from "@/lib/prisma"
+import { addReleaseWithActivities, getUserById } from "@/lib/storage"
 import { releaseFromPrisma } from "@/lib/storage-adapters"
+import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
+import { getSessionUser, requireAuth, requireAdmin } from "@/lib/server-auth"
+import { releasePostSchema } from "@/lib/api-schemas"
 
 export const dynamic = "force-dynamic"
 
@@ -15,13 +17,22 @@ function parsePagination(searchParams: URLSearchParams) {
   return { page, pageSize, skip: (page - 1) * pageSize }
 }
 
-/** GET /api/releases — пагинация + опциональные фильтры (админ/артист через artistId) */
+/** GET /api/releases — пагинация + опциональные фильтры (админ: всё; артист: только свой artistId) */
 export async function GET(request: Request) {
   try {
+    const denied = await requireAuth(request)
+    if (denied) return denied
+
+    const session = getSessionUser()
     const { searchParams } = new URL(request.url)
     const { page, pageSize, skip } = parsePagination(searchParams)
 
-    const artistId = searchParams.get("artistId") || undefined
+    let artistId = searchParams.get("artistId") || undefined
+    if (session?.role === "artist") {
+      if (!artistId || artistId !== session.id) {
+        return NextResponse.json({ success: false, error: "Доступ запрещён" }, { status: 403 })
+      }
+    }
     const q = searchParams.get("q")?.trim() || undefined
     const status = searchParams.get("status")?.trim() || undefined
     const artistName = searchParams.get("artistName")?.trim() || undefined
@@ -118,17 +129,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const releaseData = await request.json()
+    const denied = await requireAdmin(request)
+    if (denied) return denied
 
-    console.log("Получены данные для создания релиза:", releaseData)
-
-    // Валидация обязательных полей
-    if (!releaseData.artistId || !releaseData.title || !releaseData.upc) {
+    const raw = await request.json()
+    const parsed = releasePostSchema.safeParse(raw)
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "artistId, title, and upc are required" },
+        { success: false, error: "Некорректные данные", details: parsed.error.flatten() },
         { status: 400 }
       )
     }
+    const releaseData = parsed.data
+
+    console.log("Получены данные для создания релиза:", releaseData)
 
     const newRelease = {
       id: `release_${Date.now()}`,
@@ -138,44 +152,54 @@ export async function POST(request: Request) {
       upc: releaseData.upc,
       releaseDate: releaseData.releaseDate,
       status: releaseData.status || "moderation",
-      tracks: releaseData.tracks || [],
+      tracks: (releaseData.tracks || []) as unknown as import("@/lib/storage").Track[],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
 
     console.log("Создаем релиз с данными:", newRelease)
 
-    const createdRelease = await addRelease(newRelease)
+    const artist = await getUserById(releaseData.artistId)
+
+    const createdRelease = await addReleaseWithActivities(
+      {
+        artistId: newRelease.artistId,
+        title: newRelease.title,
+        coverUrl: newRelease.coverUrl,
+        upc: newRelease.upc,
+        releaseDate: newRelease.releaseDate,
+        status: newRelease.status,
+        tracks: newRelease.tracks,
+      },
+      (created) =>
+        artist
+          ? [
+              {
+                type: "release_added",
+                userId: artist.id,
+                userRole: "artist",
+                title: "Добавлен новый релиз",
+                description: `Релиз "${created.title}" успешно добавлен`,
+                metadata: { releaseId: created.id, releaseTitle: created.title },
+              },
+              {
+                type: "release_added",
+                userId: "system",
+                userRole: "admin",
+                title: "Добавлен новый релиз",
+                description: `Релиз "${created.title}" добавлен (артист: ${artist.name || artist.username})`,
+                metadata: {
+                  releaseId: created.id,
+                  releaseTitle: created.title,
+                  artistId: artist.id,
+                  artistName: artist.name,
+                },
+              },
+            ]
+          : []
+    )
 
     console.log("Релиз успешно сохранен")
-
-    // Создаем активность для артиста
-    const artist = await getUserById(releaseData.artistId)
-    if (artist) {
-      await addActivity({
-        type: "release_added",
-        userId: artist.id,
-        userRole: "artist",
-        title: "Добавлен новый релиз",
-        description: `Релиз "${createdRelease.title}" успешно добавлен`,
-        metadata: { releaseId: createdRelease.id, releaseTitle: createdRelease.title },
-      })
-
-      // Дубликат для админа
-      await addActivity({
-        type: "release_added",
-        userId: "system",
-        userRole: "admin",
-        title: "Добавлен новый релиз",
-        description: `Релиз "${createdRelease.title}" добавлен (артист: ${artist.name || artist.username})`,
-        metadata: {
-          releaseId: createdRelease.id,
-          releaseTitle: createdRelease.title,
-          artistId: artist.id,
-          artistName: artist.name,
-        },
-      })
-    }
 
     return NextResponse.json({ success: true, release: createdRelease })
   } catch (error) {
