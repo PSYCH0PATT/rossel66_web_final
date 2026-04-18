@@ -2,13 +2,15 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo, memo, useCallback } from "react"
+import { useState, useEffect, useMemo, memo } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
 interface SidebarProps {
   role: "artist" | "admin"
-  username?: string // Добавляем параметр username
+  username?: string
+  mobileMenuOpen: boolean
+  onMobileMenuOpenChange: (open: boolean) => void
 }
 
 type NavItemConfig = { href: string; label: string }
@@ -79,8 +81,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
   )
 })
 
-export default function Sidebar({ role, username }: SidebarProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [currentUsername, setCurrentUsername] = useState(username || "")
@@ -102,7 +103,7 @@ export default function Sidebar({ role, username }: SidebarProps) {
   }, [username])
 
   function handleNavigation() {
-    setIsMobileMenuOpen(false)
+    onMobileMenuOpenChange(false)
   }
 
   function handleLogout() {
@@ -145,38 +146,36 @@ export default function Sidebar({ role, username }: SidebarProps) {
 
   return (
     <>
-      <button
-        type="button"
-        className="md:hidden fixed left-2 top-0 z-[120] flex h-16 w-11 items-center justify-center text-gray-300 tap-highlight-transparent [-webkit-tap-highlight-color:transparent]"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
-      >
-        <span
-          className={`material-symbols-outlined text-3xl leading-none transition-transform duration-300 ${isMobileMenuOpen ? "rotate-90" : "rotate-0"}`}
-        >
-          {isMobileMenuOpen ? "close" : "menu"}
-        </span>
-      </button>
-
       {/* Main Sidebar (Desktop & Mobile when open) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[110] w-64 flex-shrink-0 bg-black/70 glass-panel border-r border-white/5 flex flex-col justify-between h-full backdrop-blur-xl transform transition-transform duration-300 ease-in-out md:z-40 md:translate-x-0 md:static md:bg-black/60 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        className={`fixed inset-y-0 left-0 z-[110] flex h-full w-64 flex-shrink-0 flex-col justify-between border-r border-white/5 bg-black/70 glass-panel backdrop-blur-xl transition-transform duration-300 ease-in-out md:static md:z-40 md:translate-x-0 md:bg-black/60 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
       >
-        <div>
-          {/* Logo Area */}
-          <Link
-            href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
-            onClick={handleNavigation}
-            aria-label="На главную дашборда"
-            className="flex h-16 min-h-16 shrink-0 items-center justify-center border-b border-white/5 px-3 lg:px-6"
-          >
-            <img
-              src="/images/logo.png"
-              alt=""
-              className="h-7 w-auto max-h-7 shrink-0 object-contain"
-            />
-          </Link>
+        <div className="max-md:pt-[max(0px,env(safe-area-inset-top,0px))]">
+          {/* Logo + close (mobile drawer) */}
+          <div className="flex h-16 min-h-16 shrink-0 items-center border-b border-white/5 px-2 lg:px-6">
+            <Link
+              href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
+              onClick={handleNavigation}
+              aria-label="На главную дашборда"
+              className="flex min-w-0 flex-1 items-center justify-center px-2"
+            >
+              <img
+                src="/images/logo.png"
+                alt=""
+                className="h-7 w-auto max-h-7 shrink-0 object-contain"
+              />
+            </Link>
+            <button
+              type="button"
+              className="md:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 tap-highlight-transparent hover:bg-white/5 hover:text-white [-webkit-tap-highlight-color:transparent]"
+              onClick={() => onMobileMenuOpenChange(false)}
+              aria-label="Закрыть меню"
+            >
+              <span className="material-symbols-outlined text-2xl leading-none">close</span>
+            </button>
+          </div>
 
           {/* Navigation Links */}
           <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
@@ -222,10 +221,10 @@ export default function Sidebar({ role, username }: SidebarProps) {
       </aside>
 
       {/* Mobile Overlay Backdrop */}
-      {isMobileMenuOpen && (
+      {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-x-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden top-[calc(4rem+max(0px,env(safe-area-inset-top,0px)))]"
+          onClick={() => onMobileMenuOpenChange(false)}
           aria-hidden
         />
       )}

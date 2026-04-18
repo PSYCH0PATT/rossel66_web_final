@@ -10,10 +10,12 @@ import { useState, useEffect } from "react"
 
 interface TopNavProps {
   role: UserRole
-  username?: string // Добавляем параметр username
+  username?: string
+  mobileMenuOpen: boolean
+  onMobileMenuToggle: () => void
 }
 
-export default function TopNav({ role, username }: TopNavProps) {
+export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuToggle }: TopNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [currentUsername, setCurrentUsername] = useState(username || "")
@@ -106,15 +108,29 @@ export default function TopNav({ role, username }: TopNavProps) {
   }
 
   return (
-    <header className="md:hidden relative z-40 h-16 bg-black/80 glass-panel border-b border-white/10 backdrop-blur-lg grid grid-cols-[minmax(3rem,3.5rem)_1fr_minmax(3rem,3.5rem)] items-center px-1">
-      {/* Spacer: reserves horizontal space for fixed hamburger (sidebar) so logo stays visually centered */}
-      <div className="shrink-0" aria-hidden />
+    <header className="relative z-[105] grid min-h-16 grid-cols-[minmax(3rem,3.5rem)_1fr_minmax(3rem,3.5rem)] items-center border-b border-white/10 bg-black/80 px-1 pt-[max(0px,env(safe-area-inset-top,0px))] glass-panel backdrop-blur-lg md:hidden">
+      <button
+        type="button"
+        className="flex h-11 w-11 shrink-0 items-center justify-center self-center text-gray-300 tap-highlight-transparent [-webkit-tap-highlight-color:transparent]"
+        onClick={onMobileMenuToggle}
+        aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
+      >
+        <span
+          className={`material-symbols-outlined text-3xl leading-none transition-transform duration-300 ${mobileMenuOpen ? "rotate-90" : "rotate-0"}`}
+        >
+          {mobileMenuOpen ? "close" : "menu"}
+        </span>
+      </button>
 
       <div className="flex min-w-0 items-center justify-center">
         <img src="/images/logo.png" alt="" className="h-7 w-auto max-w-[min(200px,55vw)] shrink-0 object-contain object-center" />
       </div>
 
-      <div className="flex shrink-0 items-center justify-end pr-1">
+      <div
+        className={`flex shrink-0 items-center justify-end pr-1 transition-[filter,opacity] duration-200 ${
+          mobileMenuOpen ? "pointer-events-none blur-[3px] opacity-50" : ""
+        }`}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger className="focus:outline-none">
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-800 border border-primary/50 text-white text-sm font-bold">
