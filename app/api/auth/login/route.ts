@@ -47,10 +47,14 @@ export async function POST(request: Request) {
       debugLog("getUserByUsername (DB)", tLoadUser)
     } catch (err) {
       console.error("Login: не удалось загрузить пользователя (проверьте DATABASE_URL):", err)
-      return NextResponse.json(
-        { success: false, error: "Ошибка сервера. Проверьте подключение к базе данных." },
-        { status: 500 }
-      )
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code?: string }).code === "P1000"
+          ? "Сервер не может подключиться к PostgreSQL (неверный пароль или строка DATABASE_URL). Это не ошибка логина в форме."
+          : "Ошибка сервера. Проверьте подключение к базе данных."
+      return NextResponse.json({ success: false, error: msg }, { status: 500 })
     }
 
     if (!user) {

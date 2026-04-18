@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import bcrypt from 'bcryptjs'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { 
   userFromPrisma, 
@@ -14,6 +14,35 @@ import {
   activityToPrismaCreate
 } from './storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
+
+/** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
+function isInfrastructureDbError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return PRISMA_INFRA_ERROR_CODES.has(error.code)
+  }
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    return true
+  }
+  return false
+}
+
+/** Коды Prisma: подключение / строка URL / доступ (не бизнес-логика запроса). */
+const PRISMA_INFRA_ERROR_CODES = new Set([
+  'P1000',
+  'P1001',
+  'P1002',
+  'P1003',
+  'P1008',
+  'P1009',
+  'P1010',
+  'P1011',
+  'P1012',
+  'P1013',
+  'P1014',
+  'P1015',
+  'P1016',
+  'P1017',
+])
 
 export type UserRole = 'admin' | 'artist'
 
@@ -272,6 +301,7 @@ export async function getUserById(id: string): Promise<User | null> {
     return user ? userFromPrisma(user) : null
   } catch (error) {
     console.error('Error getting user by id:', error)
+    if (isInfrastructureDbError(error)) throw error
     return null
   }
 }
@@ -282,6 +312,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     return user ? userFromPrisma(user) : null
   } catch (error) {
     console.error('Error getting user by username:', error)
+    if (isInfrastructureDbError(error)) throw error
     return null
   }
 }
@@ -292,6 +323,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     return user ? userFromPrisma(user) : null
   } catch (error) {
     console.error('Error getting user by email:', error)
+    if (isInfrastructureDbError(error)) throw error
     return null
   }
 }
