@@ -23,20 +23,20 @@ ENV CHROME_BIN=/usr/bin/chromium-browser \
 # 4. Устанавливаем рабочую директорию
 WORKDIR /app
 
-# 5. Копируем package.json и package-lock.json
-COPY package*.json ./
+# 5. pnpm через corepack (версия из package.json → packageManager)
+RUN corepack enable
 
-# 6. Устанавливаем зависимости Node.js
-# Используем --omit=dev чтобы не устанавливать devDependencies для уменьшения размера образа
-# Используем --legacy-peer-deps если есть конфликты версий peerDependencies,
-# либо разрешите их в package.json
-RUN npm ci --omit=dev
+# 6. Кэш слоя: только манифест и lock
+COPY package.json pnpm-lock.yaml ./
 
-# 7. Копируем остальные файлы проекта
+# 7. Строгая установка (dev + prod — dev нужен для next build / TypeScript)
+RUN pnpm install --frozen-lockfile
+
+# 8. Копируем остальные файлы проекта
 COPY . .
 RUN chmod +x /app/scripts/cron-sftp.sh
 
-# 8. Устанавливаем Python зависимости для парсеров
+# 9. Устанавливаем Python зависимости для парсеров
 # ВАЖНО: blinker<1.8 нужен для совместимости с selenium-wire
 RUN pip3 install --break-system-packages \
     selenium \
@@ -50,16 +50,19 @@ RUN pip3 install --break-system-packages \
 # Указываем Node.js, где искать модули (для поддержки baseUrl из tsconfig.json)
 ENV NODE_PATH=./
 
-# 9. Собираем Next.js приложение
-RUN npm run build
+# 10. Собираем Next.js приложение (prisma generate + next build)
+RUN pnpm build
 
-# 8. Создаем директорию для логов и настраиваем cron
+# 11. Убираем devDependencies из образа рантайма
+RUN pnpm prune --prod
+
+# 12. Директория логов и cron
 RUN mkdir -p /app/logs
 COPY crontab /etc/crontabs/root
 COPY entrypoint.sh ./
 
-# 9. Указываем порт, который будет слушать приложение (Next.js по умолчанию 3000)
+# 13. Порт Next.js по умолчанию
 EXPOSE 3000
 
-# 10. Запускаем приложение через entrypoint
-CMD ["./entrypoint.sh"] 
+# 14. Запуск через entrypoint
+CMD ["./entrypoint.sh"]

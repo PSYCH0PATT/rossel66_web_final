@@ -2,6 +2,10 @@
 node_modules/
 .next/
 
+# pnpm / npm — локальный кэш и чужой lock (источник истины: pnpm-lock.yaml)
+.pnpm-store/
+package-lock.json
+
 # Python
 __pycache__/
 *.pyc
