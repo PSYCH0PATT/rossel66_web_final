@@ -4,6 +4,8 @@ FROM node:20-alpine
 # 2. Устанавливаем Python, Chromium и зависимости для парсеров
 RUN apk add --no-cache \
     python3 \
+    make \
+    g++ \
     py3-pip \
     chromium \
     chromium-chromedriver \

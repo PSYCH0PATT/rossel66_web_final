@@ -46,6 +46,11 @@ const nextConfig = {
       '@prisma/adapter-pg',
       'pg',
       'pg-native',
+      // Нативные / optional deps ssh2 — иначе webpack падает на билде (Docker / prod)
+      'ssh2',
+      'ssh2-sftp-client',
+      'cpu-features',
+      'sqlite3',
     ],
   },
   // Transpile recharts и victory-vendor для корректной работы графиков в production
@@ -67,6 +72,10 @@ const nextConfig = {
         'pg',
         'pgpass',
         'pg-native',
+        'ssh2',
+        'ssh2-sftp-client',
+        'cpu-features',
+        'sqlite3',
       ]);
       const ext = ({ request }, callback) => {
         if (request && request.startsWith('node:')) {

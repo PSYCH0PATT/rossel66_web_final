@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
+import type { Database } from 'sqlite3';
+import { openSqlite } from '@/lib/sqlite3-lazy';
 import { requireAdminOrCron } from '@/lib/server-auth';
 
 // Пути к БД
@@ -10,10 +10,10 @@ const VK_DB_PATH = path.join(process.cwd(), 'vk_playlists.db');
 
 // Вспомогательные функции для работы с БД
 function getDb(dbPath: string) {
-  return new sqlite3.Database(dbPath);
+  return openSqlite(dbPath);
 }
 
-const dbRun = (db: sqlite3.Database, sql: string, params?: any[]) => {
+const dbRun = (db: Database, sql: string, params?: any[]) => {
   return new Promise((resolve, reject) => {
     db.run(sql, params || [], function(err) {
       if (err) reject(err);
@@ -22,7 +22,7 @@ const dbRun = (db: sqlite3.Database, sql: string, params?: any[]) => {
   });
 };
 
-const dbAll = (db: sqlite3.Database, sql: string, params?: any[]) => {
+const dbAll = (db: Database, sql: string, params?: any[]) => {
   return new Promise<any[]>((resolve, reject) => {
     db.all(sql, params || [], (err, rows) => {
       if (err) reject(err);

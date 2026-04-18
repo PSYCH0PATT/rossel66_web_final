@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
-import sqlite3 from 'sqlite3';
+import type { Database } from 'sqlite3';
+import { openSqlite } from '@/lib/sqlite3-lazy';
 import { requireAdmin } from '@/lib/server-auth';
 
 // Путь к БД
 const DB_PATH = path.join(process.cwd(), 'bandlink_playlists.db');
 
-// Вспомогательная функция для работы с БД
-function getDb() {
-  return new sqlite3.Database(DB_PATH);
+function getDb(): Database {
+  return openSqlite(DB_PATH);
 }
 
-const dbGet = (db: sqlite3.Database, sql: string, params?: any[]) => {
+const dbGet = (db: Database, sql: string, params?: any[]) => {
   return new Promise<any>((resolve, reject) => {
     db.get(sql, params || [], (err, row) => {
       if (err) reject(err);
