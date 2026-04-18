@@ -65,23 +65,27 @@ function getStatusVariant(status?: string): StatusVariant {
 function getStatusLabel(status?: string): string {
   switch (status) {
     case "Доставлен":
+      return "Доставлен"
     case "released":
+      return "В релизе"
     case "Одобрен":
-      return "Live"
+      return "Одобрен"
     case "В доставке":
     case "delivery":
-      return "Delivered"
+      return "В доставке"
     case "Модерируется":
     case "На модерации":
     case "moderation":
     case "scheduled":
-      return "Moderation"
+      return "На модерации"
     case "Отклонен":
     case "Отклонён":
+      return "Отклонён"
     case "Снят":
-      return "Rejected"
+      return "Снят"
     default:
-      return status || "Draft"
+      if (!status || status === "draft") return "Черновик"
+      return status
   }
 }
 

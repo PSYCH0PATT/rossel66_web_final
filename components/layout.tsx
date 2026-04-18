@@ -33,7 +33,7 @@ export default function Layout({ children, role, requiredRole, username }: Layou
           onMobileMenuToggle={() => setMobileMenuOpen((o) => !o)}
         />
         <main className="relative flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl p-6 pb-20 md:p-10 md:pb-24">
+          <div className="mx-auto max-w-7xl p-6 pb-10 md:p-10 md:pb-12">
             {children}
           </div>
         </main>
