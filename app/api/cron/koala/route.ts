@@ -3,12 +3,6 @@ import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic'
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-if (!CRON_SECRET) {
-  console.warn('⚠️ CRON_SECRET не установлен! Cron endpoints будут недоступны.');
-}
-
 /**
  * GET /api/cron/koala
  * Cron endpoint для автоматического запуска парсера Koala Music
@@ -36,7 +30,7 @@ export async function GET(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${CRON_SECRET}`,
+        Authorization: `Bearer ${process.env.CRON_SECRET}`,
       },
     });
 

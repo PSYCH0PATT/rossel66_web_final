@@ -3,6 +3,9 @@ import type { NextRequest } from 'next/server'
 /**
  * Секрет cron: предпочтительно Authorization: Bearer (не попадает в access-log как query).
  * Query ?secret= оставлен для обратной совместимости.
+ *
+ * Важно: при `next build` / Docker build переменные из панели хостинга не подставляются —
+ * CRON_SECRET есть только в рантайме контейнера; не логируйте «секрет не задан» на этапе импорта модулей.
  */
 export function getCronProvidedSecret(request: NextRequest): string | undefined {
   const auth = request.headers.get('authorization')

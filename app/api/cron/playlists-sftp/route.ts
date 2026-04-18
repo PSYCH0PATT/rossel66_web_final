@@ -6,12 +6,6 @@ import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic'
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-if (!CRON_SECRET) {
-  console.warn('⚠️ CRON_SECRET не установлен! Cron endpoints будут недоступны.');
-}
-
 /**
  * GET /api/cron/playlists-sftp
  * Cron endpoint для синхронизации плейлистов с SFTP сервера

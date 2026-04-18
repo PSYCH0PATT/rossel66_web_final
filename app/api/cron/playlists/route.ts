@@ -6,12 +6,6 @@ import { isCronAuthorized, internalCronFetchJsonHeaders } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-if (!CRON_SECRET) {
-  console.warn('⚠️ CRON_SECRET не установлен! Cron endpoints будут недоступны.');
-}
-
 /**
  * GET /api/cron/playlists
  * Cron endpoint для автоматического парсинга плейлистов
@@ -51,7 +45,7 @@ export async function GET(request: NextRequest) {
 
       try {
         const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp`, {
-          headers: { Authorization: `Bearer ${CRON_SECRET}` },
+          headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
         });
 
         const sftpResult = await sftpResponse.json();

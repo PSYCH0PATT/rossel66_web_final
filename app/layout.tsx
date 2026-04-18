@@ -26,6 +26,8 @@ const nunitoSans = Nunito_Sans({
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-nunito-sans",
   display: "swap",
+  // Next не находит метрики для auto size-adjust — убирает шум в логах docker/next build
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
