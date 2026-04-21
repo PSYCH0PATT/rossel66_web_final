@@ -20,11 +20,13 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
 
     const fetchArtistAndPlaylists = async () => {
       try {
-        const artistsRes = await fetch("/api/artists")
+        const artistsRes = await fetch(
+          `/api/artists?id=${encodeURIComponent(params.id)}`
+        )
         const artistsData = await artistsRes.json()
         if (!artistsData.success || cancelled) return
 
-        const foundArtist = artistsData.artists.find((a: any) => a.id === params.id && a.role === "artist")
+        const foundArtist = artistsData.artists?.[0]
         if (!foundArtist) {
           setError("Артист не найден")
           setLoading(false)

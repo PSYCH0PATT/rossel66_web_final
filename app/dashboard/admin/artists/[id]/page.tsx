@@ -53,11 +53,13 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchArtist = async () => {
       try {
-        const response = await fetch('/api/artists')
+        const response = await fetch(
+          `/api/artists?id=${encodeURIComponent(artistId)}`
+        )
         const result = await response.json()
         
         if (result.success) {
-          const artist = result.artists.find((a: any) => a.id === artistId)
+          const artist = result.artists?.[0]
           
           if (artist) {
             setUsername(artist.username)

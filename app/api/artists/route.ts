@@ -200,6 +200,48 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url)
+
+    const artistSelect = {
+      id: true,
+      username: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      vkMusicUrl: true,
+      yandexMusicUrl: true,
+      spotifyUrl: true,
+      fio: true,
+      fioShort: true,
+      contract: true,
+      percentage: true,
+      verified: true,
+    } as const
+
+    const idParam = searchParams.get("id")?.trim()
+    if (idParam) {
+      const row = await prisma.user.findFirst({
+        where: { id: idParam, role: "artist" },
+        select: artistSelect,
+      })
+      if (!row) {
+        return NextResponse.json({ success: false, error: "Артист не найден" }, { status: 404 })
+      }
+      const artist = { ...row, verified: row.verified ?? true }
+      const isUnverified = artist.verified === false
+      return NextResponse.json({
+        success: true,
+        artists: [artist],
+        total: 1,
+        page: 1,
+        pageSize: 1,
+        stats: {
+          all: 1,
+          verified: isUnverified ? 0 : 1,
+          unverified: isUnverified ? 1 : 0,
+        },
+      })
+    }
+
     const verifiedParam = searchParams.get("verified")
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
     const rawPs = parseInt(searchParams.get("pageSize") || "20", 10)
@@ -228,22 +270,6 @@ export async function GET(request: Request) {
     }
 
     const skip = (page - 1) * pageSize
-
-    const artistSelect = {
-      id: true,
-      username: true,
-      name: true,
-      email: true,
-      avatarUrl: true,
-      vkMusicUrl: true,
-      yandexMusicUrl: true,
-      spotifyUrl: true,
-      fio: true,
-      fioShort: true,
-      contract: true,
-      percentage: true,
-      verified: true,
-    } as const
 
     const [artists, total, statsAll, statsVerified, statsUnverified] = await Promise.all([
       prisma.user.findMany({
