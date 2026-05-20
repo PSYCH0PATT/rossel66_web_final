@@ -11,6 +11,9 @@ let isSchedulerInitialized = false;
 const CRON_FETCH_MS = 120_000;
 
 function cronBaseUrl(): string {
+  if (process.env.INTERNAL_CRON_BASE_URL) {
+    return process.env.INTERNAL_CRON_BASE_URL.replace(/\/$/, '');
+  }
   return (
     process.env.NEXT_PUBLIC_BASE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
