@@ -2,27 +2,35 @@
   "crons": [
     {
       "path": "/api/cron/koala",
-      "schedule": "0 12 * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/koala",
-      "schedule": "0 20 * * *"
+      "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/playlists",
-      "schedule": "30 21 * * 4"
+      "path": "/api/cron/playlists-sftp",
+      "schedule": "0 13 * * *"
     },
     {
-      "path": "/api/cron/playlists",
-      "schedule": "0 13 * * 6"
+      "path": "/api/cron/playlists-sftp",
+      "schedule": "30 21 * * *"
     },
     {
-      "path": "/api/cron/playlists",
-      "schedule": "0 13 * * 0"
+      "path": "/api/cron/analytics-flash",
+      "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/playlists",
-      "schedule": "0 13 * * 1"
+      "path": "/api/cron/zvonko",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/playlist-covers",
+      "schedule": "0 3 * * 0,6"
+    },
+    {
+      "path": "/api/cron/analytics-cleanup",
+      "schedule": "0 21 31 12 *"
     }
   ]
 }

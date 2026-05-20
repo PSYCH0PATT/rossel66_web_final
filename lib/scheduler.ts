@@ -131,6 +131,18 @@ export function initScheduler() {
   });
   
   // ============================================================
+  // ZVONKO PARSER - 14:00 ежедневно по Москве
+  // ============================================================
+  
+  cron.schedule('0 14 * * *', async () => {
+    console.log('');
+    console.log('🎵 [14:00 MSK] Zvonko Parser...');
+    await runZvonkoParser();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  
+  // ============================================================
   // ANALYTICS YEARLY CLEANUP - 1 января в 00:00 по Москве
   // ============================================================
   
@@ -467,7 +479,7 @@ async function runPlaylistParsers() {
 async function runAnalyticsFlashImport() {
   try {
     if (!process.env.CRON_SECRET) {
-      console.error('❌ CRON_SECRET не задан — пропуск SFTP sync');
+      console.error('❌ CRON_SECRET не задан — пропуск Analytics Flash Import');
       return;
     }
 
@@ -481,6 +493,29 @@ async function runAnalyticsFlashImport() {
     }
   } catch (error) {
     console.error('❌ Ошибка запуска Analytics Flash Import:', error);
+  }
+}
+
+/**
+ * Запускает парсинг Zvonko
+ */
+async function runZvonkoParser() {
+  try {
+    if (!process.env.CRON_SECRET) {
+      console.error('❌ CRON_SECRET не задан — пропуск Zvonko Parser');
+      return;
+    }
+
+    const response = await fetchCronGet('/api/cron/zvonko');
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`✅ Zvonko Parser завершен: добавлено ${result.stats?.added || 0}, обновлено ${result.stats?.updated || 0}`);
+    } else {
+      console.error(`❌ Zvonko Parser ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка запуска Zvonko Parser:', error);
   }
 }
 

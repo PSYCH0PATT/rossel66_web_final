@@ -131,37 +131,34 @@ export type FlashImportHttpResult = {
   body: Record<string, unknown>
 }
 
+let isFlashImportRunning = false
+
 export async function tryAcquireFlashImportLock(runId?: string): Promise<boolean> {
   const t0 = Date.now()
-  console.log(LOG, 'pg_try_advisory_lock START', { runId })
-  const lockRows = await prisma.$queryRaw<{ ok: boolean }[]>`
-    SELECT pg_try_advisory_lock(88442201, 103) AS ok
-  `
-  const ok = lockRows[0]?.ok === true
-  console.log(LOG, 'pg_try_advisory_lock DONE', {
+  console.log(LOG, 'memory_lock_acquire START', { runId })
+  
+  if (isFlashImportRunning) {
+    console.log(LOG, 'memory_lock_acquire FAILED (already running)', { runId, ms: Date.now() - t0 })
+    return false
+  }
+  
+  isFlashImportRunning = true
+  console.log(LOG, 'memory_lock_acquire DONE', {
     runId,
-    acquired: ok,
+    acquired: true,
     ms: Date.now() - t0,
   })
-  return ok
+  return true
 }
 
 /**
- * Освобождение advisory lock с таймаутом 5s.
- * Если Postgres/pooler молчит — не блокируем handler.
+ * Освобождение in-memory lock.
  */
 export async function releaseFlashImportLock(runId?: string): Promise<void> {
   const t0 = Date.now()
-  console.log(LOG, 'pg_advisory_unlock START', { runId, maxMs: UNLOCK_TIMEOUT_MS })
-  await withTimeout(
-    prisma.$executeRaw`SELECT pg_advisory_unlock(88442201, 103)`.then(
-      () => undefined
-    ),
-    UNLOCK_TIMEOUT_MS,
-    'pg_advisory_unlock',
-    runId
-  )
-  console.log(LOG, 'pg_advisory_unlock DONE', { runId, ms: Date.now() - t0 })
+  console.log(LOG, 'memory_lock_release START', { runId })
+  isFlashImportRunning = false
+  console.log(LOG, 'memory_lock_release DONE', { runId, ms: Date.now() - t0 })
 }
 
 /**
