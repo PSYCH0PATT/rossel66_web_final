@@ -297,6 +297,18 @@ export default function DistributionPage() {
       setSubmitMessage('Ошибка: Необходимо указать, нужно ли подавать релиз на промо.');
       return;
     }
+
+    if (formData.submitToPromo === "1" && formData.specifySocialMedia === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать, хотите ли вы указать ссылки на соц. сети.');
+      return;
+    }
+
+    if (formData.specifyStreamingLinks === "0") {
+      setSubmitStatus('error');
+      setSubmitMessage('Ошибка: Необходимо указать, хотите ли вы указать ссылки на профили артиста на стриминговых площадках.');
+      return;
+    }
     
     // Валидация треков
     if (formData.tracks.length === 0) {
@@ -860,7 +872,7 @@ export default function DistributionPage() {
                 Ссылки на стриминги (если релиз уже вышел)
               </h2>
                <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 mb-4">
-                 {renderSelectField("specifyStreamingLinks", "Указать ссылки на стриминги?", formData.specifyStreamingLinks, (value) => handleSelectChange("specifyStreamingLinks", value), yesNoOptions, "Да/Нет", false, "md:col-span-2 mb-1")}
+                 {renderSelectField("specifyStreamingLinks", "Хотите указать ссылки на профили артиста на стриминговых площадках?", formData.specifyStreamingLinks, (value) => handleSelectChange("specifyStreamingLinks", value), yesNoOptions, "Да/Нет", true, "md:col-span-2 mb-1")}
               </div>
               {formData.specifyStreamingLinks === "1" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6">
