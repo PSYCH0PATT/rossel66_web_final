@@ -204,10 +204,10 @@ export default function ReportProcessor() {
                   onClick={() => setColumnMapping({
                     isrc_column: "A",
                     track_name_column: "E", 
-                    album_name_column: "G",
+                    album_name_column: "F",
                     artist_column: "D",
-                    plays_column: "H",
-                    amount_column: "I"
+                    plays_column: "G",
+                    amount_column: "H"
                   })}
                   disabled={processing}
                 >
@@ -370,6 +370,24 @@ export default function ReportProcessor() {
               <p className={`font-medium ${result.success ? 'text-green-600' : 'text-red-600'}`}>
                 {result.message}
               </p>
+              
+              {result.uploadStats && (
+                <div className="space-y-1 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-4">
+                  <p className="text-green-600 font-medium text-base">
+                    ✅ Загружено в облако: {result.uploadStats.uploaded}
+                  </p>
+                  {result.uploadStats.failed > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className="text-red-600 font-medium">
+                        ❌ Ошибка загрузки: {result.uploadStats.failed}
+                      </p>
+                      <p className="text-gray-600 mt-1">
+                        {result.uploadStats.failedNames.join(', ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {result.success && result.reports && result.reports.length > 0 && (
                 <div className="space-y-3">

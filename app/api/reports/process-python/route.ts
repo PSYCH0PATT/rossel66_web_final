@@ -4,6 +4,25 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/server-auth'
+import { supabase, ensureBucketExists } from '@/lib/supabase'
+
+function transliterate(text: string): string {
+  const ru: Record<string, string> = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 
+    'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 
+    'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 
+    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 
+    'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 
+    'Е': 'E', 'Ё': 'E', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 
+    'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 
+    'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 
+    'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 
+    'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+  }
+  return text.split('').map(char => ru[char] ?? char).join('')
+}
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin(request)
@@ -72,6 +91,7 @@ export async function POST(request: NextRequest) {
           console.log('Python скрипт выполнен успешно')
           
           // Читаем метаданные созданных отчётов из reports.json
+          let uploadStats = { uploaded: 0, failed: 0, failedNames: [] as string[] };
           try {
             const reportsJsonPath = path.join(process.cwd(), 'data', 'reports.json')
             if (fs.existsSync(reportsJsonPath)) {
@@ -82,8 +102,58 @@ export async function POST(request: NextRequest) {
                 r.quarter === quarter && r.year === year
               )
               
-              // Добавляем новые отчёты в БД
+              // Проверяем/создаем бакет
+              await ensureBucketExists('reports')
+
+              // Добавляем новые отчёты в БД и загружаем в Supabase
               for (const report of currentReports) {
+                const localFilePath = path.join(process.cwd(), report.filePath)
+                let finalFilePath = report.filePath
+
+                if (fs.existsSync(localFilePath)) {
+                  let uploadSuccess = false;
+                  let attempts = 0;
+                  const maxAttempts = 3;
+                  const fileBuffer = fs.readFileSync(localFilePath);
+                  const cleanFileName = transliterate(report.fileName);
+                  const supabasePath = `${quarter}/${cleanFileName}`;
+
+                  while (attempts < maxAttempts && !uploadSuccess) {
+                    attempts++;
+                    try {
+                      console.log(`Загружаем отчет в Supabase Storage: ${supabasePath} (Попытка ${attempts}/${maxAttempts})`);
+                      const { error: uploadError } = await supabase.storage
+                        .from('reports')
+                        .upload(supabasePath, fileBuffer, {
+                          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                          upsert: true
+                        });
+
+                      if (uploadError) throw uploadError;
+                      
+                      console.log(`Успешно загружен в Supabase: ${supabasePath}`);
+                      finalFilePath = supabasePath;
+                      uploadSuccess = true;
+                      uploadStats.uploaded++;
+
+                      // Удаляем временный локальный файл
+                      if (fs.existsSync(localFilePath)) {
+                        fs.unlinkSync(localFilePath);
+                      }
+                    } catch (uploadErr) {
+                      console.error(`Ошибка при загрузке ${report.fileName} в Supabase (Попытка ${attempts}/${maxAttempts}):`, uploadErr);
+                      if (attempts >= maxAttempts) {
+                        console.error(`Не удалось загрузить ${report.fileName} после ${maxAttempts} попыток.`);
+                        uploadStats.failed++;
+                        uploadStats.failedNames.push(report.artistName || report.fileName);
+                      } else {
+                        // Ждем 2 секунды перед повторной попыткой
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                      }
+                    }
+                  }
+                }
+
                 // Проверяем, существует ли уже такой отчёт
                 const existing = await prisma.report.findUnique({
                   where: { id: report.id }
@@ -98,7 +168,7 @@ export async function POST(request: NextRequest) {
                       quarter: report.quarter,
                       year: report.year,
                       fileName: report.fileName,
-                      filePath: report.filePath,
+                      filePath: finalFilePath,
                       uploadDate: report.uploadDate || new Date().toISOString(),
                       status: report.status || 'processed',
                       totalPlays: report.totalPlays || 0,
@@ -110,6 +180,13 @@ export async function POST(request: NextRequest) {
                     }
                   })
                   console.log(`Добавлен отчёт в БД: ${report.id}`)
+                } else {
+                  // Обновляем путь к файлу в БД
+                  await prisma.report.update({
+                    where: { id: report.id },
+                    data: { filePath: finalFilePath }
+                  })
+                  console.log(`Обновлен путь отчёта в БД: ${report.id}`)
                 }
               }
               
@@ -124,7 +201,8 @@ export async function POST(request: NextRequest) {
             message: 'Отчеты успешно созданы',
             output: output,
             quarter,
-            year
+            year,
+            uploadStats
           }))
         } else {
           console.error(`Python скрипт завершился с ошибкой: ${code}`)

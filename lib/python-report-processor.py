@@ -26,8 +26,9 @@ COLUMN_ALIASES = {
     'Сумма, руб.': ['Сумма, руб.', 'Сумма,руб.', 'Сумма (руб.)', 'Сумма руб.', 'Сумма руб', 'Сумма, руб', 'Сумма', 'сумма, руб.', 'Сумма (руб)'],
 }
 
-def _set_cell(ws, cell_ref, value):
+def _set_cell(ws, cell_ref, value, number_format=None):
     """Записывает значение в ячейку; если ячейка объединена — в левую верхнюю ячейку диапазона."""
+    target_cell = None
     try:
         cell = ws[cell_ref]
         if type(cell).__name__ == 'MergedCell':
@@ -35,17 +36,24 @@ def _set_cell(ws, cell_ref, value):
             col = column_index_from_string(col_letter)
             for mr in ws.merged_cells.ranges:
                 if mr.min_row <= row <= mr.max_row and mr.min_col <= col <= mr.max_col:
-                    ws.cell(row=mr.min_row, column=mr.min_col).value = value
-                    return
-        cell.value = value
+                    target_cell = ws.cell(row=mr.min_row, column=mr.min_col)
+                    break
+        else:
+            target_cell = cell
     except AttributeError:
         col_letter, row = coordinate_from_string(cell_ref)
         col = column_index_from_string(col_letter)
         for mr in ws.merged_cells.ranges:
             if mr.min_row <= row <= mr.max_row and mr.min_col <= col <= mr.max_col:
-                ws.cell(row=mr.min_row, column=mr.min_col).value = value
-                return
-        raise
+                target_cell = ws.cell(row=mr.min_row, column=mr.min_col)
+                break
+        if not target_cell:
+            raise
+
+    if target_cell:
+        target_cell.value = value
+        if number_format:
+            target_cell.number_format = number_format
 
 def _normalize_statement_columns(df):
     """Приводит названия колонок к ожидаемым (разные форматы выгрузки)."""
@@ -86,7 +94,8 @@ def get_artists_list_from_users():
                 user.get('fio') or user.get('name') or '',
                 user.get('fioShort') or user.get('name') or '',
                 user.get('contract') or '',
-                str(user.get('percentage', 50))
+                str(user.get('percentage', 50)),
+                user.get('id')
             ]
             aliases = [a for a in (user.get('name'), user.get('username')) if a]
             match_list.append((canonical, aliases))
@@ -287,37 +296,54 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
         # Лист сводки: в шаблоне может быть "Итог" или "Краткая сводка"
         summary_sheet_name = 'Итог' if 'Итог' in wb.sheetnames else ('Краткая сводка' if 'Краткая сводка' in wb.sheetnames else wb.sheetnames[0])
         ws = wb[summary_sheet_name]
-        total_amount = sum(track['Сумма, руб.'] for track in tracks.values())
+        # Вычисляем общую сумму до вычета процента лейбла
+        total_amount_raw = sum(track['Сумма, руб.'] for track in tracks.values())
+        total_amount = round(total_amount_raw, 2)
+        
+        # Получаем процент артиста
+        percentage_str = str(artists_data[artist][3]).strip().replace('%', '').replace(',', '.')
+        try:
+            artist_percent = float(percentage_str) / 100.0
+            percentage_text = f"{percentage_str.rstrip('0').rstrip('.') if '.' in percentage_str else percentage_str}%"
+        except ValueError:
+            artist_percent = 1.0
+            percentage_text = "100%"
+            
+        # Считаем итоговое вознаграждение после вычета
+        final_amount = round(total_amount * artist_percent, 2)
+        
         _set_cell(ws, 'B10', artist)                           # Артист
         _set_cell(ws, 'B4', artists_data[artist][2])           # Договор (B4:F4 объединены)
         _set_cell(ws, 'B6', artists_data[artist][0])          # Лицензиар / ФИО полное (B6:F6 объединены)
-        _set_cell(ws, 'E14', total_amount)                     # Доход в форме контента (или F14, если шаблон с F)
-        _set_cell(ws, 'D15', artists_data[artist][3])          # Процент (D15 — не трогать E15, иначе затрёт процент)
-        _set_cell(ws, 'F15', total_amount)                     # Итого доход Лицензиара — сумма в F15
-        _set_cell(ws, 'E26', total_amount)                     # Начислено вознаграждение (E26, не D26 — D26 в объединении с подписью)
-        _set_cell(ws, 'E28', total_amount)                     # К выплате за период
+        _set_cell(ws, 'E14', total_amount, '0.00')             # Доход в форме контента
+        _set_cell(ws, 'D15', percentage_text)                  # Процент
+        _set_cell(ws, 'E15', final_amount, '0.00')             # Доход после вычета
+        _set_cell(ws, 'F15', 'руб.')                           # Валюта
+        _set_cell(ws, 'E26', final_amount, '0.00')             # Начислено вознаграждение
+        _set_cell(ws, 'E28', final_amount, '0.00')             # К выплате за период
         _set_cell(ws, 'D32', artists_data[artist][0])         # Лицензиар ФИО (повтор)
         _set_cell(ws, 'E37', artists_data[artist][1])         # ФИО кратко (E37:F37 объединены)
         ws_artist = wb.create_sheet(title=artist)
         ws_artist.append(['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %'])
         total_quantity = 0
-        total_amount = 0
+        total_amount_sheet = 0
         for (track_code, performer, name, album), track in tracks.items():
-            data = [track_code, performer, name, album, track['Количество'], track['Сумма, руб.'], track['Доля']]
+            track_sum = round(track['Сумма, руб.'], 2)
+            track_share = round(track['Доля'], 2)
+            data = [track_code, performer, name, album, track['Количество'], track_sum, track_share]
             ws_artist.append(data)
             total_quantity += track['Количество']
-            total_amount += track['Сумма, руб.']
-        ws_artist.append(['Итого', '', '', '', total_quantity, total_amount, ''])
+            total_amount_sheet += track_sum
+        ws_artist.append(['Итого', '', '', '', total_quantity, round(total_amount_sheet, 2), ''])
         wb.save(artist_file_path)
         created_files.append(artist_file_path)
         
         # Создаем метаданные для отчета
         total_plays = sum(track['Количество'] for track in tracks.values())
-        total_amount = sum(track['Сумма, руб.'] for track in tracks.values())
         
         report_metadata = {
             "id": f"report_{artist}_{quarter}_{year}_{int(time.time())}",
-            "artistId": artist if is_registered else None,
+            "artistId": artists_data[artist][4] if (is_registered and len(artists_data[artist]) > 4) else None,
             "artistName": artist,
             "quarter": quarter,
             "year": year,
@@ -326,7 +352,7 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
             "uploadDate": time.strftime('%Y-%m-%dT%H:%M:%S.000Z'),
             "status": "processed",
             "totalPlays": total_plays,
-            "totalAmount": total_amount,
+            "totalAmount": final_amount,
             "isRegistered": is_registered,
             "isSigned": False,  # По умолчанию не подписан
             "isPaid": False     # По умолчанию не выплачен
@@ -334,16 +360,16 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
         
         reports_metadata.append(report_metadata)
     
-    # Сохраняем все метаданные в reports.json
-    save_all_reports_metadata(reports_metadata)
+    # Сохраняем все метаданные в reports.json, удаляя старые за этот период
+    save_all_reports_metadata(reports_metadata, quarter, year)
     
     print(f"Всего создано файлов: {len(created_files)}")
     print(f"Зарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist in registered_users)}")
     print(f"Незарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist not in registered_users)}")
     return created_files
 
-def save_all_reports_metadata(new_reports):
-    """Сохраняет метаданные всех отчетов в reports.json"""
+def save_all_reports_metadata(new_reports, quarter, year):
+    """Сохраняет метаданные всех отчетов в reports.json, заменяя старые отчеты за тот же период"""
     reports_file = 'data/reports.json'
     existing_reports = []
     
@@ -351,6 +377,12 @@ def save_all_reports_metadata(new_reports):
     if os.path.exists(reports_file):
         with open(reports_file, 'r', encoding='utf-8') as f:
             existing_reports = json.load(f)
+            
+    # Фильтруем, оставляя только отчеты за другие кварталы/годы
+    existing_reports = [
+        r for r in existing_reports 
+        if not (r.get('quarter') == quarter and int(r.get('year', 0)) == int(year))
+    ]
     
     # Добавляем новые отчеты
     existing_reports.extend(new_reports)
