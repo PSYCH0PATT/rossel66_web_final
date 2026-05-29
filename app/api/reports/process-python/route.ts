@@ -25,6 +25,31 @@ function transliterate(text: string): string {
   return text.split('').map(char => ru[char] ?? char).join('')
 }
 
+function findTemplatePath(): string {
+  const baseDir = process.cwd()
+  const possibleNames = [
+    'Отчёт MENDXZA.xlsx', // NFD
+    'Отчёт MENDXZA.xlsx', // NFC
+    'Отчет MENDXZA.xlsx', // е instead of ё
+  ]
+  for (const name of possibleNames) {
+    const fullPath = path.join(baseDir, name)
+    if (fs.existsSync(fullPath)) {
+      return fullPath
+    }
+  }
+  try {
+    const files = fs.readdirSync(baseDir)
+    const matched = files.find(f => f.includes('MENDXZA') && f.endsWith('.xlsx'))
+    if (matched) {
+      return path.join(baseDir, matched)
+    }
+  } catch (err) {
+    console.error('Ошибка при поиске шаблона в директории:', err)
+  }
+  return path.join(baseDir, 'Отчёт MENDXZA.xlsx')
+}
+
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin(request)
   if (authError) return authError
@@ -73,8 +98,15 @@ export async function POST(request: NextRequest) {
         ? 'py'
         : (fs.existsSync(venvPython) ? venvPython : 'python3')
         
+    const templatePath = findTemplatePath()
+    console.log(`Используемый шаблон для отчетов: ${templatePath}`)
     console.log(`Запуск Python: ${pythonCmd} ${args.join(' ')}`)
-    const pythonProcess = spawn(pythonCmd, args)
+    const pythonProcess = spawn(pythonCmd, args, {
+      env: {
+        ...process.env,
+        TEMPLATE_PATH: templatePath
+      }
+    })
 
     let output = ''
     let errorOutput = ''

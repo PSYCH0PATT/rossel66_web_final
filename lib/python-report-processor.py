@@ -10,7 +10,41 @@ import time
 from collections import defaultdict
 
 # Путь к шаблону (копируем из оригинального проекта)
-TEMPLATE_PATH = "Отчёт MENDXZA.xlsx"
+def _find_template():
+    import unicodedata
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    possible_paths = [
+        os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx'),
+        os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx'),
+        'Отчёт MENDXZA.xlsx',
+        'Отчёт MENDXZA.xlsx'
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            return p
+        try:
+            norm_p = unicodedata.normalize('NFC', p)
+            if os.path.exists(norm_p):
+                return norm_p
+            norm_p = unicodedata.normalize('NFD', p)
+            if os.path.exists(norm_p):
+                return norm_p
+        except Exception:
+            pass
+            
+    # Поиск по шаблону MENDXZA в родительской директории
+    try:
+        parent_dir = os.path.abspath(os.path.join(base_dir, '..'))
+        if os.path.exists(parent_dir):
+            for f in os.listdir(parent_dir):
+                if 'MENDXZA' in f and f.endswith('.xlsx'):
+                    return os.path.join(parent_dir, f)
+    except Exception:
+        pass
+                
+    return os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx')
+
+TEMPLATE_PATH = os.environ.get('TEMPLATE_PATH') or _find_template()
 
 # Пути к Excel файлам вместо Google Sheets (ТОЧНО как в MAIN_MAY.py)
 ARTISTS_EXCEL_PATH = "artists.xlsx"  # Файл со списком артистов

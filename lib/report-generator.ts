@@ -249,7 +249,7 @@ export async function processExcelFile(
         artistId: artist,
         quarter,
         year: new Date().getFullYear(),
-        fileUrl: URL.createObjectURL(blob),
+        fileUrl: "",
         uploadDate: new Date().toISOString(),
         status: "processed" as const,
         generatedDate: new Date().toISOString(),
