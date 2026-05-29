@@ -24,13 +24,16 @@ const getFallbackUrl = () => {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || getFallbackUrl()
 // На бэкенде нам нужен Service Role Key для работы в обход RLS и автоматического создания бакетов
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const actualKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseServiceKey) {
+if (!actualKey) {
   console.warn(
     '⚠️ Предупреждение: SUPABASE_SERVICE_ROLE_KEY не задан в переменных окружения. Работа с файлами Supabase Storage может завершаться ошибкой.'
   )
 }
+
+// Передаем фиктивный ключ для статического анализа Next.js (pnpm build) в Docker
+const supabaseServiceKey = actualKey || 'dummy_key_for_build_purposes_only'
 
 export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
