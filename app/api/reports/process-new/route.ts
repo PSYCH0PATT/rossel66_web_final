@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { processReportFile } from "@/lib/report-processor"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/server-auth"
+import { supabase, ensureBucketExists } from "@/lib/supabase"
+
 
 export async function POST(request: Request) {
   const authError = await requireAdmin(request)
@@ -37,10 +39,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Не все столбцы выбраны" }, { status: 400 })
     }
 
-    // Обрабатываем файл (создаёт файлы на диск)
+    // Гарантируем наличие бакета
+    await ensureBucketExists('reports')
+
+    // Обрабатываем файл в памяти
     const result = await processReportFile(file, quarter, year, columnMapping)
 
-    // Сохраняем отчёты в БД
+    // Сохраняем отчёты в Supabase и БД
     for (const report of result.reports) {
       // Пропускаем дубликат (artistId + quarter + year)
       if (report.artistId) {
@@ -51,6 +56,18 @@ export async function POST(request: Request) {
           console.warn(`Дубликат отчёта пропущен: ${report.artistName} ${quarter} ${year}`)
           continue
         }
+      }
+
+      // Загружаем буфер в Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(report.filePath, report.fileBuffer, {
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          upsert: true
+        })
+
+      if (uploadError) {
+        throw new Error(`Не удалось загрузить отчет для ${report.artistName} в Supabase: ${uploadError.message}`)
       }
 
       await prisma.report.create({

@@ -5,6 +5,7 @@ import * as path from 'path'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/server-auth'
 import { supabase, ensureBucketExists } from '@/lib/supabase'
+import { exportPrismaDataForPython, cleanupExportedData } from '@/lib/export-data-for-python'
 
 function transliterate(text: string): string {
   const ru: Record<string, string> = {
@@ -28,6 +29,12 @@ export async function POST(request: NextRequest) {
   const authError = await requireAdmin(request)
   if (authError) return authError
 
+  const requestId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const tempFilePath = `/tmp/temp_upload_${requestId}.xlsx`
+  const reportsOutDir = `/tmp/reports_out_${requestId}`
+  const metadataJsonPath = `/tmp/metadata_${requestId}.json`
+  let exportedPaths: { usersPath: string, releasesPath: string } | null = null
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -38,31 +45,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Файл не найден' }, { status: 400 })
     }
 
-    // Создаем папку uploads если не существует
-    const uploadsDir = path.join(process.cwd(), 'uploads')
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
-    }
+    // 1. Export users/releases from Prisma for Python
+    exportedPaths = await exportPrismaDataForPython(requestId)
 
-    // Сохраняем основной файл
+    // 2. Save uploaded file to /tmp
     const ab = await file.arrayBuffer()
-    const tempFilePath = path.join(uploadsDir, 'temp_upload.xlsx')
     fs.writeFileSync(tempFilePath, new Uint8Array(ab))
+    console.log(`Файл сохранен во временный путь: ${tempFilePath}`)
 
-    console.log(`Файл сохранен: ${tempFilePath}`)
-
-    // Вызываем Python скрипт
-    // Доли роялти теперь берутся из треков в releases.json (высший приоритет)
-    // Файл долей больше не передается - используется только fallback из файла, если он есть в системе
+    // 3. Call Python script
     const pythonScript = path.join(process.cwd(), 'lib', 'python-report-processor.py')
-    const args = [pythonScript, tempFilePath, quarter, year.toString()]
+    const args = [
+      pythonScript, 
+      tempFilePath, 
+      quarter, 
+      year.toString(),
+      exportedPaths.usersPath,
+      exportedPaths.releasesPath,
+      reportsOutDir,
+      metadataJsonPath
+    ]
     
-    // Предпочитаем Python из .venv (pandas, openpyxl); иначе системный
+    // Choose Python from .venv (pandas, openpyxl); otherwise system python3
     const venvPython = path.join(process.cwd(), '.venv', 'bin', 'python3')
     const pythonCmd =
       process.platform === 'win32'
         ? 'py'
         : (fs.existsSync(venvPython) ? venvPython : 'python3')
+        
+    console.log(`Запуск Python: ${pythonCmd} ${args.join(' ')}`)
     const pythonProcess = spawn(pythonCmd, args)
 
     let output = ''
@@ -70,95 +81,92 @@ export async function POST(request: NextRequest) {
 
     pythonProcess.stdout.on('data', (data) => {
       output += data.toString()
-      console.log(`Python output: ${data}`)
+      console.log(`Python stdout: ${data}`)
     })
 
     pythonProcess.stderr.on('data', (data) => {
       errorOutput += data.toString()
-      console.error(`Python error: ${data}`)
+      console.error(`Python stderr: ${data}`)
     })
 
     return new Promise<Response>((resolve) => {
       pythonProcess.on('close', async (code) => {
-        // Удаляем временные файлы
+        // Cleanup input temp file immediately
         try {
-          fs.unlinkSync(tempFilePath)
-        } catch (error) {
-          console.error('Ошибка при удалении временных файлов:', error)
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath)
+          }
+        } catch (err) {
+          console.error('Ошибка при удалении temp_upload:', err)
         }
 
         if (code === 0) {
           console.log('Python скрипт выполнен успешно')
-          
-          // Читаем метаданные созданных отчётов из reports.json
           let uploadStats = { uploaded: 0, failed: 0, failedNames: [] as string[] };
+          
           try {
-            const reportsJsonPath = path.join(process.cwd(), 'data', 'reports.json')
-            if (fs.existsSync(reportsJsonPath)) {
-              const reportsData = JSON.parse(fs.readFileSync(reportsJsonPath, 'utf-8'))
+            // Read generated metadata
+            if (fs.existsSync(metadataJsonPath)) {
+              const currentReports = JSON.parse(fs.readFileSync(metadataJsonPath, 'utf-8'))
               
-              // Фильтруем отчёты по текущему кварталу и году
-              const currentReports = reportsData.filter((r: any) => 
-                r.quarter === quarter && r.year === year
-              )
-              
-              // Проверяем/создаем бакет
+              // Ensure bucket exists
               await ensureBucketExists('reports')
 
-              // Добавляем новые отчёты в БД и загружаем в Supabase
               for (const report of currentReports) {
-                const localFilePath = path.join(process.cwd(), report.filePath)
+                const localFilePath = report.filePath
                 let finalFilePath = report.filePath
 
                 if (fs.existsSync(localFilePath)) {
-                  let uploadSuccess = false;
-                  let attempts = 0;
-                  const maxAttempts = 3;
-                  const fileBuffer = fs.readFileSync(localFilePath);
-                  const cleanFileName = transliterate(report.fileName);
-                  const supabasePath = `${quarter}/${cleanFileName}`;
+                  let uploadSuccess = false
+                  let attempts = 0
+                  const maxAttempts = 3
+                  const fileBuffer = fs.readFileSync(localFilePath)
+                  const cleanFileName = transliterate(report.fileName)
+                  const supabasePath = `${quarter}/${cleanFileName}`
 
                   while (attempts < maxAttempts && !uploadSuccess) {
-                    attempts++;
+                    attempts++
                     try {
-                      console.log(`Загружаем отчет в Supabase Storage: ${supabasePath} (Попытка ${attempts}/${maxAttempts})`);
+                      console.log(`Загружаем отчет в Supabase Storage: ${supabasePath} (Попытка ${attempts}/${maxAttempts})`)
                       const { error: uploadError } = await supabase.storage
                         .from('reports')
                         .upload(supabasePath, fileBuffer, {
                           contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                           upsert: true
-                        });
+                        })
 
-                      if (uploadError) throw uploadError;
+                      if (uploadError) throw uploadError
                       
-                      console.log(`Успешно загружен в Supabase: ${supabasePath}`);
-                      finalFilePath = supabasePath;
-                      uploadSuccess = true;
-                      uploadStats.uploaded++;
-
-                      // Удаляем временный локальный файл
-                      if (fs.existsSync(localFilePath)) {
-                        fs.unlinkSync(localFilePath);
-                      }
+                      console.log(`Успешно загружен в Supabase: ${supabasePath}`)
+                      finalFilePath = supabasePath
+                      uploadSuccess = true
+                      uploadStats.uploaded++
                     } catch (uploadErr) {
-                      console.error(`Ошибка при загрузке ${report.fileName} в Supabase (Попытка ${attempts}/${maxAttempts}):`, uploadErr);
+                      console.error(`Ошибка при загрузке ${report.fileName} в Supabase (Попытка ${attempts}/${maxAttempts}):`, uploadErr)
                       if (attempts >= maxAttempts) {
-                        console.error(`Не удалось загрузить ${report.fileName} после ${maxAttempts} попыток.`);
-                        uploadStats.failed++;
-                        uploadStats.failedNames.push(report.artistName || report.fileName);
+                        uploadStats.failed++
+                        uploadStats.failedNames.push(report.artistName || report.fileName)
                       } else {
-                        // Ждем 2 секунды перед повторной попыткой
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        await new Promise(res => setTimeout(res, 2000))
                       }
                     }
                   }
+                } else {
+                  console.error(`Файл отчета не найден локально для загрузки: ${localFilePath}`)
+                  uploadStats.failed++
+                  uploadStats.failedNames.push(report.artistName || report.fileName)
                 }
 
-                // Проверяем, существует ли уже такой отчёт
-                const existing = await prisma.report.findUnique({
-                  where: { id: report.id }
+                // Check for existing report
+                const existing = await prisma.report.findFirst({
+                  where: {
+                    OR: [
+                      { artistName: report.artistName, quarter: report.quarter, year: report.year },
+                      ...(report.artistId ? [{ artistId: report.artistId, quarter: report.quarter, year: report.year }] : [])
+                    ]
+                  }
                 })
-                
+
                 if (!existing) {
                   await prisma.report.create({
                     data: {
@@ -179,23 +187,37 @@ export async function POST(request: NextRequest) {
                       processed: true,
                     }
                   })
-                  console.log(`Добавлен отчёт в БД: ${report.id}`)
+                  console.log(`Добавлен новый отчёт в БД: ${report.id}`)
                 } else {
-                  // Обновляем путь к файлу в БД
                   await prisma.report.update({
-                    where: { id: report.id },
-                    data: { filePath: finalFilePath }
+                    where: { id: existing.id },
+                    data: {
+                      artistId: report.artistId || null,
+                      filePath: finalFilePath,
+                      totalPlays: report.totalPlays || 0,
+                      totalAmount: report.totalAmount || 0,
+                      isRegistered: report.isRegistered ?? true
+                    }
                   })
-                  console.log(`Обновлен путь отчёта в БД: ${report.id}`)
+                  console.log(`Обновлен отчёт в БД: ${existing.id}`)
                 }
               }
-              
-              console.log(`Сохранено ${currentReports.length} отчётов в БД`)
             }
-          } catch (error) {
-            console.error('Ошибка при сохранении отчётов в БД:', error)
+          } catch (dbErr) {
+            console.error('Ошибка сохранения отчетов:', dbErr)
+          } finally {
+            // Final cleanup of temp directories/files
+            if (exportedPaths) cleanupExportedData(exportedPaths)
+            try {
+              if (fs.existsSync(metadataJsonPath)) fs.unlinkSync(metadataJsonPath)
+              if (fs.existsSync(reportsOutDir)) {
+                fs.rmSync(reportsOutDir, { recursive: true, force: true })
+              }
+            } catch (cleanupErr) {
+              console.error('Ошибка очистки временных файлов/папок:', cleanupErr)
+            }
           }
-          
+
           resolve(NextResponse.json({
             success: true,
             message: 'Отчеты успешно созданы',
@@ -205,6 +227,15 @@ export async function POST(request: NextRequest) {
             uploadStats
           }))
         } else {
+          // Failure branch cleanup
+          if (exportedPaths) cleanupExportedData(exportedPaths)
+          try {
+            if (fs.existsSync(metadataJsonPath)) fs.unlinkSync(metadataJsonPath)
+            if (fs.existsSync(reportsOutDir)) {
+              fs.rmSync(reportsOutDir, { recursive: true, force: true })
+            }
+          } catch (err) {}
+
           console.error(`Python скрипт завершился с ошибкой: ${code}`)
           resolve(NextResponse.json({
             success: false,
@@ -217,6 +248,16 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
+    // Top-level cleanup if exception happened before Spawn/Promise resolve
+    if (exportedPaths) cleanupExportedData(exportedPaths)
+    try {
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath)
+      if (fs.existsSync(metadataJsonPath)) fs.unlinkSync(metadataJsonPath)
+      if (fs.existsSync(reportsOutDir)) {
+        fs.rmSync(reportsOutDir, { recursive: true, force: true })
+      }
+    } catch (err) {}
+
     console.error('Ошибка в API:', error)
     return NextResponse.json({
       success: false,

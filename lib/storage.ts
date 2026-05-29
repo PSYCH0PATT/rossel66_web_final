@@ -1,5 +1,4 @@
-import fs from 'fs'
-import path from 'path'
+
 import bcrypt from 'bcryptjs'
 import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
@@ -165,33 +164,6 @@ export interface Activity {
 
 const ACTIVITY_RETENTION_DAYS = 90
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-const USERS_FILE = path.join(DATA_DIR, 'users.json')
-const RELEASES_FILE = path.join(DATA_DIR, 'releases.json')
-const REPORTS_FILE = path.join(DATA_DIR, 'reports.json')
-const ACTIVITIES_FILE = path.join(DATA_DIR, 'activities.json')
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
-}
-
-// Initialize files if they don't exist
-if (!fs.existsSync(USERS_FILE)) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2))
-}
-
-if (!fs.existsSync(RELEASES_FILE)) {
-  fs.writeFileSync(RELEASES_FILE, JSON.stringify([], null, 2))
-}
-
-if (!fs.existsSync(REPORTS_FILE)) {
-  fs.writeFileSync(REPORTS_FILE, JSON.stringify([], null, 2))
-}
-
-if (!fs.existsSync(ACTIVITIES_FILE)) {
-  fs.writeFileSync(ACTIVITIES_FILE, JSON.stringify([], null, 2))
-}
 
 export async function loadUsers(): Promise<User[]> {
   const dbStart = performance.now()

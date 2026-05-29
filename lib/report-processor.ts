@@ -1,7 +1,5 @@
 import * as XLSX from 'xlsx'
-import * as fs from 'fs'
-import * as path from 'path'
-import { addReport, ReportData, findArtistByName, assignReportsToArtist } from './storage'
+import { findArtistByName, assignReportsToArtist } from './storage'
 import { prisma } from './prisma'
 
 // Интерфейс для данных артиста
@@ -39,6 +37,53 @@ interface ArtistTracks {
   }
 }
 
+// Транслитерация для имен файлов
+function transliterate(text: string): string {
+  const rus = "а б в г д е ё ж з и й к л м н о п р с т у ф х ц ч ш щ ъ ы ь э ю я  . , / \\ [ ] { } ( )".split(" ");
+  const eng = "a b v g d e yo zh z i y k l m n o p r s t u f h ts ch sh shch _ y _ e yu ya _ _ _ _ _ _ _ _ _ _".split(" ");
+  
+  let res = text.toLowerCase();
+  for (let i = 0; i < rus.length; i++) {
+    res = res.split(rus[i]).join(eng[i]);
+  }
+  return res.replace(/\s+/g, '_').replace(/[^a-z0-9_\.-]/g, '');
+}
+
+// Функция для генерации Excel файла в памяти
+export function generateReportWorkbook(
+  artistName: string,
+  tracks: { [trackKey: string]: TrackData }
+): Buffer {
+  const workbook = XLSX.utils.book_new()
+  const worksheetData: (string | number)[][] = [
+    ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %']
+  ]
+  
+  let totalPlays = 0
+  let totalAmount = 0
+  
+  for (const track of Object.values(tracks)) {
+    worksheetData.push([
+      track.code,
+      track.performer,
+      track.name,
+      track.album,
+      track.plays,
+      track.amount,
+      track.share
+    ])
+    totalPlays += track.plays
+    totalAmount += track.amount
+  }
+  
+  worksheetData.push(['Итого', '', '', '', totalPlays, totalAmount, ''])
+  
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+  XLSX.utils.book_append_sheet(workbook, worksheet, artistName)
+  
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+}
+
 // Функция для извлечения артистов из строки исполнителя
 function extractArtistsFromTrack(artistStr: string, artistsData: ArtistData): string[] {
   if (!artistStr) return []
@@ -60,12 +105,10 @@ function calculateArtistShare(
   artistsData: ArtistData,
   royaltyShares: RoyaltyShares
 ): number {
-  // Если артист только один, он получает 100%
   if (allArtistsInTrack.length === 1) {
     return 1.0
   }
 
-  // Проверяем наличие кода трека в таблице с долями
   if (trackCode in royaltyShares) {
     const trackShares = royaltyShares[trackCode]
     if (artist in trackShares) {
@@ -73,12 +116,10 @@ function calculateArtistShare(
     }
   }
 
-  // Если все артисты в треке зарегистрированы, делим поровну
   if (allArtistsInTrack.every(a => a in artistsData)) {
     return 1.0 / allArtistsInTrack.length
   }
 
-  // Считаем количество зарегистрированных артистов в треке
   const ourArtistsCount = allArtistsInTrack.filter(a => a in artistsData).length
   if (ourArtistsCount > 0) {
     return 1.0 / ourArtistsCount
@@ -107,9 +148,8 @@ async function getArtistsData(): Promise<ArtistData> {
   return artistsData
 }
 
-// Функция для загрузки долей роялти (пока используем заглушку)
+// Функция для загрузки долей роялти
 function getRoyaltyShares(): RoyaltyShares {
-  // В реальном приложении здесь будет загрузка из файла или базы данных
   return {}
 }
 
@@ -123,35 +163,29 @@ export async function processReportFile(
   success: boolean
   message: string
   processedArtists: number
-  reports: ReportData[]
+  reports: any[]
 }> {
   try {
     console.log(`Обрабатываем файл: ${file.name}`)
     console.log(`Маппинг столбцов: ${JSON.stringify(columnMapping)}`)
     console.log(`Выбранный квартал: ${quarter}`)
 
-    // Читаем файл Excel
     const data = await file.arrayBuffer()
     const workbook = XLSX.read(data)
     
-    // Предполагаем, что первый лист содержит данные
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const jsonData = XLSX.utils.sheet_to_json(worksheet)
     
     console.log("Файл загружен, первые строки:", jsonData.slice(0, 3))
 
-    // Получаем данные артистов и доли роялти
     const artistsData = await getArtistsData()
     const royaltyShares = getRoyaltyShares()
     
-    // Создаем структуру для хранения данных по артистам и трекам
     const artistsTracks: ArtistTracks = {}
     
-    // Обрабатываем каждую строку данных (как в оригинальном Python коде)
     for (const row of jsonData) {
       const rowObj = row as Record<string, any>
       
-      // Используем русские названия столбцов напрямую (как в оригинале)
       const trackCode = rowObj['Код'] || ''
       const artistStr = String(rowObj['Исполнитель'] || '')
       const trackName = rowObj['Наименование'] || ''
@@ -159,25 +193,20 @@ export async function processReportFile(
       const plays = Number(rowObj['Количество'] || 0)
       const amount = Number(rowObj['Сумма, руб.'] || 0)
       
-      // Если нет данных об артисте, пропускаем
       if (!artistStr || artistStr.trim() === '') continue
       
-      // Создаем отчет для артиста (независимо от того, есть ли он в базе)
       const artistName = artistStr.trim()
       
-      // Если артист не найден в базе, все равно создаем для него отчет
       const isRegistered = artistName in artistsData
       const share = isRegistered ? calculateArtistShare(trackCode, artistName, [artistName], artistsData, royaltyShares) : 1.0
       const amountShare = amount * share
       
       const trackKey = `${trackCode}|${artistStr}|${trackName}|${albumName}`
       
-      // Инициализируем данные для артиста, если их еще нет
       if (!artistsTracks[artistName]) {
         artistsTracks[artistName] = {}
       }
       
-      // Инициализируем данные для трека, если их еще нет
       if (!artistsTracks[artistName][trackKey]) {
         artistsTracks[artistName][trackKey] = {
           code: trackCode,
@@ -190,26 +219,22 @@ export async function processReportFile(
         }
       }
       
-      // Обновляем данные для трека
       artistsTracks[artistName][trackKey].plays += plays
       artistsTracks[artistName][trackKey].amount += amountShare
     }
     
-    // Создаем отчеты для каждого артиста (как в оригинальном Python коде)
-    const reports: ReportData[] = []
+    const reports: any[] = []
     const processedArtists = Object.keys(artistsTracks).length
     
     console.log(`Найдено артистов в файле: ${processedArtists}`)
     console.log(`Список артистов:`, Object.keys(artistsTracks))
     
     for (const [artistName, tracks] of Object.entries(artistsTracks)) {
-      // Ищем артиста в системе
       const artist = await findArtistByName(artistName)
       const isRegistered = !!artist
       
       console.log(`Обрабатываем артиста: ${artistName}, зарегистрирован: ${isRegistered}`)
       
-      // Рассчитываем итоговые значения
       let totalPlays = 0
       let totalAmount = 0
       
@@ -218,27 +243,19 @@ export async function processReportFile(
         totalAmount += track.amount
       }
       
-      // Создаем Excel файл для артиста (как в оригинальном коде)
-      if (isRegistered) {
-        console.log(`Создаем файл для зарегистрированного артиста: ${artistName}`)
-        await createArtistReportFile(artist!.id, artistName, tracks, quarter, year, '')
-      } else {
-        // Если артист не зарегистрирован, сохраняем в папку незарегистрированных
-        console.log(`Создаем файл для незарегистрированного артиста: ${artistName}`)
-        await createUnregisteredReportFile(artistName, tracks, quarter, year, '')
-      }
+      const fileBuffer = generateReportWorkbook(artistName, tracks)
+      const fileName = `${artistName}_${quarter}_${year}.xlsx`
+      const cleanFileName = transliterate(fileName)
+      const filePath = `${quarter}/${cleanFileName}`
       
-      // Добавляем информацию о созданном файле
       reports.push({
         id: `report_${Date.now()}_${Math.random()}`,
-        artistId: artist?.id ?? '',
+        artistId: artist?.id ?? null,
         artistName,
         quarter,
         year,
-        fileName: `${artistName}_${quarter}_${year}.xlsx`,
-        filePath: isRegistered 
-          ? `data/artists/${artist!.id}/reports/${quarter}/${artistName}_${quarter}_${year}.xlsx`
-          : `data/unregistered-reports/${quarter}/${artistName}_${quarter}_${year}.xlsx`,
+        fileName,
+        filePath,
         uploadedAt: new Date().toISOString(),
         processed: true,
         uploadDate: new Date().toISOString(),
@@ -246,6 +263,7 @@ export async function processReportFile(
         totalPlays,
         totalAmount,
         isRegistered,
+        fileBuffer,
       })
     }
     
@@ -263,122 +281,8 @@ export async function processReportFile(
   }
 }
 
-// Функция для создания файла отчета для зарегистрированного артиста
-async function createArtistReportFile(
-  artistId: string,
-  artistName: string,
-  tracks: { [trackKey: string]: TrackData },
-  quarter: string,
-  year: number,
-  reportId: string
-): Promise<void> {
-  const artistDir = path.join(process.cwd(), 'data', 'artists', artistId, 'reports', quarter)
-  if (!fs.existsSync(artistDir)) {
-    fs.mkdirSync(artistDir, { recursive: true })
-  }
-  
-  const fileName = `${artistName}_${quarter}_${year}.xlsx`
-  const filePath = path.join(artistDir, fileName)
-  
-  // Создаем Excel файл
-  const workbook = XLSX.utils.book_new()
-  
-  // Создаем лист с данными артиста
-  const worksheetData: (string | number)[][] = [
-    ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %']
-  ]
-  
-  let totalPlays = 0
-  let totalAmount = 0
-  
-  for (const track of Object.values(tracks)) {
-    worksheetData.push([
-      track.code,
-      track.performer,
-      track.name,
-      track.album,
-      track.plays,
-      track.amount,
-      track.share
-    ])
-    totalPlays += track.plays
-    totalAmount += track.amount
-  }
-  
-  // Добавляем итоговую строку
-  worksheetData.push(['Итого', '', '', '', totalPlays, totalAmount, ''])
-  
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-  XLSX.utils.book_append_sheet(workbook, worksheet, artistName)
-  
-  // Сохраняем файл
-  try {
-    XLSX.writeFile(workbook, filePath)
-    console.log(`Создан файл отчета: ${filePath}`)
-  } catch (error) {
-    console.error(`Ошибка при сохранении файла ${filePath}:`, error)
-    throw error
-  }
-}
-
-// Функция для создания файла отчета для незарегистрированного артиста
-async function createUnregisteredReportFile(
-  artistName: string,
-  tracks: { [trackKey: string]: TrackData },
-  quarter: string,
-  year: number,
-  reportId: string
-): Promise<void> {
-  const unregisteredDir = path.join(process.cwd(), 'data', 'unregistered-reports', quarter)
-  if (!fs.existsSync(unregisteredDir)) {
-    fs.mkdirSync(unregisteredDir, { recursive: true })
-  }
-  
-  const fileName = `${artistName}_${quarter}_${year}.xlsx`
-  const filePath = path.join(unregisteredDir, fileName)
-  
-  // Создаем Excel файл
-  const workbook = XLSX.utils.book_new()
-  
-  // Создаем лист с данными артиста
-  const worksheetData: (string | number)[][] = [
-    ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %']
-  ]
-  
-  let totalPlays = 0
-  let totalAmount = 0
-  
-  for (const track of Object.values(tracks)) {
-    worksheetData.push([
-      track.code,
-      track.performer,
-      track.name,
-      track.album,
-      track.plays,
-      track.amount,
-      track.share
-    ])
-    totalPlays += track.plays
-    totalAmount += track.amount
-  }
-  
-  // Добавляем итоговую строку
-  worksheetData.push(['Итого', '', '', '', totalPlays, totalAmount, ''])
-  
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-  XLSX.utils.book_append_sheet(workbook, worksheet, artistName)
-  
-  // Сохраняем файл
-  try {
-    XLSX.writeFile(workbook, filePath)
-    console.log(`Создан файл отчета: ${filePath}`)
-  } catch (error) {
-    console.error(`Ошибка при сохранении файла ${filePath}:`, error)
-    throw error
-  }
-}
-
 // Функция для автоматического назначения отчетов при создании кабинета артиста
 export async function assignReportsToNewArtist(artistId: string, artistName: string): Promise<void> {
   await assignReportsToArtist(artistId, artistName)
 }
+

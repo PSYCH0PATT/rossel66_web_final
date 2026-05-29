@@ -66,12 +66,11 @@ def _normalize_statement_columns(df):
                 break
     return df.rename(columns=rename)
 
-def get_artists_list_from_users():
-    """Читает данные артистов из users.json. Один канонический ключ на артиста (name или username), чтобы не дублировать отчёты."""
+def get_artists_list_from_users(users_file):
+    """Читает данные артистов из указанного users.json. Один канонический ключ на артиста (name или username), чтобы не дублировать отчёты."""
     try:
-        users_file = 'data/users.json'
         if not os.path.exists(users_file):
-            print("Файл users.json не найден")
+            print(f"Файл {users_file} не найден")
             return {}, []
         
         with open(users_file, 'r', encoding='utf-8') as f:
@@ -100,10 +99,10 @@ def get_artists_list_from_users():
             aliases = [a for a in (user.get('name'), user.get('username')) if a]
             match_list.append((canonical, aliases))
         
-        print(f"✅ Загружено {len(artists_dict)} артистов из users.json")
+        print(f"✅ Загружено {len(artists_dict)} артистов из {users_file}")
         return artists_dict, match_list
     except Exception as e:
-        print(f"Ошибка при чтении users.json: {e}")
+        print(f"Ошибка при чтении {users_file}: {e}")
         return {}, []
 
 def get_royalty_shares():
@@ -146,10 +145,9 @@ def extract_artists_from_track(artist_str, match_list):
                 break
     return found
 
-def get_royalty_shares_from_tracks():
-    """Загружает доли роялти из треков в releases.json"""
+def get_royalty_shares_from_tracks(releases_file):
+    """Загружает доли роялти из треков в указанном releases.json"""
     try:
-        releases_file = 'data/releases.json'
         if not os.path.exists(releases_file):
             return {}
         
@@ -177,7 +175,7 @@ def get_royalty_shares_from_tracks():
                                 continue
         
         if track_shares:
-            print(f"✅ Загружено {len(track_shares)} треков с долями роялти из releases.json")
+            print(f"✅ Загружено {len(track_shares)} треков с долями роялти из {releases_file}")
         return track_shares
     except Exception as e:
         print(f"Ошибка при чтении долей из треков: {e}")
@@ -213,20 +211,17 @@ def calculate_artist_share(track_code, artist, all_artists_in_track, artists_dat
     # 6. Если артист не найден - получает 0%
     return 0.0
 
-def process_file(statement_path, quarter, year, royalty_file_path=None):
+def process_file(statement_path, quarter, year, users_file, releases_file, reports_dir, metadata_json_path, royalty_file_path=None):
     """Обработка файла с единым хранилищем отчетов"""
-    # Создаем единую папку для всех отчетов
-    reports_dir = f'data/reports/{quarter}'
+    # Создаем единую папку для всех отчетов в tmp
     os.makedirs(reports_dir, exist_ok=True)
     
     # Загружаем список пользователей для проверки регистрации
-    users_file = 'data/users.json'
     registered_users = set()
     if os.path.exists(users_file):
         with open(users_file, 'r', encoding='utf-8') as f:
             users_data = json.load(f)
             registered_users = {user.get('username') for user in users_data if user.get('username')}
-            # Также добавляем name как зарегистрированных
             for user in users_data:
                 if user.get('name'):
                     registered_users.add(user.get('name'))
@@ -245,15 +240,15 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
             f"Есть колонки: {list(statement_df.columns)}"
         )
 
-    # Загружаем данные артистов из users.json (один канонический ключ на артиста)
-    artists_data, match_list = get_artists_list_from_users()
+    # Загружаем данные артистов
+    artists_data, match_list = get_artists_list_from_users(users_file)
     
     if not artists_data:
-        print("⚠️  Не найдено артистов с указанным процентом в users.json")
+        print(f"⚠️  Не найдено артистов с указанным процентом в {users_file}")
         return []
         
     # Загружаем доли роялти из треков (высший приоритет)
-    track_royalty_shares = get_royalty_shares_from_tracks()
+    track_royalty_shares = get_royalty_shares_from_tracks(releases_file)
     
     # Загружаем доли роялти из файла (если передан) - используется как fallback
     if royalty_file_path and os.path.exists(royalty_file_path):
@@ -280,12 +275,10 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
     reports_metadata = []
     
     for artist, tracks in artists_tracks.items():
-        # Пропускаем артистов, которых нет в artists_data (без percentage)
         if artist not in artists_data:
             print(f"⚠️  Пропущен артист {artist}: не найден в списке артистов с процентом")
             continue
         
-        # Все файлы сохраняем в единую папку
         artist_file_path = os.path.join(reports_dir, f'{artist}.xlsx')
         is_registered = artist in registered_users
         
@@ -293,14 +286,11 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
         
         shutil.copy(TEMPLATE_PATH, artist_file_path)
         wb = load_workbook(artist_file_path)
-        # Лист сводки: в шаблоне может быть "Итог" или "Краткая сводка"
         summary_sheet_name = 'Итог' if 'Итог' in wb.sheetnames else ('Краткая сводка' if 'Краткая сводка' in wb.sheetnames else wb.sheetnames[0])
         ws = wb[summary_sheet_name]
-        # Вычисляем общую сумму до вычета процента лейбла
         total_amount_raw = sum(track['Сумма, руб.'] for track in tracks.values())
         total_amount = round(total_amount_raw, 2)
         
-        # Получаем процент артиста
         percentage_str = str(artists_data[artist][3]).strip().replace('%', '').replace(',', '.')
         try:
             artist_percent = float(percentage_str) / 100.0
@@ -309,20 +299,19 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
             artist_percent = 1.0
             percentage_text = "100%"
             
-        # Считаем итоговое вознаграждение после вычета
         final_amount = round(total_amount * artist_percent, 2)
         
-        _set_cell(ws, 'B10', artist)                           # Артист
-        _set_cell(ws, 'B4', artists_data[artist][2])           # Договор (B4:F4 объединены)
-        _set_cell(ws, 'B6', artists_data[artist][0])          # Лицензиар / ФИО полное (B6:F6 объединены)
-        _set_cell(ws, 'E14', total_amount, '0.00')             # Доход в форме контента
-        _set_cell(ws, 'D15', percentage_text)                  # Процент
-        _set_cell(ws, 'E15', final_amount, '0.00')             # Доход после вычета
-        _set_cell(ws, 'F15', 'руб.')                           # Валюта
-        _set_cell(ws, 'E26', final_amount, '0.00')             # Начислено вознаграждение
-        _set_cell(ws, 'E28', final_amount, '0.00')             # К выплате за период
-        _set_cell(ws, 'D32', artists_data[artist][0])         # Лицензиар ФИО (повтор)
-        _set_cell(ws, 'E37', artists_data[artist][1])         # ФИО кратко (E37:F37 объединены)
+        _set_cell(ws, 'B10', artist)                           # B10 Артист
+        _set_cell(ws, 'B4', artists_data[artist][2])           # B4 Договор
+        _set_cell(ws, 'B6', artists_data[artist][0])           # B6 ФИО полное
+        _set_cell(ws, 'E14', total_amount, '0.00')             # E14 Доход
+        _set_cell(ws, 'D15', percentage_text)                  # D15 Процент
+        _set_cell(ws, 'E15', final_amount, '0.00')             # E15 Доход после вычета
+        _set_cell(ws, 'F15', 'руб.')                           # F15 Валюта
+        _set_cell(ws, 'E26', final_amount, '0.00')             # E26 Начислено вознаграждение
+        _set_cell(ws, 'E28', final_amount, '0.00')             # E28 К выплате
+        _set_cell(ws, 'D32', artists_data[artist][0])          # D32 Лицензиар ФИО
+        _set_cell(ws, 'E37', artists_data[artist][1])          # E37 ФИО кратко
         ws_artist = wb.create_sheet(title=artist)
         ws_artist.append(['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %'])
         total_quantity = 0
@@ -338,11 +327,12 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
         wb.save(artist_file_path)
         created_files.append(artist_file_path)
         
-        # Создаем метаданные для отчета
         total_plays = sum(track['Количество'] for track in tracks.values())
         
+        report_id = f"report_{artist}_{quarter}_{year}_{int(time.time())}_{int(hash(artist) % 1000)}"
+        
         report_metadata = {
-            "id": f"report_{artist}_{quarter}_{year}_{int(time.time())}",
+            "id": report_id,
             "artistId": artists_data[artist][4] if (is_registered and len(artists_data[artist]) > 4) else None,
             "artistName": artist,
             "quarter": quarter,
@@ -354,62 +344,44 @@ def process_file(statement_path, quarter, year, royalty_file_path=None):
             "totalPlays": total_plays,
             "totalAmount": final_amount,
             "isRegistered": is_registered,
-            "isSigned": False,  # По умолчанию не подписан
-            "isPaid": False     # По умолчанию не выплачен
+            "isSigned": False,
+            "isPaid": False
         }
         
         reports_metadata.append(report_metadata)
     
-    # Сохраняем все метаданные в reports.json, удаляя старые за этот период
-    save_all_reports_metadata(reports_metadata, quarter, year)
+    with open(metadata_json_path, 'w', encoding='utf-8') as f:
+        json.dump(reports_metadata, f, ensure_ascii=False, indent=2)
     
+    print(f"✅ Сохранено {len(reports_metadata)} отчетов в метаданные {metadata_json_path}")
     print(f"Всего создано файлов: {len(created_files)}")
     print(f"Зарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist in registered_users)}")
     print(f"Незарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist not in registered_users)}")
     return created_files
 
-def save_all_reports_metadata(new_reports, quarter, year):
-    """Сохраняет метаданные всех отчетов в reports.json, заменяя старые отчеты за тот же период"""
-    reports_file = 'data/reports.json'
-    existing_reports = []
-    
-    # Загружаем существующие отчеты
-    if os.path.exists(reports_file):
-        with open(reports_file, 'r', encoding='utf-8') as f:
-            existing_reports = json.load(f)
-            
-    # Фильтруем, оставляя только отчеты за другие кварталы/годы
-    existing_reports = [
-        r for r in existing_reports 
-        if not (r.get('quarter') == quarter and int(r.get('year', 0)) == int(year))
-    ]
-    
-    # Добавляем новые отчеты
-    existing_reports.extend(new_reports)
-    
-    # Сохраняем обновленный список
-    os.makedirs('data', exist_ok=True)
-    with open(reports_file, 'w', encoding='utf-8') as f:
-        json.dump(existing_reports, f, ensure_ascii=False, indent=2)
-    
-    print(f"Сохранено {len(new_reports)} новых отчетов в reports.json")
-
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Использование: python python-report-processor.py <путь_к_файлу> <квартал> <год> [путь_к_файлу_долей]")
-        print("Примечание: Данные артистов берутся из data/users.json (только артисты с указанным percentage)")
+    if len(sys.argv) < 8:
+        print("Использование: python python-report-processor.py <путь_к_файлу> <квартал> <год> <путь_к_users.json> <путь_к_releases.json> <reports_out_dir> <metadata_json_path> [путь_к_файлу_долей]")
         sys.exit(1)
     
     file_path = sys.argv[1]
     quarter = sys.argv[2]
     year = int(sys.argv[3])
-    royalty_file_path = sys.argv[4] if len(sys.argv) > 4 else None
+    users_file = sys.argv[4]
+    releases_file = sys.argv[5]
+    reports_dir = sys.argv[6]
+    metadata_json_path = sys.argv[7]
+    royalty_file_path = sys.argv[8] if len(sys.argv) > 8 else None
     
     try:
-        created_files = process_file(file_path, quarter, year, royalty_file_path)
+        created_files = process_file(
+            file_path, quarter, year, 
+            users_file, releases_file, 
+            reports_dir, metadata_json_path, 
+            royalty_file_path
+        )
         print("Обработка завершена успешно!")
-        print(f"Созданные файлы: {created_files}")
     except Exception as e:
         print(f"Ошибка: {e}")
         import traceback

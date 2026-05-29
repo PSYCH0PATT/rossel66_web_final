@@ -3,8 +3,18 @@ import { processExcelFile } from "@/lib/report-generator"
 import { findArtistByName } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/server-auth"
-import * as fs from "fs"
-import * as path from "path"
+import { supabase, ensureBucketExists } from "@/lib/supabase"
+
+function transliterate(text: string): string {
+  const rus = "а б в г д е ё ж з и й к л м н о п р с т у ф х ц ч ш щ ъ ы ь э ю я  . , / \\ [ ] { } ( )".split(" ");
+  const eng = "a b v g d e yo zh z i y k l m n o p r s t u f h ts ch sh shch _ y _ e yu ya _ _ _ _ _ _ _ _ _ _".split(" ");
+  
+  let res = text.toLowerCase();
+  for (let i = 0; i < rus.length; i++) {
+    res = res.split(rus[i]).join(eng[i]);
+  }
+  return res.replace(/\s+/g, '_').replace(/[^a-z0-9_\.-]/g, '');
+}
 
 export async function POST(request: Request) {
   const authError = await requireAdmin(request)
@@ -62,11 +72,8 @@ export async function POST(request: Request) {
 
     console.log(`Обработка завершена. Сгенерировано отчетов: ${result.reports.length}`)
 
-    // Создаем директорию для сохранения файлов
-    const uploadsDir = path.join(process.cwd(), "uploads", "reports", quarter)
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
-    }
+    // Гарантируем наличие бакета
+    await ensureBucketExists('reports')
 
     // Сохраняем файлы и создаём записи в БД
     const savedReports = []
@@ -97,13 +104,21 @@ export async function POST(request: Request) {
       counter++
       const uniqueId = `r${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 7)}`
 
-      // Сохраняем файл на диск
-      const filePath = path.join(uploadsDir, report.fileName)
-      const arrayBuffer = await reportFile.arrayBuffer()
-      fs.writeFileSync(filePath, new Uint8Array(arrayBuffer))
+      const cleanFileName = transliterate(report.fileName)
+      const supabasePath = `${quarter}/${cleanFileName}`
 
-      // Относительный путь для БД
-      const relativeFilePath = `uploads/reports/${quarter}/${report.fileName}`
+      // Загружаем в Supabase Storage
+      const arrayBuffer = await reportFile.arrayBuffer()
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(supabasePath, Buffer.from(arrayBuffer), {
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          upsert: true
+        })
+
+      if (uploadError) {
+        throw new Error(`Не удалось загрузить отчет для ${resolvedArtistName} в Supabase: ${uploadError.message}`)
+      }
 
       // Создаём запись в БД с правильным artistId
       await prisma.report.create({
@@ -114,7 +129,7 @@ export async function POST(request: Request) {
           quarter,
           year: report.year,
           fileName: report.fileName,
-          filePath: relativeFilePath,
+          filePath: supabasePath,
           uploadDate: report.uploadDate,
           status: report.status || "processed",
           totalPlays: report.totalPlays || 0,
