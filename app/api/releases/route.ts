@@ -88,15 +88,46 @@ export async function GET(request: Request) {
 
     const where: Prisma.ReleaseWhereInput = andParts.length ? { AND: andParts } : {}
 
-    const [raw, total] = await Promise.all([
-      prisma.release.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: pageSize,
-      }),
-      prisma.release.count({ where }),
-    ])
+    // 1. Получаем только необходимые поля (без тяжелого JSON) для сортировки всех совпадений в памяти
+    const allMatches = await prisma.release.findMany({
+      where,
+      select: { id: true, releaseDate: true, createdAt: true },
+    })
+
+    const total = allMatches.length
+
+    // 2. Функция парсинга формата 'DD.MM.YYYY' в timestamp
+    const parseDate = (dStr: string) => {
+      if (!dStr || dStr === "--") return 0
+      const parts = dStr.split(".")
+      if (parts.length === 3) {
+        const [d, m, y] = parts
+        return new Date(`${y}-${m}-${d}`).getTime()
+      }
+      return 0
+    }
+
+    // 3. Сортируем все релизы по убыванию даты релиза (самые новые сверху)
+    allMatches.sort((a, b) => {
+      const timeA = parseDate(a.releaseDate)
+      const timeB = parseDate(b.releaseDate)
+      if (timeA !== timeB) {
+        return timeB - timeA // Descending: newest first
+      }
+      // Если даты равны, сортируем по дате добавления в систему (createdAt)
+      return b.createdAt.getTime() - a.createdAt.getTime()
+    })
+
+    // 4. Пагинация
+    const pageIds = allMatches.slice(skip, skip + pageSize).map((m) => m.id)
+
+    // 5. Запрашиваем полные данные только для нужной страницы
+    const rawUnsorted = await prisma.release.findMany({
+      where: { id: { in: pageIds } },
+    })
+
+    // 6. Восстанавливаем правильный порядок, так как findMany(in) не гарантирует порядок
+    const raw = pageIds.map(id => rawUnsorted.find(r => r.id === id)!).filter(Boolean)
 
     const base = raw.map(releaseFromPrisma)
     const artistIds = [...new Set(base.map((r) => r.artistId).filter(Boolean))] as string[]
