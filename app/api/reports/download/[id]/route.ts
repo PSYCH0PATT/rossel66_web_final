@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
-import * as fs from "fs"
-import * as path from "path"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { supabase } from "@/lib/supabase"
+
+function getStoragePath(dbPath: string): string {
+  const reportsIndex = dbPath.indexOf('reports/')
+  if (reportsIndex !== -1) {
+    return dbPath.substring(reportsIndex + 8)
+  }
+  const qMatch = dbPath.match(/(Q[1-4]\/.*)$/)
+  if (qMatch) {
+    return qMatch[1]
+  }
+  return dbPath
+}
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -30,18 +41,25 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Путь к файлу отчета не указан" }, { status: 404 })
     }
 
-    const filePath = path.join(process.cwd(), report.filePath)
+    let fileBuffer: Buffer
+
+    const storagePath = getStoragePath(report.filePath)
+
+    console.log(`Запрос файла из Supabase Storage: ${storagePath}`)
+    const { data, error } = await supabase.storage.from('reports').download(storagePath)
     
-    if (!fs.existsSync(filePath)) {
+    if (error || !data) {
+      console.error(`Ошибка скачивания из Supabase (${storagePath}):`, error)
       return NextResponse.json({ error: "Файл отчета не найден" }, { status: 404 })
     }
 
-    const fileBuffer = fs.readFileSync(filePath)
-    
+    const arrayBuffer = await data.arrayBuffer()
+    fileBuffer = Buffer.from(arrayBuffer)
+
     return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${report.fileName}"`,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(report.fileName)}"`,
         'Content-Length': fileBuffer.length.toString(),
       },
     })

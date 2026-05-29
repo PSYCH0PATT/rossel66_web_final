@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import * as fs from "fs"
-import * as path from "path"
 import { requireAdmin } from "@/lib/server-auth"
+import { supabase } from "@/lib/supabase"
+
+function getStoragePath(dbPath: string): string {
+  const reportsIndex = dbPath.indexOf('reports/')
+  if (reportsIndex !== -1) {
+    return dbPath.substring(reportsIndex + 8)
+  }
+  const qMatch = dbPath.match(/(Q[1-4]\/.*)$/)
+  if (qMatch) {
+    return qMatch[1]
+  }
+  return dbPath
+}
 
 export async function GET(request: Request) {
   try {
@@ -17,19 +28,30 @@ export async function GET(request: Request) {
     })
 
     let deletedCount = 0
+    const filesToRemove: string[] = []
     
     // Удаляем фейковые отчеты и их файлы
     for (const report of fakeReports) {
-      // Удаляем файл если существует
       if (report.filePath) {
-        const filePath = path.join(process.cwd(), report.filePath)
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath)
-          console.log(`Удален файл: ${filePath}`)
-        }
+        filesToRemove.push(getStoragePath(report.filePath))
       }
+    }
+
+    if (filesToRemove.length > 0) {
+      console.log(`Удаляем фейковые файлы из Supabase Storage:`, filesToRemove)
+      const { error: removeError } = await supabase.storage
+        .from('reports')
+        .remove(filesToRemove)
       
-      // Удаляем запись из БД
+      if (removeError) {
+        console.error("Ошибка при пакетном удалении фейковых файлов из Supabase Storage:", removeError)
+      } else {
+        console.log(`Успешно удалено фейковых файлов из Supabase Storage: ${filesToRemove.length}`)
+      }
+    }
+
+    // Удаляем записи из БД
+    for (const report of fakeReports) {
       await prisma.report.delete({ where: { id: report.id } })
       deletedCount++
     }

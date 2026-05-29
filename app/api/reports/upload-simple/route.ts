@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/server-auth"
 import * as XLSX from 'xlsx'
-import * as fs from 'fs'
-import * as path from 'path'
 import { z } from "zod"
+import { supabase, ensureBucketExists } from "@/lib/supabase"
+
+function transliterate(text: string): string {
+  const ru: Record<string, string> = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 
+    'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 
+    'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 
+    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 
+    'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 
+    'Е': 'E', 'Ё': 'E', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 
+    'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 
+    'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 
+    'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 
+    'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+  }
+  return text.split('').map(char => ru[char] ?? char).join('')
+}
 
 const fieldsSchema = z.object({
   artistName: z.string().min(1).max(500),
@@ -105,19 +122,27 @@ export async function POST(request: NextRequest) {
     // Создаем отчет
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
-    // Создаем директорию для файла
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'reports', quarter)
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
+    // Убеждаемся, что бакет существует
+    await ensureBucketExists('reports')
+
+    const cleanFileName = transliterate(file.name)
+    const supabasePath = `${quarter}/${reportId}_${cleanFileName}`
+    const fileBuffer = Buffer.from(buffer)
+
+    // Загружаем в Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('reports')
+      .upload(supabasePath, fileBuffer, {
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        upsert: true
+      })
+
+    if (uploadError) {
+      throw new Error(`Failed to upload to Supabase: ${uploadError.message}`)
     }
     
-    // Сохраняем файл на диск
-    const fileName = `${reportId}_${file.name}`
-    const filePath = path.join(uploadsDir, fileName)
-    fs.writeFileSync(filePath, new Uint8Array(buffer))
-    
     // Относительный путь для БД
-    const relativeFilePath = `uploads/reports/${quarter}/${fileName}`
+    const relativeFilePath = supabasePath
     
     const newReport = await prisma.report.create({
       data: {

@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server"
-import fs from "fs"
-import path from "path"
 import * as XLSX from "xlsx"
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { supabase } from "@/lib/supabase"
+
+function getStoragePath(dbPath: string): string {
+  const reportsIndex = dbPath.indexOf('reports/')
+  if (reportsIndex !== -1) {
+    return dbPath.substring(reportsIndex + 8)
+  }
+  const qMatch = dbPath.match(/(Q[1-4]\/.*)$/)
+  if (qMatch) {
+    return qMatch[1]
+  }
+  return dbPath
+}
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -33,16 +44,22 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Путь к файлу не указан" }, { status: 404 })
     }
 
-    // Формируем полный путь к файлу
-    const filePath = path.join(process.cwd(), report.filePath)
+    // Извлекаем путь в бакете
+    const storagePath = getStoragePath(report.filePath)
 
-    // Проверяем существование файла
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Файл отчета не найден" }, { status: 404 })
+    // Скачиваем файл из Supabase Storage
+    const { data: fileBlob, error: downloadError } = await supabase.storage
+      .from('reports')
+      .download(storagePath)
+
+    if (downloadError || !fileBlob) {
+      console.error("Ошибка скачивания файла из Supabase Storage:", downloadError)
+      return NextResponse.json({ error: "Файл отчета не найден в хранилище" }, { status: 404 })
     }
 
-    // Читаем файл с использованием Node.js fs
-    const fileBuffer = fs.readFileSync(filePath)
+    // Преобразуем Blob в Buffer
+    const arrayBuffer = await fileBlob.arrayBuffer()
+    const fileBuffer = Buffer.from(arrayBuffer)
 
     // Парсим Excel-файл
     const workbook = XLSX.read(fileBuffer, { type: "buffer" })

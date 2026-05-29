@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs"
 import type { Prisma } from "@prisma/client"
 import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
-import * as fs from "fs"
 import * as path from "path"
+import { supabase, ensureBucketExists } from "@/lib/supabase"
 import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
 import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
 
@@ -48,12 +48,26 @@ export async function POST(request: Request) {
       
       // Save avatar if provided
       if (avatar) {
-        const artistDir = path.join(process.cwd(), "data", "artists", username)
-        fs.mkdirSync(artistDir, { recursive: true })
         const buffer = Buffer.from(await avatar.arrayBuffer())
-        const avatarPath = path.join(artistDir, "avatar.jpg")
-        fs.writeFileSync(avatarPath, new Uint8Array(buffer))
-        avatarUrl = `/data/artists/${username}/avatar.jpg`
+        const ext = path.extname(avatar.name || '').toLowerCase() || '.jpg'
+        const filename = `${username}_avatar_${Date.now()}${ext}`
+        
+        await ensureBucketExists('avatars', true)
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filename, buffer, {
+            contentType: avatar.type || 'image/jpeg',
+            cacheControl: '3600',
+            upsert: true
+          })
+          
+        if (uploadError) {
+          console.error('Supabase avatar upload error:', uploadError)
+        } else {
+          const { data } = supabase.storage.from('avatars').getPublicUrl(filename)
+          avatarUrl = data.publicUrl
+        }
       }
     }
 
@@ -67,18 +81,6 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json({ error: "Username already exists" }, { status: 400 })
     }
-
-    // Create artist directory structure
-    const artistDir = path.join(process.cwd(), "data", "artists", username)
-    const coversDir = path.join(artistDir, "covers")
-    const playlistsDir = path.join(artistDir, "playlists")
-    const reportsDir = path.join(artistDir, "reports")
-
-    // Create directories
-    fs.mkdirSync(artistDir, { recursive: true })
-    fs.mkdirSync(coversDir, { recursive: true })
-    fs.mkdirSync(playlistsDir, { recursive: true })
-    fs.mkdirSync(reportsDir, { recursive: true })
 
     // Add user to database
     const newUser = await addUser({

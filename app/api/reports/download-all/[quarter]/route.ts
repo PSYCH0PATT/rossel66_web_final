@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server"
-import * as fs from "fs"
-import * as path from "path"
 import JSZip from "jszip"
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import type { Prisma } from "@prisma/client"
+import { supabase } from "@/lib/supabase"
+
+function getStoragePath(dbPath: string): string {
+  const reportsIndex = dbPath.indexOf('reports/')
+  if (reportsIndex !== -1) {
+    return dbPath.substring(reportsIndex + 8)
+  }
+  const qMatch = dbPath.match(/(Q[1-4]\/.*)$/)
+  if (qMatch) {
+    return qMatch[1]
+  }
+  return dbPath
+}
 
 export async function GET(request: Request, { params }: { params: { quarter: string } }) {
   try {
@@ -40,14 +51,20 @@ export async function GET(request: Request, { params }: { params: { quarter: str
         continue
       }
       
-      const filePath = path.join(process.cwd(), report.filePath)
+      let fileData: Buffer
+      const storagePath = getStoragePath(report.filePath)
       
-      if (!fs.existsSync(filePath)) {
-        console.warn(`Файл не найден: ${filePath}`)
+      console.log(`Скачиваем отчет для ZIP из Supabase: ${storagePath}`)
+      const { data, error } = await supabase.storage.from('reports').download(storagePath)
+      
+      if (error || !data) {
+        console.warn(`Файл не найден в Supabase: ${storagePath}`, error?.message)
         continue
       }
       
-      const fileData = fs.readFileSync(filePath)
+      const arrayBuffer = await data.arrayBuffer()
+      fileData = Buffer.from(arrayBuffer)
+      
       zip.file(report.fileName, new Uint8Array(fileData))
     }
 

@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/server-auth"
-import * as fs from "fs"
-import * as path from "path"
+import { supabase } from "@/lib/supabase"
+
+function getStoragePath(dbPath: string): string {
+  const reportsIndex = dbPath.indexOf('reports/')
+  if (reportsIndex !== -1) {
+    return dbPath.substring(reportsIndex + 8)
+  }
+  const qMatch = dbPath.match(/(Q[1-4]\/.*)$/)
+  if (qMatch) {
+    return qMatch[1]
+  }
+  return dbPath
+}
 
 export async function DELETE(request: Request) {
   const authError = await requireAdmin(request)
@@ -27,37 +38,29 @@ export async function DELETE(request: Request) {
 
     const reports = await prisma.report.findMany({ where })
 
+    // Собираем пути к файлам для удаления из хранилища
+    const filesToRemove: string[] = []
     for (const report of reports) {
       if (report.filePath) {
-        const filePath = path.join(process.cwd(), report.filePath)
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath)
-          console.log(`Удален файл: ${filePath}`)
-        }
+        filesToRemove.push(getStoragePath(report.filePath))
+      }
+    }
+
+    if (filesToRemove.length > 0) {
+      console.log(`Удаляем файлы из Supabase Storage:`, filesToRemove)
+      const { error: removeError } = await supabase.storage
+        .from('reports')
+        .remove(filesToRemove)
+      
+      if (removeError) {
+        console.error("Ошибка при пакетном удалении файлов из Supabase Storage:", removeError)
+      } else {
+        console.log(`Успешно удалено файлов из Supabase Storage: ${filesToRemove.length}`)
       }
     }
 
     const result = await prisma.report.deleteMany({ where })
     const deletedCount = result.count
-
-    // Удаляем папку квартала, если она пустая (data/reports/{quarter} или uploads/reports/{quarter})
-    const possibleDirs = [
-      path.join(process.cwd(), "data", "reports", quarter),
-      path.join(process.cwd(), "uploads", "reports", quarter),
-    ]
-    for (const dir of possibleDirs) {
-      if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-        try {
-          const entries = fs.readdirSync(dir)
-          if (entries.length === 0) {
-            fs.rmdirSync(dir)
-            console.log(`Удалена пустая папка: ${dir}`)
-          }
-        } catch {
-          // игнорируем ошибки удаления папки
-        }
-      }
-    }
 
     console.log(`Удалено отчетов за ${quarter}${year !== null ? ` ${year}` : ""}: ${deletedCount}`)
 
@@ -74,3 +77,4 @@ export async function DELETE(request: Request) {
     )
   }
 }
+
