@@ -138,9 +138,6 @@ function parseCookies(input: string): { name: string; value: string }[] {
 
 // GET: Получение текущих cookies
 export async function GET(request: NextRequest) {
-  const denied = await requireAdmin(request);
-  if (denied) return denied;
-
   const db = getDb();
   
   try {
@@ -181,12 +178,12 @@ export async function GET(request: NextRequest) {
 
 // POST: Обновление cookies из curl команды или строки
 export async function POST(request: NextRequest) {
-  const denied = await requireAdmin(request);
-  if (denied) return denied;
-
   const db = getDb();
   
   try {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
     const body = await request.json();
     const { curlCommand, cookieString } = body;
     
@@ -258,12 +255,12 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Удаление всех cookies
 export async function DELETE(request: NextRequest) {
-  const denied = await requireAdmin(request);
-  if (denied) return denied;
-
   const db = getDb();
   
   try {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
     await dbRun(db, 'DELETE FROM bandlink_cookies');
     
     db.close();

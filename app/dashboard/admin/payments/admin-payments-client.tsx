@@ -76,6 +76,28 @@ export default function AdminPaymentsClient() {
     }
   }
 
+  const handleSignatureStatusUpdate = async (reportId: string, isSigned: boolean) => {
+    setStatusError("")
+    try {
+      const response = await fetch("/api/reports/update-status", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId, statusType: "signed", value: isSigned }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Ошибка при обновлении статуса")
+      }
+
+      setPayments((prev) => prev.map((p) => (p.reportId === reportId ? { ...p, isSigned } : p)))
+      await load()
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      setStatusError(msg)
+    }
+  }
+
   const setFilterAndReset = (f: "all" | "unpaid") => {
     setFilter(f)
     setPage(1)
@@ -249,18 +271,17 @@ export default function AdminPaymentsClient() {
                           {Math.floor(payment.amount ?? 0).toLocaleString("ru-RU")} ₽
                         </td>
                         <td className="p-3 sm:p-4">
-                          <span
-                            className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border ${
-                              payment.isSigned
-                                ? "border-primary/30 text-primary bg-primary/10"
-                                : "border-white/10 text-gray-500"
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-sm">
-                              {payment.isSigned ? "check_circle" : "cancel"}
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`signed-${payment.id}`}
+                              checked={payment.isSigned ?? false}
+                              onCheckedChange={(checked) => handleSignatureStatusUpdate(payment.reportId, checked)}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                            <span className="text-xs font-mono text-gray-400">
+                              {payment.isSigned ? "Да" : "Нет"}
                             </span>
-                            {payment.isSigned ? "Да" : "Нет"}
-                          </span>
+                          </div>
                         </td>
                         <td className="p-3 sm:p-4">
                           <div className="flex items-center justify-end gap-3">

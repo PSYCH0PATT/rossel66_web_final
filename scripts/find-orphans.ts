@@ -6,6 +6,12 @@
  * Usage: pnpm exec tsx scripts/find-orphans.ts
  */
 
+// @ts-ignore
+if (typeof process.loadEnvFile === 'function') {
+  // @ts-ignore
+  process.loadEnvFile('.env')
+}
+
 import { prisma } from "../lib/prisma"
 
 async function main() {
@@ -45,9 +51,12 @@ async function main() {
   if (plOrphans.length) console.log(plOrphans.slice(0, 20))
   console.log(`StreamAnalytics rows with missing User: ${stOrphans.length}`)
   if (stOrphans.length) console.log(stOrphans.slice(0, 20))
+  await prisma.$disconnect()
+  process.exit(0)
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   console.error(e)
+  await prisma.$disconnect()
   process.exit(1)
 })

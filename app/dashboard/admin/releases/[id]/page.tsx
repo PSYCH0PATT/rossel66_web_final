@@ -28,12 +28,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isDeleted, setIsDeleted] = useState(false)
 
   const fetchRelease = async () => {
     try {
       const res = await fetch(`/api/releases/${params.id}`)
       if (res.status === 404) {
-        notFound()
+        setIsDeleted(true)
+        setLoading(false)
+        return
       }
       const data = await res.json()
       if (data?.success && data.release) {
@@ -57,6 +60,21 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
 
   const save = async () => {
     if (!release) return
+    
+    // Auto-inject a default track if tracks array is empty
+    let finalTracks = [...release.tracks]
+    if (finalTracks.length === 0) {
+      finalTracks = [
+        {
+          id: `track_${Date.now()}_0`,
+          title: release.title,
+          duration: '0:00',
+          isrc: ''
+        }
+      ]
+      setRelease({ ...release, tracks: finalTracks })
+    }
+    
     setSaving(true)
     try {
       const body = {
@@ -65,7 +83,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
         releaseDate: release.releaseDate,
         status: release.status,
         coverUrl: release.coverUrl,
-        tracks: release.tracks,
+        tracks: finalTracks,
         artistId: release.artistId,
         koalaId: release.koalaId,
         bandlinkUrl: release.bandlinkUrl
@@ -108,12 +126,42 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
     "Новый": "Модерируется",
   }
 
-  if (loading || !release) {
+  if (loading) {
     return (
       <Layout role="admin" requiredRole="admin">
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
           <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (isDeleted) {
+    return (
+      <Layout role="admin" requiredRole="admin">
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400 card-glass border border-white/5 p-8 rounded-2xl max-w-lg mx-auto mt-12 text-center">
+          <span className="material-symbols-outlined text-destructive text-5xl animate-pulse">delete_forever</span>
+          <h2 className="font-display text-2xl font-bold text-white uppercase tracking-wider">Релиз удален</h2>
+          <p className="text-sm text-gray-400 max-w-sm">
+            Данный релиз не найден в базе данных. Возможно, он был удален в процессе очистки дубликатов.
+          </p>
+          <Link href="/dashboard/admin/releases" className="mt-4">
+            <Button className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold inline-flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              Вернуться к релизу
+            </Button>
+          </Link>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!release) {
+    return (
+      <Layout role="admin" requiredRole="admin">
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+          <p className="text-sm font-mono uppercase tracking-widest">Релиз не найден</p>
         </div>
       </Layout>
     )

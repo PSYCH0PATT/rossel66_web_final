@@ -2,6 +2,14 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 
+// @ts-ignore
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    // @ts-ignore
+    process.loadEnvFile('.env')
+  } catch (e) {}
+}
+
 const globalForPrisma = globalThis as unknown as { 
   prisma: PrismaClient
   pool: Pool

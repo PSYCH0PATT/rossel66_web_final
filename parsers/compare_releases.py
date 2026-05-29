@@ -61,6 +61,12 @@ def normalize_upc(upc):
     """Нормализует UPC"""
     return upc.strip().lstrip('0')  # Удаляем ведущие нули
 
+def normalize_artist_name(name):
+    """Нормализует имя артиста для сравнения"""
+    if not name:
+        return ''
+    return " ".join(name.lower().strip().split())
+
 def compare_releases():
     """Сравнивает релизы"""
     logger.info("🔍 Начало сравнения релизов...")
@@ -82,10 +88,11 @@ def compare_releases():
             normalized_upc = normalize_upc(release['upc'])
             system_by_upc[normalized_upc] = release
         
-        # Индекс по названию
+        # Индекс по названию и артисту
         if release.get('title'):
             normalized_title = normalize_title(release['title'])
-            system_by_title[normalized_title] = release
+            normalized_artist = normalize_artist_name(release.get('artistName', ''))
+            system_by_title[(normalized_title, normalized_artist)] = release
     
     # Анализируем релизы из Zvonko
     new_releases = []
@@ -102,12 +109,15 @@ def compare_releases():
         
         # Проверяем дубликаты внутри Zvonko
         title_key = normalize_title(zvonko_title)
+        artist_key = normalize_artist_name(zvonko_release.get('artist', ''))
+        unique_key = (title_key, artist_key)
+        
         upc_key = normalize_upc(zvonko_upc) if zvonko_upc else ''
         
-        if title_key in processed_titles:
+        if unique_key in processed_titles:
             duplicates_in_zvonko.append(zvonko_release)
             continue
-        processed_titles.add(title_key)
+        processed_titles.add(unique_key)
         
         if upc_key and upc_key in processed_upcs:
             duplicates_in_zvonko.append(zvonko_release)
@@ -126,13 +136,15 @@ def compare_releases():
                 })
                 continue
         
-        # Проверяем по названию
+        # Проверяем по названию и артисту
         if zvonko_title:
             normalized_title = normalize_title(zvonko_title)
-            if normalized_title in system_by_title:
+            normalized_artist = normalize_artist_name(zvonko_release.get('artist', ''))
+            key = (normalized_title, normalized_artist)
+            if key in system_by_title:
                 existing_by_title.append({
                     'zvonko': zvonko_release,
-                    'system': system_by_title[normalized_title],
+                    'system': system_by_title[key],
                     'match_type': 'Title'
                 })
                 continue

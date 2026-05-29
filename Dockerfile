@@ -1,12 +1,14 @@
 # 1. Используем официальный Node.js образ
 FROM node:20-alpine
 
-# 2. Устанавливаем Python, Chromium и зависимости для парсеров
+# 2. Устанавливаем Python, Chromium и зависимости для парсеров и обработки отчетов
 RUN apk add --no-cache \
     python3 \
     make \
     g++ \
     py3-pip \
+    py3-pandas \
+    py3-openpyxl \
     chromium \
     chromium-chromedriver \
     nss \

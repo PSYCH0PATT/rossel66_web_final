@@ -14,19 +14,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 def main():
-    zpwd = os.environ.get("ZVONKO_PASSWORD")
-    if not zpwd:
-        print("Задайте ZVONKO_PASSWORD", file=sys.stderr)
-        sys.exit(1)
-    zuser = os.environ.get("ZVONKO_USERNAME", "").strip()
-    if not zuser:
-        print("Задайте ZVONKO_USERNAME", file=sys.stderr)
-        sys.exit(1)
     print("🔍 Анализ пагинации Zvonko...")
     
     # Настройка Chrome
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    zuser = os.environ.get("ZVONKO_USERNAME", "").strip()
+    if not zuser:
+        print("Задайте ZVONKO_USERNAME", file=sys.stderr)
+        sys.exit(1)
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.add_argument('--start-maximized')
@@ -47,15 +42,15 @@ def main():
         password_input = driver.find_element(By.NAME, "password")
         
         username_input.clear()
+        username_input.send_keys("rossel_66")
+        
+        password_input.clear()
+        password_input.send_keys("rossel_66_27122023")
+        
         username_input.send_keys(zuser)
         
         password_input.clear()
         password_input.send_keys(zpwd)
-        
-        submit_input = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
-        submit_input.submit()
-        
-        time.sleep(5)
         
         # 2. Переход на страницу релизов
         print("🎵 Переход на страницу релизов...")
