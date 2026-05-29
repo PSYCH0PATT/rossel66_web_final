@@ -241,11 +241,21 @@ export default function AdminReleasesClient() {
 
   const formatDate = (dateStr: string) => {
     try {
+      if (!dateStr) return "--"
+      if (dateStr.includes('.')) {
+        const parts = dateStr.split('.')
+        if (parts.length === 3) {
+          const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`)
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString("ru-RU")
+          }
+        }
+      }
       const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return "--"
+      if (isNaN(d.getTime())) return dateStr || "--"
       return d.toLocaleDateString("ru-RU")
     } catch {
-      return "--"
+      return dateStr || "--"
     }
   }
 

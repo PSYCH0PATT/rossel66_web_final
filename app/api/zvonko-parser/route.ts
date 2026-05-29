@@ -187,6 +187,154 @@ export async function GET(request: NextRequest) {
   }
 }
 
+async function syncDbToReleasesJson() {
+  try {
+    console.log('📥 Экспорт релизов из базы данных в data/releases.json...');
+    const dbReleases = await prisma.release.findMany({ orderBy: { createdAt: 'desc' } });
+    const baseReleases = dbReleases.map(releaseFromPrisma);
+    
+    // Подгружаем имена артистов
+    const artistIds = [...new Set(baseReleases.map((r) => r.artistId).filter(Boolean))] as string[];
+    const users = artistIds.length > 0 
+      ? await prisma.user.findMany({
+          where: { id: { in: artistIds } },
+          select: { id: true, name: true, username: true }
+        })
+      : [];
+    const nameById = new Map(users.map((u) => [u.id, u.name || u.username]));
+    
+    const mappedReleases = baseReleases.map((r: any) => ({
+      ...r,
+      artistName: r.artistName || (r.artistId ? nameById.get(r.artistId) ?? "" : "")
+    }));
+    
+    const releasesFile = path.join(process.cwd(), 'data', 'releases.json');
+    fs.writeFileSync(releasesFile, JSON.stringify(mappedReleases, null, 2), 'utf-8');
+    console.log(`✅ Успешно экспортировано ${mappedReleases.length} релизов в releases.json`);
+  } catch (error) {
+    console.error('❌ Ошибка экспорта из БД в releases.json:', error);
+  }
+}
+
+async function syncReleasesJsonToDb() {
+  try {
+    const releasesFile = path.join(process.cwd(), 'data', 'releases.json');
+    if (!fs.existsSync(releasesFile)) {
+      console.warn('⚠️ Файл data/releases.json не найден для импорта в БД');
+      return;
+    }
+    
+    console.log('📤 Импорт релизов из data/releases.json в базу данных...');
+    const fileContent = fs.readFileSync(releasesFile, 'utf-8');
+    if (!fileContent.trim()) {
+      console.warn('⚠️ Файл data/releases.json пуст');
+      return;
+    }
+    
+    const jsonReleases = JSON.parse(fileContent);
+    console.log(`   Найдено релизов в файле: ${jsonReleases.length}`);
+    
+    let upsertedCount = 0;
+    
+    for (const r of jsonReleases) {
+      const { 
+        id, title, artistId, releaseDate, type, coverUrl, tracks, createdAt, updatedAt, upc, status, 
+        featuredArtistIds, featuredArtistNames, koalaId, bandlinkUrl, ...extra 
+      } = r;
+      
+      const tracksArray = Array.isArray(tracks) ? tracks : [];
+      
+      // Находим существующий релиз в БД для слияния данных
+      const existing = await prisma.release.findUnique({
+        where: { id },
+        select: { koalaId: true, bandlinkUrl: true, tracks: true, releaseDate: true }
+      });
+      
+      let finalKoalaId = koalaId || null;
+      let finalBandlinkUrl = bandlinkUrl || null;
+      let finalTracks = tracksArray;
+      let finalReleaseDate = releaseDate || '';
+      
+      if (existing) {
+        finalKoalaId = existing.koalaId || koalaId || null;
+        finalBandlinkUrl = existing.bandlinkUrl || bandlinkUrl || null;
+        
+        if (existing.releaseDate && !finalReleaseDate) {
+          finalReleaseDate = existing.releaseDate;
+        }
+        
+        const dbTracks = Array.isArray(existing.tracks) ? (existing.tracks as any[]) : [];
+        if (dbTracks.length > 0) {
+          const dbIsrcCount = dbTracks.filter(t => t.isrc && !t.isrc.startsWith('QZZ')).length;
+          const jsonIsrcCount = tracksArray.filter(t => t.isrc && !t.isrc.startsWith('QZZ')).length;
+          
+          if (dbTracks.length > tracksArray.length || dbIsrcCount > jsonIsrcCount) {
+            finalTracks = dbTracks;
+          } else {
+            finalTracks = tracksArray.map((jt, idx) => {
+              const dt = dbTracks[idx];
+              if (dt && dt.isrc && !dt.isrc.startsWith('QZZ') && (!jt.isrc || jt.isrc.startsWith('QZZ'))) {
+                return { ...jt, isrc: dt.isrc };
+              }
+              return jt;
+            });
+          }
+        }
+      }
+      
+      // Нормализуем дату в формат YYYY-MM-DD
+      if (finalReleaseDate.includes('.')) {
+        const dateParts = finalReleaseDate.split('.');
+        if (dateParts.length === 3) {
+          finalReleaseDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+        }
+      }
+      
+      await prisma.release.upsert({
+        where: { id },
+        update: {
+          title,
+          artistId: artistId || null,
+          releaseDate: finalReleaseDate,
+          type: type || (finalTracks.length > 1 ? 'album' : 'single'),
+          coverUrl: coverUrl || null,
+          upc: upc || null,
+          status: status || null,
+          koalaId: finalKoalaId,
+          bandlinkUrl: finalBandlinkUrl,
+          updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
+          tracks: finalTracks as any,
+          featuredArtistIds: featuredArtistIds || [],
+          featuredArtistNames: featuredArtistNames || [],
+          metadata: Object.keys(extra).length > 0 ? extra : null,
+        },
+        create: {
+          id,
+          title,
+          artistId: artistId || null,
+          releaseDate: finalReleaseDate,
+          type: type || (finalTracks.length > 1 ? 'album' : 'single'),
+          coverUrl: coverUrl || null,
+          upc: upc || null,
+          status: status || null,
+          koalaId: finalKoalaId,
+          bandlinkUrl: finalBandlinkUrl,
+          createdAt: createdAt ? new Date(createdAt) : new Date(),
+          updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
+          tracks: finalTracks as any,
+          featuredArtistIds: featuredArtistIds || [],
+          featuredArtistNames: featuredArtistNames || [],
+          metadata: Object.keys(extra).length > 0 ? extra : null,
+        }
+      });
+      upsertedCount++;
+    }
+    console.log(`✅ Успешно синхронизировано ${upsertedCount} релизов с базой данных Prisma`);
+  } catch (error) {
+    console.error('❌ Ошибка импорта из releases.json в БД:', error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const denied = await requireAdminOrCron(request)
   if (denied) return denied
@@ -206,6 +354,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { action = 'parse', pagesToParse = 1 } = body
+
+    // Синхронизируем БД с releases.json перед запуском парсера
+    await syncDbToReleasesJson()
 
     const parsersDir = path.join(process.cwd(), 'parsers')
     let scriptPath = ''
@@ -618,6 +769,11 @@ export async function POST(request: NextRequest) {
             console.error('Ошибка автосоздания артистов:', error)
             // Не останавливаем весь процесс из-за этой ошибки
           }
+        }
+
+        // Если парсинг прошел успешно, синхронизируем новые/измененные релизы из JSON обратно в БД
+        if (isSuccess) {
+          await syncReleasesJsonToDb()
         }
 
         // Сохраняем статус

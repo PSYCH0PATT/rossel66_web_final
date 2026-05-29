@@ -8,6 +8,7 @@ import json
 import uuid
 from datetime import datetime
 import logging
+from pathlib import Path
 
 # Настройка логирования
 logging.basicConfig(
@@ -16,10 +17,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Директории
+BASE_DIR = Path(__file__).resolve().parent.parent
+PARSERS_DIR = BASE_DIR / 'parsers'
+DATA_DIR = BASE_DIR / 'data'
+
 def load_comparison_results():
     """Загружает результаты сравнения"""
     try:
-        with open('/Users/macbook/proga/rossel-music/parsers/comparison_results.json', 'r', encoding='utf-8') as f:
+        with open(PARSERS_DIR / 'comparison_results.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Ошибка загрузки результатов сравнения: {e}")
@@ -28,7 +34,7 @@ def load_comparison_results():
 def load_system_releases():
     """Загружает существующие релизы системы"""
     try:
-        with open('/Users/macbook/proga/rossel-music/data/releases.json', 'r', encoding='utf-8') as f:
+        with open(DATA_DIR / 'releases.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Ошибка загрузки системных релизов: {e}")
@@ -37,7 +43,7 @@ def load_system_releases():
 def load_system_users():
     """Загружает пользователей системы"""
     try:
-        with open('/Users/macbook/proga/rossel-music/data/users.json', 'r', encoding='utf-8') as f:
+        with open(DATA_DIR / 'users.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Ошибка загрузки пользователей: {e}")
@@ -107,12 +113,8 @@ def create_release_from_zvonko(zvonko_release, users):
     # Создаем трек (базовый трек на основе названия релиза)
     track_id = f"track_{int(datetime.now().timestamp() * 1000)}_{uuid.uuid4().hex[:8]}"
     
-    # Определяем ISRC на основе UPC (если есть)
-    isrc = f"QZZ{datetime.now().strftime('%y%m')}{''.join([str(ord(c)) for c in artist_name[:3]])[:5]}"
-    if len(isrc) > 8:
-        isrc = isrc[:8]
-    elif len(isrc) < 8:
-        isrc = isrc.ljust(8, '0')
+    # ISRC в Zvonko парсере изначально отсутствует, оставляем пустым, чтобы не создавать фейковые значения
+    isrc = ""
     
     # artistName всегда берется из парсера, даже если артист не найден
     display_artist_name = zvonko_release.get('artist', artist_name)
@@ -306,13 +308,13 @@ def add_new_releases():
         updated_releases = system_releases + added_releases
         
         # Создаем бэкап
-        backup_file = f"/Users/macbook/proga/rossel-music/data/releases_backup_{int(datetime.now().timestamp())}.json"
+        backup_file = DATA_DIR / f"releases_backup_{int(datetime.now().timestamp())}.json"
         with open(backup_file, 'w', encoding='utf-8') as f:
             json.dump(system_releases, f, ensure_ascii=False, indent=2)
         logger.info(f"💾 Бэкап сохранен: {backup_file}")
         
         # Обновляем основной файл
-        with open('/Users/macbook/proga/rossel-music/data/releases.json', 'w', encoding='utf-8') as f:
+        with open(DATA_DIR / 'releases.json', 'w', encoding='utf-8') as f:
             json.dump(updated_releases, f, ensure_ascii=False, indent=2)
         
         logger.info(f"✅ Обновлен файл releases.json. Добавлено {len(added_releases)} релизов, обновлено статусов: {updated_count}")
@@ -330,7 +332,7 @@ def add_new_releases():
         'failed_releases': failed_releases
     }
     
-    with open('/Users/macbook/proga/rossel-music/parsers/add_releases_report.json', 'w', encoding='utf-8') as f:
+    with open(PARSERS_DIR / 'add_releases_report.json', 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     
     logger.info("📄 Отчет сохранен в add_releases_report.json")

@@ -45,6 +45,11 @@ export default function ReportProcessor() {
     message: string
     processedArtists: number
     reports: ProcessedReport[]
+    uploadStats?: {
+      uploaded: number
+      failed: number
+      failedNames: string[]
+    }
   } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

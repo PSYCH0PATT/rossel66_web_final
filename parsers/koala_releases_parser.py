@@ -343,9 +343,9 @@ class KoalaReleasesParser:
                     if not status:
                         status = 'Неизвестен'
                     
-                    # Ищем дату (формат: ДД.ММ.ГГГГ)
-                    date_match = re.search(r'(\d{2}\.\d{2}\.\d{4})', card_text)
-                    release_date = date_match.group(1) if date_match else None
+                    # Ищем дату (формат: ДД.ММ.ГГГГ) и конвертируем в ГГГГ-ММ-ДД
+                    date_match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', card_text)
+                    release_date = f"{date_match.group(3)}-{date_match.group(2)}-{date_match.group(1)}" if date_match else None
                     
                     # Пропускаем черновики
                     if status in self.SKIP_STATUSES:

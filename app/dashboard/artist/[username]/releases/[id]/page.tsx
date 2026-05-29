@@ -120,6 +120,26 @@ function formatSeconds(total: number): string {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "—"
+  try {
+    if (dateStr.includes('.')) {
+      const parts = dateStr.split('.')
+      if (parts.length === 3) {
+        const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`)
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString("ru-RU")
+        }
+      }
+    }
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr || "—"
+    return d.toLocaleDateString("ru-RU")
+  } catch {
+    return dateStr || "—"
+  }
+}
+
 export default function ArtistReleaseDetailPage({ params }: { params: { username: string; id: string } }) {
   const router = useRouter()
   const [release, setRelease] = useState<any>(null)
@@ -186,7 +206,27 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
   }
 
   if (!artist || !release) {
-    notFound()
+    return (
+      <Layout role="artist" requiredRole="artist" username={params.username}>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center">
+          <div className="text-red-500/85 p-3 bg-red-500/10 rounded-full border border-red-500/20">
+            <span className="material-symbols-outlined" style={{ fontSize: 32 }}>error</span>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-white text-lg font-medium">Релиз не найден</h3>
+            <p className="text-gray-400 text-sm max-w-sm">
+              Релиз удален или у вас нет прав на его просмотр.
+            </p>
+          </div>
+          <Link
+            href={`/dashboard/artist/${params.username}/releases`}
+            className="text-xs text-primary font-mono uppercase tracking-widest border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-lg px-4 py-2 mt-2 transition-all duration-300"
+          >
+            Вернуться к релизам
+          </Link>
+        </div>
+      </Layout>
+    )
   }
 
   const dashHref = `/dashboard/artist/${params.username}/dashboard`
@@ -274,9 +314,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
                 <div>
                   <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Дата релиза</p>
                   <p className="text-white tabular-nums">
-                    {release.releaseDate
-                      ? new Date(release.releaseDate).toLocaleDateString("ru-RU")
-                      : "—"}
+                    {formatDate(release.releaseDate)}
                   </p>
                 </div>
               </div>
@@ -353,9 +391,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
             <div>
               <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Дата релиза</dt>
               <dd className="text-sm text-white mt-1 tabular-nums">
-                {release.releaseDate
-                  ? new Date(release.releaseDate).toLocaleDateString("ru-RU")
-                  : "—"}
+                {formatDate(release.releaseDate)}
               </dd>
             </div>
           </dl>

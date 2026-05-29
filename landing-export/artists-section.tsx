@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useMobileDetector } from "@/hooks/use-mobile-detector"
-import MobileArtistsSlider from "./mobile-artists-slider"
+import MobileArtistsSlider from "@/components/mobile-artists-slider"
 
 interface ArtistsSectionProps {
   windowSize: {

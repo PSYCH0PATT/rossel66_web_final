@@ -13,6 +13,8 @@ import {
   assignReleasesToNewArtist
 } from '@/lib/storage';
 import { nicknameToUsername } from '@/lib/utils';
+import { prisma } from '@/lib/prisma';
+import { releaseFromPrisma } from '@/lib/storage-adapters';
 import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names';
 import { requireAdminOrCron } from '@/lib/server-auth';
 import { rateLimitParser } from '@/lib/rate-limit';
@@ -326,8 +328,37 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         validArtists.push(artist);
       }
       
+      // Один релиз на один koala-релиз (первый артист из списка)
+      const artist = validArtists[0];
+
       // Проверяем, существует ли релиз с таким koalaId
-      const existingRelease = await getReleaseByKoalaId(koalaRelease.koala_id);
+      let existingRelease = await getReleaseByKoalaId(koalaRelease.koala_id);
+      
+      // Fallback: если не найден по koalaId, пробуем найти по UPC или Title + Artist
+      if (!existingRelease) {
+        if (koalaRelease.upc) {
+          const matchedByUpc = await prisma.release.findFirst({
+            where: { upc: koalaRelease.upc }
+          });
+          if (matchedByUpc) {
+            existingRelease = releaseFromPrisma(matchedByUpc);
+            console.log(`🔍 Koala Parser Fallback: найден существующий релиз по UPC (${koalaRelease.upc}) для "${koalaRelease.title}"`);
+          }
+        }
+        
+        if (!existingRelease && artist) {
+          const matchedByTitleArtist = await prisma.release.findFirst({
+            where: {
+              title: { equals: koalaRelease.title, mode: 'insensitive' },
+              artistId: artist.id
+            }
+          });
+          if (matchedByTitleArtist) {
+            existingRelease = releaseFromPrisma(matchedByTitleArtist);
+            console.log(`🔍 Koala Parser Fallback: найден существующий релиз по Названию и Артисту для "${koalaRelease.title}"`);
+          }
+        }
+      }
       
       if (existingRelease) {
         // Обновляем существующий релиз (без нового уведомления)
@@ -335,6 +366,11 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
           status: normalizeStatus(koalaRelease.status),
           updatedAt: new Date().toISOString()
         };
+        
+        // Записываем koalaId, если его не было
+        if (!existingRelease.koalaId) {
+          updates.koalaId = koalaRelease.koala_id;
+        }
         
         // Добавляем UPC если статус "Доставлен" и UPC есть
         if (koalaRelease.status === 'Доставлен' && koalaRelease.upc) {
@@ -349,13 +385,56 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         if (validArtists.length > 1) {
           updates.featuredArtistIds = validArtists.slice(1).map((a) => a.id);
         }
+
+        // Обновляем дату релиза (приводим к формату YYYY-MM-DD)
+        if (koalaRelease.release_date) {
+          let parsedDate = koalaRelease.release_date;
+          if (parsedDate.includes('.')) {
+            const dateParts = parsedDate.split('.');
+            if (dateParts.length === 3) {
+              parsedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+            }
+          }
+          const existingDate = existingRelease.releaseDate;
+          if (!existingDate || existingDate.includes('.') || existingDate !== parsedDate) {
+            updates.releaseDate = parsedDate;
+          }
+        }
+
+        // Обновляем треки с ISRC
+        const existingTracks = existingRelease.tracks || [];
+        const isrcCodes = koalaRelease.isrc_codes || [];
+        
+        let tracksUpdated = false;
+        const updatedTracks = existingTracks.map((track, index) => {
+          const parsedIsrc = isrcCodes[index];
+          // Если есть спарсенный ISRC, и он отличается от текущего в БД (или текущий фейковый/пустой)
+          if (parsedIsrc && (track.isrc !== parsedIsrc || !track.isrc || track.isrc.startsWith('QZZ'))) {
+            tracksUpdated = true;
+            return {
+              ...track,
+              isrc: parsedIsrc
+            };
+          }
+          return track;
+        });
+
+        if (updatedTracks.length === 0 && isrcCodes.length > 0) {
+          tracksUpdated = true;
+          updates.tracks = isrcCodes.map((isrc, index) => ({
+            id: `track_${Date.now()}_${index}`,
+            title: koalaRelease.title,
+            duration: '0:00',
+            isrc: isrc || undefined,
+          }));
+        } else if (tracksUpdated) {
+          updates.tracks = updatedTracks;
+        }
         
         await updateRelease(existingRelease.id, updates);
         console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
         stats.updated++;
       } else {
-        // Один релиз на один koala-релиз (первый артист из списка) — без дублей и двойных уведомлений
-        const artist = validArtists[0];
         let releaseDate = new Date().toISOString().split('T')[0];
         if (koalaRelease.release_date) {
           const dateParts = koalaRelease.release_date.split('.');
