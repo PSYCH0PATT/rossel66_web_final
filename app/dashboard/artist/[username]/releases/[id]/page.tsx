@@ -149,34 +149,22 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usersResponse = await fetch(
-          `/api/users?username=${encodeURIComponent(params.username)}&role=artist`
-        )
-        const usersData = await usersResponse.json()
-
-        if (!usersData.success) {
-          setLoading(false)
-          return
-        }
-
-        const foundArtist = usersData.users?.[0]
-
-        if (!foundArtist) {
-          setLoading(false)
-          return
-        }
-
-        setArtist(foundArtist)
-
         const releaseResponse = await fetch(`/api/releases/${params.id}`)
+        
+        if (releaseResponse.status === 404 || releaseResponse.status === 403) {
+          setLoading(false)
+          return
+        }
+
         const releaseData = await releaseResponse.json()
 
-        if (!releaseData.success || releaseData.release.artistId !== foundArtist.id) {
+        if (!releaseData.success) {
           setLoading(false)
           return
         }
 
         setRelease(releaseData.release)
+        setArtist({ name: releaseData.release.artistName || params.username })
         setLoading(false)
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -331,45 +319,54 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
             ТРЕКИ
           </h2>
         </div>
-        <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
-                  <th className="px-6 py-4 font-mono w-14">#</th>
-                  <th className="px-6 py-4 font-mono">Название</th>
-                  <th className="px-6 py-4 font-mono">ISRC</th>
-                  <th className="px-6 py-4 font-mono text-right">Длительность</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {tracks.map((track: any, index: number) => (
-                  <tr
-                    key={track.id ?? index}
-                    className="group border-b border-white/5 transition-all duration-200 table-row-hover"
-                  >
-                    <td className="px-6 py-3 text-gray-400 font-mono tabular-nums">{index + 1}</td>
-                    <td className="px-6 py-3">
-                      <div className="font-bold text-white group-hover:text-[#10b981] transition-colors min-w-0 break-words">
-                        {track.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
-                      {track.isrc || "—"}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
-                      <span className="inline-flex items-center gap-1 justify-end">
-                        <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
-                        {track.duration || "—"}
-                      </span>
-                    </td>
+        
+        {tracks.length > 0 ? (
+          <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
+                    <th className="px-6 py-4 font-mono w-14">#</th>
+                    <th className="px-6 py-4 font-mono">Название</th>
+                    <th className="px-6 py-4 font-mono">ISRC</th>
+                    <th className="px-6 py-4 font-mono text-right">Длительность</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="text-sm">
+                  {tracks.map((track: any, index: number) => (
+                    <tr
+                      key={track.id ?? index}
+                      className="group border-b border-white/5 transition-all duration-200 table-row-hover"
+                    >
+                      <td className="px-6 py-3 text-gray-400 font-mono tabular-nums">{index + 1}</td>
+                      <td className="px-6 py-3">
+                        <div className="font-bold text-white group-hover:text-[#10b981] transition-colors min-w-0 break-words">
+                          {track.title}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
+                        {track.isrc || "—"}
+                      </td>
+                      <td className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
+                          {track.duration || "—"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="card-glass rounded-2xl border border-white/5 p-8 text-center">
+            <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">music_off</span>
+            <p className="text-gray-500 font-mono text-xs uppercase tracking-wider mb-1">Треки не загружены</p>
+            <p className="text-[10px] text-gray-600">Список треков пуст или не был импортирован.</p>
+          </div>
+        )}
       </div>
 
       {/* Tech + stats */}

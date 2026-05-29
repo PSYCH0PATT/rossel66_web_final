@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
-import { requireAdmin } from "@/lib/server-auth"
+import { requireAdmin, getSessionUser } from "@/lib/server-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -21,15 +21,27 @@ const userSelect = {
 } as const
 
 export async function GET(request: Request) {
-  const denied = await requireAdmin(request)
-  if (denied) return denied
+  const session = getSessionUser()
+  if (!session) {
+    return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+  }
 
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
     const usernameExact = searchParams.get("username")
 
+    // Артист может запрашивать ТОЛЬКО свои собственные данные по username
+    if (session.role !== "admin") {
+      if (!usernameExact || usernameExact.toLowerCase() !== session.username.toLowerCase()) {
+        return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+      }
+    }
+
     if (id) {
+      if (session.role !== "admin" && session.id !== id) {
+         return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+      }
       const user = await prisma.user.findUnique({
         where: { id },
         select: userSelect,
@@ -47,7 +59,7 @@ export async function GET(request: Request) {
       const roleFilter = searchParams.get("role")
       const user = await prisma.user.findFirst({
         where: {
-          username: usernameExact,
+          username: { equals: usernameExact, mode: "insensitive" },
           ...(roleFilter && roleFilter !== "all" ? { role: roleFilter } : {}),
         },
         select: userSelect,
@@ -59,6 +71,11 @@ export async function GET(request: Request) {
         page: 1,
         pageSize: 1,
       })
+    }
+
+    // Листинг всех пользователей доступен только админам
+    if (session.role !== "admin") {
+      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
 
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
