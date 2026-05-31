@@ -2,9 +2,7 @@
 
 ## Purpose
 Система управления артистами лейбла. Позволяет создавать, редактировать, удалять артистов, массово добавлять артистов, просматривать профили с релизами, отчетами и плейлистами.
-
 ## Requirements
-
 ### Requirement: Artist List
 The system SHALL display a list of all label artists with search and filter capabilities.
 
@@ -12,6 +10,7 @@ The system SHALL display a list of all label artists with search and filter capa
 - **WHEN** administrator opens the artists page
 - **THEN** a table with all artists is displayed
 - **AND** shows name, image, social media links
+- **AND** shows report-readiness badge when fio, contract, or percentage is missing
 
 #### Scenario: Search artists
 - **WHEN** administrator enters text in search field
@@ -35,9 +34,9 @@ The system SHALL allow creating new artists with associated user accounts.
 The system SHALL allow editing artist data and associated user accounts.
 
 #### Scenario: Update artist info
-- **WHEN** administrator changes artist data
+- **WHEN** administrator changes artist data including contract fields (fio, contract, percentage)
 - **AND** clicks "Save"
-- **THEN** changes are saved
+- **THEN** changes are saved to Supabase Postgres
 - **AND** associated user is updated
 
 ### Requirement: Delete Artist
@@ -56,20 +55,34 @@ The system SHALL display artist profile with detailed information and navigation
 - **THEN** full artist information is displayed
 - **AND** links to releases, reports, payments, playlists
 
+### Requirement: Report Readiness Indicator
+The system SHALL indicate in the admin artist list when an artist lacks data required for report generation.
+
+#### Scenario: Incomplete data badge
+- **WHEN** artist is missing fio, contract, or percentage
+- **THEN** badge «нет данных для отчёта» is shown
+- **AND** tooltip or title lists missing field labels
+
+#### Scenario: Complete data display
+- **WHEN** artist has fio, contract, and percentage filled
+- **THEN** percentage is displayed on artist card
+
 ## Technical Details
 
 ### Storage
-- Artists stored in `data/artists/[id].json`
-- Linked to users via username
+- Artists stored in **Supabase Postgres** (`User` table via Prisma)
+- Contract fields: `fio`, `fioShort`, `contract`, `percentage`
 
 ### Components
 - `app/dashboard/admin/artists/page.tsx` — artist list
+- `app/dashboard/admin/artists/admin-artists-client.tsx` — list UI with report-readiness badge
 - `app/dashboard/admin/artists/add/page.tsx` — add artist
 - `app/dashboard/admin/artists/bulk-add/page.tsx` — bulk add
 - `app/dashboard/admin/artists/[id]/page.tsx` — artist profile
 
 ### API
 - `GET /api/artists` — list artists
-- `POST /api/artists` — create artist
+- `GET /api/artists?incompleteReportData=1` — artists missing report-required fields
+- `POST /api/artists` — create artist (optional contract fields)
 - `PUT /api/artists` — update artist
 - `DELETE /api/artists?id=` — delete artist

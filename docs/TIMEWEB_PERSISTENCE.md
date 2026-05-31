@@ -34,6 +34,7 @@ Production runs on **Timeweb** with an **ephemeral filesystem**: each rebuild/re
 - `unstable_cache` TTL: `DASHBOARD_REVALIDATE_SEC` (60s) in `lib/cached-dashboard.ts`.
 - Mutations call `revalidateArtistDashboardsForArtistIds` / `revalidateTag(stream-analytics)` where applicable.
 - Dashboard pages are **not** required to use `force-dynamic` globally (perf plan).
+- **Build-time rule:** dashboard Server Components must **not** call Prisma during `next build` / Docker build (DB is unavailable). UI warnings and lists that need DB data should load via dynamic API routes (e.g. `GET /api/artists?incompleteReportData=1`) from client components or at request time only.
 
 ## Acceptance after Timeweb rebuild
 
