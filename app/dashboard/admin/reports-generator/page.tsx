@@ -1,5 +1,4 @@
 import ReportProcessor from "@/components/report-processor"
-import { MissingContractBanner } from "@/components/missing-contract-banner"
 import Link from "next/link"
 
 export default function ReportsGenerator() {
@@ -20,8 +19,6 @@ export default function ReportsGenerator() {
             <p className="text-sm text-gray-400 font-light mt-2 max-w-md">Обработка и распределение по артистам</p>
           </div>
         </div>
-
-        <MissingContractBanner />
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
           <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">

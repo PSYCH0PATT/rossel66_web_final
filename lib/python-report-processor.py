@@ -293,6 +293,17 @@ def _emit_incomplete_report_json(skipped_incomplete):
         payload = json.dumps({"incompleteArtists": skipped_incomplete}, ensure_ascii=False)
         print("REPORT_INCOMPLETE_JSON:" + payload)
 
+def _collect_statement_artists(statement_df, match_list):
+    """Artists from Supabase that appear in the uploaded statement file."""
+    artists = set()
+    for _, row in statement_df.iterrows():
+        for artist in extract_artists_from_track(row['Исполнитель'], match_list):
+            artists.add(artist)
+    return artists
+
+def _filter_incomplete_for_statement(skipped_incomplete, statement_artists):
+    return [item for item in skipped_incomplete if item['name'] in statement_artists]
+
 def get_artists_list_from_users(users_file):
     """Читает данные артистов из Prisma export snapshot (/tmp/users_export_*.json)."""
     skipped_incomplete = []
@@ -312,11 +323,13 @@ def get_artists_list_from_users(users_file):
             canonical = user.get('name') or user.get('username')
             if not canonical:
                 continue
+            aliases = [a for a in (user.get('name'), user.get('username')) if a]
             missing = _missing_report_fields(user)
             if missing:
                 labels = [REPORT_FIELD_LABELS.get(f, f) for f in missing]
                 print(f"⚠️  Пропущен артист {canonical}: не хватает данных для отчёта ({', '.join(labels)})")
                 skipped_incomplete.append({"name": canonical, "missingFields": missing})
+                match_list.append((canonical, aliases))
                 continue
             
             percentage = user.get('percentage')
@@ -327,7 +340,6 @@ def get_artists_list_from_users(users_file):
                 str(percentage),
                 user.get('id')
             ]
-            aliases = [a for a in (user.get('name'), user.get('username')) if a]
             match_list.append((canonical, aliases))
         
         print(f"✅ Загружено {len(artists_dict)} артистов из {users_file}")
@@ -479,10 +491,12 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
 
     # Загружаем данные артистов
     artists_data, match_list, skipped_incomplete = get_artists_list_from_users(users_file)
+    statement_artists = _collect_statement_artists(statement_df, match_list)
+    incomplete_in_statement = _filter_incomplete_for_statement(skipped_incomplete, statement_artists)
     
     if not artists_data:
         print(f"⚠️  Не найдено артистов с полными данными для отчёта в {users_file}")
-        _emit_incomplete_report_json(skipped_incomplete)
+        _emit_incomplete_report_json(incomplete_in_statement)
         return []
         
     quarter_label, period_label = _format_quarter_labels(quarter, year)
@@ -602,8 +616,8 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
     print(f"Всего создано файлов: {len(created_files)}")
     print(f"Зарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist in registered_users)}")
     print(f"Незарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist not in registered_users)}")
-    if skipped_incomplete:
-        _emit_incomplete_report_json(skipped_incomplete)
+    if incomplete_in_statement:
+        _emit_incomplete_report_json(incomplete_in_statement)
     return created_files
 
 
