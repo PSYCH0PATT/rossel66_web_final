@@ -326,6 +326,8 @@ export type ArtistReportItem = {
   totalAmount: number | null
   isSigned: boolean | null
   isPaid: boolean | null
+  isAcknowledged: boolean | null
+  acknowledgedAt: string | null
 }
 
 export type ArtistReleaseItem = Release
@@ -363,6 +365,8 @@ async function loadArtistReportsUncached(artistId: string): Promise<ArtistReport
       totalAmount: true,
       isSigned: true,
       isPaid: true,
+      isAcknowledged: true,
+      acknowledgedAt: true,
     },
   })
   return rows
@@ -370,7 +374,7 @@ async function loadArtistReportsUncached(artistId: string): Promise<ArtistReport
 
 export const getCachedArtistReports = unstable_cache(
   async (artistId: string) => loadArtistReportsUncached(artistId),
-  ["artist-reports-v1"],
+  ["artist-reports-v2"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 

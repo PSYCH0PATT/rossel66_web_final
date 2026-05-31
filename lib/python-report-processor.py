@@ -604,7 +604,8 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
             "totalAmount": final_amount,
             "isRegistered": is_registered,
             "isSigned": False,
-            "isPaid": False
+            "isPaid": False,
+            "isAcknowledged": False
         }
         
         reports_metadata.append(report_metadata)

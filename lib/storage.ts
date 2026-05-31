@@ -125,6 +125,8 @@ export interface Report {
   totalAmount?: number
   isPaid?: boolean
   isSigned?: boolean
+  isAcknowledged?: boolean
+  acknowledgedAt?: string
   isRegistered?: boolean
   status?: 'processed' | 'pending'
   uploadDate?: string
@@ -749,6 +751,8 @@ export interface ReportData extends Omit<Report, 'status'> {
   totalAmount?: number
   isPaid?: boolean
   isSigned?: boolean
+  isAcknowledged?: boolean
+  acknowledgedAt?: string
   isRegistered?: boolean
   status?: Report['status']
   uploadDate?: string
@@ -830,6 +834,25 @@ export async function updateReportPaidStatus(reportId: string, isPaid: boolean):
     return true
   } catch (error) {
     console.error('Error updating report paid status:', error)
+    return false
+  }
+}
+
+export async function updateReportAcknowledgedStatus(
+  reportId: string,
+  acknowledged: boolean
+): Promise<boolean> {
+  try {
+    await prisma.report.update({
+      where: { id: reportId },
+      data: {
+        isAcknowledged: acknowledged,
+        acknowledgedAt: acknowledged ? new Date() : null,
+      },
+    })
+    return true
+  } catch (error) {
+    console.error('Error updating report acknowledged status:', error)
     return false
   }
 }

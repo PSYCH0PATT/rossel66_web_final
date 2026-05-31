@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "isAcknowledged" BOOLEAN DEFAULT false;
+ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "acknowledgedAt" TIMESTAMP(3);

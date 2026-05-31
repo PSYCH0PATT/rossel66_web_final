@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
         isRegistered: !!registeredArtist,
         isSigned: false,
         isPaid: false,
+        isAcknowledged: false,
         processed: true
       }
     })

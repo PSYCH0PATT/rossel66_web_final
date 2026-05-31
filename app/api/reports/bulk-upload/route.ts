@@ -146,6 +146,7 @@ export async function POST(request: Request) {
             isRegistered: true,
             isSigned: false,
             isPaid: false,
+            isAcknowledged: false,
             processed: true,
           }
         })

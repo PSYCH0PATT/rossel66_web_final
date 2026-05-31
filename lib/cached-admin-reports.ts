@@ -18,6 +18,7 @@ export type AdminReportItem = {
   totalAmount: number | null
   isSigned: boolean | null
   isPaid: boolean | null
+  isAcknowledged: boolean | null
 }
 
 function dedupeReportsByArtistQuarterYear<T extends Report>(rows: T[]): T[] {
@@ -48,6 +49,7 @@ async function loadAdminReportsUncached(): Promise<AdminReportItem[]> {
       totalAmount: true,
       isSigned: true,
       isPaid: true,
+      isAcknowledged: true,
       // skip heavy fields like filePath, processed, etc.
     },
   })
@@ -76,6 +78,7 @@ async function loadAdminReportsUncached(): Promise<AdminReportItem[]> {
     totalAmount: r.totalAmount ?? null,
     isSigned: r.isSigned ?? null,
     isPaid: r.isPaid ?? null,
+    isAcknowledged: r.isAcknowledged ?? null,
   }))
 }
 

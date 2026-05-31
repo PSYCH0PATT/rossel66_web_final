@@ -103,6 +103,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
         totalAmount: report.totalAmount,
         isSigned: report.isSigned,
         isPaid: report.isPaid,
+        isAcknowledged: report.isAcknowledged,
       })),
       total,
       page,

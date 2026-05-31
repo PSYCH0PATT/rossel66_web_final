@@ -37,6 +37,7 @@ interface Report {
   totalAmount: number
   isSigned: boolean
   isPaid: boolean
+  isAcknowledged?: boolean
 }
 
 type QuarterYear = { quarter: string; year: number }
@@ -436,6 +437,18 @@ export default function ReportsList() {
                                 </div>
                               </div>
                               <div className="flex items-center flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                  <div className="flex items-center gap-1 sm:gap-2">
+                                    {report.isAcknowledged ? (
+                                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
+                                    ) : (
+                                      <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500 flex-shrink-0" />
+                                    )}
+                                    <span className="text-slate-300 whitespace-nowrap text-xs sm:text-sm">
+                                      Ознакомлен
+                                    </span>
+                                  </div>
+                                </div>
                                 <div className="flex items-center gap-2 sm:gap-3">
                                   <div className="flex items-center gap-1 sm:gap-2">
                                     {report.isSigned ? (

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import type { Report } from "@/lib/storage"
+import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 
@@ -12,9 +13,14 @@ interface ArtistReportsProps {
   artistName: string
 }
 
-export default function ArtistReports({ username, reports, artistName }: ArtistReportsProps) {
+export default function ArtistReports({ username, reports: initialReports, artistName }: ArtistReportsProps) {
+  const [reports, setReports] = useState(initialReports)
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null)
+  const [ackMessage, setAckMessage] = useState<string | null>(null)
+
+  const acknowledgeGate = useMemo(() => canAcknowledgeReports(reports), [reports])
 
   const years = [
     ...new Set(
@@ -43,6 +49,39 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
 
   const handleClosePreview = () => {
     setPreviewReportId(null)
+  }
+
+  const handleAcknowledge = async (reportId: string) => {
+    setAcknowledgingId(reportId)
+    setAckMessage(null)
+    try {
+      const res = await fetch("/api/reports/acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAckMessage(data.error ?? "Не удалось сохранить ознакомление")
+        return
+      }
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                isAcknowledged: true,
+                acknowledgedAt: data.acknowledgedAt ?? new Date().toISOString(),
+              }
+            : r
+        )
+      )
+      setAckMessage(data.message ?? "Спасибо. Ссылка на подписание будет в рабочем Telegram-канале.")
+    } catch {
+      setAckMessage("Не удалось сохранить ознакомление")
+    } finally {
+      setAcknowledgingId(null)
+    }
   }
 
   return (
@@ -92,6 +131,16 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
 
       {years.length > 0 ? (
         <>
+          <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-5 mb-8">
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Пока вы не нажмёте «Ознакомился», мы не можем выслать ссылку на подписание документа.
+              После нажатия ссылка появится в рабочем Telegram-канале — мы отправим её вам вручную.
+            </p>
+            {ackMessage && (
+              <p className="text-sm text-primary mt-3 font-mono">{ackMessage}</p>
+            )}
+          </div>
+
           {sortedQuarters.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               {sortedQuarters.map((quarter) => (
@@ -103,8 +152,9 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
                     {reportsByQuarter[quarter].map((report) => (
                       <div
                         key={report.id}
-                        className="card-glass rounded-2xl border border-white/5 p-4 flex items-center gap-4 hover:border-white/10 transition-colors"
+                        className="card-glass rounded-2xl border border-white/5 p-4 hover:border-white/10 transition-colors"
                       >
+                        <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
                           <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-black flex items-center justify-center">
                             <span className="material-symbols-outlined text-xl text-emerald-400">description</span>
@@ -122,14 +172,20 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
                                 : "—"}
                           </p>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] font-mono uppercase tracking-wider">
-                            <span className={`inline-flex items-center gap-1 ${(report as any).isSigned ? "text-emerald-400" : "text-red-400"}`}>
+                            <span className={`inline-flex items-center gap-1 ${report.isSigned ? "text-emerald-400" : "text-red-400"}`}>
                               <span className="material-symbols-outlined text-sm">
-                                {(report as any).isSigned ? "verified" : "cancel"}
+                                {report.isSigned ? "verified" : "cancel"}
                               </span>
-                              {(report as any).isSigned ? "Подписан" : "Не подписан"}
+                              {report.isSigned ? "Подписан" : "Не подписан"}
                             </span>
+                            {report.isAcknowledged && (
+                              <span className="inline-flex items-center gap-1 text-emerald-400">
+                                <span className="material-symbols-outlined text-sm">task_alt</span>
+                                Ознакомлен
+                              </span>
+                            )}
                             <span className="text-yellow-400/90 tabular-nums">
-                              {Math.round((report as any).totalAmount || 0).toLocaleString("ru-RU")} ₽
+                              {Math.round(report.totalAmount || 0).toLocaleString("ru-RU")} ₽
                             </span>
                           </div>
                         </div>
@@ -152,6 +208,35 @@ export default function ArtistReports({ username, reports, artistName }: ArtistR
                           >
                             <span className="material-symbols-outlined text-[20px]">download</span>
                           </button>
+                        </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-white/5">
+                          {report.isAcknowledged ? (
+                            <span className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-emerald-400">
+                              <span className="material-symbols-outlined text-base">check_circle</span>
+                              Вы ознакомились
+                            </span>
+                          ) : acknowledgeGate.allowed ? (
+                            <button
+                              type="button"
+                              disabled={acknowledgingId === report.id}
+                              onClick={() => handleAcknowledge(report.id)}
+                              className="bg-[#10b981] hover:bg-emerald-400 disabled:opacity-60 text-black font-bold rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 transition-all"
+                            >
+                              {acknowledgingId === report.id ? "Сохранение..." : "Ознакомился"}
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest border border-white/10 text-gray-500 cursor-not-allowed"
+                              >
+                                Ознакомился
+                              </button>
+                              <p className="text-xs text-gray-500 leading-relaxed">{acknowledgeGate.reason}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

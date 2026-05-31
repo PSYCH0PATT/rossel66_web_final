@@ -133,6 +133,7 @@ export async function POST(request: Request) {
           isRegistered: !!resolvedArtistId,
           isSigned: false,
           isPaid: false,
+          isAcknowledged: false,
           processed: true,
         }
       })

@@ -708,6 +708,12 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           </div>
                           <div className="flex flex-wrap items-center gap-4 mt-3 text-xs font-mono uppercase text-gray-500">
                             <div className="flex items-center gap-2">
+                              <div className={`size-2 rounded-full ${report.isAcknowledged ? 'bg-primary' : 'bg-gray-600'}`} aria-hidden />
+                              <span className="text-gray-400 normal-case">
+                                {report.isAcknowledged ? 'Ознакомлен' : 'Не ознакомлен'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <div className={`size-2 rounded-full ${report.isSigned ? 'bg-primary' : 'bg-gray-600'}`} aria-hidden />
                               <span className="text-gray-400 normal-case">
                                 {report.isSigned ? 'Подписан' : 'Не подписан'}

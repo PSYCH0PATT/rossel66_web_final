@@ -338,6 +338,7 @@ export async function POST(request: NextRequest) {
                       isRegistered: report.isRegistered ?? true,
                       isSigned: false,
                       isPaid: false,
+                      isAcknowledged: false,
                       processed: true,
                     }
                   })

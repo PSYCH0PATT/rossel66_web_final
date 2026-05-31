@@ -70,6 +70,8 @@ model Report {
   totalAmount  Float?
   isPaid       Boolean?
   isSigned     Boolean?
+  isAcknowledged Boolean? @default(false)
+  acknowledgedAt DateTime?
   isRegistered Boolean?
   status       String?
   uploadDate   String?
