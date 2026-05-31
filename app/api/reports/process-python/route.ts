@@ -65,6 +65,36 @@ function incompleteReportMessage(incomplete: IncompleteArtistFromPython[]): stri
   return `У ${incomplete.length} артистов не хватает обязательных данных для отчёта (ФИО, договор, процент)`
 }
 
+function parsePythonErrorMessage(output: string, errorOutput: string): string | null {
+  const combined = `${output}\n${errorOutput}`
+  const match = combined.match(/Ошибка: (.+)/)
+  return match?.[1]?.trim() ?? null
+}
+
+function resolveProcessFailureMessage(
+  output: string,
+  errorOutput: string,
+  incomplete: IncompleteArtistFromPython[],
+): string {
+  const pythonError = parsePythonErrorMessage(output, errorOutput)
+  if (pythonError) return pythonError
+  return incompleteReportMessage(incomplete)
+}
+
+function resolveApprovalDate(raw: FormDataEntryValue | null): string {
+  const today = new Date().toISOString().slice(0, 10)
+  if (!raw || typeof raw !== 'string') return today
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today
+}
+
+type ReportMetadataFromPython = {
+  id: string
+  artistName: string
+  isRegistered: boolean
+  totalPlays: number
+  totalAmount: number
+}
+
 function findTemplatePath(): string {
   const baseDir = process.cwd()
   const libTemplate = path.join(baseDir, 'lib', 'templates', 'report-mendxza.xlsx')
@@ -102,6 +132,7 @@ export async function POST(request: NextRequest) {
   const tempFilePath = `/tmp/temp_upload_${requestId}.xlsx`
   const reportsOutDir = `/tmp/reports_out_${requestId}`
   const metadataJsonPath = `/tmp/metadata_${requestId}.json`
+  const columnMappingPath = `/tmp/column_mapping_${requestId}.json`
   let exportedPaths: { usersPath: string, releasesPath: string } | null = null
 
   try {
@@ -113,6 +144,22 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: 'Файл не найден' }, { status: 400 })
     }
+
+    const columnMapping = {
+      isrc_column: String(formData.get('isrc_column') ?? ''),
+      track_name_column: String(formData.get('track_name_column') ?? ''),
+      album_name_column: String(formData.get('album_name_column') ?? ''),
+      artist_column: String(formData.get('artist_column') ?? ''),
+      plays_column: String(formData.get('plays_column') ?? ''),
+      amount_column: String(formData.get('amount_column') ?? ''),
+    }
+    const hasColumnMapping = Object.values(columnMapping).some(Boolean)
+    if (hasColumnMapping) {
+      fs.writeFileSync(columnMappingPath, JSON.stringify(columnMapping))
+      console.log(`Маппинг столбцов сохранён: ${columnMappingPath}`, columnMapping)
+    }
+
+    const approvalDate = resolveApprovalDate(formData.get('approval_date'))
 
     // 1. Export users/releases from Prisma for Python
     exportedPaths = await exportPrismaDataForPython(requestId)
@@ -154,7 +201,9 @@ export async function POST(request: NextRequest) {
     const pythonProcess = spawn(pythonCmd, args, {
       env: {
         ...process.env,
-        TEMPLATE_PATH: templatePath
+        TEMPLATE_PATH: templatePath,
+        REPORT_APPROVAL_DATE: approvalDate,
+        ...(hasColumnMapping ? { COLUMN_MAPPING_PATH: columnMappingPath } : {}),
       }
     })
 
@@ -178,18 +227,40 @@ export async function POST(request: NextRequest) {
           if (fs.existsSync(tempFilePath)) {
             fs.unlinkSync(tempFilePath)
           }
+          if (fs.existsSync(columnMappingPath)) {
+            fs.unlinkSync(columnMappingPath)
+          }
         } catch (err) {
           console.error('Ошибка при удалении temp_upload:', err)
         }
 
         if (code === 0) {
           console.log('Python скрипт выполнен успешно')
-          let uploadStats = { uploaded: 0, failed: 0, failedNames: [] as string[] };
+          let uploadStats = {
+            uploaded: 0,
+            failed: 0,
+            failedNames: [] as string[],
+            uploadedNames: [] as string[],
+          }
+          let reportsForResponse: ReportMetadataFromPython[] = []
           
           try {
             // Read generated metadata
             if (fs.existsSync(metadataJsonPath)) {
               const currentReports = JSON.parse(fs.readFileSync(metadataJsonPath, 'utf-8'))
+              reportsForResponse = currentReports.map((report: {
+                id: string
+                artistName: string
+                isRegistered?: boolean
+                totalPlays?: number
+                totalAmount?: number
+              }) => ({
+                id: report.id,
+                artistName: report.artistName,
+                isRegistered: report.isRegistered ?? false,
+                totalPlays: report.totalPlays ?? 0,
+                totalAmount: report.totalAmount ?? 0,
+              }))
               
               // Ensure bucket exists
               await ensureBucketExists('reports')
@@ -223,6 +294,7 @@ export async function POST(request: NextRequest) {
                       finalFilePath = supabasePath
                       uploadSuccess = true
                       uploadStats.uploaded++
+                      uploadStats.uploadedNames.push(report.artistName || report.fileName)
                     } catch (uploadErr) {
                       console.error(`Ошибка при загрузке ${report.fileName} в Supabase (Попытка ${attempts}/${maxAttempts}):`, uploadErr)
                       if (attempts >= maxAttempts) {
@@ -311,6 +383,8 @@ export async function POST(request: NextRequest) {
             quarter,
             year,
             uploadStats,
+            reports: reportsForResponse,
+            processedArtists: reportsForResponse.length,
             incompleteArtists,
           }))
         } else {
@@ -327,7 +401,7 @@ export async function POST(request: NextRequest) {
           const incompleteArtists = parseIncompleteReportArtists(output)
           resolve(NextResponse.json({
             success: false,
-            message: incompleteReportMessage(incompleteArtists),
+            message: resolveProcessFailureMessage(output, errorOutput, incompleteArtists),
             error: errorOutput,
             output: output,
             incompleteArtists,
@@ -343,6 +417,7 @@ export async function POST(request: NextRequest) {
     if (exportedPaths) cleanupExportedData(exportedPaths)
     try {
       if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath)
+      if (fs.existsSync(columnMappingPath)) fs.unlinkSync(columnMappingPath)
       if (fs.existsSync(metadataJsonPath)) fs.unlinkSync(metadataJsonPath)
       if (fs.existsSync(reportsOutDir)) {
         fs.rmSync(reportsOutDir, { recursive: true, force: true })
@@ -350,9 +425,16 @@ export async function POST(request: NextRequest) {
     } catch (err) {}
 
     console.error('Ошибка в API:', error)
+    const isSchemaDrift =
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2022'
     return NextResponse.json({
       success: false,
-      message: 'Внутренняя ошибка сервера',
+      message: isSchemaDrift
+        ? 'Схема базы данных устарела. Выполните pnpm db:migrate на Supabase.'
+        : 'Внутренняя ошибка сервера',
       error: error instanceof Error ? error.message : 'Неизвестная ошибка'
     }, { status: 500 })
   }

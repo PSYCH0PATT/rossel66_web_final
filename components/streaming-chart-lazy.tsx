@@ -13,7 +13,10 @@ function ChartSkeleton() {
   )
 }
 
-export const StreamingChart = dynamic(() => import("@/components/streaming-chart"), {
-  ssr: false,
-  loading: () => <ChartSkeleton />,
-})
+export const StreamingChart = dynamic(
+  () => import("@/components/streaming-chart").then((mod) => mod.StreamingChart),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton />,
+  }
+)

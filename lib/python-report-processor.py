@@ -8,6 +8,7 @@ import json
 import sys
 import time
 from collections import defaultdict
+from datetime import date, datetime
 
 # Путь к шаблону (lib/templates — в git; корень — legacy для локальной разработки)
 def _find_template():
@@ -55,13 +56,52 @@ def _sanitize_filename(name):
 
 # Ожидаемые колонки отчёта и возможные варианты названий в Excel
 COLUMN_ALIASES = {
-    'Код': ['Код', 'код', 'Код трека'],
+    'Код': ['Код', 'код', 'Код трека', 'ISRC', 'isrc'],
     'Исполнитель': ['Исполнитель', 'исполнитель', 'Artist'],
     'Наименование': ['Наименование', 'наименование', 'Название', 'Трек'],
     'Альбом': ['Альбом', 'альбом', 'Release'],
     'Количество': ['Количество', 'количество', 'Кол-во', 'Прослушивания'],
     'Сумма, руб.': ['Сумма, руб.', 'Сумма,руб.', 'Сумма (руб.)', 'Сумма руб.', 'Сумма руб', 'Сумма, руб', 'Сумма', 'сумма, руб.', 'Сумма (руб)'],
 }
+
+CANONICAL_FROM_MAPPING = {
+    'isrc_column': 'Код',
+    'artist_column': 'Исполнитель',
+    'track_name_column': 'Наименование',
+    'album_name_column': 'Альбом',
+    'plays_column': 'Количество',
+    'amount_column': 'Сумма, руб.',
+}
+
+REQUIRED_STATEMENT_COLUMNS = list(CANONICAL_FROM_MAPPING.values())
+
+QUARTER_LABELS = {
+    'Q1': (1, '01.01.{year}', '31.03.{year}'),
+    'Q2': (2, '01.04.{year}', '30.06.{year}'),
+    'Q3': (3, '01.07.{year}', '30.09.{year}'),
+    'Q4': (4, '01.10.{year}', '31.12.{year}'),
+}
+
+def _format_quarter_labels(quarter, year):
+    """Returns (B8 text, D8 period text) for the report summary sheet."""
+    key = str(quarter).strip().upper()
+    if key not in QUARTER_LABELS:
+        raise ValueError(f"Неизвестный квартал: {quarter}. Ожидается Q1, Q2, Q3 или Q4.")
+    num, start_tpl, end_tpl = QUARTER_LABELS[key]
+    start = start_tpl.format(year=year)
+    end = end_tpl.format(year=year)
+    return f"{num} квартал {year} г.", f"Период с {start} по {end}"
+
+def _parse_approval_date(raw_value=None):
+    """Parse REPORT_APPROVAL_DATE env (YYYY-MM-DD) or default to today."""
+    value = raw_value if raw_value is not None else os.environ.get('REPORT_APPROVAL_DATE')
+    if value:
+        value = str(value).strip()
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    return date.today()
 
 def _set_cell(ws, cell_ref, value, number_format=None):
     """Записывает значение в ячейку; если ячейка объединена — в левую верхнюю ячейку диапазона."""
@@ -102,6 +142,129 @@ def _normalize_statement_columns(df):
                 rename[col] = canonical
                 break
     return df.rename(columns=rename)
+
+def _col_letter_to_index(letter):
+    """Excel column letter to 0-based index (A=0, B=1, ..., Z=25)."""
+    if not letter or not isinstance(letter, str):
+        return None
+    letter = letter.strip().upper()
+    if not letter.isalpha():
+        return None
+    idx = 0
+    for char in letter:
+        idx = idx * 26 + (ord(char) - ord('A') + 1)
+    return idx - 1
+
+def _cell_str(val):
+    if pd.isna(val):
+        return ''
+    return str(val).strip()
+
+def _row_header_score(row, column_mapping=None):
+    """Higher score = more likely a header row."""
+    aliases_flat = set()
+    for aliases in COLUMN_ALIASES.values():
+        for alias in aliases:
+            aliases_flat.add(alias.lower())
+
+    score = 0
+    for val in row:
+        cell = _cell_str(val).lower()
+        if not cell:
+            continue
+        if cell in aliases_flat:
+            score += 2
+        elif any(alias in cell or cell in alias for alias in aliases_flat if len(alias) > 3):
+            score += 1
+
+    if column_mapping:
+        for field in CANONICAL_FROM_MAPPING:
+            letter = column_mapping.get(field)
+            if not letter:
+                continue
+            idx = _col_letter_to_index(letter)
+            if idx is not None and idx < len(row):
+                cell = _cell_str(row.iloc[idx]).lower()
+                if cell and not cell.replace('.', '').replace(',', '').replace('-', '').isdigit():
+                    score += 1
+    return score
+
+def _find_header_row(raw_df, column_mapping=None, min_score=3):
+    best_row = None
+    best_score = 0
+    for i in range(min(40, len(raw_df))):
+        score = _row_header_score(raw_df.iloc[i], column_mapping)
+        if score > best_score:
+            best_score = score
+            best_row = i
+    if best_score >= min_score:
+        return best_row
+    return None
+
+def _load_column_mapping(path):
+    if not path or not os.path.isfile(path):
+        return None
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return {key: value for key, value in data.items() if value}
+
+def _coerce_numeric_columns(df):
+    for col in ['Количество', 'Сумма, руб.']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    return df
+
+def _load_statement_df(statement_path, column_mapping=None):
+    """Load distributor statement; supports title rows and UI column letter mapping."""
+    xl = pd.ExcelFile(statement_path)
+    sheet_name = 'TDSheet' if 'TDSheet' in xl.sheet_names else xl.sheet_names[0]
+
+    if column_mapping:
+        raw = pd.read_excel(statement_path, sheet_name=sheet_name, header=None)
+        header_row = _find_header_row(raw, column_mapping)
+        if header_row is None:
+            header_row = 0
+
+        data = raw.iloc[header_row + 1:].copy().reset_index(drop=True)
+        result = pd.DataFrame()
+        for field, canonical in CANONICAL_FROM_MAPPING.items():
+            letter = column_mapping.get(field)
+            if not letter:
+                continue
+            idx = _col_letter_to_index(letter)
+            if idx is None or idx >= raw.shape[1]:
+                raise ValueError(
+                    f"Столбец {letter} ({canonical}) вне диапазона файла "
+                    f"(всего столбцов: {raw.shape[1]})"
+                )
+            result[canonical] = data.iloc[:, idx]
+
+        result = result.dropna(how='all')
+        result = result[
+            ~result.apply(
+                lambda row: all(_cell_str(v) == '' for v in row),
+                axis=1,
+            )
+        ]
+        return _coerce_numeric_columns(result)
+
+    statement_df = pd.read_excel(statement_path, sheet_name=sheet_name)
+    statement_df = _normalize_statement_columns(statement_df)
+    missing = [col for col in REQUIRED_STATEMENT_COLUMNS if col not in statement_df.columns]
+    if missing:
+        raw = pd.read_excel(statement_path, sheet_name=sheet_name, header=None)
+        header_row = _find_header_row(raw)
+        if header_row is not None:
+            statement_df = pd.read_excel(statement_path, sheet_name=sheet_name, header=header_row)
+            statement_df = _normalize_statement_columns(statement_df)
+            missing = [col for col in REQUIRED_STATEMENT_COLUMNS if col not in statement_df.columns]
+
+    if missing:
+        raise ValueError(
+            f"В файле отчёта не найдены колонки: {missing}. "
+            f"Есть колонки: {list(statement_df.columns)}"
+        )
+    return _coerce_numeric_columns(statement_df)
 
 def _is_empty_report_value(val):
     if val is None:
@@ -300,14 +463,14 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
                 if user.get('name'):
                     registered_users.add(user.get('name'))
     
-    # Лист с данными: по умолчанию TDSheet, если нет — первый лист
-    xl = pd.ExcelFile(statement_path)
-    sheet_name = 'TDSheet' if 'TDSheet' in xl.sheet_names else xl.sheet_names[0]
-    statement_df = pd.read_excel(statement_path, sheet_name=sheet_name)
-    statement_df = _normalize_statement_columns(statement_df)
+    column_mapping_path = os.environ.get('COLUMN_MAPPING_PATH')
+    column_mapping = _load_column_mapping(column_mapping_path)
+    if column_mapping:
+        print(f"📋 Маппинг столбцов: {column_mapping}")
 
-    required = ['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.']
-    missing = [c for c in required if c not in statement_df.columns]
+    statement_df = _load_statement_df(statement_path, column_mapping)
+
+    missing = [col for col in REQUIRED_STATEMENT_COLUMNS if col not in statement_df.columns]
     if missing:
         raise ValueError(
             f"В файле отчёта не найдены колонки: {missing}. "
@@ -321,6 +484,9 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
         print(f"⚠️  Не найдено артистов с полными данными для отчёта в {users_file}")
         _emit_incomplete_report_json(skipped_incomplete)
         return []
+        
+    quarter_label, period_label = _format_quarter_labels(quarter, year)
+    approval_date = _parse_approval_date()
         
     # Загружаем доли роялти из треков (высший приоритет)
     track_royalty_shares = get_royalty_shares_from_tracks(releases_file)
@@ -377,6 +543,8 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
             
         final_amount = round(total_amount * artist_percent, 2)
         
+        _set_cell(ws, 'B8', quarter_label)                     # B8 Квартал
+        _set_cell(ws, 'D8', period_label)                      # D8 Период
         _set_cell(ws, 'B10', artist)                           # B10 Артист
         _set_cell(ws, 'B4', artists_data[artist][2])           # B4 Договор
         _set_cell(ws, 'B6', artists_data[artist][0])           # B6 ФИО полное
@@ -386,6 +554,7 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
         _set_cell(ws, 'F15', 'руб.')                           # F15 Валюта
         _set_cell(ws, 'E26', final_amount, '0.00')             # E26 Начислено вознаграждение
         _set_cell(ws, 'E28', final_amount, '0.00')             # E28 К выплате
+        _set_cell(ws, 'C30', approval_date)                    # C30 Дата утверждения
         _set_cell(ws, 'D32', artists_data[artist][0])          # D32 Лицензиар ФИО
         _set_cell(ws, 'E37', artists_data[artist][1])          # E37 ФИО кратко
         ws_artist = wb.create_sheet(title=artist)

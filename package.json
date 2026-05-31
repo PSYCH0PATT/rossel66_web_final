@@ -17,6 +17,9 @@
     "db:backfill-yandex-covers": "SKIP_COVER_SCRAPER_DELAY=1 npx tsx scripts/backfill-yandex-playlist-covers.ts",
     "db:backfill-vk-covers": "npx tsx scripts/backfill-vk-playlist-covers.ts",
     "db:seed-artist-contracts": "npx tsx scripts/seed-artist-contracts.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
+    "db:backfill-release-date-sort": "npx tsx scripts/backfill-release-date-sort.ts",
     "db:backup": "npx tsx scripts/backup-db-json.ts",
     "db:backup:pg": "bash scripts/backup-supabase-db.sh"
   },

@@ -36,6 +36,31 @@ Production runs on **Timeweb** with an **ephemeral filesystem**: each rebuild/re
 - Dashboard pages are **not** required to use `force-dynamic` globally (perf plan).
 - **Build-time rule:** dashboard Server Components must **not** call Prisma during `next build` / Docker build (DB is unavailable). UI warnings and lists that need DB data should load via dynamic API routes (e.g. `GET /api/artists?incompleteReportData=1`) from client components or at request time only.
 
+## Database migrations (Supabase Postgres)
+
+Schema lives in **Supabase only** — not on Timeweb disk. After deploy that includes new files under `prisma/migrations/`:
+
+```bash
+pnpm db:migrate:status   # pending migrations?
+pnpm db:migrate            # apply to Supabase
+```
+
+If `migrate deploy` hangs on pooler port **6543**, use session port **5432** (same URL, swap port) or set `DIRECT_URL` in `.env.local` per `SUPABASE_SETUP.md`.
+
+Optional after `release_date_sort` migration:
+
+```bash
+pnpm db:backfill-release-date-sort
+```
+
+Verify:
+
+```sql
+SELECT COUNT(*) AS total, COUNT("releaseDateSort") AS with_sort FROM "Release";
+```
+
+Timeweb **does not** run migrations automatically (`entrypoint.sh` only starts cron + Next). Run `pnpm db:migrate` against prod Supabase before or right after each release that adds migrations.
+
 ## Acceptance after Timeweb rebuild
 
 1. **Cookies**: save Bandlink/VK cookies in admin → rebuild → parser run still loads cookies (Postgres).

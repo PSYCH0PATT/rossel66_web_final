@@ -35,6 +35,7 @@ export default function ReportProcessor() {
   const [file, setFile] = useState<File | null>(null)
   const [quarter, setQuarter] = useState("")
   const [year, setYear] = useState(new Date().getFullYear())
+  const [approvalDate, setApprovalDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
     isrc_column: "",
     track_name_column: "",
@@ -49,10 +50,13 @@ export default function ReportProcessor() {
     message: string
     processedArtists: number
     reports: ProcessedReport[]
+    output?: string
+    error?: string
     uploadStats?: {
       uploaded: number
       failed: number
       failedNames: string[]
+      uploadedNames?: string[]
     }
     missingContractArtists?: string[]
     incompleteArtists?: { name: string; missingFields: ArtistReportRequiredField[] }[]
@@ -101,6 +105,7 @@ export default function ReportProcessor() {
       formData.append("file", file)
       formData.append("quarter", quarter)
       formData.append("year", year.toString())
+      formData.append("approval_date", approvalDate)
       
       // Добавляем маппинг столбцов
       Object.entries(columnMapping).forEach(([key, value]) => {
@@ -199,6 +204,16 @@ export default function ReportProcessor() {
                   type="number"
                   value={year}
                   onChange={(e) => setYear(parseInt(e.target.value))}
+                  disabled={processing}
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="approval_date">Дата утверждения отчёта</Label>
+                <Input
+                  id="approval_date"
+                  type="date"
+                  value={approvalDate}
+                  onChange={(e) => setApprovalDate(e.target.value)}
                   disabled={processing}
                 />
               </div>
@@ -382,6 +397,17 @@ export default function ReportProcessor() {
                 {result.message}
               </p>
 
+              {!result.success && (result.output || result.error) && (
+                <details className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm">
+                  <summary className="text-red-800 font-medium cursor-pointer">
+                    Подробности ошибки
+                  </summary>
+                  <pre className="mt-3 text-xs text-red-700 whitespace-pre-wrap break-words font-mono max-h-48 overflow-y-auto">
+                    {[result.output, result.error].filter(Boolean).join('\n')}
+                  </pre>
+                </details>
+              )}
+
               {(result.incompleteArtists?.length ?? result.missingContractArtists?.length ?? 0) > 0 && (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                   <p className="text-amber-800 font-medium mb-2">
@@ -415,6 +441,13 @@ export default function ReportProcessor() {
                   <p className="text-green-600 font-medium text-base">
                     ✅ Загружено в облако: {result.uploadStats.uploaded}
                   </p>
+                  {(result.uploadStats.uploadedNames?.length ?? 0) > 0 && (
+                    <ul className="text-gray-600 mt-2 text-xs font-mono space-y-1 max-h-48 overflow-y-auto">
+                      {result.uploadStats.uploadedNames!.map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                  )}
                   {result.uploadStats.failed > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-200">
                       <p className="text-red-600 font-medium">
