@@ -133,8 +133,10 @@ export default function ArtistReports({ username, reports: initialReports, artis
         <>
           <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-5 mb-8">
             <p className="text-sm text-gray-400 leading-relaxed">
-              Пока вы не нажмёте «Ознакомился», мы не можем выслать ссылку на подписание документа.
-              После нажатия ссылка появится в рабочем Telegram-канале — мы отправим её вам вручную.
+              Пожалуйста, внимательно проверьте отчёт перед получением выплаты. Нажав кнопку «Ознакомился», вы подтверждаете, что все треки учтены, данные верны и вы согласны с итоговой суммой. После этого мы отправим вам ссылку на подписание документа в рабочий чат.
+            </p>
+            <p className="text-sm text-gray-400 leading-relaxed mt-3">
+              Если вы обнаружили ошибку, не нашли какой-либо трек или у вас возникли вопросы — не нажимайте кнопку, а напишите в рабочую группу в Telegram, чтобы мы могли оперативно всё исправить.
             </p>
             {ackMessage && (
               <p className="text-sm text-primary mt-3 font-mono">{ackMessage}</p>
