@@ -31,8 +31,10 @@ export default async function AdminDashboardPage() {
 
   return (
     <AdminDashboardClient
-      users={payload.users}
-      releases={payload.releases}
+      artistCount={payload.artistCount}
+      releaseCount={payload.releaseCount}
+      pendingReleases={payload.pendingReleases}
+      reportCount={payload.reportCount}
       payments={payload.payments}
       reports={payload.reports}
       initialStreamsByDay={analytics.streamsByDay}

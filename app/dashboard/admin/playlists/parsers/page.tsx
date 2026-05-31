@@ -10,7 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Play, Users, Calendar, ExternalLink, Image, RefreshCw, Save, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchAllUsersFromApi } from '@/lib/fetch-all-users';
-import Layout from '@/components/layout';
 import Link from 'next/link';
 import {
   Dialog,
@@ -398,8 +397,8 @@ export default function ParsersPage() {
   };
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8 max-w-7xl mx-auto">
+    <>
+    <div className="space-y-8 max-w-7xl mx-auto">
         {actionBanner && (
           <div
             className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
@@ -987,6 +986,6 @@ export default function ParsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </>
   );
 }

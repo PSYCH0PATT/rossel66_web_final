@@ -1,4 +1,3 @@
-import Layout from "@/components/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ReportsList from "@/components/reports-list"
 import UnregisteredReportsList from "@/components/unregistered-reports-list"
@@ -7,8 +6,7 @@ import Link from "next/link"
 
 export default function ReportsPage() {
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
@@ -74,6 +72,5 @@ export default function ReportsPage() {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

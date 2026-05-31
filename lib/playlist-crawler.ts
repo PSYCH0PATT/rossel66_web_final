@@ -34,40 +34,16 @@ async function fetchHtml(url: string): Promise<string | null> {
   }
 }
 
-function persistPlaylistsJson(artistId: string, artistName: string, playlists: ReturnType<typeof parseVkMusicArtistPage>): void {
-  if (typeof window === "undefined") {
-    console.log(
-      `[playlist-crawler] Skipping localStorage (SSR): would store ${playlists.length} playlists for ${artistName} (${artistId})`
-    )
-    return
-  }
-  try {
-    const playlistsStr = localStorage.getItem("playlists")
-    const existingPlaylists = playlistsStr ? JSON.parse(playlistsStr) : []
-
-    const newPlaylists = playlists.map((playlist, index) => ({
-      id: `pl_vk_${Date.now()}_${index}`,
-      name: playlist.name,
-      platform: "VK Музыка",
-      imageUrl: playlist.imageUrl,
-      trackId: "",
-      artistId,
-      addedDate: new Date().toISOString().split("T")[0],
-      description: "Плейлист из ВК Музыки (автоматически добавлен)",
-      externalUrl: playlist.playlistUrl,
-    }))
-
-    const filteredPlaylists = existingPlaylists.filter(
-      (p: { artistId?: string; platform?: string; externalUrl?: string }) =>
-        !(p.artistId === artistId && p.platform === "VK Музыка" && p.externalUrl && p.externalUrl.includes("vk.com"))
-    )
-
-    const updatedPlaylists = [...filteredPlaylists, ...newPlaylists]
-    localStorage.setItem("playlists", JSON.stringify(updatedPlaylists))
-    console.log(`Successfully updated ${newPlaylists.length} playlists for ${artistName}`)
-  } catch (error) {
-    console.error("Error saving playlists to localStorage:", error)
-  }
+async function persistPlaylistsForArtist(
+  artistId: string,
+  artistName: string,
+  playlists: ReturnType<typeof parseVkMusicArtistPage>
+): Promise<void> {
+  const { persistVkHtmlPlaylistsForArtist } = await import("@/lib/vk-playlists-persist")
+  const stats = await persistVkHtmlPlaylistsForArtist(artistId, artistName, playlists)
+  console.log(
+    `[playlist-crawler] Postgres: +${stats.added} ~${stats.updated} =${stats.unchanged} for ${artistName}`
+  )
 }
 
 // Функция для парсинга плейлистов артиста
@@ -99,7 +75,7 @@ export async function crawlArtistPlaylists(artistId: string): Promise<void> {
       return
     }
 
-    persistPlaylistsJson(artist.id, artist.name, playlists)
+    await persistPlaylistsForArtist(artist.id, artist.name, playlists)
   } catch (error) {
     console.error(`Error crawling playlists for artist ${artistId}:`, error)
   }

@@ -7,6 +7,8 @@ import { addActivity, getUserByUsername } from '@/lib/storage';
 import { requireAdmin, requireAdminOrCron } from '@/lib/server-auth';
 import { rateLimitParser } from '@/lib/rate-limit';
 import { isCronAuthorized, internalCronFetchJsonHeaders, internalCronAuthHeaderOnly } from '@/lib/cron-auth';
+import { getParserCookiesRecord } from '@/lib/parser-cookies';
+import { syncVkSqliteRowsToPostgres } from '@/lib/parser-results-sync';
 
 export async function POST(request: NextRequest) {
   const denied = await requireAdminOrCron(request);
@@ -49,30 +51,8 @@ export async function POST(request: NextRequest) {
       console.log('🔑 2captcha API ключ найден в переменных окружения для VK');
     }
     
-    // Загружаем VK cookies из БД
-    let cookies: Record<string, string> = {};
-    try {
-      const sqlite3 = require('sqlite3').verbose();
-      const dbPath = path.join(process.cwd(), 'vk_playlists.db');
-      const db = new sqlite3.Database(dbPath);
-      
-      const cookiesData = await new Promise<any[]>((resolve, reject) => {
-        db.all('SELECT cookie_name, cookie_value FROM vk_cookies', (err: any, rows: any) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-        db.close();
-      });
-      
-      // Преобразуем в объект
-      for (const cookie of cookiesData) {
-        cookies[cookie.cookie_name] = cookie.cookie_value;
-      }
-      
-      console.log(`🍪 Загружено ${Object.keys(cookies).length} VK кук из БД`);
-    } catch (error) {
-      console.warn('⚠️  Не удалось загрузить VK cookies из БД:', error);
-    }
+    const cookies = await getParserCookiesRecord('vk');
+    console.log(`🍪 Загружено ${Object.keys(cookies).length} VK кук из Postgres`);
 
     // Создаем временный конфиг файл
     const configPath = path.join(process.cwd(), 'temp_vk_config.json');
@@ -121,6 +101,15 @@ export async function POST(request: NextRequest) {
           // Читаем результаты из базы данных
           try {
             const results = await readVKResults();
+
+            try {
+              const syncStats = await syncVkSqliteRowsToPostgres(results as any[]);
+              console.log(
+                `📤 VK → Postgres: +${syncStats.added} ~${syncStats.updated} =${syncStats.unchanged}`
+              );
+            } catch (syncErr) {
+              console.error('Ошибка синхронизации VK результатов в Postgres:', syncErr);
+            }
             
             // Сохраняем историю парсинга
             try {

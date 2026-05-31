@@ -17,7 +17,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="dashboard-theme min-h-screen relative overflow-x-hidden text-gray-100 transition-colors duration-300">
+    <div className="dashboard-theme relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden text-gray-100 transition-colors duration-300 md:h-screen md:max-h-none">
       <div className="noise-overlay"></div>
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-accent-azure blur-[150px] animate-pulse-slow-azure-blob"></div>

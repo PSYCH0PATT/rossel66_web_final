@@ -220,35 +220,12 @@ export function parseVkMusicArtistPage(html: string): ParsedPlaylist[] {
   return uniquePlaylists
 }
 
-// Функция для добавления плейлистов артисту
-export async function addPlaylistsToArtist(artistId: string, playlists: ParsedPlaylist[]): Promise<void> {
-  // Получаем плейлисты из localStorage (если есть)
-  try {
-    const playlistsStr = localStorage.getItem("playlists")
-    const existingPlaylists = playlistsStr ? JSON.parse(playlistsStr) : []
-
-    // Удаляем старые плейлисты этого артиста из VK Music
-    const filteredPlaylists = existingPlaylists.filter(
-      (p: any) =>
-        !(p.artistId === artistId && p.platform === "VK Музыка" && p.externalUrl && p.externalUrl.includes("vk.com")),
-    )
-
-    const newPlaylists = playlists.map((playlist, index) => ({
-      id: `pl_vk_${Date.now()}_${index}`,
-      name: playlist.name,
-      platform: "VK Музыка",
-      imageUrl: playlist.imageUrl,
-      trackId: "", // Пустой trackId
-      artistId,
-      addedDate: new Date().toISOString().split("T")[0],
-      description: "Плейлист из ВК Музыки",
-      externalUrl: playlist.playlistUrl,
-    }))
-
-    const updatedPlaylists = [...filteredPlaylists, ...newPlaylists]
-    localStorage.setItem("playlists", JSON.stringify(updatedPlaylists))
-  } catch (error) {
-    console.error("Error adding playlists to artist:", error)
-    throw error
-  }
+/** Сохраняет плейлисты в Postgres (переживает Timeweb rebuild). */
+export async function addPlaylistsToArtist(
+  artistId: string,
+  artistName: string,
+  playlists: ParsedPlaylist[]
+): Promise<void> {
+  const { persistVkHtmlPlaylistsForArtist } = await import("@/lib/vk-playlists-persist")
+  await persistVkHtmlPlaylistsForArtist(artistId, artistName, playlists)
 }

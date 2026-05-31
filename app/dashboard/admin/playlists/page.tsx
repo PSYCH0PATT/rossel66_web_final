@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import Layout from "@/components/layout"
+import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -100,6 +99,10 @@ export default function PlaylistsPage() {
   const [isSftpSyncing, setIsSftpSyncing] = useState(false)
   const [parsingOutput, setParsingOutput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [playlistQuery, setPlaylistQuery] = useState('')
+  const [debouncedPlaylistQuery, setDebouncedPlaylistQuery] = useState('')
+  const [playlistTotal, setPlaylistTotal] = useState(0)
+  const playlistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'added_at' | 'parsed_at'>('added_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -140,13 +143,28 @@ export default function PlaylistsPage() {
   useEffect(() => {
     loadArtists()
     loadRecentArtists()
-    loadResults()
-    loadCookiesStatus()
-    checkCookiesNotification()
-    loadParsingHistory()
-    loadVkCookiesStatus()
-    void loadSftpLocalCsvList()
+    void loadResults()
+    const idle = window.setTimeout(() => {
+      void loadCookiesStatus()
+      void checkCookiesNotification()
+      void loadParsingHistory()
+      void loadVkCookiesStatus()
+      void loadSftpLocalCsvList()
+    }, 0)
+    return () => window.clearTimeout(idle)
   }, [])
+
+  useEffect(() => {
+    void loadResults()
+  }, [debouncedPlaylistQuery, selectedArtistFilter])
+
+  const handlePlaylistSearch = (val: string) => {
+    setPlaylistQuery(val)
+    if (playlistDebounceRef.current) clearTimeout(playlistDebounceRef.current)
+    playlistDebounceRef.current = setTimeout(() => {
+      setDebouncedPlaylistQuery(val.trim())
+    }, 350)
+  }
 
   const appendSftpLog = (line: string) => {
     setParsingOutput((prev) => (prev ? `${prev}\n${line}` : line))
@@ -197,8 +215,13 @@ export default function PlaylistsPage() {
 
   const loadResults = async () => {
     try {
-      // Загружаем только SFTP плейлисты из Supabase
-      const response = await fetch("/api/playlists/sftp?take=5000")
+      const params = new URLSearchParams({ take: "100", skip: "0" })
+      if (debouncedPlaylistQuery) params.set("q", debouncedPlaylistQuery)
+      if (selectedArtistFilter !== "all") {
+        const artist = artists.find((a) => a.name === selectedArtistFilter)
+        if (artist?.id) params.set("artistId", artist.id)
+      }
+      const response = await fetch(`/api/playlists/sftp?${params}`)
       const data = await response.json()
 
       if (!data.success) {
@@ -211,6 +234,7 @@ export default function PlaylistsPage() {
       }
       
       const allPlaylists = data.results || []
+      setPlaylistTotal(typeof data.total === "number" ? data.total : allPlaylists.length)
       
       // Разделяем по платформам: VK -> vkResults, остальные -> bandlinkResults
       const vkFormatted: VKPlaylist[] = []
@@ -1013,8 +1037,8 @@ export default function PlaylistsPage() {
     otherPlaylists.length
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-10 pb-24 space-y-8">
+    <>
+    <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-10 pb-24 space-y-8">
         {actionBanner && (
           <div
             className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
@@ -1087,6 +1111,15 @@ export default function PlaylistsPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <span className="material-symbols-outlined text-primary text-xl">filter_alt</span>
                 <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Фильтр</span>
+                <Input
+                  placeholder="Поиск плейлиста или артиста…"
+                  value={playlistQuery}
+                  onChange={(e) => handlePlaylistSearch(e.target.value)}
+                  className={`max-w-xs ${inputCls} h-10`}
+                />
+                <p className="text-xs font-mono uppercase tracking-widest text-gray-500 ml-auto">
+                  Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
+                </p>
                 <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
                   <SelectTrigger className={`w-64 ${inputCls} h-10`}>
                     <SelectValue placeholder="Все артисты" />
@@ -2022,6 +2055,6 @@ export default function PlaylistsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </>
   )
 }

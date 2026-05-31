@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import Link from "next/link"
@@ -122,17 +121,15 @@ export default function KoalaParserPage() {
 
   if (isLoading) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
           <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
         </div>
-      </Layout>
-    )
+      )
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-8 max-w-7xl mx-auto pb-8">
         <div className="space-y-4">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
@@ -345,6 +342,5 @@ export default function KoalaParserPage() {
           <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

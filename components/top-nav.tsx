@@ -6,7 +6,8 @@ import Link from "next/link"
 import Image from "next/image"
 import type { UserRole } from "@/lib/storage"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useDashboardProfile } from "@/components/dashboard-user-context"
+import { dashboardLogout } from "@/lib/dashboard-logout"
 
 interface TopNavProps {
   role: UserRole
@@ -18,51 +19,11 @@ interface TopNavProps {
 export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuToggle }: TopNavProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [currentUsername, setCurrentUsername] = useState(username || "")
-  const [currentUserName, setCurrentUserName] = useState("")
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (username) {
-      setCurrentUsername(username)
-      return
-    }
-    try {
-      const userStr = localStorage.getItem("user")
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        if (user?.username) setCurrentUsername(user.username)
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [username])
-
-  // Загружаем данные пользователя включая аватарку
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!currentUsername) return
-
-      try {
-        const response = await fetch(
-          `/api/users?username=${encodeURIComponent(currentUsername)}`
-        )
-        const result = await response.json()
-
-        if (result.success) {
-          const user = result.users?.[0]
-          if (user) {
-            setCurrentUserName(user.name)
-            setAvatarUrl(user.avatarUrl || null)
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при загрузке данных пользователя:', error)
-      }
-    }
-
-    fetchUserData()
-  }, [currentUsername])
+  const profile = useDashboardProfile()
+  const navUsername = username || profile?.username || ""
+  const currentUserName = profile?.name || navUsername
+  const avatarUrl = profile?.avatarUrl ?? null
+  const currentUsername = navUsername
 
   // Генерация хлебных крошек на основе текущего пути
   const generateBreadcrumbs = () => {
@@ -103,12 +64,11 @@ export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuTog
   const breadcrumbs = generateBreadcrumbs()
 
   function handleLogout() {
-    localStorage.removeItem("user")
-    router.push("/dashboard/login")
+    void dashboardLogout(router)
   }
 
   return (
-    <header className="relative z-[105] grid min-h-16 grid-cols-[minmax(3rem,3.5rem)_1fr_minmax(3rem,3.5rem)] items-center border-b border-white/10 bg-black/80 px-1 pt-[max(0px,env(safe-area-inset-top,0px))] glass-panel backdrop-blur-lg md:hidden">
+    <header className="relative z-[105] grid shrink-0 min-h-[calc(4rem+env(safe-area-inset-top,0px))] grid-cols-[minmax(3rem,3.5rem)_1fr_minmax(3rem,3.5rem)] items-center border-b border-white/10 bg-black/80 px-1 pt-[max(0px,env(safe-area-inset-top,0px))] glass-panel backdrop-blur-lg md:hidden">
       <button
         type="button"
         className="flex h-11 w-11 shrink-0 items-center justify-center self-center text-gray-300 tap-highlight-transparent [-webkit-tap-highlight-color:transparent]"

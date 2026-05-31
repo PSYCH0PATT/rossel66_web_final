@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { AdminInput } from "@/components/ui/admin-input"
@@ -16,6 +15,8 @@ import {
 } from "@/components/ui/dialog"
 import Link from "next/link"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
+import { fetchAllArtistsFromApi } from "@/lib/fetch-all-artists"
+import { useDashboardProfile } from "@/components/dashboard-user-context"
 
 interface Backup {
   id: string
@@ -32,6 +33,7 @@ const inputClass =
   "h-11 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
 export default function AdminSettingsPage() {
+  const profile = useDashboardProfile()
   const [adminId, setAdminId] = useState<string | null>(null)
   const [adminPassword, setAdminPassword] = useState<string>("")
   const [name, setName] = useState("Администратор")
@@ -52,26 +54,27 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     loadBackups()
-    loadAdminData()
   }, [])
 
-  const loadAdminData = async () => {
+  useEffect(() => {
+    if (profile?.username) void loadAdminData(profile.username)
+  }, [profile?.username])
+
+  const loadAdminData = async (adminUsername: string) => {
     try {
-      const userStr = localStorage.getItem("user")
-      if (userStr) {
-        const user = JSON.parse(userStr)
+      const response = await fetch(
+        `/api/users?username=${encodeURIComponent(adminUsername)}&role=admin`,
+        { cache: "no-store" }
+      )
+      const result = await response.json()
 
-        const response = await fetch(`/api/users?username=${encodeURIComponent(user.username)}&role=admin`)
-        const result = await response.json()
-
-        if (result.success) {
-          const admin = result.users?.[0]
-          if (admin) {
-            setAdminId(admin.id)
-            setAdminPassword(admin.password)
-            setName(admin.name)
-            setEmail(admin.email)
-          }
+      if (result.success) {
+        const admin = result.users?.[0]
+        if (admin) {
+          setAdminId(admin.id)
+          setAdminPassword(admin.password)
+          setName(admin.name)
+          setEmail(admin.email)
         }
       }
     } catch (error) {
@@ -275,21 +278,32 @@ export default function AdminSettingsPage() {
 
   const handleExport = async () => {
     try {
-      const allUsers = await fetchAllUsersFromApi()
+      const [allUsers, allArtists] = await Promise.all([
+        fetchAllUsersFromApi(),
+        fetchAllArtistsFromApi(),
+      ])
+      const artistById = new Map(allArtists.map((a: Record<string, unknown>) => [a.id, a]))
       const csvRows = [
-        ["ID", "Username", "Имя", "Email", "Роль", "Дата регистрации", "Avatar URL", "VK Music URL", "Yandex Music URL", "Spotify URL"],
-        ...allUsers.map((user: Record<string, unknown>) => [
-          user.id,
-          user.username || "",
-          user.name,
-          user.email,
-          user.role === "admin" ? "Администратор" : "Артист",
-          new Date(user.createdAt as string).toLocaleDateString("ru-RU"),
-          user.avatarUrl || "",
-          user.vkMusicUrl || "",
-          user.yandexMusicUrl || "",
-          user.spotifyUrl || "",
-        ]),
+        ["ID", "Username", "Имя", "Email", "Роль", "ФИО", "ФИО кратко", "Договор", "Процент", "Дата регистрации", "Avatar URL", "VK Music URL", "Yandex Music URL", "Spotify URL"],
+        ...allUsers.map((user: Record<string, unknown>) => {
+          const artist = user.role === "artist" ? artistById.get(user.id) as Record<string, unknown> | undefined : undefined
+          return [
+            user.id,
+            user.username || "",
+            user.name,
+            user.email,
+            user.role === "admin" ? "Администратор" : "Артист",
+            artist?.fio || "",
+            artist?.fioShort || "",
+            artist?.contract || "",
+            artist?.percentage != null ? artist.percentage : "",
+            new Date(user.createdAt as string).toLocaleDateString("ru-RU"),
+            user.avatarUrl || "",
+            user.vkMusicUrl || "",
+            user.yandexMusicUrl || "",
+            user.spotifyUrl || "",
+          ]
+        }),
       ]
 
       const csv = csvRows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n")
@@ -317,8 +331,8 @@ export default function AdminSettingsPage() {
         : "border-white/15 bg-white/5 text-gray-300"
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8">
+    <>
+    <div className="space-y-8">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
@@ -668,6 +682,6 @@ export default function AdminSettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </>
   )
 }

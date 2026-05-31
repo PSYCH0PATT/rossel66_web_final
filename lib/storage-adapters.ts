@@ -1,3 +1,4 @@
+import { releaseDateToSortDate } from "@/lib/release-date-sort"
 import type {
   User as PrismaUser,
   Release as PrismaRelease,
@@ -129,6 +130,7 @@ export function releaseToPrismaCreate(release: Omit<Release, 'id' | 'createdAt' 
     title,
     artistId: artistId || null,
     releaseDate,
+    releaseDateSort: releaseDateToSortDate(releaseDate),
     type,
     coverUrl,
     upc,

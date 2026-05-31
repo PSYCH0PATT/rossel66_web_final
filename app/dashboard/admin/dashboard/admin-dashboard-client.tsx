@@ -1,14 +1,12 @@
 "use client"
 
-import Layout from "@/components/layout"
 import Link from "next/link"
 import { useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ActivityFeed } from "@/components/activity-feed"
-import { StreamingChart } from "@/components/streaming-chart"
+import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
-import type { AdminDashboardPayload, PublicUser } from "@/lib/cached-dashboard"
-import type { Release } from "@/lib/storage"
+import type { AdminDashboardPayload } from "@/lib/cached-dashboard"
 import { formatRubExact, formatRubKpiShort } from "@/lib/format-dashboard-rub"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -17,8 +15,10 @@ type StreamDay = { date: string; streams: number }
 type Payment = AdminDashboardPayload["payments"][number]
 
 type Props = {
-  users: PublicUser[]
-  releases: Release[]
+  artistCount: number
+  releaseCount: number
+  pendingReleases: number
+  reportCount: number
   payments: Payment[]
   reports: AdminDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
@@ -26,8 +26,10 @@ type Props = {
 }
 
 export default function AdminDashboardClient({
-  users,
-  releases,
+  artistCount,
+  releaseCount,
+  pendingReleases,
+  reportCount,
   payments,
   reports,
   initialStreamsByDay,
@@ -36,10 +38,6 @@ export default function AdminDashboardClient({
   const router = useRouter()
 
   const metrics = useMemo(() => {
-    const artistCount = users.filter((u) => u.role === "artist").length
-    const releaseCount = releases.length
-    const reportCount = reports.length
-    const pendingReleases = releases.filter((r) => r.status !== "released").length
     const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
     const pendingPayments = payments.filter((p) => !p.isPaid).length
 
@@ -51,11 +49,11 @@ export default function AdminDashboardClient({
       totalPayments,
       pendingPayments,
     }
-  }, [users, releases, payments, reports])
+  }, [artistCount, releaseCount, reportCount, pendingReleases, payments])
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="mb-8 flex flex-col gap-3 md:mb-12 md:gap-6">
+    <>
+    <div className="mb-8 flex flex-col gap-3 md:mb-12 md:gap-6">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
           <span className="hover:text-primary cursor-pointer transition-colors">ДАШБОРД</span>
           <span className="material-symbols-outlined text-[10px]">chevron_right</span>
@@ -237,6 +235,6 @@ export default function AdminDashboardClient({
         </div>
         <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
       </div>
-    </Layout>
+    </>
   )
 }

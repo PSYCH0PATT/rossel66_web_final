@@ -25,9 +25,10 @@ export async function GET(request: Request, { params }: { params: { username: st
     return NextResponse.json({
       success: true,
       artist: data.artist,
-      releases: data.releases,
+      releaseCount: data.releaseCount,
+      releasedCount: data.releasedCount,
+      playlistCount: data.playlistCount,
       reports: data.reports,
-      playlists: data.playlists,
     })
   } catch (error) {
     console.error("Ошибка artist-dashboard:", error)

@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistReports } from "@/lib/cached-dashboard"
-import Layout from "@/components/layout"
 import ArtistReports from "@/components/artist-reports"
 
 export const revalidate = 600
@@ -22,8 +21,6 @@ export default async function ArtistReportsPage({ params }: { params: { username
   const reports = await getCachedArtistReports(artist.id)
 
   return (
-    <Layout role={session.role} requiredRole="artist" username={params.username}>
-      <ArtistReports username={params.username} reports={reports as any} artistName={artist.name} />
-    </Layout>
-  )
+    <ArtistReports username={params.username} reports={reports as any} artistName={artist.name} />
+    )
 }

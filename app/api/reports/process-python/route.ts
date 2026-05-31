@@ -9,24 +9,68 @@ import { exportPrismaDataForPython, cleanupExportedData } from '@/lib/export-dat
 
 function transliterate(text: string): string {
   const ru: Record<string, string> = {
-    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 
-    'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 
-    'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 
-    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 
-    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
+    'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y',
+    'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh',
     'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 
-    'Е': 'E', 'Ё': 'E', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 
-    'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 
-    'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 
-    'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D',
+    'Е': 'E', 'Ё': 'E', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y',
+    'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O',
+    'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+    'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh',
     'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
   }
   return text.split('').map(char => ru[char] ?? char).join('')
 }
 
+import {
+  type ArtistReportRequiredField,
+} from '@/lib/artist-report-requirements'
+
+type IncompleteArtistFromPython = {
+  name: string
+  missingFields: ArtistReportRequiredField[]
+}
+
+function parseIncompleteReportArtists(output: string): IncompleteArtistFromPython[] {
+  const reportMatch = output.match(/REPORT_INCOMPLETE_JSON:(.+)/)
+  if (reportMatch) {
+    try {
+      const parsed = JSON.parse(reportMatch[1]) as {
+        incompleteArtists?: IncompleteArtistFromPython[]
+      }
+      return parsed.incompleteArtists ?? []
+    } catch {
+      return []
+    }
+  }
+
+  const legacyMatch = output.match(/MISSING_CONTRACT_JSON:(.+)/)
+  if (!legacyMatch) return []
+  try {
+    const parsed = JSON.parse(legacyMatch[1]) as { missingContractArtists?: string[] }
+    return (parsed.missingContractArtists ?? []).map((name) => ({
+      name,
+      missingFields: ['percentage' as const],
+    }))
+  } catch {
+    return []
+  }
+}
+
+function incompleteReportMessage(incomplete: IncompleteArtistFromPython[]): string {
+  if (incomplete.length === 0) return 'Ошибка при обработке файла'
+  return `У ${incomplete.length} артистов не хватает обязательных данных для отчёта (ФИО, договор, процент)`
+}
+
 function findTemplatePath(): string {
   const baseDir = process.cwd()
+  const libTemplate = path.join(baseDir, 'lib', 'templates', 'report-mendxza.xlsx')
+  if (fs.existsSync(libTemplate)) {
+    return libTemplate
+  }
   const possibleNames = [
     'Отчёт MENDXZA.xlsx', // NFD
     'Отчёт MENDXZA.xlsx', // NFC
@@ -47,7 +91,7 @@ function findTemplatePath(): string {
   } catch (err) {
     console.error('Ошибка при поиске шаблона в директории:', err)
   }
-  return path.join(baseDir, 'Отчёт MENDXZA.xlsx')
+  return path.join(baseDir, 'lib', 'templates', 'report-mendxza.xlsx')
 }
 
 export async function POST(request: NextRequest) {
@@ -99,6 +143,12 @@ export async function POST(request: NextRequest) {
         : (fs.existsSync(venvPython) ? venvPython : 'python3')
         
     const templatePath = findTemplatePath()
+    if (!fs.existsSync(templatePath)) {
+      return NextResponse.json({
+        success: false,
+        message: `Шаблон отчёта не найден: ${templatePath}. Должен быть lib/templates/report-mendxza.xlsx`,
+      }, { status: 500 })
+    }
     console.log(`Используемый шаблон для отчетов: ${templatePath}`)
     console.log(`Запуск Python: ${pythonCmd} ${args.join(' ')}`)
     const pythonProcess = spawn(pythonCmd, args, {
@@ -250,13 +300,18 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          const incompleteArtists = parseIncompleteReportArtists(output)
+
           resolve(NextResponse.json({
             success: true,
-            message: 'Отчеты успешно созданы',
+            message: incompleteArtists.length
+              ? `Отчёты созданы. Пропущено артистов без полных данных: ${incompleteArtists.length}`
+              : 'Отчеты успешно созданы',
             output: output,
             quarter,
             year,
-            uploadStats
+            uploadStats,
+            incompleteArtists,
           }))
         } else {
           // Failure branch cleanup
@@ -269,11 +324,15 @@ export async function POST(request: NextRequest) {
           } catch (err) {}
 
           console.error(`Python скрипт завершился с ошибкой: ${code}`)
+          const incompleteArtists = parseIncompleteReportArtists(output)
           resolve(NextResponse.json({
             success: false,
-            message: 'Ошибка при обработке файла',
+            message: incompleteReportMessage(incompleteArtists),
             error: errorOutput,
-            output: output
+            output: output,
+            incompleteArtists,
+            /** @deprecated use incompleteArtists */
+            missingContractArtists: incompleteArtists.map((a) => a.name),
           }, { status: 500 }))
         }
       })

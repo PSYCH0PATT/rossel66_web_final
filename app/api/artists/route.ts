@@ -7,6 +7,10 @@ import * as path from "path"
 import { supabase, ensureBucketExists } from "@/lib/supabase"
 import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
 import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
+import {
+  getArtistReportMissingFields,
+  type IncompleteReportArtist,
+} from "@/lib/artist-report-requirements"
 
 export const dynamic = "force-dynamic"
 
@@ -18,6 +22,8 @@ export async function POST(request: Request) {
     const contentType = request.headers.get("content-type")
     let username: string, password: string, name: string, email: string, avatarUrl: string | undefined
     let vkMusicUrl: string | undefined, yandexMusicUrl: string | undefined, spotifyUrl: string | undefined
+    let fio: string | undefined, fioShort: string | undefined, contract: string | undefined
+    let percentage: number | undefined
 
     if (contentType?.includes("application/json")) {
       // Handle JSON data
@@ -37,6 +43,10 @@ export async function POST(request: Request) {
       vkMusicUrl = parsed.data.vkMusicUrl
       yandexMusicUrl = parsed.data.yandexMusicUrl
       spotifyUrl = parsed.data.spotifyUrl
+      fio = parsed.data.fio
+      fioShort = parsed.data.fioShort
+      contract = parsed.data.contract
+      percentage = parsed.data.percentage
     } else {
       // Handle FormData (legacy)
       const data = await request.formData()
@@ -93,6 +103,10 @@ export async function POST(request: Request) {
       vkMusicUrl,
       yandexMusicUrl,
       spotifyUrl,
+      fio,
+      fioShort,
+      contract,
+      percentage,
     })
 
     // Auto-assign existing data to this artist by name matching
@@ -220,6 +234,41 @@ export async function GET(request: Request) {
     } as const
 
     const idParam = searchParams.get("id")?.trim()
+    const incompleteReportData =
+      searchParams.get("incompleteReportData") === "1" ||
+      searchParams.get("missingContract") === "1"
+
+    if (incompleteReportData) {
+      const rows = await prisma.user.findMany({
+        where: { role: "artist" },
+        orderBy: { name: "asc" },
+        select: artistSelect,
+      })
+      const incomplete: IncompleteReportArtist[] = rows
+        .map((artist) => {
+          const missingFields = getArtistReportMissingFields(artist)
+          if (missingFields.length === 0) return null
+          return {
+            id: artist.id,
+            name: artist.name,
+            username: artist.username,
+            missingFields,
+          }
+        })
+        .filter((row): row is IncompleteReportArtist => row !== null)
+
+      return NextResponse.json({
+        success: true,
+        artists: incomplete,
+        total: incomplete.length,
+        page: 1,
+        pageSize: incomplete.length,
+        incompleteReportData: true,
+        /** @deprecated use incompleteReportData */
+        missingContract: true,
+      })
+    }
+
     if (idParam) {
       const row = await prisma.user.findFirst({
         where: { id: idParam, role: "artist" },

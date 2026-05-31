@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
-import Layout from "@/components/layout"
 import AdminArtistsClient from "./admin-artists-client"
 
 export const revalidate = 600
@@ -11,8 +10,6 @@ export default async function AdminArtistsPage() {
   if (session.role !== "admin") redirect("/dashboard")
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <AdminArtistsClient />
-    </Layout>
-  )
+    <AdminArtistsClient />
+    )
 }

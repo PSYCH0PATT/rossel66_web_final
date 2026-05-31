@@ -5,6 +5,7 @@ import { tokenizeCollaborationArtistField } from '@/lib/playlist-artist-match';
 import { userFromPrisma } from '@/lib/storage-adapters';
 import { prisma } from './prisma';
 import { findManyPlaylistRows } from '@/lib/prisma-playlist-read';
+import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard';
 
 /**
  * Инициализирует базу данных (заглушка для обратной совместимости)
@@ -39,6 +40,7 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
     errors: [] as string[],
     addedPlaylists: [] as AddedPlaylistInfo[]
   };
+  const touchedArtistIds = new Set<string>();
 
   const artistRows = await prisma.user.findMany({ where: { role: 'artist' } })
   const artistIdByNormalizedKey = new Map<string, string>()
@@ -72,6 +74,7 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
       // Сохраняем отдельную запись для каждого артиста
       for (const [artistName, artistTracks] of Array.from(tracksByArtist.entries())) {
         const artistId = resolveArtistId(artistName);
+        if (artistId) touchedArtistIds.add(artistId);
         
         // Проверяем существующий плейлист
         const existing = await prisma.playlist.findFirst({
@@ -172,6 +175,10 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
       stats.errors.push(errorMsg);
     }
   }
+
+  if (touchedArtistIds.size > 0) {
+    await revalidateArtistDashboardsForArtistIds([...touchedArtistIds])
+  }
   
   return stats;
 }
@@ -179,10 +186,15 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
 /**
  * Получает все плейлисты
  */
-export async function getAllPlaylists(opts?: { take?: number; skip?: number }): Promise<any[]> {
+export async function getAllPlaylists(opts?: {
+  take?: number
+  skip?: number
+  where?: import('@prisma/client').Prisma.PlaylistWhereInput
+}): Promise<any[]> {
   const take = opts?.take !== undefined ? Math.min(opts.take, 5000) : undefined
   const skip = opts?.skip !== undefined ? Math.max(0, opts.skip) : undefined
   const playlists = await findManyPlaylistRows({
+    ...(opts?.where ? { where: opts.where } : {}),
     orderBy: { updatedAt: 'desc' },
     ...(take !== undefined ? { take } : {}),
     ...(skip !== undefined ? { skip } : {}),

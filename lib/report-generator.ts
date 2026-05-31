@@ -280,6 +280,7 @@ export async function processExcelFile(
 }
 
 // Функция для чтения файла с данными артистов
+/** @deprecated Local Excel artists file — use Supabase User fields via process-python */
 async function readArtistsFile(file: File): Promise<Record<string, any[]>> {
   const data = await file.arrayBuffer()
   const workbook = XLSX.read(data)

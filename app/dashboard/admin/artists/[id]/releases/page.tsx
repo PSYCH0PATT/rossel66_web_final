@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -76,17 +75,15 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
 
   if (loading) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
         </div>
-      </Layout>
-    )
+      )
   }
 
   if (error) {
     return (
-      <Layout role="admin" requiredRole="admin">
+      
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Link
@@ -103,12 +100,11 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </div>
-      </Layout>
-    )
+      )
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Link
@@ -203,6 +199,5 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
           </div>
         )}
       </div>
-    </Layout>
-  )
+    )
 }

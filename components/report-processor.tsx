@@ -9,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
+import {
+  ARTIST_REPORT_FIELD_LABELS,
+  type ArtistReportRequiredField,
+} from "@/lib/artist-report-requirements"
 
 interface ColumnMapping {
   isrc_column: string
@@ -50,6 +54,8 @@ export default function ReportProcessor() {
       failed: number
       failedNames: string[]
     }
+    missingContractArtists?: string[]
+    incompleteArtists?: { name: string; missingFields: ArtistReportRequiredField[] }[]
   } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -375,6 +381,34 @@ export default function ReportProcessor() {
               <p className={`font-medium ${result.success ? 'text-green-600' : 'text-red-600'}`}>
                 {result.message}
               </p>
+
+              {(result.incompleteArtists?.length ?? result.missingContractArtists?.length ?? 0) > 0 && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                  <p className="text-amber-800 font-medium mb-2">
+                    Артисты без обязательных данных для отчёта (
+                    {result.incompleteArtists?.length ?? result.missingContractArtists?.length}):
+                  </p>
+                  <p className="text-amber-700 text-xs mb-2">
+                    Нужны: ФИО, номер договора и процент в Supabase.
+                  </p>
+                  {result.incompleteArtists && result.incompleteArtists.length > 0 ? (
+                    <ul className="text-amber-700 text-xs font-mono space-y-1 max-h-48 overflow-y-auto">
+                      {result.incompleteArtists.map((artist) => (
+                        <li key={artist.name}>
+                          {artist.name} — нет:{" "}
+                          {artist.missingFields
+                            .map((f) => ARTIST_REPORT_FIELD_LABELS[f])
+                            .join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-amber-700 text-xs font-mono break-words">
+                      {result.missingContractArtists?.join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
               
               {result.uploadStats && (
                 <div className="space-y-1 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-4">

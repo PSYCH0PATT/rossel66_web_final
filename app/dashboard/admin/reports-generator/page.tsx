@@ -1,11 +1,10 @@
-import Layout from "@/components/layout"
 import ReportProcessor from "@/components/report-processor"
+import { MissingContractBanner } from "@/components/missing-contract-banner"
 import Link from "next/link"
 
 export default function ReportsGenerator() {
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
@@ -21,6 +20,8 @@ export default function ReportsGenerator() {
             <p className="text-sm text-gray-400 font-light mt-2 max-w-md">Обработка и распределение по артистам</p>
           </div>
         </div>
+
+        <MissingContractBanner />
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
           <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
@@ -42,6 +43,5 @@ export default function ReportsGenerator() {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

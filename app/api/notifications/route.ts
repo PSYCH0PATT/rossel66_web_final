@@ -1,84 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import type { Database } from 'sqlite3';
-import { openSqlite } from '@/lib/sqlite3-lazy';
-import { requireAdmin } from '@/lib/server-auth';
+import { NextRequest, NextResponse } from "next/server"
+import { getParserRunStatus } from "@/lib/parser-status"
+import { requireAdmin } from "@/lib/server-auth"
 
-// Путь к БД
-const DB_PATH = path.join(process.cwd(), 'bandlink_playlists.db');
-
-function getDb(): Database {
-  return openSqlite(DB_PATH);
-}
-
-const dbGet = (db: Database, sql: string, params?: any[]) => {
-  return new Promise<any>((resolve, reject) => {
-    db.get(sql, params || [], (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-};
-
-// GET: Проверка уведомлений о необходимости новых cookies
 export async function GET(request: NextRequest) {
-  const denied = await requireAdmin(request);
-  if (denied) return denied;
+  const denied = await requireAdmin(request)
+  if (denied) return denied
 
-  const db = getDb();
-  
   try {
-    // Получаем статус парсера
-    const status = await dbGet(db, `
-      SELECT status, last_run, needs_new_cookies, failed_attempts 
-      FROM parser_status 
-      WHERE id = 1
-    `);
-    
-    db.close();
-    
-    if (!status) {
-      return NextResponse.json({
-        success: true,
-        hasNotification: false,
-        message: null
-      });
-    }
-    
-    // Проверяем нужны ли новые cookies
-    const needsNewCookies = status.needs_new_cookies === 1;
-    
-    let message = null;
+    const status = await getParserRunStatus("bandlink")
+    const needsNewCookies = status.needsNewCookies
+
+    let message: string | null = null
     if (needsNewCookies) {
-      message = `⚠️ Требуются новые cookies! Парсинг не работает после ${status.failed_attempts} неудачных попыток.`;
+      message = `⚠️ Требуются новые cookies! Парсинг не работает после ${status.failedAttempts} неудачных попыток.`
     }
-    
+
     return NextResponse.json({
       success: true,
       hasNotification: needsNewCookies,
       message,
       status: {
         status: status.status,
-        lastRun: status.last_run,
-        needsNewCookies: needsNewCookies,
-        failedAttempts: status.failed_attempts
-      }
-    });
-    
+        lastRun: status.lastRun,
+        needsNewCookies,
+        failedAttempts: status.failedAttempts,
+      },
+    })
   } catch (error) {
-    db.close();
-    console.error('Ошибка проверки уведомлений:', error);
+    console.error("Ошибка проверки уведомлений:", error)
     return NextResponse.json(
-      { success: false, error: 'Ошибка проверки уведомлений' },
+      { success: false, error: "Ошибка проверки уведомлений" },
       { status: 500 }
-    );
+    )
   }
 }
-
-
-
-
-
-
-
-

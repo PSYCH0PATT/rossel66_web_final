@@ -13,6 +13,7 @@ import {
   activityToPrismaCreate
 } from './storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
+import { releaseDateToSortDate } from '@/lib/release-date-sort'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -355,7 +356,10 @@ function toReleaseUpdateInput(updates: Partial<Release>): Prisma.ReleaseUpdateIn
   const data: Prisma.ReleaseUpdateInput = {}
   if (updates.title !== undefined) data.title = updates.title
   if (updates.artistId !== undefined) data.artistId = updates.artistId || null
-  if (updates.releaseDate !== undefined) data.releaseDate = updates.releaseDate
+  if (updates.releaseDate !== undefined) {
+    data.releaseDate = updates.releaseDate
+    data.releaseDateSort = releaseDateToSortDate(updates.releaseDate)
+  }
   if (updates.type !== undefined) data.type = updates.type
   if (updates.coverUrl !== undefined) data.coverUrl = updates.coverUrl
   if (updates.tracks !== undefined)

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -210,8 +209,7 @@ export default function AdminActivityPage() {
     "h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
@@ -464,6 +462,5 @@ export default function AdminActivityPage() {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

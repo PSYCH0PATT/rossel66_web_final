@@ -5,8 +5,6 @@ import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { getSessionUser } from "@/lib/server-auth"
-import Layout from "@/components/layout"
-
 function firstTrackLabel(trackDataJson: string): string {
   try {
     const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
@@ -54,8 +52,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
   const total = playlists.length
 
   return (
-    <Layout role="artist" requiredRole="artist" username={params.username}>
-      <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="max-w-full p-0 pb-6 md:pb-0">
         <div className="flex flex-col gap-6 mb-8">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link
@@ -161,6 +158,5 @@ export default async function PlaylistsPage({ params }: { params: { username: st
           </div>
         </div>
       </div>
-    </Layout>
-  )
+    )
 }

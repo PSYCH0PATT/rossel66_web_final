@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { userFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser } from "@/lib/server-auth"
-import Layout from "@/components/layout"
 import ArtistSettingsClient from "./artist-settings-client"
 
 export default async function SettingsPage({ params }: { params: { username: string } }) {
@@ -28,8 +27,6 @@ export default async function SettingsPage({ params }: { params: { username: str
   }
 
   return (
-    <Layout role="artist" requiredRole="artist" username={params.username}>
-      <ArtistSettingsClient initialArtist={initialArtist} />
-    </Layout>
-  )
+    <ArtistSettingsClient initialArtist={initialArtist} />
+    )
 }

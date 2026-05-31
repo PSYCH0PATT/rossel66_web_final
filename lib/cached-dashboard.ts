@@ -1,8 +1,12 @@
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import type { Release } from "@/lib/storage"
 import { normalizeArtistName } from "@/lib/storage"
-import { reportFromPrisma, releaseFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
+import { reportFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
+import {
+  CACHE_TAG_ADMIN_DASHBOARD,
+  CACHE_TAG_ARTIST_DASHBOARD,
+  CACHE_TAG_STREAM_ANALYTICS,
+} from "@/lib/dashboard-cache-tags"
 import {
   dedupePlaylistsByUrlAndName,
   playlistRowVisibleToCabinetUser,
@@ -11,8 +15,8 @@ import { getActivitiesFiltered, type Activity, type Report, type User } from "@/
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 
-/** Серверный кеш дашбордов и тяжёлых агрегатов — 10 минут */
-export const DASHBOARD_REVALIDATE_SEC = 600
+/** Серверный кеш дашбордов — 60s (Timeweb: cold start OK; мутации сбрасывают теги) */
+export const DASHBOARD_REVALIDATE_SEC = 60
 
 export type ArtistDashboardPayload = {
   artist: {
@@ -31,7 +35,9 @@ export type ArtistDashboardPayload = {
     percentage: number | null
     verified: boolean
   }
-  releases: Release[]
+  releaseCount: number
+  releasedCount: number
+  playlistCount: number
   reports: Array<{
     id: string
     artistId: string | null
@@ -46,20 +52,6 @@ export type ArtistDashboardPayload = {
     totalAmount: number | null
     isSigned: boolean | null
     isPaid: boolean | null
-  }>
-  playlists: Array<{
-    id: string
-    playlist_url: string
-    playlist_name: string
-    platform: string
-    artist_name: string
-    artist_id: string | null
-    track_data: string
-    first_seen_date: string | null
-    last_seen_date: string | null
-    created_at: string
-    updated_at: string
-    cover_url: string | null
   }>
 }
 
@@ -92,12 +84,14 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
 
   const artistId = artist.id
 
-  const [releasesRaw, reportsRaw] = await Promise.all([
-    prisma.release.findMany({
-      where: {
-        OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
-      },
-      orderBy: { createdAt: "desc" },
+  const releaseScope = {
+    OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
+  }
+
+  const [releaseCount, releasedCount, reportsRaw, playlistsForCount] = await Promise.all([
+    prisma.release.count({ where: releaseScope }),
+    prisma.release.count({
+      where: { AND: [releaseScope, { status: "released" }] },
     }),
     prisma.report.findMany({
       where: { artistId, isRegistered: true },
@@ -118,9 +112,10 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
         isPaid: true,
       },
     }),
+    loadArtistPlaylistsUncached(artistId),
   ])
 
-  const releases = releasesRaw.map(releaseFromPrisma)
+  const playlistCount = playlistsForCount.length
   const reports = reportsRaw.map((r) => ({
     id: r.id,
     artistId: r.artistId,
@@ -137,9 +132,6 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
     isPaid: r.isPaid,
   }))
 
-  // Та же выборка, что и на странице плейлистов (коллабы + artistId).
-  const playlists = await loadArtistPlaylistsUncached(artistId)
-
   return {
     ok: true,
     data: {
@@ -147,17 +139,21 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
         ...artist,
         email: artist.email ?? "",
       },
-      releases,
+      releaseCount,
+      releasedCount,
+      playlistCount,
       reports,
-      playlists,
     },
   }
 }
 
 export const getCachedArtistDashboard = unstable_cache(
   async (username: string) => loadArtistDashboardUncached(username),
-  ["artist-dashboard-v4"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
+  ["artist-dashboard-v5"],
+  {
+    revalidate: DASHBOARD_REVALIDATE_SEC,
+    tags: [CACHE_TAG_ARTIST_DASHBOARD],
+  }
 )
 
 export type PublicUser = {
@@ -173,8 +169,10 @@ export type PublicUser = {
 }
 
 export type AdminDashboardPayload = {
-  users: PublicUser[]
-  releases: Release[]
+  artistCount: number
+  releaseCount: number
+  pendingReleases: number
+  reportCount: number
   payments: Array<{
     id: string
     reportId: string
@@ -215,17 +213,19 @@ function dedupeReportsByArtistQuarterYear<T extends Report>(rows: T[]): T[] {
 }
 
 async function loadAdminDashboardUncached(): Promise<AdminDashboardPayload> {
-  const [usersRaw, releasesRaw, rawReports] = await Promise.all([
-    prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.release.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.report.findMany({
-      where: { isRegistered: true },
-      orderBy: { uploadedAt: "desc" },
-    }),
-  ])
+  const [artistCount, releaseCount, pendingReleases, usersRaw, rawReports] =
+    await Promise.all([
+      prisma.user.count({ where: { role: "artist" } }),
+      prisma.release.count(),
+      prisma.release.count({ where: { status: { not: "released" } } }),
+      prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
+      prisma.report.findMany({
+        where: { isRegistered: true },
+        orderBy: { uploadedAt: "desc" },
+      }),
+    ])
 
   const users: User[] = usersRaw.map(userFromPrisma)
-  const releases = releasesRaw.map(releaseFromPrisma)
   const userById = new Map(users.map((u) => [u.id, u]))
 
   const allReports = rawReports.map(reportFromPrisma)
@@ -270,21 +270,11 @@ async function loadAdminDashboardUncached(): Promise<AdminDashboardPayload> {
       return qb - qa
     })
 
-  const publicUsers: PublicUser[] = users.map((u) => ({
-    id: u.id,
-    username: u.username,
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    avatarUrl: u.avatarUrl,
-    vkMusicUrl: u.vkMusicUrl,
-    yandexMusicUrl: u.yandexMusicUrl,
-    spotifyUrl: u.spotifyUrl,
-  }))
-
   return {
-    users: publicUsers,
-    releases,
+    artistCount,
+    releaseCount,
+    pendingReleases,
+    reportCount: reports.length,
     payments,
     reports,
   }
@@ -292,14 +282,20 @@ async function loadAdminDashboardUncached(): Promise<AdminDashboardPayload> {
 
 export const getCachedAdminDashboard = unstable_cache(
   async () => loadAdminDashboardUncached(),
-  ["admin-dashboard-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
+  ["admin-dashboard-v2"],
+  {
+    revalidate: DASHBOARD_REVALIDATE_SEC,
+    tags: [CACHE_TAG_ADMIN_DASHBOARD],
+  }
 )
 
 export const getCachedStreamAnalytics = unstable_cache(
   async (filters: StreamFilters) => getStreamAnalytics(filters),
-  ["stream-analytics-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
+  ["stream-analytics-v2"],
+  {
+    revalidate: DASHBOARD_REVALIDATE_SEC,
+    tags: [CACHE_TAG_STREAM_ANALYTICS],
+  }
 )
 
 export const getCachedActivitiesForFeed = unstable_cache(

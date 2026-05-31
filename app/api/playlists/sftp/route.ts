@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getAllPlaylists, getPlaylistsByArtist, getPlaylistsByArtistId } from '@/lib/sftp-playlist-storage';
 import { getPlaylistCoverUrl } from '@/lib/playlist-cover';
 import { extractTrackTitle } from '@/lib/sftp-playlist-parser';
 import { requireAdmin } from '@/lib/server-auth';
+import { jsonWithPerfLog } from '@/lib/api-perf-log';
 
 export const dynamic = "force-dynamic"
+
+const DEFAULT_TAKE = 100
+const MAX_TAKE = 500
 
 /**
  * GET /api/playlists/sftp
@@ -15,23 +21,68 @@ export const dynamic = "force-dynamic"
  * - artistName: фильтр по имени артиста (опционально)
  */
 export async function GET(request: NextRequest) {
+  const startedAt = performance.now();
+  const pathname = request.nextUrl.pathname;
+
   try {
     const denied = await requireAdmin(request);
     if (denied) return denied;
 
-    const artistId = request.nextUrl.searchParams.get('artistId');
-    const artistName = request.nextUrl.searchParams.get('artistName');
-    /** По умолчанию 2000 — админка и отчёты ожидают полный список; при необходимости передавайте take/skip */
-    const take = Math.min(Number(request.nextUrl.searchParams.get('take') || '2000') || 2000, 5000);
-    const skip = Math.max(0, Number(request.nextUrl.searchParams.get('skip') || '0') || 0);
+    const sp = request.nextUrl.searchParams;
+    const artistId = sp.get('artistId');
+    const artistName = sp.get('artistName');
+    const q = sp.get('q')?.trim() || undefined;
+    const platform = sp.get('platform')?.trim() || undefined;
+    const take = Math.min(
+      Math.max(1, Number(sp.get('take') || String(DEFAULT_TAKE)) || DEFAULT_TAKE),
+      MAX_TAKE
+    );
+    const skip = Math.max(0, Number(sp.get('skip') || '0') || 0);
 
     let playlists;
+    let total: number | undefined;
+
     if (artistId) {
       playlists = await getPlaylistsByArtistId(artistId);
+      if (q) {
+        const ql = q.toLowerCase();
+        playlists = playlists.filter(
+          (p) =>
+            (p.playlist_name || '').toLowerCase().includes(ql) ||
+            (p.artist_name || '').toLowerCase().includes(ql)
+        );
+      }
+      if (platform) {
+        const pl = platform.toLowerCase();
+        playlists = playlists.filter((p) => (p.platform || '').toLowerCase().includes(pl));
+      }
+      total = playlists.length;
+      playlists = playlists.slice(skip, skip + take);
     } else if (artistName) {
       playlists = await getPlaylistsByArtist(artistName);
+      if (q) {
+        const ql = q.toLowerCase();
+        playlists = playlists.filter((p) =>
+          (p.playlist_name || '').toLowerCase().includes(ql)
+        );
+      }
+      total = playlists.length;
+      playlists = playlists.slice(skip, skip + take);
     } else {
-      playlists = await getAllPlaylists({ take, skip });
+      const where: Prisma.PlaylistWhereInput = {};
+      if (q) {
+        where.OR = [
+          { playlistName: { contains: q, mode: 'insensitive' } },
+          { artistName: { contains: q, mode: 'insensitive' } },
+        ];
+      }
+      if (platform) {
+        where.platform = { contains: platform, mode: 'insensitive' };
+      }
+      [total, playlists] = await Promise.all([
+        prisma.playlist.count({ where }),
+        getAllPlaylists({ take, skip, where }),
+      ]);
     }
 
     // Преобразуем в формат, совместимый с существующим API
@@ -172,11 +223,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    return jsonWithPerfLog(pathname, startedAt, {
       success: true,
       results,
       count: results.length,
-      ...(artistId || artistName ? {} : { take, skip }),
+      total: total ?? results.length,
+      take,
+      skip,
+      ...(artistId || artistName ? {} : { paginated: true }),
     });
 
   } catch (error) {

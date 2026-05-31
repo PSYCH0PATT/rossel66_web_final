@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import Layout from "@/components/layout"
+import { useDashboardProfile } from "@/components/dashboard-user-context"
+import { revalidateStreamAnalytics } from "@/lib/hooks/use-dashboard-fetch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -99,7 +100,8 @@ function formatDate(dateStr: any) {
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const profile = useDashboardProfile()
+  const currentUser = profile?.role === "admin" ? profile : null
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -122,26 +124,16 @@ export default function AdminAnalyticsPage() {
     setChartMounted(true)
   }, [])
 
-  // Auth
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        if (user.role === "admin") {
-          setCurrentUser(user)
-        } else if (user.username) {
-          router.push(`/dashboard/artist/${user.username}/dashboard`)
-        } else {
-          router.push("/dashboard/login")
-        }
-      } catch {
+    if (!profile) return
+    if (profile.role !== "admin") {
+      if (profile.username) {
+        router.push(`/dashboard/artist/${profile.username}/dashboard`)
+      } else {
         router.push("/dashboard/login")
       }
-    } else {
-      router.push("/dashboard/login")
     }
-  }, [router])
+  }, [profile, router])
 
   // Загрузка артистов
   useEffect(() => {
@@ -227,6 +219,7 @@ export default function AdminAnalyticsPage() {
 
       if (json.success) {
         setImportResult(`Импортировано ${json.stats.added} записей, пропущено ${json.stats.skipped} дубликатов`)
+        revalidateStreamAnalytics()
         loadData() // перезагружаем данные
       } else {
         setImportResult(`Ошибка: ${json.error}`)
@@ -331,12 +324,10 @@ export default function AdminAnalyticsPage() {
 
   if (!currentUser) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
         </div>
-      </Layout>
-    )
+      )
   }
 
   const totalStreams = data?.totalStreams ?? data?.streamsByDay.reduce((s, d) => s + d.streams, 0) ?? 0
@@ -345,7 +336,7 @@ export default function AdminAnalyticsPage() {
   const tracksForChart = (data?.streamsByTrack ?? []).slice()
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-6">
         {/* TopAppBar Mapping */}
         <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
@@ -804,6 +795,5 @@ export default function AdminAnalyticsPage() {
           </div>
         )}
       </div>
-    </Layout>
-  )
+    )
 }

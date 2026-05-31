@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -166,8 +165,7 @@ export default function AddReleasePage() {
   ]
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8 max-w-7xl mx-auto pb-8">
+    <div className="space-y-8 max-w-7xl mx-auto pb-8">
         <div className="space-y-4">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
@@ -456,6 +454,5 @@ export default function AddReleasePage() {
           <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

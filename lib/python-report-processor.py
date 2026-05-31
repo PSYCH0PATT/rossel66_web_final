@@ -9,11 +9,12 @@ import sys
 import time
 from collections import defaultdict
 
-# Путь к шаблону (копируем из оригинального проекта)
+# Путь к шаблону (lib/templates — в git; корень — legacy для локальной разработки)
 def _find_template():
     import unicodedata
     base_dir = os.path.dirname(os.path.abspath(__file__))
     possible_paths = [
+        os.path.join(base_dir, 'templates', 'report-mendxza.xlsx'),
         os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx'),
         os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx'),
         'Отчёт MENDXZA.xlsx',
@@ -42,13 +43,15 @@ def _find_template():
     except Exception:
         pass
                 
-    return os.path.join(base_dir, '..', 'Отчёт MENDXZA.xlsx')
+    return os.path.join(base_dir, 'templates', 'report-mendxza.xlsx')
 
 TEMPLATE_PATH = os.environ.get('TEMPLATE_PATH') or _find_template()
 
-# Пути к Excel файлам вместо Google Sheets (ТОЧНО как в MAIN_MAY.py)
-ARTISTS_EXCEL_PATH = "artists.xlsx"  # Файл со списком артистов
-ROYALTY_SHARES_EXCEL_PATH = "royalty_shares.xlsx"  # Файл с долями артистов
+def _sanitize_filename(name):
+    """Безопасное имя файла отчёта (Linux/Timeweb)."""
+    safe = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', str(name))
+    safe = safe.strip().strip('.')
+    return safe or 'artist'
 
 # Ожидаемые колонки отчёта и возможные варианты названий в Excel
 COLUMN_ALIASES = {
@@ -100,12 +103,40 @@ def _normalize_statement_columns(df):
                 break
     return df.rename(columns=rename)
 
+def _is_empty_report_value(val):
+    if val is None:
+        return True
+    s = str(val).strip()
+    return s == '' or s == '-'
+
+REPORT_FIELD_LABELS = {
+    'fio': 'ФИО',
+    'contract': 'Номер договора',
+    'percentage': 'Процент',
+}
+
+def _missing_report_fields(user):
+    missing = []
+    if _is_empty_report_value(user.get('fio')):
+        missing.append('fio')
+    if _is_empty_report_value(user.get('contract')):
+        missing.append('contract')
+    if user.get('percentage') is None or user.get('percentage') == '':
+        missing.append('percentage')
+    return missing
+
+def _emit_incomplete_report_json(skipped_incomplete):
+    if skipped_incomplete:
+        payload = json.dumps({"incompleteArtists": skipped_incomplete}, ensure_ascii=False)
+        print("REPORT_INCOMPLETE_JSON:" + payload)
+
 def get_artists_list_from_users(users_file):
-    """Читает данные артистов из указанного users.json. Один канонический ключ на артиста (name или username), чтобы не дублировать отчёты."""
+    """Читает данные артистов из Prisma export snapshot (/tmp/users_export_*.json)."""
+    skipped_incomplete = []
     try:
         if not os.path.exists(users_file):
             print(f"Файл {users_file} не найден")
-            return {}, []
+            return {}, [], skipped_incomplete
         
         with open(users_file, 'r', encoding='utf-8') as f:
             users_data = json.load(f)
@@ -118,26 +149,29 @@ def get_artists_list_from_users(users_file):
             canonical = user.get('name') or user.get('username')
             if not canonical:
                 continue
-            percentage = user.get('percentage')
-            if percentage is None or percentage == '':
-                print(f"⚠️  Пропущен артист {canonical}: не указан процент")
+            missing = _missing_report_fields(user)
+            if missing:
+                labels = [REPORT_FIELD_LABELS.get(f, f) for f in missing]
+                print(f"⚠️  Пропущен артист {canonical}: не хватает данных для отчёта ({', '.join(labels)})")
+                skipped_incomplete.append({"name": canonical, "missingFields": missing})
                 continue
             
+            percentage = user.get('percentage')
             artists_dict[canonical] = [
                 user.get('fio') or user.get('name') or '',
-                user.get('fioShort') or user.get('name') or '',
+                user.get('fioShort') or user.get('fio') or user.get('name') or '',
                 user.get('contract') or '',
-                str(user.get('percentage', 50)),
+                str(percentage),
                 user.get('id')
             ]
             aliases = [a for a in (user.get('name'), user.get('username')) if a]
             match_list.append((canonical, aliases))
         
         print(f"✅ Загружено {len(artists_dict)} артистов из {users_file}")
-        return artists_dict, match_list
+        return artists_dict, match_list, skipped_incomplete
     except Exception as e:
         print(f"Ошибка при чтении {users_file}: {e}")
-        return {}, []
+        return {}, [], skipped_incomplete
 
 def get_royalty_shares():
     # Возвращаем пустой словарь (как в оригинале)
@@ -247,6 +281,12 @@ def calculate_artist_share(track_code, artist, all_artists_in_track, artists_dat
 
 def process_file(statement_path, quarter, year, users_file, releases_file, reports_dir, metadata_json_path, royalty_file_path=None):
     """Обработка файла с единым хранилищем отчетов"""
+    if not os.path.isfile(TEMPLATE_PATH):
+        raise FileNotFoundError(
+            f"Шаблон отчёта не найден: {TEMPLATE_PATH}. "
+            f"Ожидается lib/templates/report-mendxza.xlsx в репозитории."
+        )
+
     # Создаем единую папку для всех отчетов в tmp
     os.makedirs(reports_dir, exist_ok=True)
     
@@ -275,10 +315,11 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
         )
 
     # Загружаем данные артистов
-    artists_data, match_list = get_artists_list_from_users(users_file)
+    artists_data, match_list, skipped_incomplete = get_artists_list_from_users(users_file)
     
     if not artists_data:
-        print(f"⚠️  Не найдено артистов с указанным процентом в {users_file}")
+        print(f"⚠️  Не найдено артистов с полными данными для отчёта в {users_file}")
+        _emit_incomplete_report_json(skipped_incomplete)
         return []
         
     # Загружаем доли роялти из треков (высший приоритет)
@@ -313,7 +354,8 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
             print(f"⚠️  Пропущен артист {artist}: не найден в списке артистов с процентом")
             continue
         
-        artist_file_path = os.path.join(reports_dir, f'{artist}.xlsx')
+        safe_name = _sanitize_filename(artist)
+        artist_file_path = os.path.join(reports_dir, f'{safe_name}.xlsx')
         is_registered = artist in registered_users
         
         print(f"Создаем отчет для {'зарегистрированного' if is_registered else 'незарегистрированного'} артиста: {artist}")
@@ -371,7 +413,7 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
             "artistName": artist,
             "quarter": quarter,
             "year": year,
-            "fileName": f"{artist}.xlsx",
+            "fileName": f"{safe_name}.xlsx",
             "filePath": artist_file_path,
             "uploadDate": time.strftime('%Y-%m-%dT%H:%M:%S.000Z'),
             "status": "processed",
@@ -391,6 +433,8 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
     print(f"Всего создано файлов: {len(created_files)}")
     print(f"Зарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist in registered_users)}")
     print(f"Незарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist not in registered_users)}")
+    if skipped_incomplete:
+        _emit_incomplete_report_json(skipped_incomplete)
     return created_files
 
 
@@ -415,6 +459,9 @@ if __name__ == "__main__":
             reports_dir, metadata_json_path, 
             royalty_file_path
         )
+        if not created_files:
+            print("Обработка завершена без созданных отчётов")
+            sys.exit(1)
         print("Обработка завершена успешно!")
     except Exception as e:
         print(f"Ошибка: {e}")

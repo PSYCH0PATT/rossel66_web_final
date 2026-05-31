@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import { findArtistByName, assignReportsToArtist } from './storage'
 import { prisma } from './prisma'
+import { isArtistReadyForReport } from '@/lib/artist-report-requirements'
 
 // Интерфейс для данных артиста
 interface ArtistData {
@@ -132,16 +133,24 @@ function calculateArtistShare(
 async function getArtistsData(): Promise<ArtistData> {
   const users = await prisma.user.findMany({
     where: { role: 'artist' },
-    select: { id: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      fio: true,
+      fioShort: true,
+      contract: true,
+      percentage: true,
+    },
   })
   const artistsData: ArtistData = {}
 
   for (const user of users) {
+    if (!isArtistReadyForReport(user)) continue
     artistsData[user.name] = {
-      fullName: user.name,
-      shortName: user.name,
-      contractNumber: `ДОГ-${user.id}`,
-      percentage: '100%',
+      fullName: user.fio || user.name,
+      shortName: user.fioShort || user.fio || user.name,
+      contractNumber: user.contract || '',
+      percentage: `${user.percentage}%`,
     }
   }
 

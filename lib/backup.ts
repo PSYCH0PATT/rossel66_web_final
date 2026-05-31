@@ -113,7 +113,7 @@ export async function createBackup(type: 'auto' | 'manual' = 'manual'): Promise<
 
     archive.pipe(output)
 
-    // Add ALL data directory recursively (includes users.json, releases.json, activities.json, artists folders, etc.)
+    // Add data directory if present (legacy local files — deprecated; use pnpm db:backup for Supabase)
     if (fs.existsSync(dataDir)) {
       archive.directory(dataDir, 'data')
     }
@@ -127,14 +127,7 @@ export async function createBackup(type: 'auto' | 'manual' = 'manual'): Promise<
       }
     })
 
-    // Add Excel files if they exist
-    const excelFiles = ['artists.xlsx', 'report.xlsx', 'royalty_shares.xlsx']
-    excelFiles.forEach(excelFile => {
-      const excelPath = path.join(process.cwd(), excelFile)
-      if (fs.existsSync(excelPath)) {
-        archive.file(excelPath, { name: excelFile })
-      }
-    })
+    // Legacy Excel contract files removed — contract data lives in Supabase User table
 
     archive.finalize()
   })

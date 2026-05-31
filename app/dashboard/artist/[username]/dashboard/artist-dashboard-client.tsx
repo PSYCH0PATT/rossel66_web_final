@@ -1,13 +1,11 @@
 "use client"
 
 import { useMemo } from "react"
-import Layout from "@/components/layout"
 import Link from "next/link"
 import { ActivityFeed } from "@/components/activity-feed"
-import { StreamingChart } from "@/components/streaming-chart"
+import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
-import type { Release } from "@/lib/storage"
 import { formatRubKpiShort, formatRubPlain } from "@/lib/format-dashboard-rub"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -16,9 +14,10 @@ type StreamDay = { date: string; streams: number }
 type Props = {
   username: string
   artist: ArtistDashboardPayload["artist"]
-  releases: Release[]
+  releaseCount: number
+  releasedCount: number
+  playlistCount: number
   reports: ArtistDashboardPayload["reports"]
-  playlists: ArtistDashboardPayload["playlists"]
   initialStreamsByDay: StreamDay[]
   initialActivities: Activity[]
 }
@@ -26,9 +25,10 @@ type Props = {
 export default function ArtistDashboardClient({
   username,
   artist,
-  releases,
+  releaseCount,
+  releasedCount,
+  playlistCount,
   reports,
-  playlists,
   initialStreamsByDay,
   initialActivities,
 }: Props) {
@@ -36,14 +36,8 @@ export default function ArtistDashboardClient({
     () => reports.reduce((sum, report) => sum + (report.totalAmount || 0), 0),
     [reports]
   )
-  const releasedCount = useMemo(
-    () => releases.filter((r) => r.status === "released").length,
-    [releases]
-  )
-
   return (
-    <Layout role="artist" requiredRole="artist" username={username}>
-      <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="mb-6 flex flex-col gap-3 md:mb-8 md:gap-6">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
           <Link
@@ -96,7 +90,7 @@ export default function ArtistDashboardClient({
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Релизы</h3>
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releases.length}</p>
+              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releaseCount}</p>
               <span className="stat-dash-metric-badge stat-dash-metric-badge--primary">
                 +{releasedCount} <span className="material-symbols-outlined">arrow_upward</span>
               </span>
@@ -168,9 +162,9 @@ export default function ArtistDashboardClient({
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Плейлисты</h3>
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{playlists.length}</p>
+              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{playlistCount}</p>
               <span className="stat-dash-metric-badge stat-dash-metric-badge--purple">
-                +{playlists.length} <span className="material-symbols-outlined">add</span>
+                +{playlistCount} <span className="material-symbols-outlined">add</span>
               </span>
             </div>
           </div>
@@ -228,6 +222,5 @@ export default function ArtistDashboardClient({
         <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
       </div>
       </div>
-    </Layout>
-  )
+    )
 }

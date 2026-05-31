@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -106,8 +105,7 @@ export default function PlaylistHistoryPage() {
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-8 max-w-[1600px] mx-auto">
+    <div className="space-y-8 max-w-[1600px] mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
@@ -302,6 +300,5 @@ export default function PlaylistHistoryPage() {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

@@ -6,7 +6,6 @@
  * Файл: backups/db/backup_YYYYMMDD_HHMMSS.json
  */
 
-import 'dotenv/config'
 import { prisma } from '../lib/prisma'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'

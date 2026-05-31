@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { useState, useMemo, useRef } from "react"
+import { useReleasesList, revalidateReleasesLists } from "@/lib/hooks/use-dashboard-fetch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { AdminInput } from "@/components/ui/admin-input"
@@ -120,11 +121,8 @@ function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
 }
 
 export default function AdminReleasesClient() {
-  const [releases, setReleases] = useState<ReleaseRow[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [loading, setLoading] = useState(true)
   const [q, setQ] = useState("")
   const [debouncedQ, setDebouncedQ] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
@@ -144,38 +142,22 @@ export default function AdminReleasesClient() {
     }, 350)
   }
 
-  const fetchReleases = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      params.set("page", String(page))
-      params.set("pageSize", String(pageSize))
-      if (debouncedQ) params.set("q", debouncedQ)
-      if (filterStatus !== "all") params.set("status", filterStatus)
-      if (filterArtistName.trim()) params.set("artistName", filterArtistName.trim())
-      if (filterDateFrom) params.set("dateFrom", filterDateFrom)
-      if (filterDateTo) params.set("dateTo", filterDateTo)
-
-      const res = await fetch(`/api/releases?${params}`)
-      const data = await res.json()
-      if (data.success && Array.isArray(data.releases)) {
-        setReleases(data.releases as ReleaseRow[])
-        setTotal(typeof data.total === "number" ? data.total : data.releases.length)
-      } else {
-        setReleases([])
-        setTotal(0)
-      }
-    } catch {
-      setReleases([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
+  const listUrl = useMemo(() => {
+    const params = new URLSearchParams()
+    params.set("page", String(page))
+    params.set("pageSize", String(pageSize))
+    if (debouncedQ) params.set("q", debouncedQ)
+    if (filterStatus !== "all") params.set("status", filterStatus)
+    if (filterArtistName.trim()) params.set("artistName", filterArtistName.trim())
+    if (filterDateFrom) params.set("dateFrom", filterDateFrom)
+    if (filterDateTo) params.set("dateTo", filterDateTo)
+    return `/api/releases?${params}`
   }, [page, pageSize, debouncedQ, filterStatus, filterArtistName, filterDateFrom, filterDateTo])
 
-  useEffect(() => {
-    fetchReleases()
-  }, [fetchReleases])
+  const { data, isLoading, mutate } = useReleasesList(listUrl)
+  const releases = (data?.releases as ReleaseRow[] | undefined) ?? []
+  const total = typeof data?.total === "number" ? data.total : releases.length
+  const loading = isLoading
 
   const activeFiltersCount = useMemo(() => {
     let c = 0
@@ -209,7 +191,8 @@ export default function AdminReleasesClient() {
             .join("\n")}`
         )
         setPage(1)
-        await fetchReleases()
+        await mutate()
+        revalidateReleasesLists()
       } else {
         alert(`❌ Ошибка: ${result.error}`)
       }
@@ -225,7 +208,8 @@ export default function AdminReleasesClient() {
     try {
       const response = await fetch(`/api/releases/${releaseId}`, { method: "DELETE" })
       if (response.ok) {
-        await fetchReleases()
+        await mutate()
+        revalidateReleasesLists()
       } else {
         alert("Ошибка при удалении релиза")
       }
@@ -577,7 +561,11 @@ export default function AdminReleasesClient() {
                     <td className="px-6 py-4 text-center text-gray-400 font-mono">
                       <span className="flex items-center justify-center gap-1">
                         <span className="material-symbols-outlined text-emerald-500/60" style={{ fontSize: 14 }}>music_note</span>
-                        {Array.isArray(release.tracks) ? release.tracks.length : 0}
+                        {typeof release.trackCount === "number"
+                          ? release.trackCount
+                          : Array.isArray(release.tracks)
+                            ? release.tracks.length
+                            : 0}
                       </span>
                     </td>
 

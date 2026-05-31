@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -234,8 +233,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
   if (artistNotFound) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="space-y-6">
+      <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard/admin/artists"
@@ -251,12 +249,11 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
             Артист не найден
           </div>
         </div>
-      </Layout>
-    )
+      )
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-6">
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
@@ -787,6 +784,5 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

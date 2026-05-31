@@ -61,22 +61,22 @@ The system SHALL allow administrators to manage users via CRUD operations. (Си
 
 #### Scenario: Create user
 - **WHEN** администратор создает нового пользователя через API
-- **THEN** пользователь сохраняется в `data/users.json`
+- **THEN** пользователь сохраняется в Supabase Postgres (`User` table)
 - **AND** возвращается созданный пользователь
 
 #### Scenario: Update user
 - **WHEN** администратор обновляет данные пользователя
-- **THEN** изменения сохраняются в `data/users.json`
+- **THEN** изменения сохраняются в Supabase Postgres
 
 #### Scenario: Delete user
 - **WHEN** администратор удаляет пользователя
-- **THEN** пользователь удаляется из `data/users.json`
+- **THEN** пользователь удаляется из Supabase Postgres
 
 ## Technical Details
 
 ### Storage
-- Пользователи хранятся в `data/users.json`
-- Сессия хранится в localStorage под ключом `user`
+- Пользователи хранятся в **Supabase Postgres** (`User` via Prisma)
+- Сессия: httpOnly cookie `rossel_session` (не localStorage для domain data)
 
 ### Components
 - `components/auth-check.tsx` — HOC для проверки авторизации

@@ -3,7 +3,6 @@ import { getSessionUser } from "@/lib/server-auth"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistReports } from "@/lib/cached-dashboard"
 import { getArtistBalance } from "@/lib/storage"
-import Layout from "@/components/layout"
 import PaymentsClient from "./payments-client"
 
 export const revalidate = 600
@@ -26,8 +25,6 @@ export default async function ArtistPaymentsPage({ params }: { params: { usernam
   ])
 
   return (
-    <Layout role={session.role} requiredRole="artist" username={params.username}>
-      <PaymentsClient username={params.username} reports={reports as any} balance={balance} />
-    </Layout>
-  )
+    <PaymentsClient username={params.username} reports={reports as any} balance={balance} />
+    )
 }

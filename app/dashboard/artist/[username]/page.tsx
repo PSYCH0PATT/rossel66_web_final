@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -65,13 +64,11 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
 
   if (loading) {
     return (
-      <Layout role="artist" requiredRole="artist" username={params.username}>
-        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
           <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
         </div>
-      </Layout>
-    )
+      )
   }
 
   const dash = `/dashboard/artist/${params.username}/dashboard`
@@ -79,7 +76,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
   const playlistsHref = `/dashboard/artist/${params.username}/playlists`
 
   return (
-    <Layout role="artist" requiredRole="artist" username={params.username}>
+    
       <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
@@ -256,6 +253,5 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
         <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
       </div>
       </div>
-    </Layout>
-  )
+    )
 }

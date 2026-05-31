@@ -29,6 +29,10 @@ export const artistPostSchema = z.object({
   vkMusicUrl: z.string().max(2000).optional(),
   yandexMusicUrl: z.string().max(2000).optional(),
   spotifyUrl: z.string().max(2000).optional(),
+  fio: z.string().max(512).optional(),
+  fioShort: z.string().max(256).optional(),
+  contract: z.string().max(512).optional(),
+  percentage: z.number().int().min(0).max(100).optional(),
 })
 
 /** PUT /api/artists */

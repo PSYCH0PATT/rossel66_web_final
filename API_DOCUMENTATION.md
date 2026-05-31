@@ -187,36 +187,22 @@ rossel-music/
 
 ### Управление отчетами
 
-#### `POST /api/reports/process`
-Обработать Excel файл отчета
+#### `POST /api/reports/process-python` (production)
+Обработать Excel файл отчёта. Данные договоров (fio, contract, percentage) берутся из Supabase `User`.
 
 **FormData:**
-- `file`: File - Excel файл с данными
-- `template_file`: File - Шаблон Excel
-- `artists_file`: File - Файл с артистами
+- `file`: File - Excel файл с данными CMS
 - `quarter`: string - Квартал (Q1, Q2, Q3, Q4)
-- `isrc_column`: string - Столбец ISRC
-- `track_name_column`: string - Столбец названия трека
-- `album_name_column`: string - Столбец альбома
-- `artist_column`: string - Столбец артиста
-- `plays_column`: string - Столбец прослушиваний
-- `amount_column`: string - Столбец суммы
+- `year`: number - Год
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "string",
-  "processedArtists": number,
-  "reports": ReportData[]
-}
-```
+#### `POST /api/reports/process` (deprecated, 410)
+Используйте `POST /api/reports/process-python`.
 
-#### `POST /api/reports/process-new`
-Новая обработка отчета (упрощенная)
+#### `POST /api/reports/process-new` (deprecated, 410)
+Используйте `POST /api/reports/process-python`.
 
-#### `POST /api/reports/process-python`
-Обработка через Python скрипт
+#### `GET /api/artists?missingContract=1`
+Список артистов без `percentage` в Supabase.
 
 #### `POST /api/reports/bulk-upload`
 Массовая загрузка отчетов
@@ -1117,11 +1103,21 @@ python3 vk_parser_linux.py config.json
 
 ## Хранение данных
 
-### JSON файлы (file-based storage)
+### Supabase Postgres (source of truth)
 
-**Расположение:** `/data/`
+- **`User`** — пользователи, артисты, поля договоров (`fio`, `fioShort`, `contract`, `percentage`)
+- **`Release`**, **`Report`**, **`Playlist`**, **`Activity`**, **`StreamAnalytics`**
 
-**Файлы:**
+### Supabase Storage
+
+- Bucket **`reports`** — сгенерированные Excel-отчёты
+- Bucket **`avatars`** — аватары
+
+### Legacy JSON (deprecated)
+
+**Расположение:** `/data/` — не используется в production после миграции на Supabase.
+
+**Файлы (legacy):**
 - `users.json` - пользователи
 - `artists.json` - артисты (алиас users.json)
 - `releases.json` - релизы

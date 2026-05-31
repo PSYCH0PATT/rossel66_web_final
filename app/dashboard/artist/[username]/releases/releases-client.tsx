@@ -1,8 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useReleasesList } from "@/lib/hooks/use-dashboard-fetch"
 
 interface Release {
   id: string
@@ -13,7 +14,9 @@ interface Release {
   upc?: string
   releaseDate: string
   status?: string
-  tracks: any[]
+  tracks?: any[]
+  trackCount?: number
+  primaryIsrc?: string
   featuredArtistNames?: string[]
   artistDisplay: string
 }
@@ -159,14 +162,45 @@ interface Props {
 }
 
 export default function ReleasesClient({ artistId, username, mainArtistName }: Props) {
-  const [releases, setReleases] = useState<Release[]>([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [total, setTotal] = useState(0)
   const [q, setQ] = useState("")
   const [debouncedQ, setDebouncedQ] = useState("")
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const listUrl = useMemo(() => {
+    const params = new URLSearchParams({
+      artistId,
+      page: String(page),
+      pageSize: String(pageSize),
+    })
+    if (debouncedQ) params.set("q", debouncedQ)
+    return `/api/releases?${params}`
+  }, [artistId, page, pageSize, debouncedQ])
+
+  const { data, isLoading } = useReleasesList(listUrl)
+
+  const releases = useMemo((): Release[] => {
+    if (!data?.releases || !Array.isArray(data.releases)) return []
+    return data.releases.map((release: Record<string, unknown>) => ({
+      id: String(release.id),
+      artistId: String(release.artistId ?? ""),
+      title: String(release.title),
+      type: release.type as string | undefined,
+      coverUrl: release.coverUrl as string | undefined,
+      upc: release.upc as string | undefined,
+      releaseDate: String(release.releaseDate),
+      status: release.status as string | undefined,
+      tracks: (release.tracks as any[]) ?? [],
+      trackCount: release.trackCount as number | undefined,
+      primaryIsrc: release.primaryIsrc as string | undefined,
+      featuredArtistNames: release.featuredArtistNames as string[] | undefined,
+      artistDisplay: buildArtistDisplay(release, mainArtistName),
+    }))
+  }, [data, mainArtistName])
+
+  const loading = isLoading
+  const total = typeof data?.total === "number" ? data.total : releases.length
 
   const handleSearch = (val: string) => {
     setQ(val)
@@ -176,49 +210,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
       setPage(1)
     }, 300)
   }
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        artistId,
-        page: String(page),
-        pageSize: String(pageSize),
-      })
-      if (debouncedQ) params.set("q", debouncedQ)
-      const res = await fetch(`/api/releases?${params}`)
-      const data = await res.json()
-      if (!data.success || !Array.isArray(data.releases)) {
-        setReleases([])
-        setTotal(0)
-        return
-      }
-      const mapped: Release[] = data.releases.map((release: any) => ({
-        id: release.id,
-        artistId: release.artistId ?? "",
-        title: release.title,
-        type: release.type,
-        coverUrl: release.coverUrl,
-        upc: release.upc,
-        releaseDate: release.releaseDate,
-        status: release.status,
-        tracks: release.tracks ?? [],
-        featuredArtistNames: release.featuredArtistNames,
-        artistDisplay: buildArtistDisplay(release, mainArtistName),
-      }))
-      setReleases(mapped)
-      setTotal(typeof data.total === "number" ? data.total : mapped.length)
-    } catch {
-      setReleases([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [artistId, page, pageSize, debouncedQ, mainArtistName])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1
@@ -302,7 +293,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
               {/* Mobile: карточки вместо таблицы */}
               <div className="space-y-3 p-3 md:hidden">
                 {releases.map((release) => {
-                  const isrc = primaryIsrc(release.tracks)
+                  const isrc = release.primaryIsrc ?? primaryIsrc(release.tracks)
                   return (
                     <Link
                       key={release.id}

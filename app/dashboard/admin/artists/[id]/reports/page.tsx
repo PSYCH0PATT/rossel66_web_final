@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
-import Layout from "@/components/layout"
 import ArtistReports from "@/components/artist-reports"
 
 export default async function AdminArtistReportsPage({ params }: { params: { id: string } }) {
@@ -8,10 +7,8 @@ export default async function AdminArtistReportsPage({ params }: { params: { id:
 
   if (!artist || artist.role !== "artist") {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="text-center py-8 text-gray-400">Артист не найден</div>
-      </Layout>
-    )
+      <div className="text-center py-8 text-gray-400">Артист не найден</div>
+      )
   }
 
   const reportRows = await prisma.report.findMany({
@@ -21,11 +18,10 @@ export default async function AdminArtistReportsPage({ params }: { params: { id:
   const reports = reportRows.map(reportFromPrisma)
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Отчеты: {artist.name}</h1>
         <ArtistReports username={artist.username} reports={reports} artistName={artist.name} />
       </div>
-    </Layout>
-  )
+    )
 }

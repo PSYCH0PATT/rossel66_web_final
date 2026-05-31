@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStreamAnalytics } from '@/lib/flash-storage'
+import { getCachedStreamAnalytics } from '@/lib/cached-dashboard'
 import { getSessionUser, requireAuth } from '@/lib/server-auth'
+import { jsonWithPerfLog } from '@/lib/api-perf-log'
+import type { StreamFilters } from '@/lib/flash-storage'
 
 export const dynamic = "force-dynamic"
 
@@ -16,6 +18,9 @@ export const dynamic = "force-dynamic"
  *   isrc        — фильтр по ISRC трека
  */
 export async function GET(request: NextRequest) {
+  const startedAt = performance.now()
+  const pathname = new URL(request.url).pathname
+
   try {
     const denied = await requireAuth(request)
     if (denied) return denied
@@ -28,7 +33,7 @@ export async function GET(request: NextRequest) {
       artistId = session.id
     }
 
-    const filters = {
+    const filters: StreamFilters = {
       artistId,
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
@@ -36,11 +41,12 @@ export async function GET(request: NextRequest) {
       isrc: searchParams.get('isrc') || undefined,
     }
 
-    const data = await getStreamAnalytics(filters)
+    const data = await getCachedStreamAnalytics(filters)
 
-    return NextResponse.json({
+    return jsonWithPerfLog(pathname, startedAt, {
       success: true,
       data,
+      cachedAt: new Date().toISOString(),
     })
 
   } catch (error) {

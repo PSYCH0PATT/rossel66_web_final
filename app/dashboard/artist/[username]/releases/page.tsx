@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
 import { prisma } from "@/lib/prisma"
-import Layout from "@/components/layout"
 import ReleasesClient from "./releases-client"
 
 export default async function ArtistReleasesPage({ params }: { params: { username: string } }) {
@@ -17,12 +16,10 @@ export default async function ArtistReleasesPage({ params }: { params: { usernam
   if (session.role === "artist" && session.id !== artist.id) notFound()
 
   return (
-    <Layout role={session.role} requiredRole="artist" username={params.username}>
-      <ReleasesClient
+    <ReleasesClient
         artistId={artist.id}
         username={params.username}
         mainArtistName={artist.name}
       />
-    </Layout>
-  )
+    )
 }

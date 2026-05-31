@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "No playlists found", playlists: [] })
     }
 
-    await addPlaylistsToArtist(artistId, playlists)
+    await addPlaylistsToArtist(artistId, artistRow.name, playlists)
 
     return NextResponse.json({
       message: `Successfully added ${playlists.length} playlists to artist ${artistRow.name}`,

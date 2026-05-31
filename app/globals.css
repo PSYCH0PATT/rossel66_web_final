@@ -73,7 +73,7 @@ body {
   padding-right: 0; /* Отступ для scrollbar будет добавлен только когда нужно */
 }
 
-main {
+body > main {
   flex: 1;
   position: relative;
   /* overflow: hidden; */ /* Убираем глобальное скрытие overflow */

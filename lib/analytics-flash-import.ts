@@ -3,7 +3,9 @@ import SftpClient from 'ssh2-sftp-client'
 import * as fs from 'fs'
 import * as path from 'path'
 import { parseFlashCSV } from '@/lib/flash-parser'
+import { revalidateTag } from 'next/cache'
 import { saveFlashRecords } from '@/lib/flash-storage'
+import { CACHE_TAG_STREAM_ANALYTICS } from '@/lib/dashboard-cache-tags'
 import {
   resolveFlashRemoteDir,
   sftpConnectOptions,
@@ -581,6 +583,14 @@ export async function runAnalyticsFlashSftpImport(
       `   Файлов: ${fileResults.length}/${filesToProcess.length}, Добавлено: ${totalAdded}, Пропущено: ${totalSkipped}`
     )
     console.log('═══════════════════════════════════════════════════')
+
+    if (totalAdded > 0) {
+      try {
+        revalidateTag(CACHE_TAG_STREAM_ANALYTICS)
+      } catch {
+        /* outside Next request */
+      }
+    }
 
     return {
       status: 200,

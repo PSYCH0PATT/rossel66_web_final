@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -114,16 +113,14 @@ export default function UnregisteredReportsPage() {
 
   if (loading) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="flex items-center justify-center min-h-[40vh]">
+      <div className="flex items-center justify-center min-h-[40vh]">
           <span className="inline-block size-8 border-2 border-primary/30 border-t-primary rounded-full motion-safe:animate-spin" aria-hidden />
         </div>
-      </Layout>
-    )
+      )
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    <>
       <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
@@ -307,6 +304,6 @@ export default function UnregisteredReportsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </>
   )
 }

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { parseFlashCSVFromBuffer } from '@/lib/flash-parser'
 import { saveFlashRecords } from '@/lib/flash-storage'
 import { requireAdmin } from '@/lib/server-auth'
+import { CACHE_TAG_STREAM_ANALYTICS } from '@/lib/dashboard-cache-tags'
 
 /**
  * POST /api/analytics/import-flash
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await saveFlashRecords(records)
+    revalidateTag(CACHE_TAG_STREAM_ANALYTICS)
 
     return NextResponse.json({
       success: true,

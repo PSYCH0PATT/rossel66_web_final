@@ -60,16 +60,7 @@ export default function LoginForm() {
 
       const user = result.user
 
-      // Сохраняем данные пользователя (без пароля)
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          username: user.username,
-          role: user.role,
-          id: user.id,
-          name: user.name,
-        }),
-      )
+      // Сессия только в httpOnly cookie (см. /api/auth/login)
 
       if (user.role === "admin") {
         router.push("/dashboard/admin/dashboard")

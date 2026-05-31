@@ -2,10 +2,12 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo, memo } from "react"
+import { useEffect, useMemo, memo } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
+import { useDashboardProfile } from "@/components/dashboard-user-context"
+import { dashboardLogout } from "@/lib/dashboard-logout"
 interface SidebarProps {
   role: "artist" | "admin"
   username?: string
@@ -84,31 +86,19 @@ const SidebarNavItem = memo(function SidebarNavItem({
 export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [currentUsername, setCurrentUsername] = useState(username || "")
+  const profile = useDashboardProfile()
+  const currentUsername = username || profile?.username || ""
 
   useEffect(() => {
-    if (username) {
-      setCurrentUsername(username)
-      return
-    }
-    try {
-      const userStr = localStorage.getItem("user")
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        if (user?.username) setCurrentUsername(user.username)
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [username])
+    onMobileMenuOpenChange(false)
+  }, [pathname, onMobileMenuOpenChange])
 
   function handleNavigation() {
     onMobileMenuOpenChange(false)
   }
 
   function handleLogout() {
-    localStorage.removeItem("user")
-    router.push("/dashboard/login")
+    void dashboardLogout(router)
   }
 
   // Создаем базовые пути для артиста с учетом username
@@ -223,7 +213,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
       {/* Mobile Overlay Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden top-[calc(4rem+max(0px,env(safe-area-inset-top,0px)))]"
+          className="fixed inset-x-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden top-[calc(4rem+env(safe-area-inset-top,0px))]"
           onClick={() => onMobileMenuOpenChange(false)}
           aria-hidden
         />

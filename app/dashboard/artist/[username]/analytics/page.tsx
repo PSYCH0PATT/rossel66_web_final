@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
+import { useDashboardProfile } from "@/components/dashboard-user-context"
 import dynamic from "next/dynamic"
-import Layout from "@/components/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -65,7 +65,7 @@ export default function ArtistAnalyticsPage() {
   const router = useRouter()
   const params = useParams()
   const username = typeof params?.username === "string" ? params.username : ""
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const profile = useDashboardProfile()
   const [loading, setLoading] = useState(true)
   const [tracks, setTracks] = useState<Track[]>([])
   const [selectedTrack, setSelectedTrack] = useState<string>("all")
@@ -79,24 +79,14 @@ export default function ArtistAnalyticsPage() {
     setChartMounted(true)
   }, [])
 
-  // Auth
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        if (user.role === "artist") {
-          setCurrentUser(user)
-        } else {
-          router.push("/dashboard/admin/dashboard")
-        }
-      } catch {
-        router.push("/dashboard/login")
-      }
-    } else {
-      router.push("/dashboard/login")
+    if (!profile) return
+    if (profile.role !== "artist") {
+      router.push("/dashboard/admin/dashboard")
     }
-  }, [router])
+  }, [profile, router])
+
+  const currentUser = profile?.role === "artist" ? profile : null
 
   // Загрузка треков
   useEffect(() => {
@@ -156,14 +146,8 @@ export default function ArtistAnalyticsPage() {
     loadData()
   }, [loadData])
 
-  const layoutShell = (inner: ReactNode) => (
-    <Layout role="artist" requiredRole="artist" username={username}>
-      {inner}
-    </Layout>
-  )
-
-  if (!currentUser) {
-    return layoutShell(
+    if (!currentUser) {
+    return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
       </div>
@@ -174,7 +158,7 @@ export default function ArtistAnalyticsPage() {
   const totalPaid = data?.paidVsFree.find(p => p.name === "Платные")?.value || 0
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
 
-  return layoutShell(
+  return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">

@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import Link from "next/link"
 import type { AdminArtistItem } from "@/lib/cached-dashboard"
+import {
+  ARTIST_REPORT_FIELD_LABELS,
+  getArtistReportMissingFields,
+} from "@/lib/artist-report-requirements"
 
 export default function AdminArtistsClient() {
   const [allArtists, setAllArtists] = useState<AdminArtistItem[]>([])
@@ -423,11 +427,24 @@ export default function AdminArtistsClient() {
                           {artist.fioShort}
                         </p>
                       )}
-                      {artist.percentage != null && (
-                        <p className="artist-card-meta truncate w-full text-primary text-[10px] font-mono tabular-nums">
-                          {artist.percentage}%
-                        </p>
-                      )}
+                      {(() => {
+                        const missing = getArtistReportMissingFields(artist)
+                        if (missing.length === 0) {
+                          return (
+                            <p className="artist-card-meta truncate w-full text-primary text-[10px] font-mono tabular-nums">
+                              {artist.percentage}%
+                            </p>
+                          )
+                        }
+                        return (
+                          <span
+                            className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-widest border border-amber-500/30 bg-amber-500/10 text-amber-300"
+                            title={`Нет: ${missing.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")}`}
+                          >
+                            нет данных для отчёта
+                          </span>
+                        )
+                      })()}
                     </div>
                   </div>
                 </Link>

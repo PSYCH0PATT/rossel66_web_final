@@ -15,7 +15,13 @@ export async function exportPrismaDataForPython(requestId: string): Promise<Expo
   const users = await prisma.user.findMany({
     where: { role: 'artist' }
   })
-  const artistsData = users.map(userFromPrisma)
+  const artistsData = users.map((u) => {
+    const dto = userFromPrisma(u)
+    return {
+      ...dto,
+      percentage: u.percentage ?? null,
+    }
+  })
 
   // 2. Fetch releases
   const releases = await prisma.release.findMany()

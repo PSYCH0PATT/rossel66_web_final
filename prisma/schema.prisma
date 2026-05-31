@@ -35,6 +35,7 @@ model Release {
   title             String
   artistId          String?
   releaseDate       String
+  releaseDateSort   DateTime?
   type              String?
   coverUrl          String?
   upc               String?
@@ -51,6 +52,8 @@ model Release {
   @@index([artistId])
   @@index([koalaId])
   @@index([artistId, createdAt])
+  @@index([releaseDateSort])
+  @@index([artistId, releaseDateSort])
 }
 
 model Report {
@@ -148,4 +151,28 @@ model StreamAnalytics {
   @@index([artistId, date])
   @@index([artistId, isMonthlyAggregate, year, month])
   @@unique([date, isrc, dsp, length, source, isMonthlyAggregate], map: "stream_analytics_flash_row_key")
+}
+
+/** Parser cookies (Bandlink/VK) — survives Timeweb ephemeral disk rebuild */
+model ParserCookie {
+  id        String   @id @default(cuid())
+  platform  String
+  name      String
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([platform, name])
+  @@index([platform])
+}
+
+/** Parser run status / cookie alerts — survives Timeweb rebuild */
+model ParserRunStatus {
+  platform          String   @id
+  status            String   @default("idle")
+  lastRun           DateTime?
+  needsNewCookies   Boolean  @default(false)
+  failedAttempts    Int      @default(0)
+  lastError         String?
+  updatedAt         DateTime @updatedAt
 }

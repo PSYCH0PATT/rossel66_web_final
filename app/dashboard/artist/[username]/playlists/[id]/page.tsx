@@ -3,7 +3,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { getSessionUser } from "@/lib/server-auth"
 import { prisma } from "@/lib/prisma"
-import Layout from "@/components/layout"
 import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
@@ -60,8 +59,7 @@ export default async function ArtistPlaylistDetailPage({
   const added = playlist.firstSeenDate || playlist.createdAt.toISOString().split("T")[0]
 
   return (
-    <Layout role="artist" requiredRole="artist" username={params.username}>
-      <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2 min-w-0">
@@ -184,6 +182,5 @@ export default async function ArtistPlaylistDetailPage({
         <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
       </div>
       </div>
-    </Layout>
-  )
+    )
 }

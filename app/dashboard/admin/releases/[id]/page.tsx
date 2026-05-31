@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -128,18 +127,16 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
 
   if (loading) {
     return (
-      <Layout role="admin" requiredRole="admin">
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
           <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
         </div>
-      </Layout>
-    )
+      )
   }
 
   if (isDeleted) {
     return (
-      <Layout role="admin" requiredRole="admin">
+      
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400 card-glass border border-white/5 p-8 rounded-2xl max-w-lg mx-auto mt-12 text-center">
           <span className="material-symbols-outlined text-destructive text-5xl animate-pulse">delete_forever</span>
           <h2 className="font-display text-2xl font-bold text-white uppercase tracking-wider">Релиз удален</h2>
@@ -153,25 +150,23 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
             </Button>
           </Link>
         </div>
-      </Layout>
-    )
+      )
   }
 
   if (!release) {
     return (
-      <Layout role="admin" requiredRole="admin">
+      
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
           <p className="text-sm font-mono uppercase tracking-widest">Релиз не найден</p>
         </div>
-      </Layout>
-    )
+      )
   }
 
   const inputCls =
     "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
   return (
-    <Layout role="admin" requiredRole="admin">
+    
       <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-4 min-w-0">
@@ -528,7 +523,6 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }
 

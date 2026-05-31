@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState } from "react"
-import Layout from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -118,8 +117,7 @@ export default function AddArtistPage() {
   }
 
   return (
-    <Layout role="admin" requiredRole="admin">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
             <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
@@ -422,6 +420,5 @@ export default function AddArtistPage() {
           <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
         </footer>
       </div>
-    </Layout>
-  )
+    )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import Layout from "@/components/layout"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound, useRouter } from "next/navigation"
@@ -184,18 +183,16 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
 
   if (loading) {
     return (
-      <Layout role="artist" requiredRole="artist" username={params.username}>
-        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
           <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
         </div>
-      </Layout>
-    )
+      )
   }
 
   if (!artist || !release) {
     return (
-      <Layout role="artist" requiredRole="artist" username={params.username}>
+      
         <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center">
           <div className="text-red-500/85 p-3 bg-red-500/10 rounded-full border border-red-500/20">
             <span className="material-symbols-outlined" style={{ fontSize: 32 }}>error</span>
@@ -213,8 +210,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
             Вернуться к релизам
           </Link>
         </div>
-      </Layout>
-    )
+      )
   }
 
   const dashHref = `/dashboard/artist/${params.username}/dashboard`
@@ -223,7 +219,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
     release.title.length > 32 ? `${release.title.slice(0, 32)}…` : release.title
 
   return (
-    <Layout role="artist" requiredRole="artist" username={params.username}>
+    
       <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -426,6 +422,5 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
         <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
       </div>
       </div>
-    </Layout>
-  )
+    )
 }

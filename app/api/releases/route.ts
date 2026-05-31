@@ -1,14 +1,30 @@
 import { NextResponse } from "next/server"
 import { addReleaseWithActivities, getUserById } from "@/lib/storage"
-import { releaseFromPrisma } from "@/lib/storage-adapters"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { getSessionUser, requireAuth, requireAdmin } from "@/lib/server-auth"
 import { releasePostSchema } from "@/lib/api-schemas"
+import { jsonWithPerfLog } from "@/lib/api-perf-log"
+import { releaseListItemFromPrisma } from "@/lib/release-list-dto"
 
 export const dynamic = "force-dynamic"
 
 const PAGE_SIZES = new Set([20, 50, 100])
+
+const LIST_SELECT = {
+  id: true,
+  title: true,
+  artistId: true,
+  releaseDate: true,
+  type: true,
+  coverUrl: true,
+  upc: true,
+  status: true,
+  featuredArtistIds: true,
+  featuredArtistNames: true,
+  tracks: true,
+  metadata: true,
+} as const
 
 function parsePagination(searchParams: URLSearchParams) {
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1)
@@ -19,6 +35,9 @@ function parsePagination(searchParams: URLSearchParams) {
 
 /** GET /api/releases — пагинация + опциональные фильтры (админ: всё; артист: только свой artistId) */
 export async function GET(request: Request) {
+  const startedAt = performance.now()
+  const pathname = new URL(request.url).pathname
+
   try {
     const denied = await requireAuth(request)
     if (denied) return denied
@@ -68,7 +87,7 @@ export async function GET(request: Request) {
       })
       const ids = matchingUsers.map((u) => u.id)
       if (ids.length === 0) {
-        return NextResponse.json({
+        return jsonWithPerfLog(pathname, startedAt, {
           success: true,
           releases: [],
           total: 0,
@@ -88,48 +107,18 @@ export async function GET(request: Request) {
 
     const where: Prisma.ReleaseWhereInput = andParts.length ? { AND: andParts } : {}
 
-    // 1. Получаем только необходимые поля (без тяжелого JSON) для сортировки всех совпадений в памяти
-    const allMatches = await prisma.release.findMany({
-      where,
-      select: { id: true, releaseDate: true, createdAt: true },
-    })
+    const [total, rows] = await Promise.all([
+      prisma.release.count({ where }),
+      prisma.release.findMany({
+        where,
+        select: LIST_SELECT,
+        orderBy: [{ releaseDateSort: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: pageSize,
+      }),
+    ])
 
-    const total = allMatches.length
-
-    // 2. Функция парсинга формата 'DD.MM.YYYY' в timestamp
-    const parseDate = (dStr: string) => {
-      if (!dStr || dStr === "--") return 0
-      const parts = dStr.split(".")
-      if (parts.length === 3) {
-        const [d, m, y] = parts
-        return new Date(`${y}-${m}-${d}`).getTime()
-      }
-      return 0
-    }
-
-    // 3. Сортируем все релизы по убыванию даты релиза (самые новые сверху)
-    allMatches.sort((a, b) => {
-      const timeA = parseDate(a.releaseDate)
-      const timeB = parseDate(b.releaseDate)
-      if (timeA !== timeB) {
-        return timeB - timeA // Descending: newest first
-      }
-      // Если даты равны, сортируем по дате добавления в систему (createdAt)
-      return b.createdAt.getTime() - a.createdAt.getTime()
-    })
-
-    // 4. Пагинация
-    const pageIds = allMatches.slice(skip, skip + pageSize).map((m) => m.id)
-
-    // 5. Запрашиваем полные данные только для нужной страницы
-    const rawUnsorted = await prisma.release.findMany({
-      where: { id: { in: pageIds } },
-    })
-
-    // 6. Восстанавливаем правильный порядок, так как findMany(in) не гарантирует порядок
-    const raw = pageIds.map(id => rawUnsorted.find(r => r.id === id)!).filter(Boolean)
-
-    const base = raw.map(releaseFromPrisma)
+    const base = rows.map(releaseListItemFromPrisma)
     const artistIds = [...new Set(base.map((r) => r.artistId).filter(Boolean))] as string[]
     const users =
       artistIds.length > 0
@@ -145,7 +134,7 @@ export async function GET(request: Request) {
       artistName: r.artistId ? nameById.get(r.artistId) ?? "" : "",
     }))
 
-    return NextResponse.json({
+    return jsonWithPerfLog(pathname, startedAt, {
       success: true,
       releases,
       total,
@@ -173,34 +162,17 @@ export async function POST(request: Request) {
     }
     const releaseData = parsed.data
 
-    console.log("Получены данные для создания релиза:", releaseData)
-
-    const newRelease = {
-      id: `release_${Date.now()}`,
-      artistId: releaseData.artistId,
-      title: releaseData.title,
-      coverUrl: releaseData.coverUrl || "",
-      upc: releaseData.upc,
-      releaseDate: releaseData.releaseDate,
-      status: releaseData.status || "moderation",
-      tracks: (releaseData.tracks || []) as unknown as import("@/lib/storage").Track[],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    console.log("Создаем релиз с данными:", newRelease)
-
     const artist = await getUserById(releaseData.artistId)
 
     const createdRelease = await addReleaseWithActivities(
       {
-        artistId: newRelease.artistId,
-        title: newRelease.title,
-        coverUrl: newRelease.coverUrl,
-        upc: newRelease.upc,
-        releaseDate: newRelease.releaseDate,
-        status: newRelease.status,
-        tracks: newRelease.tracks,
+        artistId: releaseData.artistId,
+        title: releaseData.title,
+        coverUrl: releaseData.coverUrl || "",
+        upc: releaseData.upc,
+        releaseDate: releaseData.releaseDate,
+        status: releaseData.status || "moderation",
+        tracks: (releaseData.tracks || []) as unknown as import("@/lib/storage").Track[],
       },
       (created) =>
         artist
@@ -229,8 +201,6 @@ export async function POST(request: Request) {
             ]
           : []
     )
-
-    console.log("Релиз успешно сохранен")
 
     return NextResponse.json({ success: true, release: createdRelease })
   } catch (error) {
