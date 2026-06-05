@@ -2,10 +2,29 @@
  * Сопоставление trackArtist из rossel_flash с профилями артистов.
  */
 
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { normalizeArtistName } from '@/lib/storage'
 import { tokenizeCollaborationArtistField } from '@/lib/playlist-artist-match'
 import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names'
+
+export const ANALYTICS_ALIAS_MIGRATION_MESSAGE =
+  'Миграция БД не применена: отсутствует таблица AnalyticsArtistAlias. Выполните pnpm db:migrate на Supabase (DIRECT_URL, порт 5432).'
+
+export class AnalyticsAliasTableMissingError extends Error {
+  constructor() {
+    super(ANALYTICS_ALIAS_MIGRATION_MESSAGE)
+    this.name = 'AnalyticsAliasTableMissingError'
+  }
+}
+
+export function isAnalyticsAliasTableMissingError(error: unknown): boolean {
+  if (error instanceof AnalyticsAliasTableMissingError) return true
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
+  if (error.code !== 'P2021') return false
+  const table = String((error.meta as { table?: string } | undefined)?.table ?? '')
+  return table.includes('AnalyticsArtistAlias')
+}
 
 const LOOKALIKE_REPLACEMENTS: [RegExp, string][] = [
   [/ø/g, 'o'],
@@ -123,15 +142,29 @@ export function isCollaborationTrackArtist(trackArtist: string): boolean {
   return splitCollaboratingArtistDisplayNames(trackArtist).length > 1
 }
 
+async function loadAnalyticsAliasRows(): Promise<AnalyticsArtistAliasRow[]> {
+  try {
+    return await prisma.analyticsArtistAlias.findMany({
+      select: { trackArtist: true, artistId: true },
+    })
+  } catch (error) {
+    if (isAnalyticsAliasTableMissingError(error)) {
+      console.warn(
+        '⚠️ AnalyticsArtistAlias table missing; using User-only artist matching until migrate deploy'
+      )
+      return []
+    }
+    throw error
+  }
+}
+
 export async function loadAnalyticsArtistLookup(): Promise<AnalyticsArtistLookup> {
   const [users, aliases] = await Promise.all([
     prisma.user.findMany({
       where: { role: 'artist' },
       select: { id: true, name: true, username: true },
     }),
-    prisma.analyticsArtistAlias.findMany({
-      select: { trackArtist: true, artistId: true },
-    }),
+    loadAnalyticsAliasRows(),
   ])
   return buildAnalyticsArtistLookup(users, aliases)
 }
@@ -168,12 +201,19 @@ export async function assignAnalyticsToArtist(
     }
   }
 
-  for (const trackArtist of trackArtistsToLink) {
-    await prisma.analyticsArtistAlias.upsert({
-      where: { trackArtist },
-      create: { trackArtist, artistId },
-      update: { artistId },
-    })
+  if (trackArtistsToLink.size > 0) {
+    try {
+      for (const trackArtist of trackArtistsToLink) {
+        await prisma.analyticsArtistAlias.upsert({
+          where: { trackArtist },
+          create: { trackArtist, artistId },
+          update: { artistId },
+        })
+      }
+    } catch (error) {
+      if (!isAnalyticsAliasTableMissingError(error)) throw error
+      console.warn('⚠️ AnalyticsArtistAlias missing; backfill StreamAnalytics without alias rows')
+    }
   }
 
   const trackArtistList = [...trackArtistsToLink]
@@ -200,11 +240,18 @@ export async function linkTrackArtistToProfile(
   const trimmed = trackArtist.trim()
   if (!trimmed) return { rowsUpdated: 0 }
 
-  await prisma.analyticsArtistAlias.upsert({
-    where: { trackArtist: trimmed },
-    create: { trackArtist: trimmed, artistId },
-    update: { artistId },
-  })
+  try {
+    await prisma.analyticsArtistAlias.upsert({
+      where: { trackArtist: trimmed },
+      create: { trackArtist: trimmed, artistId },
+      update: { artistId },
+    })
+  } catch (error) {
+    if (isAnalyticsAliasTableMissingError(error)) {
+      throw new AnalyticsAliasTableMissingError()
+    }
+    throw error
+  }
 
   const result = await prisma.streamAnalytics.updateMany({
     where: { trackArtist: trimmed },
@@ -319,11 +366,16 @@ export async function buildCabinetStreamAnalyticsWhere(
   displayName: string,
   username: string
 ): Promise<Record<string, unknown>> {
-  const aliases = await prisma.analyticsArtistAlias.findMany({
-    where: { artistId: userId },
-    select: { trackArtist: true },
-  })
-  const aliasSet = new Set(aliases.map((a) => a.trackArtist))
+  let aliasSet = new Set<string>()
+  try {
+    const aliases = await prisma.analyticsArtistAlias.findMany({
+      where: { artistId: userId },
+      select: { trackArtist: true },
+    })
+    aliasSet = new Set(aliases.map((a) => a.trackArtist))
+  } catch (error) {
+    if (!isAnalyticsAliasTableMissingError(error)) throw error
+  }
 
   const unmappedDistinct = await prisma.streamAnalytics.findMany({
     where: { artistId: null },

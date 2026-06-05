@@ -3,7 +3,6 @@
  * Запуск: npx tsx scripts/rematch-analytics-artists.ts
  */
 
-import 'dotenv/config'
 import { prisma } from '../lib/prisma'
 import { rematchUnmappedAnalytics } from '../lib/analytics-artist-match'
 

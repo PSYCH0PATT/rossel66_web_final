@@ -45,7 +45,7 @@ pnpm db:migrate:status   # pending migrations?
 pnpm db:migrate            # apply to Supabase
 ```
 
-If `migrate deploy` hangs on pooler port **6543**, use session port **5432** (same URL, swap port) or set `DIRECT_URL` in `.env.local` per `SUPABASE_SETUP.md`.
+If `migrate deploy` hangs on pooler port **6543**, use session port **5432** (same URL, swap port) or set `DIRECT_URL` in Timeweb env / `.env.local` per `SUPABASE_SETUP.md`. `prisma.config.ts` prefers `DIRECT_URL` for CLI migrations; the app keeps using `DATABASE_URL` (pooler).
 
 Optional after `release_date_sort` migration:
 
@@ -59,7 +59,7 @@ Verify:
 SELECT COUNT(*) AS total, COUNT("releaseDateSort") AS with_sort FROM "Release";
 ```
 
-Timeweb **does not** run migrations automatically (`entrypoint.sh` only starts cron + Next). Run `pnpm db:migrate` against prod Supabase before or right after each release that adds migrations.
+On container start, [`entrypoint.sh`](../entrypoint.sh) runs `pnpm db:migrate` before `next start` when `DATABASE_URL` or `DIRECT_URL` is set. **Set `DIRECT_URL` (port 5432)** in Timeweb env so migrate does not hang on the pooler. If the container fails to start after deploy, check migrate logs and run `pnpm db:migrate` manually once against Supabase.
 
 ## Acceptance after Timeweb rebuild
 

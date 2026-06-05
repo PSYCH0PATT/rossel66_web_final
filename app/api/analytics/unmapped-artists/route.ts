@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAnalyticsMigrationHttpError } from '@/lib/analytics-api-errors'
 import { countUnmappedTrackArtists, listUnmappedTrackArtists } from '@/lib/analytics-artist-match'
 import { requireAdmin } from '@/lib/server-auth'
 
@@ -24,6 +25,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, artists, total, take, skip })
   } catch (error) {
+    const migrationErr = getAnalyticsMigrationHttpError(error)
+    if (migrationErr) {
+      return NextResponse.json({ success: false, error: migrationErr.message }, { status: migrationErr.status })
+    }
     console.error('❌ unmapped-artists:', error)
     return NextResponse.json({ success: false, error: 'Внутренняя ошибка сервера' }, { status: 500 })
   }
