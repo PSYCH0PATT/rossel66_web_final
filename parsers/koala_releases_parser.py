@@ -217,50 +217,54 @@ class KoalaReleasesParser:
             
             print("📝 Заполняем форму входа...")
             
-            # Ждем появления формы
             wait = WebDriverWait(self.driver, self.config.get('timeout', 30))
             
-            # Находим поле email
-            email_field = wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, 'input[name="Username"], input[type="email"], input[placeholder*="mail"]')
+            # identity.koala-music.com: видимое поле UserName (не скрытый Email)
+            email_field = wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'input[name="UserName"], input#UserName')
             ))
             email_field.clear()
             email_field.send_keys(login_email)
             time.sleep(0.5)
             
-            # Находим поле пароля
-            password_field = self.driver.find_element(
-                By.CSS_SELECTOR, 'input[name="Password"], input[type="password"]'
-            )
+            password_field = wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'input[name="Password"]:not([type="hidden"]), input#Password')
+            ))
             password_field.clear()
             password_field.send_keys(login_password)
             time.sleep(0.5)
             
-            # Нажимаем кнопку входа
-            try:
-                submit_button = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
-            except NoSuchElementException:
-                # Пробуем найти по тексту кнопки
-                buttons = self.driver.find_elements(By.TAG_NAME, 'button')
-                submit_button = None
-                for btn in buttons:
-                    text = btn.text.lower()
-                    if 'продолжить' in text or 'войти' in text or 'вход' in text:
-                        submit_button = btn
-                        break
-                if not submit_button and buttons:
-                    submit_button = buttons[-1]  # Последняя кнопка как fallback
+            # Кнопка «Продолжить» — type=button; первый type=submit на странице — переключатель «EN»
+            submit_button = None
+            for btn in self.driver.find_elements(By.TAG_NAME, 'button'):
+                text = btn.text.strip().lower()
+                if text in ('продолжить', 'continue', 'войти', 'log in', 'sign in'):
+                    submit_button = btn
+                    break
             
-            if submit_button:
-                submit_button.click()
+            if not submit_button:
+                print("❌ Кнопка входа не найдена на странице")
+                return False
             
-            # Ждем редиректа на страницу релизов
+            submit_button.click()
+            
             print("⏳ Ожидаем авторизацию...")
-            time.sleep(5)
+            try:
+                wait.until(lambda d: (
+                    'releases' in d.current_url
+                    or (
+                        self.config['base_url'] in d.current_url
+                        and 'identity.koala-music.com' not in d.current_url
+                    )
+                ))
+            except TimeoutException:
+                pass
             
-            # Проверяем успешность авторизации
             current_url = self.driver.current_url
-            if 'releases' in current_url or self.config['base_url'] in current_url:
+            if 'releases' in current_url or (
+                self.config['base_url'] in current_url
+                and 'identity.koala-music.com' not in current_url
+            ):
                 print("✅ Авторизация успешна")
                 return True
             else:
