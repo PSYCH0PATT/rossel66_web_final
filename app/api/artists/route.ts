@@ -122,6 +122,14 @@ export async function POST(request: Request) {
       console.error('Error assigning playlists:', error)
     }
 
+    let assignedAnalytics = { aliasesCreated: 0, rowsUpdated: 0 }
+    try {
+      const { assignAnalyticsToArtist } = await import('@/lib/analytics-artist-match')
+      assignedAnalytics = await assignAnalyticsToArtist(newUser.id, [name, username])
+    } catch (error) {
+      console.error('Error assigning analytics:', error)
+    }
+
     // Log artist creation
     await addActivity({
       type: 'artist_added',
@@ -134,7 +142,8 @@ export async function POST(request: Request) {
         artistName: newUser.name,
         assignedReports,
         assignedReleases,
-        assignedPlaylists
+        assignedPlaylists,
+        assignedAnalytics,
       }
     })
     

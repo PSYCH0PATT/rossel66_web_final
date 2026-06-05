@@ -20,6 +20,7 @@ import { BarChart3, CalendarIcon, Loader2, TrendingUp } from "lucide-react"
 import dynamic from "next/dynamic"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
 import TrackPaidFreeDistribution from "@/components/analytics/TrackPaidFreeDistribution"
+import { UnmappedArtistsPanel, UnmappedArtistsTrigger } from "@/components/analytics/unmapped-artists-panel"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -51,7 +52,20 @@ interface Track {
 
 interface ArtistOption {
   trackArtist: string
-  artistId: string
+  artistId: string | null
+  mappedProfileName: string | null
+  mappedUsername: string | null
+  totalStreams: number
+}
+
+function artistFilterParams(selected: string, artists: ArtistOption[]): URLSearchParams {
+  const params = new URLSearchParams()
+  if (selected === "all") return params
+  const artist = artists.find((a) => a.trackArtist === selected)
+  if (!artist) return params
+  if (artist.artistId) params.set("artistId", artist.artistId)
+  else params.set("trackArtist", artist.trackArtist)
+  return params
 }
 
 interface AnalyticsData {
@@ -109,6 +123,8 @@ export default function AdminAnalyticsPage() {
   const [syncRangeStart, setSyncRangeStart] = useState("2026-03-01")
   const [syncRangeEnd, setSyncRangeEnd] = useState(() => mskDateString())
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [unmappedOpen, setUnmappedOpen] = useState(false)
+  const [unmappedCount, setUnmappedCount] = useState<number | null>(null)
 
   const [artists, setArtists] = useState<ArtistOption[]>([])
   const [selectedArtist, setSelectedArtist] = useState<string>("all")
@@ -135,18 +151,28 @@ export default function AdminAnalyticsPage() {
     }
   }, [profile, router])
 
-  // Загрузка артистов
-  useEffect(() => {
-    fetch("/api/analytics/artists")
-      .then(r => r.json())
-      .then(d => { if (d.success) setArtists(d.artists) })
+  const refreshArtistsAndUnmapped = useCallback(() => {
+    fetch("/api/analytics/artists?take=2000")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setArtists(d.artists)
+      })
+      .catch(console.error)
+    fetch("/api/analytics/unmapped-artists?take=1")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setUnmappedCount(d.total)
+      })
       .catch(console.error)
   }, [])
 
+  useEffect(() => {
+    refreshArtistsAndUnmapped()
+  }, [refreshArtistsAndUnmapped])
+
   // Загрузка треков при смене артиста
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (selectedArtist !== "all") params.set("artistId", selectedArtist)
+    const params = artistFilterParams(selectedArtist, artists)
 
     fetch(`/api/analytics/tracks?${params}`)
       .then(r => r.json())
@@ -155,7 +181,7 @@ export default function AdminAnalyticsPage() {
         setSelectedTrack("all") // сброс при смене артиста
       })
       .catch(console.error)
-  }, [selectedArtist])
+  }, [selectedArtist, artists])
 
   // Загрузка данных
   const loadData = useCallback(async () => {
@@ -178,8 +204,8 @@ export default function AdminAnalyticsPage() {
       }
 
       const params = new URLSearchParams({ startDate, endDate })
-
-      if (selectedArtist !== "all") params.set("artistId", selectedArtist)
+      const artistParams = artistFilterParams(selectedArtist, artists)
+      artistParams.forEach((v, k) => params.set(k, v))
       if (selectedTrack !== "all") {
         const track = tracks.find(t => t.isrc === selectedTrack)
         if (track) params.set("isrc", track.isrc)
@@ -196,7 +222,7 @@ export default function AdminAnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }, [period, selectedArtist, selectedTrack, customStart, customEnd, tracks])
+  }, [period, selectedArtist, selectedTrack, customStart, customEnd, tracks, artists])
 
   useEffect(() => {
     if (currentUser) loadData()
@@ -220,7 +246,8 @@ export default function AdminAnalyticsPage() {
       if (json.success) {
         setImportResult(`Импортировано ${json.stats.added} записей, пропущено ${json.stats.skipped} дубликатов`)
         revalidateStreamAnalytics()
-        loadData() // перезагружаем данные
+        refreshArtistsAndUnmapped()
+        loadData()
       } else {
         setImportResult(`Ошибка: ${json.error}`)
       }
@@ -294,9 +321,8 @@ export default function AdminAnalyticsPage() {
         setImportResult(describeSyncResult(json))
         setSyncDialogOpen(false)
         loadData()
-        fetch("/api/analytics/artists").then(r => r.json()).then(d => { if (d.success) setArtists(d.artists) })
-        const params = new URLSearchParams()
-        if (selectedArtist !== "all") params.set("artistId", selectedArtist)
+        refreshArtistsAndUnmapped()
+        const params = artistFilterParams(selectedArtist, artists)
         fetch(`/api/analytics/tracks?${params}`).then(r => r.json()).then(d => { if (d.success) setTracks(d.tracks) })
       } else {
         setImportResult(`Ошибка: ${json.error || json.details || "Unknown"}`)
@@ -367,6 +393,7 @@ export default function AdminAnalyticsPage() {
                   <span>{importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin inline" /> : null}Загрузить CSV</span>
                 </Button>
               </label>
+              <UnmappedArtistsTrigger count={unmappedCount} onOpen={() => setUnmappedOpen(true)} />
             </nav>
           </div>
 
@@ -386,9 +413,22 @@ export default function AdminAnalyticsPage() {
                 <SelectItem value="all" className="text-[10px] font-bold uppercase tracking-widest">
                   Все артисты
                 </SelectItem>
-                {artists.map(a => (
-                  <SelectItem key={a.artistId} value={a.artistId} className="text-[10px] font-bold uppercase tracking-widest">
-                    {a.trackArtist}
+                {artists.map((a) => (
+                  <SelectItem
+                    key={a.trackArtist}
+                    value={a.trackArtist}
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{a.trackArtist}</span>
+                      {a.artistId ? (
+                        <span className="text-gray-500 normal-case">
+                          → {a.mappedUsername || a.mappedProfileName}
+                        </span>
+                      ) : (
+                        <span className="text-amber-500/80 text-[9px]">без профиля</span>
+                      )}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -794,6 +834,15 @@ export default function AdminAnalyticsPage() {
             </Card>
           </div>
         )}
+
+        <UnmappedArtistsPanel
+          open={unmappedOpen}
+          onOpenChange={setUnmappedOpen}
+          onLinked={() => {
+            refreshArtistsAndUnmapped()
+            loadData()
+          }}
+        />
       </div>
     )
 }

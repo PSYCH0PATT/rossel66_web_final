@@ -121,6 +121,17 @@ model Playlist {
   @@index([coverFetchedAt])
 }
 
+model AnalyticsArtistAlias {
+  id          String   @id @default(cuid())
+  trackArtist String
+  artistId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([trackArtist])
+  @@index([artistId])
+}
+
 model StreamAnalytics {
   id               String   @id @default(cuid())
   date             DateTime

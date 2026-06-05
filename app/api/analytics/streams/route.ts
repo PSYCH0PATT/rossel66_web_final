@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCachedStreamAnalytics } from '@/lib/cached-dashboard'
+import { buildAnalyticsFiltersFromRequest } from '@/lib/analytics-request-filters'
 import { getSessionUser, requireAuth } from '@/lib/server-auth'
 import { jsonWithPerfLog } from '@/lib/api-perf-log'
-import type { StreamFilters } from '@/lib/flash-storage'
 
 export const dynamic = "force-dynamic"
 
@@ -27,19 +27,7 @@ export async function GET(request: NextRequest) {
     const session = getSessionUser()!
 
     const { searchParams } = new URL(request.url)
-
-    let artistId = searchParams.get('artistId') || undefined
-    if (session.role === 'artist') {
-      artistId = session.id
-    }
-
-    const filters: StreamFilters = {
-      artistId,
-      startDate: searchParams.get('startDate') || undefined,
-      endDate: searchParams.get('endDate') || undefined,
-      trackName: searchParams.get('trackName') || undefined,
-      isrc: searchParams.get('isrc') || undefined,
-    }
+    const filters = await buildAnalyticsFiltersFromRequest(session, searchParams)
 
     const data = await getCachedStreamAnalytics(filters)
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAvailableTracks } from '@/lib/flash-storage'
+import { buildAnalyticsFiltersFromRequest } from '@/lib/analytics-request-filters'
 import { getSessionUser, requireAuth } from '@/lib/server-auth'
 
 export const dynamic = 'force-dynamic'
@@ -18,13 +19,10 @@ export async function GET(request: NextRequest) {
     const session = getSessionUser()!
 
     const { searchParams } = new URL(request.url)
-    let artistId = searchParams.get('artistId') || undefined
-    if (session.role === 'artist') {
-      artistId = session.id
-    }
+    const filters = await buildAnalyticsFiltersFromRequest(session, searchParams)
     const take = Math.min(Number(searchParams.get('take') || '100') || 100, 2000)
     const skip = Math.max(0, Number(searchParams.get('skip') || '0') || 0)
-    const tracks = await getAvailableTracks(artistId, { take, skip })
+    const tracks = await getAvailableTracks(filters, { take, skip })
 
     return NextResponse.json({ success: true, tracks, take, skip })
 

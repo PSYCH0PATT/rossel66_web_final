@@ -4,6 +4,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import {
+  loadAnalyticsArtistLookup,
+  resolveArtistId,
+  buildCabinetStreamAnalyticsWhere,
+} from '@/lib/analytics-artist-match'
 import type { FlashRecord } from './flash-parser'
 
 // ─── Сохранение ────────────────────────────────────────────────
@@ -25,18 +30,7 @@ export async function saveFlashRecords(records: FlashRecord[]): Promise<SaveFlas
   if (records.length === 0) return result
 
   try {
-    // Загружаем всех артистов для маппинга
-    const users = await prisma.user.findMany({
-      where: { role: 'artist' },
-      select: { id: true, name: true, username: true }
-    })
-
-    // Создаём Map для быстрого поиска по имени (lowercase)
-    const artistMap = new Map<string, string>()
-    for (const u of users) {
-      if (u.name) artistMap.set(u.name.toLowerCase(), u.id)
-      if (u.username) artistMap.set(u.username.toLowerCase(), u.id)
-    }
+    const lookup = await loadAnalyticsArtistLookup()
 
     // Проверяем какие даты уже есть в БД для избежания дубликатов
     const dates = [...new Set(records.map(r => r.date.toISOString().split('T')[0]))]
@@ -66,7 +60,7 @@ export async function saveFlashRecords(records: FlashRecord[]): Promise<SaveFlas
         continue
       }
 
-      const artistId = artistMap.get(rec.trackArtist.toLowerCase()) || null
+      const artistId = resolveArtistId(rec.trackArtist, lookup)
 
       toInsert.push({
         date: rec.date,
@@ -112,10 +106,13 @@ export async function saveFlashRecords(records: FlashRecord[]): Promise<SaveFlas
 
 export interface StreamFilters {
   artistId?: string
+  trackArtist?: string
   startDate?: string  // ISO date string
   endDate?: string    // ISO date string
   trackName?: string
   isrc?: string
+  /** Prisma where override for artist cabinet (OR: artistId + unmapped collabs). */
+  cabinetWhere?: Record<string, unknown>
 }
 
 /**
@@ -129,7 +126,13 @@ const DEFAULT_ANALYTICS_RANGE_DAYS = 90
 
 function buildStreamAnalyticsWhere(filters: StreamFilters): { rangeWhere: Record<string, unknown> } {
   const baseWhere: Record<string, unknown> = {}
-  if (filters.artistId) baseWhere.artistId = filters.artistId
+  if (filters.cabinetWhere) {
+    Object.assign(baseWhere, filters.cabinetWhere)
+  } else if (filters.artistId) {
+    baseWhere.artistId = filters.artistId
+  } else if (filters.trackArtist) {
+    baseWhere.trackArtist = filters.trackArtist
+  }
   if (filters.trackName) baseWhere.trackName = filters.trackName
   if (filters.isrc) baseWhere.isrc = filters.isrc
 
@@ -275,9 +278,18 @@ export async function getStreamAnalytics(filters: StreamFilters) {
 /**
  * Возвращает список уникальных треков для фильтра-выпадашки.
  */
-export async function getAvailableTracks(artistId?: string, opts?: { take?: number; skip?: number }) {
+export async function getAvailableTracks(
+  filters?: Pick<StreamFilters, 'artistId' | 'trackArtist' | 'cabinetWhere'>,
+  opts?: { take?: number; skip?: number }
+) {
   const where: Record<string, unknown> = {}
-  if (artistId) where.artistId = artistId
+  if (filters?.cabinetWhere) {
+    Object.assign(where, filters.cabinetWhere)
+  } else if (filters?.artistId) {
+    where.artistId = filters.artistId
+  } else if (filters?.trackArtist) {
+    where.trackArtist = filters.trackArtist
+  }
   const take = Math.min(opts?.take ?? 500, 2000)
   const skip = Math.max(0, opts?.skip ?? 0)
 
@@ -297,27 +309,66 @@ export async function getAvailableTracks(artistId?: string, opts?: { take?: numb
   }))
 }
 
+export type AnalyticsArtistOption = {
+  trackArtist: string
+  artistId: string | null
+  mappedProfileName: string | null
+  mappedUsername: string | null
+  totalStreams: number
+}
+
 /**
- * Возвращает список уникальных артистов из аналитики (для админского фильтра).
+ * Все уникальные trackArtist из аналитики (для админского фильтра).
  */
 export async function getAvailableArtists(opts?: { take?: number; skip?: number }) {
   const take = Math.min(opts?.take ?? 500, 2000)
   const skip = Math.max(0, opts?.skip ?? 0)
 
-  const artists = await prisma.streamAnalytics.findMany({
-    select: { trackArtist: true, artistId: true },
-    distinct: ['artistId'],
-    where: { artistId: { not: null } },
+  const grouped = await prisma.streamAnalytics.groupBy({
+    by: ['trackArtist', 'artistId'],
+    _sum: { streams: true },
     orderBy: { trackArtist: 'asc' },
-    take,
-    skip,
   })
 
-  return artists.map(a => ({
-    trackArtist: a.trackArtist,
-    artistId: a.artistId!,
-  }))
+  const byTrackArtist = new Map<string, { artistId: string | null; totalStreams: number }>()
+  for (const g of grouped) {
+    const prev = byTrackArtist.get(g.trackArtist)
+    const streams = g._sum.streams ?? 0
+    if (!prev) {
+      byTrackArtist.set(g.trackArtist, { artistId: g.artistId, totalStreams: streams })
+    } else {
+      prev.totalStreams += streams
+      if (g.artistId && !prev.artistId) prev.artistId = g.artistId
+    }
+  }
+
+  const artistIds = [...new Set([...byTrackArtist.values()].map((v) => v.artistId).filter(Boolean))] as string[]
+  const users =
+    artistIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: artistIds } },
+          select: { id: true, name: true, username: true },
+        })
+      : []
+  const userById = new Map(users.map((u) => [u.id, u]))
+
+  const sorted = [...byTrackArtist.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, 'ru'))
+    .slice(skip, skip + take)
+
+  return sorted.map(([trackArtist, meta]): AnalyticsArtistOption => {
+    const profile = meta.artistId ? userById.get(meta.artistId) : undefined
+    return {
+      trackArtist,
+      artistId: meta.artistId,
+      mappedProfileName: profile?.name ?? null,
+      mappedUsername: profile?.username ?? null,
+      totalStreams: meta.totalStreams,
+    }
+  })
 }
+
+export { buildCabinetStreamAnalyticsWhere }
 
 // ─── Годовая агрегация и очистка ────────────────────────────────
 

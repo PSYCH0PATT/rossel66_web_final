@@ -102,7 +102,11 @@ function parseFlashCSV(filePath: string): FlashRecord[] {
 
 import { Pool } from 'pg'
 
-async function saveRecordsToDB(pool: Pool, records: FlashRecord[], artistMap: Map<string, string>): Promise<{ added: number; skipped: number }> {
+async function saveRecordsToDB(
+  pool: Pool,
+  records: FlashRecord[],
+  resolveArtist: (trackArtist: string) => string | null
+): Promise<{ added: number; skipped: number }> {
   if (records.length === 0) return { added: 0, skipped: 0 }
 
   // Check existing dates
@@ -123,7 +127,6 @@ async function saveRecordsToDB(pool: Pool, records: FlashRecord[], artistMap: Ma
   for (const rec of records) {
     const key = `${rec.date.toISOString().split('T')[0]}|${rec.isrc}|${rec.dsp}|${rec.length}|${rec.source}`
     if (existingKeys.has(key)) { skipped++; continue }
-    const artistId = artistMap.get(rec.trackArtist.toLowerCase()) || null
     toInsert.push(rec)
     // Also track in existingKeys to avoid intra-batch duplicates
     existingKeys.add(key)
@@ -138,7 +141,7 @@ async function saveRecordsToDB(pool: Pool, records: FlashRecord[], artistMap: Ma
     const placeholders: string[] = []
     let idx = 1
     for (const rec of batch) {
-      const artistId = artistMap.get(rec.trackArtist.toLowerCase()) || null
+      const artistId = resolveArtist(rec.trackArtist)
       placeholders.push(`(gen_random_uuid(), $${idx}, $${idx+1}, $${idx+2}, $${idx+3}, $${idx+4}, $${idx+5}, $${idx+6}, $${idx+7}, $${idx+8}, $${idx+9}, $${idx+10}, $${idx+11}, $${idx+12}, false, NOW(), NOW())`)
       values.push(rec.date, rec.dsp, rec.length, rec.source, rec.isrc, rec.trackArtist, rec.trackName, rec.albumTitle, rec.cpline || null, rec.albumReleaseDate || null, rec.daysSinceRelease || null, rec.streams, artistId)
       idx += 13
@@ -173,14 +176,11 @@ async function main() {
   await pool.query('SELECT 1')
   console.log('✅ БД подключена')
 
-  // Load artist mapping
-  const usersRes = await pool.query(`SELECT id, name, username FROM "User" WHERE role = 'artist'`)
-  const artistMap = new Map<string, string>()
-  for (const u of usersRes.rows) {
-    if (u.name) artistMap.set(u.name.toLowerCase(), u.id)
-    if (u.username) artistMap.set(u.username.toLowerCase(), u.id)
-  }
-  console.log(`👥 Загружено ${usersRes.rows.length} артистов для маппинга`)
+  const { prisma } = await import('../lib/prisma')
+  const { loadAnalyticsArtistLookup, resolveArtistId } = await import('../lib/analytics-artist-match')
+  const lookup = await loadAnalyticsArtistLookup()
+  const resolveArtist = (trackArtist: string) => resolveArtistId(trackArtist, lookup)
+  console.log('👥 Загружены артисты и алиасы для маппинга аналитики')
 
   // Connect to SFTP
   const sftp = new SftpClient()
@@ -237,7 +237,7 @@ async function main() {
 
     // Parse and import
     const records = parseFlashCSV(localPath)
-    const result = await saveRecordsToDB(pool, records, artistMap)
+    const result = await saveRecordsToDB(pool, records, resolveArtist)
     totalAdded += result.added
     totalSkipped += result.skipped
     console.log(`   📊 ${records.length} записей → добавлено ${result.added}, пропущено ${result.skipped}`)
@@ -245,6 +245,7 @@ async function main() {
 
   await sftp.end()
   await pool.end()
+  await prisma.$disconnect()
 
   console.log('')
   console.log('═══════════════════════════════════════════════════')
