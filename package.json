@@ -63,6 +63,7 @@
     "cheerio": "1.0.0-rc.12",
     "class-variance-authority": "0.7.0",
     "clsx": "2.0.0",
+    "cmdk": "^1.1.1",
     "critters": "^0.0.20",
     "d3-scale": "4.0.2",
     "d3-shape": "3.2.0",
