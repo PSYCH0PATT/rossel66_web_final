@@ -142,6 +142,27 @@ export function isCollaborationTrackArtist(trackArtist: string): boolean {
   return splitCollaboratingArtistDisplayNames(trackArtist).length > 1
 }
 
+/** Коллаб, у которого каждый токен матчится на артиста в ростере — ручная привязка не нужна. */
+export function isCollabFullyResolvedInRoster(
+  trackArtist: string,
+  lookup: AnalyticsArtistLookup
+): boolean {
+  const parts = splitCollaboratingArtistDisplayNames(trackArtist.trim())
+  if (parts.length <= 1) return false
+  for (const part of parts) {
+    if (!resolveSingleToken(part, lookup)) return false
+  }
+  return true
+}
+
+/** Имя из CSV без artistId, требующее ручного сопоставления (исключая полностью разрешённые коллабы). */
+export function needsManualUnmappedMapping(
+  trackArtist: string,
+  lookup: AnalyticsArtistLookup
+): boolean {
+  return !isCollabFullyResolvedInRoster(trackArtist, lookup)
+}
+
 async function loadAnalyticsAliasRows(): Promise<AnalyticsArtistAliasRow[]> {
   try {
     return await prisma.analyticsArtistAlias.findMany({
@@ -274,6 +295,7 @@ export async function listUnmappedTrackArtists(opts?: {
 }): Promise<UnmappedTrackArtist[]> {
   const take = Math.min(opts?.take ?? 500, 2000)
   const skip = Math.max(0, opts?.skip ?? 0)
+  const lookup = await loadAnalyticsArtistLookup()
 
   const grouped = await prisma.streamAnalytics.groupBy({
     by: ['trackArtist'],
@@ -281,11 +303,12 @@ export async function listUnmappedTrackArtists(opts?: {
     _sum: { streams: true },
     _count: { _all: true },
     orderBy: { _sum: { streams: 'desc' } },
-    take,
-    skip,
   })
 
-  return grouped.map((g) => ({
+  const filtered = grouped.filter((g) => needsManualUnmappedMapping(g.trackArtist, lookup))
+  const sliced = filtered.slice(skip, skip + take)
+
+  return sliced.map((g) => ({
     trackArtist: g.trackArtist,
     totalStreams: g._sum.streams ?? 0,
     rowCount: g._count._all,
@@ -294,11 +317,12 @@ export async function listUnmappedTrackArtists(opts?: {
 }
 
 export async function countUnmappedTrackArtists(): Promise<number> {
+  const lookup = await loadAnalyticsArtistLookup()
   const rows = await prisma.streamAnalytics.groupBy({
     by: ['trackArtist'],
     where: { artistId: null },
   })
-  return rows.length
+  return rows.filter((r) => needsManualUnmappedMapping(r.trackArtist, lookup)).length
 }
 
 /** Rematch всех строк с artistId IS NULL. */

@@ -1,0 +1,49 @@
+import assert from "node:assert/strict"
+import { describe, it } from "node:test"
+import {
+  buildAnalyticsArtistLookup,
+  isCollabFullyResolvedInRoster,
+  needsManualUnmappedMapping,
+  type AnalyticsArtistUser,
+} from "./analytics-artist-match"
+
+const rosterUsers: AnalyticsArtistUser[] = [
+  { id: "id-rompy", name: "rompy", username: "rompy" },
+  { id: "id-lolo", name: "Лоло", username: "lolo" },
+  { id: "id-solo", name: "Solo Artist", username: "solo" },
+]
+
+function makeLookup(users: AnalyticsArtistUser[] = rosterUsers) {
+  return buildAnalyticsArtistLookup(users, [])
+}
+
+describe("isCollabFullyResolvedInRoster", () => {
+  it("returns true when all collab tokens match roster artists", () => {
+    const lookup = makeLookup()
+    assert.equal(isCollabFullyResolvedInRoster("rompy & Лоло", lookup), true)
+  })
+
+  it("returns false when one collab token is missing from roster", () => {
+    const lookup = makeLookup()
+    assert.equal(isCollabFullyResolvedInRoster("rompy & Unknown", lookup), false)
+  })
+
+  it("returns false for a single artist name", () => {
+    const lookup = makeLookup()
+    assert.equal(isCollabFullyResolvedInRoster("rompy", lookup), false)
+    assert.equal(isCollabFullyResolvedInRoster("Unknown Artist", lookup), false)
+  })
+})
+
+describe("needsManualUnmappedMapping", () => {
+  it("returns false for fully resolved collabs", () => {
+    const lookup = makeLookup()
+    assert.equal(needsManualUnmappedMapping("rompy & Лоло", lookup), false)
+  })
+
+  it("returns true for unknown single names and partial collabs", () => {
+    const lookup = makeLookup()
+    assert.equal(needsManualUnmappedMapping("Unknown Artist", lookup), true)
+    assert.equal(needsManualUnmappedMapping("rompy & Unknown", lookup), true)
+  })
+})

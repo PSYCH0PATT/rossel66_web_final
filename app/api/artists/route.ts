@@ -278,6 +278,21 @@ export async function GET(request: Request) {
       })
     }
 
+    if (searchParams.get("forPicker") === "1") {
+      const artists = await prisma.user.findMany({
+        where: { role: "artist" },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, username: true },
+        take: 500,
+      })
+      return NextResponse.json({
+        success: true,
+        artists,
+        total: artists.length,
+        forPicker: true,
+      })
+    }
+
     if (idParam) {
       const row = await prisma.user.findFirst({
         where: { id: idParam, role: "artist" },

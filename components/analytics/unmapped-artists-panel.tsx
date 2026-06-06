@@ -3,14 +3,23 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { revalidateStreamAnalytics } from "@/lib/hooks/use-dashboard-fetch"
+import { cn } from "@/lib/utils"
 
 type UnmappedArtist = {
   trackArtist: string
@@ -31,6 +40,79 @@ interface UnmappedArtistsPanelProps {
   onLinked?: () => void
 }
 
+function ArtistPicker({
+  artists,
+  value,
+  onChange,
+}: {
+  artists: RosterArtist[]
+  value: string
+  onChange: (artistId: string) => void
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const selected = artists.find((a) => a.id === value)
+
+  return (
+    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={pickerOpen}
+          className="h-9 flex-1 justify-between rounded-lg border border-white/10 bg-white/5 text-xs font-normal text-gray-300 hover:bg-white/[0.07] hover:text-white"
+        >
+          <span className="truncate">
+            {selected ? `${selected.name} (@${selected.username})` : "Выберите профиль"}
+          </span>
+          <span className="material-symbols-outlined text-base text-gray-500 shrink-0">
+            expand_more
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="z-[250] w-[var(--radix-popover-trigger-width)] border border-white/10 bg-[#1a1a1a] p-0 text-white"
+        align="start"
+      >
+        <Command className="bg-transparent text-white">
+          <CommandInput
+            placeholder="Поиск по имени или @username…"
+            className="text-xs text-gray-300 placeholder:text-gray-500"
+          />
+          <CommandList className="max-h-60">
+            <CommandEmpty className="py-4 text-xs font-mono uppercase tracking-widest text-gray-500">
+              Не найдено
+            </CommandEmpty>
+            <CommandGroup>
+              {artists.map((a) => (
+                <CommandItem
+                  key={a.id}
+                  value={`${a.name} ${a.username}`}
+                  className="text-xs text-gray-300 data-[selected='true']:bg-emerald-500/15 data-[selected='true']:text-emerald-50"
+                  onSelect={() => {
+                    onChange(a.id)
+                    setPickerOpen(false)
+                  }}
+                >
+                  <span
+                    className={cn(
+                      "material-symbols-outlined mr-2 text-sm",
+                      value === a.id ? "text-primary opacity-100" : "opacity-0"
+                    )}
+                  >
+                    check
+                  </span>
+                  {a.name} (@{a.username})
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedArtistsPanelProps) {
   const [loading, setLoading] = useState(false)
   const [linking, setLinking] = useState<string | null>(null)
@@ -45,7 +127,7 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
     try {
       const [unmappedRes, artistsRes] = await Promise.all([
         fetch("/api/analytics/unmapped-artists?take=500"),
-        fetch("/api/artists?take=500"),
+        fetch("/api/artists?forPicker=1"),
       ])
       const unmappedJson = await unmappedRes.json()
       const artistsJson = await artistsRes.json()
@@ -136,9 +218,16 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
         </DialogHeader>
 
         <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-3">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-            {loading ? "Загрузка…" : `${unmapped.length} без профиля`}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+              {loading ? "Загрузка…" : `${unmapped.length} без профиля`}
+            </span>
+            {roster.length > 0 ? (
+              <span className="text-[9px] font-mono uppercase tracking-widest text-gray-600">
+                {roster.length} артистов в ростере
+              </span>
+            ) : null}
+          </div>
           <Button
             type="button"
             variant="ghost"
@@ -177,29 +266,19 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
                     </p>
                     {row.isCollaboration ? (
                       <p className="text-[10px] text-amber-500/90 font-mono mt-1">
-                        Коллаб — привязка целиком к одному профилю
+                        Коллаб — не все имена найдены в ростере
                       </p>
                     ) : null}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <Select
+                  <ArtistPicker
+                    artists={roster}
                     value={selection[row.trackArtist] || ""}
-                    onValueChange={(v) =>
+                    onChange={(v) =>
                       setSelection((prev) => ({ ...prev, [row.trackArtist]: v }))
                     }
-                  >
-                    <SelectTrigger className="h-9 flex-1 rounded-lg border border-white/10 bg-white/5 text-xs text-gray-300">
-                      <SelectValue placeholder="Выберите профиль" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roster.map((a) => (
-                        <SelectItem key={a.id} value={a.id} className="text-xs">
-                          {a.name} (@{a.username})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                   <Button
                     type="button"
                     className="h-9 shrink-0 bg-[#10b981] hover:bg-emerald-400 text-black font-bold text-[10px] uppercase tracking-widest"
