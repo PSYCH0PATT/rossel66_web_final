@@ -188,4 +188,4 @@ export const pyrusReleaseUploadClientSchema = z
   .passthrough()
 
 /** submit-pyrus-catalog-upload: массив релизов */
-export const pyrusCatalogReleasesSchema = z.array(z.record(z.string(), z.unknown())).min(1).max(25)
+export { catalogReleasesSchema as pyrusCatalogReleasesSchema } from "@/lib/pyrus-catalog/validate"

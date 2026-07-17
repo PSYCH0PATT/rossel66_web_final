@@ -21,7 +21,11 @@
     "db:migrate:status": "prisma migrate status",
     "db:backfill-release-date-sort": "npx tsx scripts/backfill-release-date-sort.ts",
     "db:backup": "npx tsx scripts/backup-db-json.ts",
-    "db:backup:pg": "bash scripts/backup-supabase-db.sh"
+    "db:backup:pg": "bash scripts/backup-supabase-db.sh",
+    "sync:pyrus-catalog": "npx tsx scripts/sync-pyrus-catalog-form.ts",
+    "verify:pyrus-catalog": "npx tsx scripts/verify-pyrus-catalog-submit.ts",
+    "test": "npx tsx --test lib/**/*.test.ts",
+    "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

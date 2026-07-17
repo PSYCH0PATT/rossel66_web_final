@@ -1,0 +1,2199 @@
+{
+  "formId": 2312633,
+  "formName": "Бэк-каталог",
+  "syncedAt": "2026-07-02T12:11:08.444Z",
+  "fields": [
+    {
+      "id": 43,
+      "type": "note",
+      "name": "Первый релиз"
+    },
+    {
+      "id": 45,
+      "type": "multiple_choice",
+      "name": "Тип первого релиза"
+    },
+    {
+      "id": 54,
+      "type": "title",
+      "name": "Первый сингл",
+      "children": [
+        {
+          "id": 57,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 54
+        },
+        {
+          "id": 58,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 54
+        },
+        {
+          "id": 59,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 54
+        },
+        {
+          "id": 60,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 54
+        },
+        {
+          "id": 61,
+          "type": "text",
+          "name": "ISRC",
+          "parentId": 54
+        },
+        {
+          "id": 62,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 54
+        },
+        {
+          "id": 63,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 54
+        },
+        {
+          "id": 64,
+          "type": "table",
+          "name": "Трек-лист первого сингла",
+          "parentId": 54,
+          "columns": [
+            {
+              "id": 65,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 64
+            },
+            {
+              "id": 235,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 64
+            },
+            {
+              "id": 69,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 64
+            },
+            {
+              "id": 67,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 64
+            },
+            {
+              "id": 68,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 64
+            },
+            {
+              "id": 122,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 64
+            },
+            {
+              "id": 70,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 64
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "type": "title",
+      "name": "Первый альбом",
+      "children": [
+        {
+          "id": 55,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 56
+        },
+        {
+          "id": 71,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 56
+        },
+        {
+          "id": 72,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 56
+        },
+        {
+          "id": 73,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 56
+        },
+        {
+          "id": 74,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 56
+        },
+        {
+          "id": 75,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 56
+        },
+        {
+          "id": 76,
+          "type": "table",
+          "name": "Трек-лист первого альбома",
+          "parentId": 56,
+          "columns": [
+            {
+              "id": 77,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 76
+            },
+            {
+              "id": 78,
+              "type": "text",
+              "name": "Название трека",
+              "parentId": 76
+            },
+            {
+              "id": 80,
+              "type": "text",
+              "name": "Основные исполнители",
+              "parentId": 76
+            },
+            {
+              "id": 79,
+              "type": "text",
+              "name": "ISRC трека",
+              "parentId": 76
+            },
+            {
+              "id": 236,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 76
+            },
+            {
+              "id": 84,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 76
+            },
+            {
+              "id": 82,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 76
+            },
+            {
+              "id": 83,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 76
+            },
+            {
+              "id": 126,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 76
+            },
+            {
+              "id": 86,
+              "type": "checkmark",
+              "name": "Фокус трек",
+              "parentId": 76
+            },
+            {
+              "id": 87,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 76
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "type": "multiple_choice",
+      "name": "Тип второго релиза"
+    },
+    {
+      "id": 89,
+      "type": "title",
+      "name": "Второй сингл",
+      "children": [
+        {
+          "id": 90,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 89
+        },
+        {
+          "id": 91,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 89
+        },
+        {
+          "id": 92,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 89
+        },
+        {
+          "id": 93,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 89
+        },
+        {
+          "id": 94,
+          "type": "text",
+          "name": "ISRC",
+          "parentId": 89
+        },
+        {
+          "id": 95,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 89
+        },
+        {
+          "id": 96,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 89
+        },
+        {
+          "id": 97,
+          "type": "table",
+          "name": "Трек-лист второго сингла",
+          "parentId": 89,
+          "columns": [
+            {
+              "id": 98,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 97
+            },
+            {
+              "id": 237,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 97
+            },
+            {
+              "id": 102,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 97
+            },
+            {
+              "id": 100,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 97
+            },
+            {
+              "id": 101,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 97
+            },
+            {
+              "id": 123,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 97
+            },
+            {
+              "id": 103,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 97
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "title",
+      "name": "Второй альбом",
+      "children": [
+        {
+          "id": 127,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 104
+        },
+        {
+          "id": 128,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 104
+        },
+        {
+          "id": 129,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 104
+        },
+        {
+          "id": 130,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 104
+        },
+        {
+          "id": 131,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 104
+        },
+        {
+          "id": 132,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 104
+        },
+        {
+          "id": 133,
+          "type": "table",
+          "name": "Трек-лист второго альбома",
+          "parentId": 104,
+          "columns": [
+            {
+              "id": 134,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 133
+            },
+            {
+              "id": 135,
+              "type": "text",
+              "name": "Название трека",
+              "parentId": 133
+            },
+            {
+              "id": 136,
+              "type": "text",
+              "name": "Основные исполнители",
+              "parentId": 133
+            },
+            {
+              "id": 137,
+              "type": "text",
+              "name": "ISRC трека",
+              "parentId": 133
+            },
+            {
+              "id": 238,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 133
+            },
+            {
+              "id": 141,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 133
+            },
+            {
+              "id": 139,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 133
+            },
+            {
+              "id": 140,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 133
+            },
+            {
+              "id": 142,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 133
+            },
+            {
+              "id": 143,
+              "type": "checkmark",
+              "name": "Фокус трек",
+              "parentId": 133
+            },
+            {
+              "id": 144,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 133
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "type": "multiple_choice",
+      "name": "Тип третьего релиза"
+    },
+    {
+      "id": 106,
+      "type": "title",
+      "name": "Третий сингл",
+      "children": [
+        {
+          "id": 107,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 106
+        },
+        {
+          "id": 108,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 106
+        },
+        {
+          "id": 109,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 106
+        },
+        {
+          "id": 110,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 106
+        },
+        {
+          "id": 111,
+          "type": "text",
+          "name": "ISRC",
+          "parentId": 106
+        },
+        {
+          "id": 112,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 106
+        },
+        {
+          "id": 113,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 106
+        },
+        {
+          "id": 114,
+          "type": "table",
+          "name": "Таблица",
+          "parentId": 106,
+          "columns": [
+            {
+              "id": 115,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 114
+            },
+            {
+              "id": 239,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 114
+            },
+            {
+              "id": 124,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 114
+            },
+            {
+              "id": 117,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 114
+            },
+            {
+              "id": 118,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 114
+            },
+            {
+              "id": 125,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 114
+            },
+            {
+              "id": 120,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 114
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 121,
+      "type": "title",
+      "name": "Третий альбом",
+      "children": [
+        {
+          "id": 145,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 121
+        },
+        {
+          "id": 146,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 121
+        },
+        {
+          "id": 147,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 121
+        },
+        {
+          "id": 148,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 121
+        },
+        {
+          "id": 149,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 121
+        },
+        {
+          "id": 150,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 121
+        },
+        {
+          "id": 151,
+          "type": "table",
+          "name": "Трек-лист третьего альбома",
+          "parentId": 121,
+          "columns": [
+            {
+              "id": 152,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 151
+            },
+            {
+              "id": 153,
+              "type": "text",
+              "name": "Название трека",
+              "parentId": 151
+            },
+            {
+              "id": 154,
+              "type": "text",
+              "name": "Основные исполнители",
+              "parentId": 151
+            },
+            {
+              "id": 155,
+              "type": "text",
+              "name": "ISRC трека",
+              "parentId": 151
+            },
+            {
+              "id": 240,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 151
+            },
+            {
+              "id": 159,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 151
+            },
+            {
+              "id": 157,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 151
+            },
+            {
+              "id": 158,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 151
+            },
+            {
+              "id": 160,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 151
+            },
+            {
+              "id": 161,
+              "type": "checkmark",
+              "name": "Фокус трек",
+              "parentId": 151
+            },
+            {
+              "id": 162,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 151
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 164,
+      "type": "multiple_choice",
+      "name": "Тип четвёртого релиза"
+    },
+    {
+      "id": 166,
+      "type": "title",
+      "name": "Четвёртый сингл",
+      "children": [
+        {
+          "id": 170,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 166
+        },
+        {
+          "id": 171,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 166
+        },
+        {
+          "id": 172,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 166
+        },
+        {
+          "id": 173,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 166
+        },
+        {
+          "id": 174,
+          "type": "text",
+          "name": "ISRC",
+          "parentId": 166
+        },
+        {
+          "id": 175,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 166
+        },
+        {
+          "id": 245,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 166
+        },
+        {
+          "id": 176,
+          "type": "table",
+          "name": "Трек-лист четвёртого сингла",
+          "parentId": 166,
+          "columns": [
+            {
+              "id": 177,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 176
+            },
+            {
+              "id": 241,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 176
+            },
+            {
+              "id": 179,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 176
+            },
+            {
+              "id": 180,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 176
+            },
+            {
+              "id": 181,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 176
+            },
+            {
+              "id": 182,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 176
+            },
+            {
+              "id": 183,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 176
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 167,
+      "type": "title",
+      "name": "Четвёртый альбом",
+      "children": [
+        {
+          "id": 184,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 167
+        },
+        {
+          "id": 185,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 167
+        },
+        {
+          "id": 186,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 167
+        },
+        {
+          "id": 187,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 167
+        },
+        {
+          "id": 188,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 167
+        },
+        {
+          "id": 189,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 167
+        },
+        {
+          "id": 190,
+          "type": "table",
+          "name": "Трек-лист четвёртого альбома",
+          "parentId": 167,
+          "columns": [
+            {
+              "id": 191,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 190
+            },
+            {
+              "id": 192,
+              "type": "text",
+              "name": "Название трека",
+              "parentId": 190
+            },
+            {
+              "id": 193,
+              "type": "text",
+              "name": "Основные исполнители",
+              "parentId": 190
+            },
+            {
+              "id": 194,
+              "type": "text",
+              "name": "ISRC трека",
+              "parentId": 190
+            },
+            {
+              "id": 242,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 190
+            },
+            {
+              "id": 198,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 190
+            },
+            {
+              "id": 196,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 190
+            },
+            {
+              "id": 197,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 190
+            },
+            {
+              "id": 199,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 190
+            },
+            {
+              "id": 200,
+              "type": "checkmark",
+              "name": "Фокус трек",
+              "parentId": 190
+            },
+            {
+              "id": 201,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 190
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 165,
+      "type": "multiple_choice",
+      "name": "Тип пятого релиза"
+    },
+    {
+      "id": 168,
+      "type": "title",
+      "name": "Пятый сингл",
+      "children": [
+        {
+          "id": 220,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 168
+        },
+        {
+          "id": 221,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 168
+        },
+        {
+          "id": 222,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 168
+        },
+        {
+          "id": 223,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 168
+        },
+        {
+          "id": 224,
+          "type": "text",
+          "name": "ISRC",
+          "parentId": 168
+        },
+        {
+          "id": 225,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 168
+        },
+        {
+          "id": 226,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 168
+        },
+        {
+          "id": 227,
+          "type": "table",
+          "name": "Трек-лист пятого сингла",
+          "parentId": 168,
+          "columns": [
+            {
+              "id": 228,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 227
+            },
+            {
+              "id": 243,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 227
+            },
+            {
+              "id": 232,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 227
+            },
+            {
+              "id": 230,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 227
+            },
+            {
+              "id": 231,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 227
+            },
+            {
+              "id": 233,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 227
+            },
+            {
+              "id": 234,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 227
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 169,
+      "type": "title",
+      "name": "Пятый альбом",
+      "children": [
+        {
+          "id": 202,
+          "type": "text",
+          "name": "Название релиза",
+          "parentId": 169
+        },
+        {
+          "id": 203,
+          "type": "text",
+          "name": "Никнеймы артистов релиза",
+          "parentId": 169
+        },
+        {
+          "id": 204,
+          "type": "file",
+          "name": "Обложка",
+          "parentId": 169
+        },
+        {
+          "id": 205,
+          "type": "text",
+          "name": "UPC/EAN",
+          "parentId": 169
+        },
+        {
+          "id": 206,
+          "type": "date",
+          "name": "Оригинальная дата релиза",
+          "parentId": 169
+        },
+        {
+          "id": 207,
+          "type": "text",
+          "name": "Жанр",
+          "parentId": 169
+        },
+        {
+          "id": 208,
+          "type": "table",
+          "name": "Трек-лист пятого альбома",
+          "parentId": 169,
+          "columns": [
+            {
+              "id": 209,
+              "type": "file",
+              "name": "Аудио-файл",
+              "parentId": 208
+            },
+            {
+              "id": 210,
+              "type": "text",
+              "name": "Название трека",
+              "parentId": 208
+            },
+            {
+              "id": 211,
+              "type": "text",
+              "name": "Основные исполнители",
+              "parentId": 208
+            },
+            {
+              "id": 212,
+              "type": "text",
+              "name": "ISRC трека",
+              "parentId": 208
+            },
+            {
+              "id": 244,
+              "type": "text",
+              "name": "Начало предпрослушивания",
+              "parentId": 208
+            },
+            {
+              "id": 216,
+              "type": "multiple_choice",
+              "name": "Язык релиза",
+              "parentId": 208
+            },
+            {
+              "id": 214,
+              "type": "text",
+              "name": "Автор музыки",
+              "parentId": 208
+            },
+            {
+              "id": 215,
+              "type": "text",
+              "name": "Автор слов",
+              "parentId": 208
+            },
+            {
+              "id": 217,
+              "type": "checkmark",
+              "name": "Мат (ненормативная лексика)",
+              "parentId": 208
+            },
+            {
+              "id": 218,
+              "type": "checkmark",
+              "name": "Фокус трек",
+              "parentId": 208
+            },
+            {
+              "id": 219,
+              "type": "file",
+              "name": "Текст трека",
+              "parentId": 208
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 163,
+      "type": "note",
+      "name": "Форма поддерживает только пять релизов. Если Вы хотите отправить больше релизов - отправьте эту форму, дождитесь сообщения \"Спасибо! Данные успешно отправлены.\", перезагрузите страницу и заполните её ещё раз. По любым вопросам обращайтесь к своему лейбл менеджеру."
+    }
+  ],
+  "flat": [
+    {
+      "id": 43,
+      "type": "note",
+      "name": "Первый релиз"
+    },
+    {
+      "id": 45,
+      "type": "multiple_choice",
+      "name": "Тип первого релиза"
+    },
+    {
+      "id": 54,
+      "type": "title",
+      "name": "Первый сингл"
+    },
+    {
+      "id": 57,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 54
+    },
+    {
+      "id": 58,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 54
+    },
+    {
+      "id": 59,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 54
+    },
+    {
+      "id": 60,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 54
+    },
+    {
+      "id": 61,
+      "type": "text",
+      "name": "ISRC",
+      "parentId": 54
+    },
+    {
+      "id": 62,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 54
+    },
+    {
+      "id": 63,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 54
+    },
+    {
+      "id": 64,
+      "type": "table",
+      "name": "Трек-лист первого сингла",
+      "parentId": 54
+    },
+    {
+      "id": 65,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 64
+    },
+    {
+      "id": 235,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 64
+    },
+    {
+      "id": 69,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 64
+    },
+    {
+      "id": 67,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 64
+    },
+    {
+      "id": 68,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 64
+    },
+    {
+      "id": 122,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 64
+    },
+    {
+      "id": 70,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 64
+    },
+    {
+      "id": 56,
+      "type": "title",
+      "name": "Первый альбом"
+    },
+    {
+      "id": 55,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 56
+    },
+    {
+      "id": 71,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 56
+    },
+    {
+      "id": 72,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 56
+    },
+    {
+      "id": 73,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 56
+    },
+    {
+      "id": 74,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 56
+    },
+    {
+      "id": 75,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 56
+    },
+    {
+      "id": 76,
+      "type": "table",
+      "name": "Трек-лист первого альбома",
+      "parentId": 56
+    },
+    {
+      "id": 77,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 76
+    },
+    {
+      "id": 78,
+      "type": "text",
+      "name": "Название трека",
+      "parentId": 76
+    },
+    {
+      "id": 80,
+      "type": "text",
+      "name": "Основные исполнители",
+      "parentId": 76
+    },
+    {
+      "id": 79,
+      "type": "text",
+      "name": "ISRC трека",
+      "parentId": 76
+    },
+    {
+      "id": 236,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 76
+    },
+    {
+      "id": 84,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 76
+    },
+    {
+      "id": 82,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 76
+    },
+    {
+      "id": 83,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 76
+    },
+    {
+      "id": 126,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 76
+    },
+    {
+      "id": 86,
+      "type": "checkmark",
+      "name": "Фокус трек",
+      "parentId": 76
+    },
+    {
+      "id": 87,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 76
+    },
+    {
+      "id": 88,
+      "type": "multiple_choice",
+      "name": "Тип второго релиза"
+    },
+    {
+      "id": 89,
+      "type": "title",
+      "name": "Второй сингл"
+    },
+    {
+      "id": 90,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 89
+    },
+    {
+      "id": 91,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 89
+    },
+    {
+      "id": 92,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 89
+    },
+    {
+      "id": 93,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 89
+    },
+    {
+      "id": 94,
+      "type": "text",
+      "name": "ISRC",
+      "parentId": 89
+    },
+    {
+      "id": 95,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 89
+    },
+    {
+      "id": 96,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 89
+    },
+    {
+      "id": 97,
+      "type": "table",
+      "name": "Трек-лист второго сингла",
+      "parentId": 89
+    },
+    {
+      "id": 98,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 97
+    },
+    {
+      "id": 237,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 97
+    },
+    {
+      "id": 102,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 97
+    },
+    {
+      "id": 100,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 97
+    },
+    {
+      "id": 101,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 97
+    },
+    {
+      "id": 123,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 97
+    },
+    {
+      "id": 103,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 97
+    },
+    {
+      "id": 104,
+      "type": "title",
+      "name": "Второй альбом"
+    },
+    {
+      "id": 127,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 104
+    },
+    {
+      "id": 128,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 104
+    },
+    {
+      "id": 129,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 104
+    },
+    {
+      "id": 130,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 104
+    },
+    {
+      "id": 131,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 104
+    },
+    {
+      "id": 132,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 104
+    },
+    {
+      "id": 133,
+      "type": "table",
+      "name": "Трек-лист второго альбома",
+      "parentId": 104
+    },
+    {
+      "id": 134,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 133
+    },
+    {
+      "id": 135,
+      "type": "text",
+      "name": "Название трека",
+      "parentId": 133
+    },
+    {
+      "id": 136,
+      "type": "text",
+      "name": "Основные исполнители",
+      "parentId": 133
+    },
+    {
+      "id": 137,
+      "type": "text",
+      "name": "ISRC трека",
+      "parentId": 133
+    },
+    {
+      "id": 238,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 133
+    },
+    {
+      "id": 141,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 133
+    },
+    {
+      "id": 139,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 133
+    },
+    {
+      "id": 140,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 133
+    },
+    {
+      "id": 142,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 133
+    },
+    {
+      "id": 143,
+      "type": "checkmark",
+      "name": "Фокус трек",
+      "parentId": 133
+    },
+    {
+      "id": 144,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 133
+    },
+    {
+      "id": 105,
+      "type": "multiple_choice",
+      "name": "Тип третьего релиза"
+    },
+    {
+      "id": 106,
+      "type": "title",
+      "name": "Третий сингл"
+    },
+    {
+      "id": 107,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 106
+    },
+    {
+      "id": 108,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 106
+    },
+    {
+      "id": 109,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 106
+    },
+    {
+      "id": 110,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 106
+    },
+    {
+      "id": 111,
+      "type": "text",
+      "name": "ISRC",
+      "parentId": 106
+    },
+    {
+      "id": 112,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 106
+    },
+    {
+      "id": 113,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 106
+    },
+    {
+      "id": 114,
+      "type": "table",
+      "name": "Таблица",
+      "parentId": 106
+    },
+    {
+      "id": 115,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 114
+    },
+    {
+      "id": 239,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 114
+    },
+    {
+      "id": 124,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 114
+    },
+    {
+      "id": 117,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 114
+    },
+    {
+      "id": 118,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 114
+    },
+    {
+      "id": 125,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 114
+    },
+    {
+      "id": 120,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 114
+    },
+    {
+      "id": 121,
+      "type": "title",
+      "name": "Третий альбом"
+    },
+    {
+      "id": 145,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 121
+    },
+    {
+      "id": 146,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 121
+    },
+    {
+      "id": 147,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 121
+    },
+    {
+      "id": 148,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 121
+    },
+    {
+      "id": 149,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 121
+    },
+    {
+      "id": 150,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 121
+    },
+    {
+      "id": 151,
+      "type": "table",
+      "name": "Трек-лист третьего альбома",
+      "parentId": 121
+    },
+    {
+      "id": 152,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 151
+    },
+    {
+      "id": 153,
+      "type": "text",
+      "name": "Название трека",
+      "parentId": 151
+    },
+    {
+      "id": 154,
+      "type": "text",
+      "name": "Основные исполнители",
+      "parentId": 151
+    },
+    {
+      "id": 155,
+      "type": "text",
+      "name": "ISRC трека",
+      "parentId": 151
+    },
+    {
+      "id": 240,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 151
+    },
+    {
+      "id": 159,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 151
+    },
+    {
+      "id": 157,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 151
+    },
+    {
+      "id": 158,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 151
+    },
+    {
+      "id": 160,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 151
+    },
+    {
+      "id": 161,
+      "type": "checkmark",
+      "name": "Фокус трек",
+      "parentId": 151
+    },
+    {
+      "id": 162,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 151
+    },
+    {
+      "id": 164,
+      "type": "multiple_choice",
+      "name": "Тип четвёртого релиза"
+    },
+    {
+      "id": 166,
+      "type": "title",
+      "name": "Четвёртый сингл"
+    },
+    {
+      "id": 170,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 166
+    },
+    {
+      "id": 171,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 166
+    },
+    {
+      "id": 172,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 166
+    },
+    {
+      "id": 173,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 166
+    },
+    {
+      "id": 174,
+      "type": "text",
+      "name": "ISRC",
+      "parentId": 166
+    },
+    {
+      "id": 175,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 166
+    },
+    {
+      "id": 245,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 166
+    },
+    {
+      "id": 176,
+      "type": "table",
+      "name": "Трек-лист четвёртого сингла",
+      "parentId": 166
+    },
+    {
+      "id": 177,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 176
+    },
+    {
+      "id": 241,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 176
+    },
+    {
+      "id": 179,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 176
+    },
+    {
+      "id": 180,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 176
+    },
+    {
+      "id": 181,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 176
+    },
+    {
+      "id": 182,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 176
+    },
+    {
+      "id": 183,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 176
+    },
+    {
+      "id": 167,
+      "type": "title",
+      "name": "Четвёртый альбом"
+    },
+    {
+      "id": 184,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 167
+    },
+    {
+      "id": 185,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 167
+    },
+    {
+      "id": 186,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 167
+    },
+    {
+      "id": 187,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 167
+    },
+    {
+      "id": 188,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 167
+    },
+    {
+      "id": 189,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 167
+    },
+    {
+      "id": 190,
+      "type": "table",
+      "name": "Трек-лист четвёртого альбома",
+      "parentId": 167
+    },
+    {
+      "id": 191,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 190
+    },
+    {
+      "id": 192,
+      "type": "text",
+      "name": "Название трека",
+      "parentId": 190
+    },
+    {
+      "id": 193,
+      "type": "text",
+      "name": "Основные исполнители",
+      "parentId": 190
+    },
+    {
+      "id": 194,
+      "type": "text",
+      "name": "ISRC трека",
+      "parentId": 190
+    },
+    {
+      "id": 242,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 190
+    },
+    {
+      "id": 198,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 190
+    },
+    {
+      "id": 196,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 190
+    },
+    {
+      "id": 197,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 190
+    },
+    {
+      "id": 199,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 190
+    },
+    {
+      "id": 200,
+      "type": "checkmark",
+      "name": "Фокус трек",
+      "parentId": 190
+    },
+    {
+      "id": 201,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 190
+    },
+    {
+      "id": 165,
+      "type": "multiple_choice",
+      "name": "Тип пятого релиза"
+    },
+    {
+      "id": 168,
+      "type": "title",
+      "name": "Пятый сингл"
+    },
+    {
+      "id": 220,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 168
+    },
+    {
+      "id": 221,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 168
+    },
+    {
+      "id": 222,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 168
+    },
+    {
+      "id": 223,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 168
+    },
+    {
+      "id": 224,
+      "type": "text",
+      "name": "ISRC",
+      "parentId": 168
+    },
+    {
+      "id": 225,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 168
+    },
+    {
+      "id": 226,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 168
+    },
+    {
+      "id": 227,
+      "type": "table",
+      "name": "Трек-лист пятого сингла",
+      "parentId": 168
+    },
+    {
+      "id": 228,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 227
+    },
+    {
+      "id": 243,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 227
+    },
+    {
+      "id": 232,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 227
+    },
+    {
+      "id": 230,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 227
+    },
+    {
+      "id": 231,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 227
+    },
+    {
+      "id": 233,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 227
+    },
+    {
+      "id": 234,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 227
+    },
+    {
+      "id": 169,
+      "type": "title",
+      "name": "Пятый альбом"
+    },
+    {
+      "id": 202,
+      "type": "text",
+      "name": "Название релиза",
+      "parentId": 169
+    },
+    {
+      "id": 203,
+      "type": "text",
+      "name": "Никнеймы артистов релиза",
+      "parentId": 169
+    },
+    {
+      "id": 204,
+      "type": "file",
+      "name": "Обложка",
+      "parentId": 169
+    },
+    {
+      "id": 205,
+      "type": "text",
+      "name": "UPC/EAN",
+      "parentId": 169
+    },
+    {
+      "id": 206,
+      "type": "date",
+      "name": "Оригинальная дата релиза",
+      "parentId": 169
+    },
+    {
+      "id": 207,
+      "type": "text",
+      "name": "Жанр",
+      "parentId": 169
+    },
+    {
+      "id": 208,
+      "type": "table",
+      "name": "Трек-лист пятого альбома",
+      "parentId": 169
+    },
+    {
+      "id": 209,
+      "type": "file",
+      "name": "Аудио-файл",
+      "parentId": 208
+    },
+    {
+      "id": 210,
+      "type": "text",
+      "name": "Название трека",
+      "parentId": 208
+    },
+    {
+      "id": 211,
+      "type": "text",
+      "name": "Основные исполнители",
+      "parentId": 208
+    },
+    {
+      "id": 212,
+      "type": "text",
+      "name": "ISRC трека",
+      "parentId": 208
+    },
+    {
+      "id": 244,
+      "type": "text",
+      "name": "Начало предпрослушивания",
+      "parentId": 208
+    },
+    {
+      "id": 216,
+      "type": "multiple_choice",
+      "name": "Язык релиза",
+      "parentId": 208
+    },
+    {
+      "id": 214,
+      "type": "text",
+      "name": "Автор музыки",
+      "parentId": 208
+    },
+    {
+      "id": 215,
+      "type": "text",
+      "name": "Автор слов",
+      "parentId": 208
+    },
+    {
+      "id": 217,
+      "type": "checkmark",
+      "name": "Мат (ненормативная лексика)",
+      "parentId": 208
+    },
+    {
+      "id": 218,
+      "type": "checkmark",
+      "name": "Фокус трек",
+      "parentId": 208
+    },
+    {
+      "id": 219,
+      "type": "file",
+      "name": "Текст трека",
+      "parentId": 208
+    },
+    {
+      "id": 163,
+      "type": "note",
+      "name": "Форма поддерживает только пять релизов. Если Вы хотите отправить больше релизов - отправьте эту форму, дождитесь сообщения \"Спасибо! Данные успешно отправлены.\", перезагрузите страницу и заполните её ещё раз. По любым вопросам обращайтесь к своему лейбл менеджеру."
+    }
+  ]
+}

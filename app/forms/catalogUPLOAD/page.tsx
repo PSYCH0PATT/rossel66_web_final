@@ -37,7 +37,6 @@ interface Release {
   upc: string;
   originalReleaseDate: string;
   genre: string;
-  otherGenre: string;
   tracks: Track[];
   isExpanded: boolean;
 }
@@ -59,6 +58,12 @@ const languageOptions = [
 ];
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const MAX_FILE_BYTES = 150 * 1024 * 1024;
+
+function formatFileSizeMb(bytes: number): string {
+  return `${Math.round(bytes / (1024 * 1024))} МБ`;
+}
 
 export default function CatalogUploadPage() {
   const initialTrack = (): Track => ({
@@ -82,7 +87,6 @@ export default function CatalogUploadPage() {
     upc: "",
     originalReleaseDate: "",
     genre: "",
-    otherGenre: "",
     tracks: [initialTrack()],
     isExpanded: true,
   });
@@ -125,14 +129,29 @@ export default function CatalogUploadPage() {
   const handleReleaseSelectChange = (releaseId: string, name: keyof Pick<Release, 'releaseType' | 'genre'>, value: string) => {
     setFormData(prev => ({
       ...prev,
-      releases: prev.releases.map(release =>
-        release.id === releaseId ? { ...release, [name]: value } : release
-      ),
+      releases: prev.releases.map(release => {
+        if (release.id !== releaseId) return release;
+        const updated = { ...release, [name]: value };
+        if (name === 'releaseType' && value === '1' && updated.tracks.length > 1) {
+          updated.tracks = [updated.tracks[0]];
+        }
+        return updated;
+      }),
     }));
+  };
+
+  const assertFileSize = (file: File, label: string): boolean => {
+    if (file.size > MAX_FILE_BYTES) {
+      setSubmitStatus('error');
+      setSubmitMessage(`Ошибка: файл «${file.name}» (${label}) слишком большой. Максимум ${formatFileSizeMb(MAX_FILE_BYTES)}.`);
+      return false;
+    }
+    return true;
   };
 
   const handleReleaseFileChange = (releaseId: string, name: 'coverArt', files: FileList | null) => {
     if (files && files[0]) {
+      if (!assertFileSize(files[0], 'обложка')) return;
       setFormData(prev => ({
         ...prev,
         releases: prev.releases.map(release =>
@@ -224,6 +243,8 @@ export default function CatalogUploadPage() {
 
   const handleTrackFileChange = (releaseId: string, trackId: string, name: 'audioFile' | 'lyricsFile', files: FileList | null) => {
     if (files && files[0]) {
+      const label = name === 'audioFile' ? 'аудио' : 'текст трека';
+      if (!assertFileSize(files[0], label)) return;
       setFormData(prev => ({
         ...prev,
         releases: prev.releases.map(release =>
@@ -243,11 +264,11 @@ export default function CatalogUploadPage() {
   const addTrack = (releaseId: string) => {
     setFormData(prev => ({
       ...prev,
-      releases: prev.releases.map(release =>
-        release.id === releaseId
-          ? { ...release, tracks: [...release.tracks, initialTrack()] }
-          : release
-      ),
+      releases: prev.releases.map(release => {
+        if (release.id !== releaseId) return release;
+        if (release.releaseType === '1') return release;
+        return { ...release, tracks: [...release.tracks, initialTrack()] };
+      }),
     }));
   };
 
@@ -301,6 +322,20 @@ export default function CatalogUploadPage() {
       if (!release.genre || release.genre.trim() === "") {
         setSubmitStatus('error');
         setSubmitMessage(`Ошибка: Необходимо указать жанр для релиза ${rIdx + 1}.`);
+        return;
+      }
+      
+      // Проверка даты релиза
+      if (!release.originalReleaseDate.trim()) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Необходимо указать оригинальную дату релиза для релиза ${rIdx + 1}.`);
+        return;
+      }
+
+      // Сингл — только один трек
+      if (release.releaseType === "1" && release.tracks.length !== 1) {
+        setSubmitStatus('error');
+        setSubmitMessage(`Ошибка: Для сингла (релиз ${rIdx + 1}) допускается только один трек.`);
         return;
       }
       
@@ -727,7 +762,7 @@ export default function CatalogUploadPage() {
                                 (e) => handleReleaseChange(release.id, e), 
                               "",
                               "date",
-                              false
+                              true
                             )}
                       </div>
                        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6">
@@ -903,10 +938,12 @@ export default function CatalogUploadPage() {
                       </div>
 
                       <div className="mt-4 flex justify-start">
+                        {release.releaseType === '2' && (
                         <Button type="button" onClick={() => addTrack(release.id)} variant="default" className="bg-neutral-800 text-emerald-500 border border-neutral-700 hover:bg-neutral-700 hover:text-emerald-400">
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Добавить трек
                         </Button>
+                        )}
                       </div>
 
                     </div>
