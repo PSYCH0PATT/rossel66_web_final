@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
               for (const report of currentReports) {
                 const localFilePath = report.filePath
                 let finalFilePath = report.filePath
+                let uploadedToStorage = false
 
                 if (fs.existsSync(localFilePath)) {
                   let uploadSuccess = false
@@ -293,6 +294,7 @@ export async function POST(request: NextRequest) {
                       console.log(`Успешно загружен в Supabase: ${supabasePath}`)
                       finalFilePath = supabasePath
                       uploadSuccess = true
+                      uploadedToStorage = true
                       uploadStats.uploaded++
                       uploadStats.uploadedNames.push(report.artistName || report.fileName)
                     } catch (uploadErr) {
@@ -309,6 +311,14 @@ export async function POST(request: NextRequest) {
                   console.error(`Файл отчета не найден локально для загрузки: ${localFilePath}`)
                   uploadStats.failed++
                   uploadStats.failedNames.push(report.artistName || report.fileName)
+                }
+
+                // G5: если файл не загружен в Storage, finalFilePath указывает на /tmp,
+                // который удаляется в finally → отчёт будет невозможно скачать.
+                // Не создаём/не обновляем строку отчёта в этом случае.
+                if (!uploadedToStorage) {
+                  console.error(`Пропуск записи отчёта в БД (файл не загружен в Storage): ${report.fileName}`)
+                  continue
                 }
 
                 // Check for existing report
