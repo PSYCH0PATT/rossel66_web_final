@@ -486,9 +486,10 @@ export async function getReleaseById(id: string): Promise<Release | null> {
 
 export async function getReleasesByArtistId(artistId: string): Promise<Release[]> {
   try {
-    const releases = await prisma.release.findMany({ 
+    const releases = await prisma.release.findMany({
       where: { artistId },
-      orderBy: { createdAt: 'desc' }
+      // A2: сортировка по дате ВЫХОДА (releaseDateSort), а не по дате добавления в БД
+      orderBy: [{ releaseDateSort: 'desc' }, { createdAt: 'desc' }]
     })
     return releases.map(releaseFromPrisma)
   } catch (error) {

@@ -25,7 +25,9 @@ export async function GET(request: Request, { params }: { params: { artistId: st
     const artist = userFromPrisma(userRow)
     const releaseRows = await prisma.release.findMany({
       where: { artistId },
-      orderBy: { releaseDate: "desc" },
+      // A2: сортировка по дате выхода. Строковый releaseDate в двух форматах
+      // ("DD.MM.YYYY" и "YYYY-MM-DD") давал неверный порядок при строковой сортировке.
+      orderBy: [{ releaseDateSort: "desc" }, { createdAt: "desc" }],
     })
     const releases = releaseRows.map(releaseFromPrisma)
 
