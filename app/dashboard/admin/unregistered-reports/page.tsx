@@ -48,7 +48,8 @@ export default function UnregisteredReportsPage() {
     try {
       const response = await fetch("/api/reports/unregistered")
       const data = await response.json()
-      if (data.success) {
+      // /api/reports/unregistered отдаёт { reports: [...] } без поля success
+      if (Array.isArray(data.reports)) {
         setReports(data.reports)
       }
     } catch (error) {
@@ -60,7 +61,8 @@ export default function UnregisteredReportsPage() {
 
   const loadArtists = async () => {
     try {
-      const response = await fetch("/api/artists")
+      // forPicker=1 возвращает всех артистов (до 500), а не первую страницу из 20
+      const response = await fetch("/api/artists?forPicker=1")
       const data = await response.json()
       if (data.success) {
         setArtists(data.artists)
