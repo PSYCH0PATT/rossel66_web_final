@@ -149,6 +149,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'example.com',
       },
+      {
+        // Обложки, загружаемые админом, отдаются как Supabase Storage public URL
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
     ],
   },
 };
