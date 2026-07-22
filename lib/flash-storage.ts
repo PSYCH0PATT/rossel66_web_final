@@ -311,6 +311,10 @@ export async function getAvailableTracks(
 }
 
 export type AnalyticsArtistOption = {
+  /** Стабильный ключ опции: artistId для смапленных, trackArtist для немапленных. */
+  id: string
+  /** Отображаемое имя: профиль для смапленных, сырое имя для немапленных. */
+  label: string
   trackArtist: string
   artistId: string | null
   mappedProfileName: string | null
@@ -319,7 +323,10 @@ export type AnalyticsArtistOption = {
 }
 
 /**
- * Все уникальные trackArtist из аналитики (для админского фильтра).
+ * Список артистов для админского фильтра.
+ * Смапленные trackArtist консолидируются по artistId (ростер) — «Artist» и
+ * «Artist feat Guest», ведущие на один профиль, схлопываются в одну запись.
+ * Немапленные имена остаются отдельными (их привязывают вручную).
  */
 export async function getAvailableArtists(opts?: { take?: number; skip?: number }) {
   const take = Math.min(opts?.take ?? 500, 2000)
@@ -331,19 +338,22 @@ export async function getAvailableArtists(opts?: { take?: number; skip?: number 
     orderBy: { trackArtist: 'asc' },
   })
 
-  const byTrackArtist = new Map<string, { artistId: string | null; totalStreams: number }>()
+  // Консолидация смапленных по artistId; немапленные — по trackArtist
+  const byArtistId = new Map<string, number>()
+  const unmappedByTrackArtist = new Map<string, number>()
   for (const g of grouped) {
-    const prev = byTrackArtist.get(g.trackArtist)
     const streams = g._sum.streams ?? 0
-    if (!prev) {
-      byTrackArtist.set(g.trackArtist, { artistId: g.artistId, totalStreams: streams })
+    if (g.artistId) {
+      byArtistId.set(g.artistId, (byArtistId.get(g.artistId) ?? 0) + streams)
     } else {
-      prev.totalStreams += streams
-      if (g.artistId && !prev.artistId) prev.artistId = g.artistId
+      unmappedByTrackArtist.set(
+        g.trackArtist,
+        (unmappedByTrackArtist.get(g.trackArtist) ?? 0) + streams
+      )
     }
   }
 
-  const artistIds = [...new Set([...byTrackArtist.values()].map((v) => v.artistId).filter(Boolean))] as string[]
+  const artistIds = [...byArtistId.keys()]
   const users =
     artistIds.length > 0
       ? await prisma.user.findMany({
@@ -353,20 +363,35 @@ export async function getAvailableArtists(opts?: { take?: number; skip?: number 
       : []
   const userById = new Map(users.map((u) => [u.id, u]))
 
-  const sorted = [...byTrackArtist.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, 'ru'))
-    .slice(skip, skip + take)
-
-  return sorted.map(([trackArtist, meta]): AnalyticsArtistOption => {
-    const profile = meta.artistId ? userById.get(meta.artistId) : undefined
+  const mappedOptions: AnalyticsArtistOption[] = artistIds.map((artistId) => {
+    const profile = userById.get(artistId)
+    const label = profile?.name || profile?.username || artistId
     return {
-      trackArtist,
-      artistId: meta.artistId,
+      id: artistId,
+      label,
+      trackArtist: label,
+      artistId,
       mappedProfileName: profile?.name ?? null,
       mappedUsername: profile?.username ?? null,
-      totalStreams: meta.totalStreams,
+      totalStreams: byArtistId.get(artistId) ?? 0,
     }
   })
+
+  const unmappedOptions: AnalyticsArtistOption[] = [...unmappedByTrackArtist.entries()].map(
+    ([trackArtist, totalStreams]) => ({
+      id: trackArtist,
+      label: trackArtist,
+      trackArtist,
+      artistId: null,
+      mappedProfileName: null,
+      mappedUsername: null,
+      totalStreams,
+    })
+  )
+
+  return [...mappedOptions, ...unmappedOptions]
+    .sort((a, b) => a.label.localeCompare(b.label, 'ru'))
+    .slice(skip, skip + take)
 }
 
 export { buildCabinetStreamAnalyticsWhere }

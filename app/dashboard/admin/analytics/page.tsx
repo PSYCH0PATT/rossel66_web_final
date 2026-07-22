@@ -51,6 +51,8 @@ interface Track {
 }
 
 interface ArtistOption {
+  id: string
+  label: string
   trackArtist: string
   artistId: string | null
   mappedProfileName: string | null
@@ -61,7 +63,7 @@ interface ArtistOption {
 function artistFilterParams(selected: string, artists: ArtistOption[]): URLSearchParams {
   const params = new URLSearchParams()
   if (selected === "all") return params
-  const artist = artists.find((a) => a.trackArtist === selected)
+  const artist = artists.find((a) => a.id === selected)
   if (!artist) return params
   if (artist.artistId) params.set("artistId", artist.artistId)
   else params.set("trackArtist", artist.trackArtist)
@@ -415,16 +417,18 @@ export default function AdminAnalyticsPage() {
                 </SelectItem>
                 {artists.map((a) => (
                   <SelectItem
-                    key={a.trackArtist}
-                    value={a.trackArtist}
+                    key={a.id}
+                    value={a.id}
                     className="text-[10px] font-bold uppercase tracking-widest"
                   >
                     <span className="flex items-center gap-2">
-                      <span>{a.trackArtist}</span>
+                      <span>{a.label}</span>
                       {a.artistId ? (
-                        <span className="text-gray-500 normal-case">
-                          → {a.mappedUsername || a.mappedProfileName}
-                        </span>
+                        a.mappedUsername ? (
+                          <span className="text-gray-500 normal-case">
+                            @{a.mappedUsername}
+                          </span>
+                        ) : null
                       ) : (
                         <span className="text-amber-500/80 text-[9px]">без профиля</span>
                       )}
