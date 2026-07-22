@@ -383,7 +383,10 @@ def extract_artists_from_track(artist_str, match_list):
     found = []
     for canonical, aliases in match_list:
         for alias in aliases:
-            if alias and re.search(re.escape(alias), artist_str, re.IGNORECASE):
+            # G3: матчим имя только как ЦЕЛЫЙ токен (границы слова, Unicode-aware),
+            # а не как подстроку — иначе «Rem» ловит «Rema», «Ян» ловит «Боян»
+            # и артист получает чужие роялти.
+            if alias and re.search(r'(?<!\w)' + re.escape(alias) + r'(?!\w)', artist_str, re.IGNORECASE):
                 found.append(canonical)
                 break
     return found
