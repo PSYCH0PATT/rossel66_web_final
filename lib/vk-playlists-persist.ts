@@ -24,6 +24,7 @@ export async function persistVkHtmlPlaylistsForArtist(
         releaseDate: "",
         parsedDate,
         albumTitle: "",
+        label: "",
       },
     ],
   }))

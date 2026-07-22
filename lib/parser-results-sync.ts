@@ -31,6 +31,7 @@ function stubTrack(artistName: string, label: string, parsedDate: string): Parse
     releaseDate: "",
     parsedDate: parsedDate || new Date().toISOString().split("T")[0],
     albumTitle: "",
+    label: "",
   }
 }
 
