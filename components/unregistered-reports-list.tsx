@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatDateRu } from "@/lib/format-date"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, FileText, Loader2, Users, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight } from "lucide-react"
@@ -220,7 +221,7 @@ export default function UnregisteredReportsList() {
                       
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                        <span className="text-slate-400">{new Date(report.uploadDate).toLocaleDateString('ru-RU')}</span>
+                        <span className="text-slate-400">{formatDateRu(report.uploadDate)}</span>
                       </div>
                     </div>
                   </div>

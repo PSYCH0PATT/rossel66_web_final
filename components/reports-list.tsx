@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { formatDateRu } from "@/lib/format-date"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
@@ -432,7 +433,7 @@ export default function ReportsList() {
                                 <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
                                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
                                   <span className="text-slate-400">
-                                    {new Date(report.uploadDate).toLocaleDateString("ru-RU")}
+                                    {formatDateRu(report.uploadDate)}
                                   </span>
                                 </div>
                               </div>

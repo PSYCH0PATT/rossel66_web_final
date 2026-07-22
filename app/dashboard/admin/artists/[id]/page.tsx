@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { formatDateRu } from "@/lib/format-date"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -726,7 +727,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                               </span>
                             </div>
                             <div className="ml-auto [font-variant-numeric:tabular-nums]">
-                              {new Date(report.uploadDate).toLocaleDateString('ru-RU')}
+                              {formatDateRu(report.uploadDate)}
                             </div>
                           </div>
                         </div>
