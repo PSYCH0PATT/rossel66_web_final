@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { formatDateRu } from "@/lib/format-date"
 import * as XLSX from "xlsx"
 import { prisma } from "@/lib/prisma"
 import { releaseFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
@@ -35,7 +36,7 @@ export async function GET(request: Request, { params }: { params: { artistId: st
           "Никнейм артиста": artist.name,
           "Название релиза": release.title,
           "Название трека": track.title,
-          Дата: new Date(release.releaseDate).toLocaleDateString(),
+          Дата: formatDateRu(release.releaseDate),
           UPC: release.upc,
           ISRC: track.isrc || "Не присвоен",
           Длительность: track.duration,

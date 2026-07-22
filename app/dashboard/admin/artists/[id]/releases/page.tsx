@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatDateRu } from "@/lib/format-date"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -163,7 +164,7 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
 
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-300">Дата: {new Date(release.releaseDate).toLocaleDateString()}</span>
+                      <span className="text-gray-300">Дата: {formatDateRu(release.releaseDate)}</span>
                     </div>
 
                     <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatDateRu } from "@/lib/format-date"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -196,9 +197,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                           {release.title}
                         </p>
                         <p className="text-[10px] font-mono text-gray-500 tabular-nums">
-                          {release.releaseDate
-                            ? new Date(release.releaseDate).toLocaleDateString("ru-RU")
-                            : "—"}
+                          {formatDateRu(release.releaseDate)}
                         </p>
                       </div>
                       <span className="material-symbols-outlined text-gray-600 group-hover:text-white text-sm flex-shrink-0">

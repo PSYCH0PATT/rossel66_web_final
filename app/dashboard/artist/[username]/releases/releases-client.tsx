@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState } from "react"
+import { formatDateRu } from "@/lib/format-date"
 import Image from "next/image"
 import Link from "next/link"
 import { useReleasesList } from "@/lib/hooks/use-dashboard-fetch"
@@ -216,14 +217,9 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
   const to = Math.min(page * pageSize, total)
   const pageNumbers = getPageNumbers(page, totalPages)
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr)
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    } catch {
-      return dateStr || "--"
-    }
-  }
+  // Единый русский формат DD.MM.YYYY (поддерживает и "DD.MM.YYYY", и ISO),
+  // без английских «May 14, 2026» и «Invalid Date».
+  const formatDate = (dateStr: string) => formatDateRu(dateStr, "--")
 
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
