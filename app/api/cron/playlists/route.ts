@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
 
     if (useSftpSync) {
       // Перенаправляем на SFTP синхронизацию
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
       try {
         const sftpResponse = await fetch(`${baseUrl}/api/cron/playlists-sftp`, {
@@ -86,8 +85,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Определяем базовый URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
     const results = {
       bandlink: { success: false, count: 0, error: null as string | null },

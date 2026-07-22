@@ -24,8 +24,15 @@
     "db:backup:pg": "bash scripts/backup-supabase-db.sh",
     "sync:pyrus-catalog": "npx tsx scripts/sync-pyrus-catalog-form.ts",
     "verify:pyrus-catalog": "npx tsx scripts/verify-pyrus-catalog-submit.ts",
+    "setup:buildin": "npx tsx scripts/setup-buildin-databases.ts",
+    "process:buildin-outbox": "npx tsx scripts/process-buildin-outbox.ts",
+    "reconcile:buildin": "npx tsx scripts/reconcile-buildin-submissions.ts",
+    "export:buildin-id-map": "npx tsx scripts/export-buildin-id-map.ts",
+    "smoke:buildin": "npx tsx scripts/smoke-buildin.ts",
+    "backfill:buildin": "npx tsx scripts/backfill-buildin.ts",
     "test": "npx tsx --test lib/**/*.test.ts",
-    "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts"
+    "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts",
+    "test:buildin": "npx tsx --test lib/buildin/*.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

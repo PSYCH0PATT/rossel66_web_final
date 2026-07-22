@@ -197,6 +197,22 @@ export async function POST(request: Request) {
       })
     }
 
+    try {
+      const { enqueueArtistSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueArtistSync({
+        id: newUser.id,
+        name: newUser.name,
+        username: newUser.username,
+        email: newUser.email,
+        verified: newUser.verified,
+        vkMusicUrl: newUser.vkMusicUrl,
+        yandexMusicUrl: newUser.yandexMusicUrl,
+        spotifyUrl: newUser.spotifyUrl,
+      })
+    } catch (err) {
+      console.error("Buildin artist sync enqueue failed:", err)
+    }
+
     return NextResponse.json({
       success: true,
       message: "Artist created successfully",
@@ -478,6 +494,22 @@ export async function PUT(request: Request) {
       description: `Профиль артиста "${updatedUser.name}" был обновлен`,
       metadata: { artistId: updatedUser.id, artistName: updatedUser.name }
     })
+
+    try {
+      const { enqueueArtistSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueArtistSync({
+        id: updatedUser.id,
+        name: updatedUser.name,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        verified: updatedUser.verified,
+        vkMusicUrl: updatedUser.vkMusicUrl,
+        yandexMusicUrl: updatedUser.yandexMusicUrl,
+        spotifyUrl: updatedUser.spotifyUrl,
+      })
+    } catch (err) {
+      console.error("Buildin artist sync enqueue failed:", err)
+    }
 
     return NextResponse.json({
       success: true,

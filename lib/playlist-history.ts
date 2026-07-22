@@ -1,69 +1,127 @@
-import { prisma } from './prisma';
+import { prisma } from "./prisma"
+import { enqueuePlaylistHistorySync } from "@/lib/buildin/sync-hooks"
+import type { Prisma } from "@prisma/client"
 
 export interface PlaylistHistoryRecord {
-  playlistUrl: string;
-  playlistName: string;
-  platform: string;
-  changeType: 'added' | 'updated' | 'removed' | 'position_changed';
-  changeDate: string;
-  artistName?: string;
-  artistId?: string | null;
-  trackTitle?: string;
-  oldPosition?: number;
-  newPosition?: number;
-  metadata?: Record<string, any>;
+  playlistUrl: string
+  playlistName: string
+  platform: string
+  changeType: "added" | "updated" | "removed" | "position_changed"
+  changeDate: string
+  artistName?: string
+  artistId?: string | null
+  trackTitle?: string
+  oldPosition?: number
+  newPosition?: number
+  metadata?: Record<string, unknown>
 }
 
 /**
- * Инициализирует таблицу истории (заглушка для обратной совместимости)
+ * Ensures playlist history storage is ready (Prisma migration).
  */
 export async function ensurePlaylistHistoryDatabase(): Promise<void> {
-  // Prisma автоматически создает таблицы через миграции
-  // История пока хранится в памяти / логах, т.к. отдельная таблица не критична
+  // Table created via prisma/migrations/20260720120000_buildin_sync_foundation
 }
 
 /**
- * Записывает изменение в историю (логирование)
+ * Persist a playlist change event and optionally mirror to Buildin.
  */
 export async function recordPlaylistChange(record: PlaylistHistoryRecord): Promise<void> {
-  // Логируем изменение в консоль
-  console.log(`📝 Playlist ${record.changeType}: ${record.playlistName} (${record.platform}) - ${record.artistName || 'unknown'}`);
+  try {
+    const row = await prisma.playlistHistory.create({
+      data: {
+        playlistUrl: record.playlistUrl,
+        playlistName: record.playlistName,
+        platform: record.platform,
+        changeType: record.changeType,
+        changeDate: record.changeDate,
+        artistName: record.artistName ?? null,
+        artistId: record.artistId ?? null,
+        trackTitle: record.trackTitle ?? null,
+        oldPosition: record.oldPosition ?? null,
+        newPosition: record.newPosition ?? null,
+        metadata: (record.metadata as Prisma.InputJsonValue) ?? undefined,
+      },
+    })
+
+    await enqueuePlaylistHistorySync({
+      id: row.id,
+      playlistName: row.playlistName,
+      playlistUrl: row.playlistUrl,
+      platform: row.platform,
+      changeType: row.changeType,
+      changeDate: row.changeDate,
+      artistName: row.artistName,
+      trackTitle: row.trackTitle,
+    })
+  } catch (err) {
+    console.error("recordPlaylistChange failed:", err)
+  }
 }
 
 /**
- * Получает историю изменений
+ * Query playlist change history from Postgres.
  */
 export async function getPlaylistHistory(filters?: {
-  startDate?: string;
-  endDate?: string;
-  changeType?: string;
-  artistName?: string;
-  playlistUrl?: string;
-  limit?: number;
-}): Promise<any[]> {
-  // История пока не хранится в отдельной таблице
-  return [];
+  startDate?: string
+  endDate?: string
+  changeType?: string
+  artistName?: string
+  playlistUrl?: string
+  limit?: number
+}): Promise<
+  Array<{
+    id: string
+    playlistUrl: string
+    playlistName: string
+    platform: string
+    changeType: string
+    changeDate: string
+    artistName: string | null
+    artistId: string | null
+    trackTitle: string | null
+    oldPosition: number | null
+    newPosition: number | null
+    createdAt: Date
+  }>
+> {
+  const where: Record<string, unknown> = {}
+
+  if (filters?.changeType) where.changeType = filters.changeType
+  if (filters?.playlistUrl) where.playlistUrl = filters.playlistUrl
+  if (filters?.artistName) {
+    where.artistName = { contains: filters.artistName, mode: "insensitive" }
+  }
+  if (filters?.startDate || filters?.endDate) {
+    where.changeDate = {
+      ...(filters.startDate ? { gte: filters.startDate } : {}),
+      ...(filters.endDate ? { lte: filters.endDate } : {}),
+    }
+  }
+
+  return prisma.playlistHistory.findMany({
+    where,
+    orderBy: [{ changeDate: "desc" }, { createdAt: "desc" }],
+    take: Math.min(filters?.limit ?? 200, 1000),
+  })
 }
 
 /**
- * Очищает плейлисты, которых нет в новых файлах
- * Использует Prisma для работы с Supabase
+ * Removes playlists missing from the current SFTP snapshot.
  */
 export async function cleanupRemovedPlaylists(
   currentPlaylistKeys: Set<string>
 ): Promise<{ removed: number; errors: string[] }> {
-  const result = { removed: 0, errors: [] as string[] };
+  const result = { removed: 0, errors: [] as string[] }
 
-  /** Пустой снимок = нет валидного CSV / парсинг дал 0 плейлистов — нельзя считать «все удалены с SFTP». */
   if (currentPlaylistKeys.size === 0) {
     console.warn(
       "⚠️  cleanupRemovedPlaylists: пропуск — пустой набор ключей (иначе удалились бы все плейлисты в БД)"
-    );
-    return result;
+    )
+    return result
   }
 
   try {
-    // Получаем все плейлисты из Supabase
     const allPlaylists = await prisma.playlist.findMany({
       select: {
         id: true,
@@ -71,35 +129,41 @@ export async function cleanupRemovedPlaylists(
         playlistName: true,
         platform: true,
         artistName: true,
-        artistId: true
-      }
-    });
-    
-    const now = new Date().toISOString().split('T')[0];
-    
+        artistId: true,
+      },
+    })
+
+    const now = new Date().toISOString().split("T")[0]
+
     for (const playlist of allPlaylists) {
-      const key = `${playlist.playlistUrl}|${playlist.playlistName}`;
-      
-      // Если плейлиста нет в текущих файлах
+      const key = `${playlist.playlistUrl}|${playlist.playlistName}`
+
       if (!currentPlaylistKeys.has(key)) {
         try {
-          // Логируем удаление
-          console.log(`🗑️  Удаление плейлиста: ${playlist.playlistName} (${playlist.artistName})`);
-          
-          // Удаляем из базы
-          await prisma.playlist.delete({
-            where: { id: playlist.id }
-          });
-          
-          result.removed++;
-        } catch (error: any) {
-          result.errors.push(`Ошибка удаления плейлиста ${playlist.playlistName} (${playlist.artistName}): ${error.message}`);
+          await recordPlaylistChange({
+            playlistUrl: playlist.playlistUrl,
+            playlistName: playlist.playlistName,
+            platform: playlist.platform,
+            changeType: "removed",
+            changeDate: now,
+            artistName: playlist.artistName ?? undefined,
+            artistId: playlist.artistId,
+          })
+
+          await prisma.playlist.delete({ where: { id: playlist.id } })
+          result.removed++
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error)
+          result.errors.push(
+            `Ошибка удаления плейлиста ${playlist.playlistName} (${playlist.artistName}): ${message}`
+          )
         }
       }
     }
-  } catch (error: any) {
-    result.errors.push(`Ошибка получения плейлистов для очистки: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    result.errors.push(`Ошибка получения плейлистов для очистки: ${message}`)
   }
-  
-  return result;
+
+  return result
 }

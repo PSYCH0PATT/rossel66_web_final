@@ -85,7 +85,7 @@ const TRANSACTIONS: Transaction[] = [
   },
   {
     id: "6",
-    title: "Vercel Subscription",
+    title: "Subscription",
     amount: "$15.99",
     type: "outgoing",
     category: "entertainment",

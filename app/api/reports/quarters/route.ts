@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireAuth } from "@/lib/server-auth"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = await requireAuth(request)
+  if (denied) return denied
+
   try {
     const rows = await prisma.$queryRaw<{ quarter: string }[]>`
       SELECT DISTINCT quarter FROM "Report"

@@ -15,8 +15,7 @@ function cronBaseUrl(): string {
     return process.env.INTERNAL_CRON_BASE_URL.replace(/\/$/, '');
   }
   return (
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
   ).replace(/\/$/, '');
 }
 
@@ -76,6 +75,7 @@ export function initScheduler() {
   console.log('📊 Analytics Flash Import: 20:00 MSK ежедневно');
   console.log('🧹 Analytics Cleanup: 1 января 00:00 MSK');
   console.log('🖼  Playlist covers (VK/Яндекс): сб + вс 06:00 MSK → /api/cron/playlist-covers (до 20/день)');
+  console.log('📦 Buildin outbox: каждые 5 минут → /api/cron/buildin-outbox');
   console.log('═══════════════════════════════════════════════════');
   console.log('');
   
@@ -83,6 +83,20 @@ export function initScheduler() {
   // KOALA PARSER - 12:00 и 20:00 по Москве
   // ============================================================
   
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const response = await fetchCronGet('/api/cron/buildin-outbox?limit=20');
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('📦 [Buildin outbox] failed:', result);
+      }
+    } catch (err) {
+      console.error('📦 [Buildin outbox] error:', err);
+    }
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+
   cron.schedule('0 12 * * *', async () => {
     console.log('');
     console.log('🚀 [12:00 MSK] Starting scheduled Koala Parser...');

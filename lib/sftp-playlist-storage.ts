@@ -126,7 +126,7 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
           }
         } else {
           // Создаем новый плейлист
-          await prisma.playlist.create({
+          const createdPlaylist = await prisma.playlist.create({
             data: {
               id: `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               playlistUrl: playlist.playlistUrl,
@@ -139,6 +139,23 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
               lastSeenDate: today
             }
           });
+
+          try {
+            const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+            await enqueuePlaylistSync({
+              id: createdPlaylist.id,
+              playlistName: createdPlaylist.playlistName,
+              playlistUrl: createdPlaylist.playlistUrl,
+              platform: createdPlaylist.platform,
+              artistId: createdPlaylist.artistId,
+              artistName: createdPlaylist.artistName,
+              firstSeenDate: createdPlaylist.firstSeenDate,
+              lastSeenDate: createdPlaylist.lastSeenDate,
+              coverUrl: createdPlaylist.coverUrl,
+            })
+          } catch (err) {
+            console.error("Buildin playlist sync enqueue failed:", err)
+          }
           
           // Записываем добавление в историю
           for (const track of artistTracks) {

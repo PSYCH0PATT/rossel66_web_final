@@ -8,10 +8,19 @@ import {
 import { resetParserCookieAlert } from "@/lib/parser-status"
 import { requireAdmin } from "@/lib/server-auth"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const data = await listParserCookies("bandlink")
-    return NextResponse.json({ success: true, ...data })
+    // Never expose cookie values to the client — only names + metadata.
+    return NextResponse.json({
+      success: true,
+      cookies: data.cookies.map((c) => ({ name: c.name, hasValue: Boolean(c.value) })),
+      count: data.count,
+      lastUpdated: data.lastUpdated,
+    })
   } catch (error) {
     console.error("Ошибка получения cookies:", error)
     return NextResponse.json(

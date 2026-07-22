@@ -21,6 +21,12 @@ import {
 } from "@/lib/pyrus-catalog/errors"
 import { catalogLog } from "@/lib/pyrus-catalog/log"
 import type { CatalogRelease } from "@/lib/pyrus-catalog/types"
+import {
+  isBuildinDualWriteEnabled,
+  isPyrusWriteDisabled,
+} from "@/lib/buildin/env"
+import { recordAndDualWriteSubmission } from "@/lib/buildin/dual-write"
+import { collectBuildinFilesFromFormData } from "@/lib/buildin/collect-files"
 
 export const maxDuration = 300
 
@@ -30,20 +36,13 @@ export async function POST(request: NextRequest) {
   const rl = guardPublicFormRateLimit(request)
   if (rl) return rl
 
-  if (!getPyrusApiKey()) {
-    catalogLog("config_missing", { reason: "PYRUS_API_KEY" })
-    return NextResponse.json(
-      { message: "Ошибка сервера: интеграция с Pyrus не настроена." },
-      { status: 500 }
-    )
-  }
+  const pyrusDisabled = isPyrusWriteDisabled()
+  const buildinEnabled = isBuildinDualWriteEnabled()
 
-  const accessToken = await getPyrusAccessToken()
-  if (!accessToken) {
-    catalogLog("auth_failed", {})
+  if (pyrusDisabled && !buildinEnabled) {
     return NextResponse.json(
-      { message: "Ошибка аутентификации. Попробуйте позже или обратитесь в поддержку." },
-      { status: 500 }
+      { message: "Приём заявок временно недоступен: нет настроенного бэкенда форм." },
+      { status: 503 }
     )
   }
 
@@ -74,60 +73,102 @@ export async function POST(request: NextRequest) {
     }
 
     const releases = parsed.data as CatalogRelease[]
-
     preflightCatalogFiles(releases, formData)
-
-    const totalFiles = countCatalogFilesToUpload(releases, formData)
-    const guids = await uploadAllCatalogFiles(releases, formData, accessToken, (percent) => {
-      if (uploadId) pushProgress(uploadId, percent)
-    })
-
-    const pyrusFields = buildPyrusCatalogFields(releases, guids)
     const taskTitle = buildCatalogTaskTitle(releases)
 
-    catalogLog("create_task_request", {
-      uploadId,
-      releaseCount: releases.length,
-      fieldCount: pyrusFields.length,
-      fileCount: totalFiles,
-    })
+    let pyrusTaskId: string | null = null
 
-    const pyrusResponse = await fetch("https://api.pyrus.com/v4/tasks", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        form_id: PYRUS_CATALOG_FORM_ID,
-        fields: pyrusFields,
-        text: taskTitle,
-      }),
-    })
+    if (!pyrusDisabled) {
+      if (!getPyrusApiKey()) {
+        catalogLog("config_missing", { reason: "PYRUS_API_KEY" })
+        return NextResponse.json(
+          { message: "Ошибка сервера: интеграция с Pyrus не настроена." },
+          { status: 500 }
+        )
+      }
 
-    const responseData = await pyrusResponse.json()
+      const accessToken = await getPyrusAccessToken()
+      if (!accessToken) {
+        catalogLog("auth_failed", {})
+        return NextResponse.json(
+          { message: "Ошибка аутентификации. Попробуйте позже или обратитесь в поддержку." },
+          { status: 500 }
+        )
+      }
 
-    if (pyrusResponse.ok && responseData?.task?.id) {
-      if (uploadId) pushProgress(uploadId, 100)
-      return NextResponse.json({
-        message: "Форма успешно отправлена",
-        taskId: responseData.task.id,
+      const totalFiles = countCatalogFilesToUpload(releases, formData)
+      const guids = await uploadAllCatalogFiles(releases, formData, accessToken, (percent) => {
+        if (uploadId) pushProgress(uploadId, percent)
       })
+
+      const pyrusFields = buildPyrusCatalogFields(releases, guids)
+
+      catalogLog("create_task_request", {
+        uploadId,
+        releaseCount: releases.length,
+        fieldCount: pyrusFields.length,
+        fileCount: totalFiles,
+      })
+
+      const pyrusResponse = await fetch("https://api.pyrus.com/v4/tasks", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          form_id: PYRUS_CATALOG_FORM_ID,
+          fields: pyrusFields,
+          text: taskTitle,
+        }),
+      })
+
+      const responseData = await pyrusResponse.json()
+
+      if (!(pyrusResponse.ok && responseData?.task?.id)) {
+        catalogLog("pyrus_api_error", {
+          uploadId,
+          status: pyrusResponse.status,
+          errorCode: responseData?.error_code,
+          error: responseData?.error,
+          responseData,
+        })
+
+        const userMessage = responseData?.error_code
+          ? mapPyrusApiErrorToUserMessage(responseData.error_code, responseData.error ?? "")
+          : "Ошибка при отправке формы. Попробуйте позже."
+
+        return NextResponse.json({ message: userMessage }, { status: pyrusResponse.status || 500 })
+      }
+
+      pyrusTaskId = String(responseData.task.id)
     }
 
-    catalogLog("pyrus_api_error", {
-      uploadId,
-      status: pyrusResponse.status,
-      errorCode: responseData?.error_code,
-      error: responseData?.error,
-      responseData,
+    const dualWarnings: string[] = []
+    const buildinFiles = buildinEnabled
+      ? await collectBuildinFilesFromFormData(formData, dualWarnings)
+      : []
+
+    const dual = await recordAndDualWriteSubmission({
+      formType: "catalog_upload",
+      title: taskTitle,
+      payload: { releases },
+      artistNickname: releases[0]?.artists ?? null,
+      pyrusTaskId,
+      files: buildinFiles,
+      idempotencySeed: uploadId || `catalog:${taskTitle}:${releases.length}`,
     })
 
-    const userMessage = responseData?.error_code
-      ? mapPyrusApiErrorToUserMessage(responseData.error_code, responseData.error ?? "")
-      : "Ошибка при отправке формы. Попробуйте позже."
-
-    return NextResponse.json({ message: userMessage }, { status: pyrusResponse.status || 500 })
+    if (uploadId) pushProgress(uploadId, 100)
+    return NextResponse.json({
+      message: "Форма успешно отправлена",
+      taskId: pyrusTaskId,
+      submissionId: dual.submissionId,
+      buildinPageId: dual.buildinPageId,
+      warnings: [...dualWarnings, ...dual.warnings].length
+        ? [...dualWarnings, ...dual.warnings]
+        : undefined,
+    })
   } catch (error) {
     if (error instanceof CatalogSubmitError) {
       catalogLog("submit_error", {

@@ -24,7 +24,7 @@ export function isCronAuthorized(request: NextRequest): boolean {
   return provided === expected
 }
 
-/** Server-to-server: JSON POST с тем же секретом, что и Vercel Cron */
+/** Server-to-server: JSON POST с тем же секретом CRON_SECRET, что и системный cron (crond в Docker) */
 export function internalCronFetchJsonHeaders(): HeadersInit {
   const secret = process.env.CRON_SECRET
   if (!secret) throw new Error('CRON_SECRET is not set')

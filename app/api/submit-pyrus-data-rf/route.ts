@@ -1,33 +1,40 @@
-import { NextResponse } from "next/server";
-import { getPyrusAccessToken } from "@/lib/pyrus";
-import { guardPublicFormRateLimit, pyrusDataRfSchema } from "@/lib/pyrus-public-schemas";
+import { NextResponse } from "next/server"
+import { getPyrusAccessToken } from "@/lib/pyrus"
+import {
+  guardPublicFormRateLimit,
+  pyrusDataRfSchema,
+} from "@/lib/pyrus-public-schemas"
+import {
+  isBuildinDualWriteEnabled,
+  isPyrusWriteDisabled,
+} from "@/lib/buildin/env"
+import { recordAndDualWriteSubmission } from "@/lib/buildin/dual-write"
 
-// Интерфейс для данных, приходящих с фронтенда
 interface FormDataRF {
-  nickname: string;
-  telegramProfile: string;
-  email: string;
-  passportFullName: string;
-  passportShortName: string;
-  dateOfBirth: string; // Формат YYYY-MM-DD
-  passportSeriesNumber: string;
-  passportIssuedBy: string;
-  passportIssueDate: string; // Формат YYYY-MM-DD
-  passportDepartmentCode: string;
-  placeOfBirth: string;
-  registrationAddress: string;
-  snils: string;
-  inn: string;
-  bankName: string;
-  bankAccountNumber: string;
-  bankCorrespondentAccount: string;
-  bankBik: string;
-  bankInn: string;
-  bankKpp: string;
+  nickname: string
+  telegramProfile: string
+  email: string
+  passportFullName: string
+  passportShortName: string
+  dateOfBirth: string
+  passportSeriesNumber: string
+  passportIssuedBy: string
+  passportIssueDate: string
+  passportDepartmentCode: string
+  placeOfBirth: string
+  registrationAddress: string
+  snils: string
+  inn: string
+  bankName: string
+  bankAccountNumber: string
+  bankCorrespondentAccount: string
+  bankBik: string
+  bankInn: string
+  bankKpp: string
 }
 
-const PYRUS_FIELD_IDS = { // Этот блок должен быть АКТИВНЫМ и содержать ваши реальные ID полей
-  nickname: "1", 
+const PYRUS_FIELD_IDS = {
+  nickname: "1",
   telegramProfile: "2",
   email: "24",
   passportFullName: "6",
@@ -47,98 +54,115 @@ const PYRUS_FIELD_IDS = { // Этот блок должен быть АКТИВ�
   bankBik: "21",
   bankInn: "22",
   bankKpp: "23",
-};
+}
 
-const PYRUS_FORM_ID = 1553991;
+const PYRUS_FORM_ID = 1553991
 
 export async function POST(request: Request) {
   try {
-    const rl = guardPublicFormRateLimit(request);
-    if (rl) return rl;
+    const rl = guardPublicFormRateLimit(request)
+    if (rl) return rl
 
-    const accessToken = await getPyrusAccessToken();
-    if (!accessToken) {
+    const pyrusDisabled = isPyrusWriteDisabled()
+    const buildinEnabled = isBuildinDualWriteEnabled()
+
+    if (pyrusDisabled && !buildinEnabled) {
       return NextResponse.json(
-        { message: "Pyrus не настроен: задайте PYRUS_LOGIN и PYRUS_API_KEY в окружении." },
-        { status: 500 }
-      );
+        { message: "Приём заявок временно недоступен: нет настроенного бэкенда форм." },
+        { status: 503 }
+      )
     }
 
-    const rawBody: unknown = await request.json().catch(() => null);
-    const validated = pyrusDataRfSchema.safeParse(rawBody);
+    const rawBody: unknown = await request.json().catch(() => null)
+    const validated = pyrusDataRfSchema.safeParse(rawBody)
     if (!validated.success) {
       return NextResponse.json(
         { message: "Некорректные поля формы.", details: validated.error.flatten() },
         { status: 400 }
-      );
+      )
     }
-    const formData: FormDataRF = validated.data as FormDataRF;
+    const formData = validated.data as FormDataRF
 
-    const pyrusFields = Object.entries(formData)
-      .map(([key, value]) => {
-        const fieldId = PYRUS_FIELD_IDS[key as keyof typeof PYRUS_FIELD_IDS];
-        if (fieldId && value && fieldId.startsWith("FIELD_ID_") === false) { // Добавил проверку, что ID был заменен
-          return { id: fieldId, value: value };
-        }
-        return null;
+    let taskTitle = `Заявка от ${formData.nickname || formData.passportShortName || "Новый пользователь"}`
+    if (formData.email) taskTitle += ` (${formData.email})`
+
+    let pyrusTaskId: string | null = null
+
+    if (!pyrusDisabled) {
+      const accessToken = await getPyrusAccessToken()
+      if (!accessToken) {
+        return NextResponse.json(
+          { message: "Pyrus не настроен: задайте PYRUS_LOGIN и PYRUS_API_KEY в окружении." },
+          { status: 500 }
+        )
+      }
+
+      const pyrusFields = Object.entries(formData)
+        .map(([key, value]) => {
+          const fieldId = PYRUS_FIELD_IDS[key as keyof typeof PYRUS_FIELD_IDS]
+          if (fieldId && value) return { id: fieldId, value }
+          return null
+        })
+        .filter((field): field is { id: string; value: string } => field !== null)
+
+      if (pyrusFields.length === 0) {
+        return NextResponse.json(
+          { message: "Нет данных для отправки в Pyrus. Проверьте конфигурацию ID полей." },
+          { status: 400 }
+        )
+      }
+
+      const taskResponse = await fetch("https://api.pyrus.com/v4/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          form_id: PYRUS_FORM_ID,
+          fields: pyrusFields,
+          text: taskTitle,
+        }),
       })
-      .filter((field) => field !== null) as { id: string; value: any }[]; // Уточнил тип
 
-    if (pyrusFields.length === 0) {
-      // Это может произойти, если PYRUS_FIELD_IDS не заполнены реальными значениями
-      console.warn("No Pyrus fields to submit. Check PYRUS_FIELD_IDS configuration.");
-      return NextResponse.json(
-        { message: "Нет данных для отправки в Pyrus. Проверьте конфигурацию ID полей." },
-        { status: 400 }
-      );
-    }
-
-    let taskTitle = `Заявка от ${formData.nickname || formData.passportShortName || 'Новый пользователь'}`;
-    if (formData.email) {
-        taskTitle += ` (${formData.email})`;
-    }
-
-    const pyrusTaskData = {
-      form_id: PYRUS_FORM_ID,
-      fields: pyrusFields,
-      text: taskTitle,
-    };
-
-    const taskResponse = await fetch("https://api.pyrus.com/v4/tasks", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(pyrusTaskData),
-    });
-
-    const responseData = await taskResponse.json();
-
-    if (taskResponse.ok && responseData && responseData.task) {
-        return NextResponse.json({
-            message: "Форма успешно отправлена",
-            taskId: responseData.task.id,
-        });
-    } else {
-        console.error("Pyrus API error (creating task):", responseData);
-        
-        // Handle validation errors
-        if (responseData.error && responseData.error_code === 'invalid_value_format') {
+      const responseData = await taskResponse.json()
+      if (!(taskResponse.ok && responseData?.task?.id)) {
+        console.error("Pyrus API error (creating task):", responseData)
+        if (responseData.error_code === "invalid_value_format") {
           return NextResponse.json(
             { message: "Проверьте формат заполненных полей (серия/номер паспорта, ИНН, СНИЛС)." },
             { status: 400 }
-          );
+          )
         }
-        
         return NextResponse.json(
-            { message: "Ошибка при отправке формы", details: responseData },
-            { status: taskResponse.status }
-        );
+          { message: "Ошибка при отправке формы", details: responseData },
+          { status: taskResponse.status }
+        )
+      }
+      pyrusTaskId = String(responseData.task.id)
     }
 
-  } catch (error: any) {
-    console.error("Error processing Pyrus form submission:", error);
-    return NextResponse.json({ message: "Ошибка при отправке формы", details: error.message ? error.message : "Неизвестная ошибка сервера" }, { status: 500 });
+    const dual = await recordAndDualWriteSubmission({
+      formType: "data_rf",
+      title: taskTitle,
+      payload: formData as unknown as Record<string, unknown>,
+      contactEmail: formData.email,
+      contactTelegram: formData.telegramProfile,
+      artistNickname: formData.nickname,
+      pyrusTaskId,
+      idempotencySeed: `data_rf:${formData.email}:${formData.nickname}:${formData.passportSeriesNumber}`,
+    })
+
+    return NextResponse.json({
+      message: "Форма успешно отправлена",
+      taskId: pyrusTaskId,
+      submissionId: dual.submissionId,
+      buildinPageId: dual.buildinPageId,
+      warnings: dual.warnings.length ? dual.warnings : undefined,
+    })
+  } catch (error: unknown) {
+    console.error("Error processing RF form submission:", error)
+    const message = error instanceof Error ? error.message : "Неизвестная ошибка сервера"
+    return NextResponse.json({ message: "Ошибка при отправке формы", details: message }, { status: 500 })
   }
-} 
+}

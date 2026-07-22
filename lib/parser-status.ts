@@ -31,7 +31,7 @@ export async function upsertParserRunStatus(
     lastError?: string | null
   }
 ) {
-  return prisma.parserRunStatus.upsert({
+  const row = await prisma.parserRunStatus.upsert({
     where: { platform },
     create: {
       platform,
@@ -49,6 +49,22 @@ export async function upsertParserRunStatus(
       ...(data.lastError !== undefined ? { lastError: data.lastError } : {}),
     },
   })
+
+  try {
+    const { enqueueParserRunSync } = await import("@/lib/buildin/sync-hooks")
+    await enqueueParserRunSync({
+      platform: row.platform,
+      status: row.status,
+      lastRun: row.lastRun,
+      needsNewCookies: row.needsNewCookies,
+      failedAttempts: row.failedAttempts,
+      lastError: row.lastError,
+    })
+  } catch (err) {
+    console.error("Buildin parser sync enqueue failed:", err)
+  }
+
+  return row
 }
 
 export async function resetParserCookieAlert(platform: ParserStatusPlatform) {

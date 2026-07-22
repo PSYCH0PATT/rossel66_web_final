@@ -316,8 +316,24 @@ export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'up
     prismaRelease.artistId,
     ...(prismaRelease.featuredArtistIds ?? []),
   ])
-  
-  return releaseFromPrisma(prismaRelease)
+
+  const created = releaseFromPrisma(prismaRelease)
+  try {
+    const { enqueueReleaseSync } = await import("@/lib/buildin/sync-hooks")
+    await enqueueReleaseSync({
+      id: created.id,
+      title: created.title,
+      artistId: created.artistId,
+      upc: created.upc,
+      releaseDate: created.releaseDate,
+      autoStatus: created.status,
+      coverUrl: created.coverUrl,
+    })
+  } catch (err) {
+    console.error("Buildin release sync enqueue failed:", err)
+  }
+
+  return created
 }
 
 /** Атомарно: создать релиз и записи activity (без частичного состояния). */
@@ -351,7 +367,23 @@ export async function addReleaseWithActivities(
   ])
   await trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
 
-  return releaseFromPrisma(prismaRelease)
+  const created = releaseFromPrisma(prismaRelease)
+  try {
+    const { enqueueReleaseSync } = await import("@/lib/buildin/sync-hooks")
+    await enqueueReleaseSync({
+      id: created.id,
+      title: created.title,
+      artistId: created.artistId,
+      upc: created.upc,
+      releaseDate: created.releaseDate,
+      autoStatus: created.status,
+      coverUrl: created.coverUrl,
+    })
+  } catch (err) {
+    console.error("Buildin release sync enqueue failed:", err)
+  }
+
+  return created
 }
 
 function toReleaseUpdateInput(updates: Partial<Release>): Prisma.ReleaseUpdateInput {
@@ -656,8 +688,24 @@ export async function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>):
   
   // Trim old activities
   await trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
-  
-  return activityFromPrisma(prismaActivity)
+
+  const created = activityFromPrisma(prismaActivity)
+  try {
+    const { enqueueActivitySync } = await import("@/lib/buildin/sync-hooks")
+    await enqueueActivitySync({
+      id: created.id,
+      type: created.type,
+      userId: created.userId,
+      userRole: created.userRole,
+      title: created.title,
+      description: created.description,
+      createdAt: created.createdAt,
+    })
+  } catch (err) {
+    console.error("Buildin activity sync enqueue failed:", err)
+  }
+
+  return created
 }
 
 export interface ActivityFilters {

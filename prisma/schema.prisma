@@ -189,3 +189,105 @@ model ParserRunStatus {
   lastError         String?
   updatedAt         DateTime @updatedAt
 }
+
+/**
+ * Canonical form submission (source of truth for dual-write to Pyrus + Buildin).
+ * Payload is stored as JSON; files live in Pyrus/Buildin/Supabase depending on adapter.
+ */
+model FormSubmission {
+  id              String   @id @default(cuid())
+  /** release_upload | catalog_upload | distribution | data_rf | data_not_rf */
+  formType        String
+  /** pending | dual_writing | completed | partial | failed */
+  status          String   @default("pending")
+  idempotencyKey  String   @unique
+  title           String
+  contactEmail    String?
+  contactTelegram String?
+  artistNickname  String?
+  /** Canonical validated payload (no file binaries) */
+  payload         Json
+  /** Snapshot of file metadata: name, size, contentType, adapters' file refs */
+  filesMeta       Json     @default("[]")
+  pyrusTaskId     String?
+  buildinPageId   String?
+  lastError       String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  externalIds BuildinExternalId[]
+  outbox      BuildinOutbox[]
+
+  @@index([formType, createdAt])
+  @@index([status, createdAt])
+  @@index([pyrusTaskId])
+  @@index([buildinPageId])
+}
+
+/** Maps local entity IDs to Buildin page/database record IDs */
+model BuildinExternalId {
+  id             String   @id @default(cuid())
+  /** submission | artist | release | track | report | playlist | activity | parser_run */
+  entityType     String
+  localId        String
+  buildinPageId  String
+  buildinDbKey   String?
+  version        Int      @default(1)
+  lastSyncedAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  submissionId   String?
+  submission     FormSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+
+  @@unique([entityType, localId])
+  @@unique([buildinPageId])
+  @@index([entityType, buildinPageId])
+  @@index([submissionId])
+}
+
+/** Reliable outbox for Buildin writes / sync jobs */
+model BuildinOutbox {
+  id           String    @id @default(cuid())
+  /** create_submission | sync_artist | sync_release | sync_report | sync_playlist | sync_activity | sync_parser */
+  eventType    String
+  payload      Json
+  /** pending | processing | done | failed | dead */
+  status       String    @default("pending")
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(8)
+  nextAttemptAt DateTime @default(now())
+  lastError    String?   @db.Text
+  submissionId String?
+  submission   FormSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  processedAt  DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([eventType, status])
+  @@index([submissionId])
+}
+
+/** Playlist change history (was stubbed empty before) */
+model PlaylistHistory {
+  id            String   @id @default(cuid())
+  playlistUrl   String
+  playlistName  String
+  platform      String
+  changeType    String
+  changeDate    String
+  artistName    String?
+  artistId      String?
+  trackTitle    String?
+  oldPosition   Int?
+  newPosition   Int?
+  metadata      Json?
+  buildinPageId String?
+  createdAt     DateTime @default(now())
+
+  @@index([changeDate])
+  @@index([artistId])
+  @@index([playlistUrl])
+  @@index([changeType])
+  @@index([createdAt])
+}

@@ -9,3 +9,6 @@
 # SFTP плейлисты: 16:00 и 00:30 МСК -> 13:00 и 21:30 UTC (скрипт читает CRON_SECRET из /tmp/.cron_secret)
 0 13 * * * /app/scripts/cron-sftp.sh >> /app/logs/cron.log 2>&1
 30 21 * * * /app/scripts/cron-sftp.sh >> /app/logs/cron.log 2>&1
+
+# Buildin outbox retries: каждые 5 минут
+*/5 * * * * curl -s -H "Authorization: Bearer $(cat /tmp/.cron_secret 2>/dev/null)" "http://127.0.0.1:3000/api/cron/buildin-outbox?limit=20" >> /app/logs/cron.log 2>&1

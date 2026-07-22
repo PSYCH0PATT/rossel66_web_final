@@ -168,6 +168,26 @@ export async function POST(request: NextRequest) {
     console.log('Создан новый отчет:', newReport)
     console.log('Файл сохранён:', relativeFilePath)
 
+    try {
+      const { enqueueReportSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueReportSync({
+        id: newReport.id,
+        artistId: newReport.artistId,
+        artistName: newReport.artistName,
+        quarter: newReport.quarter,
+        year: newReport.year,
+        totalAmount: newReport.totalAmount,
+        totalPlays: newReport.totalPlays,
+        isPaid: newReport.isPaid,
+        isSigned: newReport.isSigned,
+        isAcknowledged: newReport.isAcknowledged,
+        isRegistered: newReport.isRegistered,
+        fileUrl: newReport.filePath,
+      })
+    } catch (err) {
+      console.error("Buildin report sync enqueue failed:", err)
+    }
+
     return NextResponse.json({
       success: true,
       message: `Отчет успешно загружен! ${registeredArtist ? 'Артист найден в системе.' : 'Артист не зарегистрирован.'} Обработано ${data.length} треков.`,

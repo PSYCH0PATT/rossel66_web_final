@@ -11,10 +11,15 @@ import {
   safeParseFormJsonString,
   pyrusReleaseUploadClientSchema,
 } from "@/lib/pyrus-public-schemas";
+import { recordAndDualWriteSubmission } from "@/lib/buildin/dual-write";
+import { collectBuildinFilesFromFormData } from "@/lib/buildin/collect-files";
+import {
+  isBuildinDualWriteEnabled,
+  isPyrusWriteDisabled,
+} from "@/lib/buildin/env";
 
 const PYRUS_FORM_ID_RELEASE_UPLOAD = 1534238;
 
-// --- Interfaces (should match client-side state) ---
 interface TrackReleaseData {
   id: string;
   trackName: string;
@@ -155,18 +160,13 @@ export async function POST(request: NextRequest) {
   const rl = guardPublicFormRateLimit(request);
   if (rl) return rl;
 
-  if (!getPyrusApiKey()) {
-    return NextResponse.json(
-      { message: "Ошибка сервера: Ключ API Pyrus не настроен." },
-      { status: 500 }
-    );
-  }
+  const pyrusDisabled = isPyrusWriteDisabled();
+  const buildinEnabled = isBuildinDualWriteEnabled();
 
-  const accessToken = await getPyrusAccessToken();
-  if (!accessToken) {
+  if (pyrusDisabled && !buildinEnabled) {
     return NextResponse.json(
-      { message: "Ошибка аутентификации Pyrus." },
-      { status: 500 }
+      { message: "Приём заявок временно недоступен: нет настроенного бэкенда форм." },
+      { status: 503 }
     );
   }
 
@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
     let clientData: ReleaseUploadAPIData;
     let coverGuid: string | null = null;
     let trackGuids: { audioGuid: string | null; lyricsGuid: string | null }[] = [];
+    let formDataFromRequest: FormData | null = null;
 
     if (contentType.includes("application/json")) {
       const body: unknown = await request.json().catch(() => null);
@@ -192,88 +193,131 @@ export async function POST(request: NextRequest) {
         lyricsGuid: t.lyricsGuid ?? null,
       }));
     } else {
-      const formDataFromRequest = await request.formData();
+      formDataFromRequest = await request.formData();
       const formJsonString = formDataFromRequest.get("form_data_json") as string | null;
       const parsed = safeParseFormJsonString(formJsonString, pyrusReleaseUploadClientSchema);
       if (!parsed.ok) return parsed.response;
       clientData = parsed.data as unknown as ReleaseUploadAPIData;
-
-      const coverArtFile = formDataFromRequest.get("coverArtFile") as File | null;
-      if (coverArtFile && coverArtFile instanceof File) {
-        const uploadedCover = await uploadFileToPyrus(coverArtFile, accessToken);
-        if (uploadedCover?.guid) coverGuid = uploadedCover.guid;
-      }
-
-      for (let i = 0; i < clientData.tracks.length; i++) {
-        const audioFile = formDataFromRequest.get(`track_${i}_audioFile`) as File | null;
-        const lyricsFile = formDataFromRequest.get(`track_${i}_lyricsFile`) as File | null;
-        let audioGuid: string | null = null;
-        let lyricsGuid: string | null = null;
-        if (audioFile && audioFile instanceof File) {
-          const uploaded = await uploadFileToPyrus(audioFile, accessToken);
-          if (uploaded?.guid) audioGuid = uploaded.guid;
-        }
-        if (lyricsFile && lyricsFile instanceof File) {
-          const uploaded = await uploadFileToPyrus(lyricsFile, accessToken);
-          if (uploaded?.guid) lyricsGuid = uploaded.guid;
-        }
-        trackGuids.push({ audioGuid, lyricsGuid });
-      }
     }
-
-    const pyrusFields = buildPyrusFieldsFromClientData(
-      clientData,
-      coverGuid,
-      trackGuids
-    ).filter(
-      (f) =>
-        f.value !== null &&
-        f.value !== undefined &&
-        f.value !== "" &&
-        (Array.isArray(f.value) ? f.value.length > 0 : true)
-    );
 
     const taskTitle = `Заявка на выгрузку релиза: ${clientData.releaseTitle || "Без названия"} от ${clientData.artistNicknames || "Неизвестный артист"}${clientData.email ? ` (${clientData.email})` : ""}`;
 
-    const pyrusTaskData = {
-      form_id: PYRUS_FORM_ID_RELEASE_UPLOAD,
-      fields: pyrusFields,
-      text: taskTitle,
-    };
+    let pyrusTaskId: string | null = null;
 
-    const pyrusResponse = await fetch("https://api.pyrus.com/v4/tasks", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(pyrusTaskData),
+    if (!pyrusDisabled) {
+      if (!getPyrusApiKey()) {
+        return NextResponse.json(
+          { message: "Ошибка сервера: Ключ API Pyrus не настроен." },
+          { status: 500 }
+        );
+      }
+
+      const accessToken = await getPyrusAccessToken();
+      if (!accessToken) {
+        return NextResponse.json(
+          { message: "Ошибка аутентификации Pyrus." },
+          { status: 500 }
+        );
+      }
+
+      if (formDataFromRequest) {
+        const coverArtFile = formDataFromRequest.get("coverArtFile") as File | null;
+        if (coverArtFile && coverArtFile instanceof File) {
+          const uploadedCover = await uploadFileToPyrus(coverArtFile, accessToken);
+          if (uploadedCover?.guid) coverGuid = uploadedCover.guid;
+        }
+
+        for (let i = 0; i < clientData.tracks.length; i++) {
+          const audioFile = formDataFromRequest.get(`track_${i}_audioFile`) as File | null;
+          const lyricsFile = formDataFromRequest.get(`track_${i}_lyricsFile`) as File | null;
+          let audioGuid: string | null = null;
+          let lyricsGuid: string | null = null;
+          if (audioFile && audioFile instanceof File) {
+            const uploaded = await uploadFileToPyrus(audioFile, accessToken);
+            if (uploaded?.guid) audioGuid = uploaded.guid;
+          }
+          if (lyricsFile && lyricsFile instanceof File) {
+            const uploaded = await uploadFileToPyrus(lyricsFile, accessToken);
+            if (uploaded?.guid) lyricsGuid = uploaded.guid;
+          }
+          trackGuids.push({ audioGuid, lyricsGuid });
+        }
+      }
+
+      const pyrusFields = buildPyrusFieldsFromClientData(
+        clientData,
+        coverGuid,
+        trackGuids
+      ).filter(
+        (f) =>
+          f.value !== null &&
+          f.value !== undefined &&
+          f.value !== "" &&
+          (Array.isArray(f.value) ? f.value.length > 0 : true)
+      );
+
+      const pyrusResponse = await fetch("https://api.pyrus.com/v4/tasks", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          form_id: PYRUS_FORM_ID_RELEASE_UPLOAD,
+          fields: pyrusFields,
+          text: taskTitle,
+        }),
+      });
+
+      const responseData = await pyrusResponse.json();
+
+      if (!(pyrusResponse.ok && responseData?.task?.id)) {
+        console.error("Pyrus API error (creating release task):", responseData);
+        if (responseData.error_code) {
+          const errorMessage = getPyrusErrorMessage(
+            responseData.error_code,
+            responseData.error ?? ""
+          );
+          return NextResponse.json(
+            { message: errorMessage },
+            { status: pyrusResponse.status || 400 }
+          );
+        }
+        return NextResponse.json(
+          { message: "Ошибка при отправке формы", details: responseData },
+          { status: pyrusResponse.status || 500 }
+        );
+      }
+
+      pyrusTaskId = String(responseData.task.id);
+    }
+
+    const dualWarnings: string[] = [];
+    const buildinFiles =
+      buildinEnabled && formDataFromRequest
+        ? await collectBuildinFilesFromFormData(formDataFromRequest, dualWarnings)
+        : [];
+
+    const dual = await recordAndDualWriteSubmission({
+      formType: "release_upload",
+      title: taskTitle,
+      payload: clientData as unknown as Record<string, unknown>,
+      contactEmail: clientData.email ?? null,
+      artistNickname: clientData.artistNicknames,
+      pyrusTaskId,
+      files: buildinFiles,
+      idempotencySeed: `release_upload:${clientData.releaseTitle}:${clientData.artistNicknames}:${clientData.email || ""}`,
     });
 
-    const responseData = await pyrusResponse.json();
-
-    if (pyrusResponse.ok && responseData?.task?.id) {
-      return NextResponse.json({
-        message: "Форма успешно отправлена",
-        taskId: responseData.task.id,
-      });
-    }
-
-    console.error("Pyrus API error (creating release task):", responseData);
-    if (responseData.error_code) {
-      const errorMessage = getPyrusErrorMessage(
-        responseData.error_code,
-        responseData.error ?? ""
-      );
-      return NextResponse.json(
-        { message: errorMessage },
-        { status: pyrusResponse.status || 400 }
-      );
-    }
-    return NextResponse.json(
-      { message: "Ошибка при отправке формы", details: responseData },
-      { status: pyrusResponse.status || 500 }
-    );
+    return NextResponse.json({
+      message: "Форма успешно отправлена",
+      taskId: pyrusTaskId,
+      submissionId: dual.submissionId,
+      buildinPageId: dual.buildinPageId,
+      warnings: [...dualWarnings, ...dual.warnings].length
+        ? [...dualWarnings, ...dual.warnings]
+        : undefined,
+    });
   } catch (error) {
     console.error("Error processing Pyrus release submission:", error);
     const errorDetails =
