@@ -71,23 +71,23 @@ export async function POST(request: NextRequest) {
     let calculatedPlays = 0
 
     if (data.length > 0) {
-      // Ищем столбцы с суммами и прослушиваниями
       const firstRow = data[0] as any
       const keys = Object.keys(firstRow)
-      
-      // Пытаемся найти столбцы с числовыми данными
+
+      // G4: определяем нужные столбцы ПО ИМЕНИ, а не суммируем все числа подряд.
+      // Слепое суммирование клало год «2024» и id в прослушивания, а выплату >1000₽
+      // считало прослушиваниями. Если распознаваемых столбцов нет — оставляем 0.
+      const playsKeys = keys.filter((k) => /кол-?во|количест|прослушив|plays|streams/i.test(k))
+      const amountKeys = keys.filter((k) => /сумм|руб|amount|доход|выплат/i.test(k))
+
       for (const row of data) {
-        for (const key of keys) {
-          const value = (row as any)[key]
-          if (typeof value === 'number') {
-            // Если значение больше 1000, вероятно это прослушивания
-            if (value > 1000) {
-              calculatedPlays += value
-            } else if (value > 0) {
-              // Иначе это может быть сумма
-              calculatedAmount += value
-            }
-          }
+        for (const key of playsKeys) {
+          const v = Number((row as any)[key])
+          if (Number.isFinite(v) && v > 0) calculatedPlays += v
+        }
+        for (const key of amountKeys) {
+          const v = Number((row as any)[key])
+          if (Number.isFinite(v) && v > 0) calculatedAmount += v
         }
       }
     }
