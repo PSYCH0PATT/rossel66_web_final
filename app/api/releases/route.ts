@@ -61,7 +61,10 @@ export async function GET(request: Request) {
     const andParts: Prisma.ReleaseWhereInput[] = []
 
     if (artistId) {
-      andParts.push({ artistId })
+      // B1: показывать релизы, где артист — основной ИЛИ приглашённый (feat)
+      andParts.push({
+        OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
+      })
     }
 
     if (status && status !== "all") {
@@ -95,7 +98,10 @@ export async function GET(request: Request) {
           pageSize,
         })
       }
-      andParts.push({ artistId: { in: ids } })
+      // B1: включаем и релизы, где найденные артисты — приглашённые (feat)
+      andParts.push({
+        OR: [{ artistId: { in: ids } }, { featuredArtistIds: { hasSome: ids } }],
+      })
     }
 
     if (dateFrom || dateTo) {
