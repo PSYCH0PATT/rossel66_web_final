@@ -44,7 +44,22 @@ export async function buildAnalyticsFiltersFromRequest(
   const trackArtist = searchParams.get('trackArtist') || undefined
 
   if (artistId) {
-    filters.artistId = artistId
+    // B2: админ выбрал ростер-артиста → включаем и его коллаб-стримы (строки без
+    // artistId, чьё имя токенизируется на него), как в кабинете. Иначе выбор
+    // «Artist» занижает стримы, а фит-стримы видны только под отдельной записью.
+    const user = await prisma.user.findUnique({
+      where: { id: artistId },
+      select: { id: true, name: true, username: true },
+    })
+    if (user) {
+      filters.cabinetWhere = await buildCabinetStreamAnalyticsWhere(
+        user.id,
+        user.name,
+        user.username
+      )
+    } else {
+      filters.artistId = artistId
+    }
   } else if (trackArtist) {
     filters.trackArtist = trackArtist
   }
