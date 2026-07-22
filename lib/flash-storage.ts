@@ -10,6 +10,7 @@ import {
   buildCabinetStreamAnalyticsWhere,
 } from '@/lib/analytics-artist-match'
 import type { FlashRecord } from './flash-parser'
+import { isPaidStreamLength } from '@/lib/stream-length'
 
 // ─── Сохранение ────────────────────────────────────────────────
 
@@ -213,7 +214,7 @@ export async function getStreamAnalytics(filters: StreamFilters) {
   let paidStreams = 0
   let freeStreams = 0
   for (const r of lengthAgg) {
-    const isPaid = r.length === 'Полный стрим' || r.length.toLowerCase() === 'full'
+    const isPaid = isPaidStreamLength(r.length)
     const count = r._sum.streams ?? 0
     if (isPaid) paidStreams += count
     else freeStreams += count
@@ -255,7 +256,7 @@ export async function getStreamAnalytics(filters: StreamFilters) {
     const count = r._sum.streams ?? 0
     track.value += count
 
-    const isPaid = r.length === 'Полный стрим' || r.length.toLowerCase() === 'full'
+    const isPaid = isPaidStreamLength(r.length)
     if (isPaid) track.paid += count
     else track.free += count
   }
