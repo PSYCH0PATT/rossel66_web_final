@@ -15,7 +15,18 @@ interface ArtistReportsProps {
 
 export default function ArtistReports({ username, reports: initialReports, artistName }: ArtistReportsProps) {
   const [reports, setReports] = useState(initialReports)
-  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
+  // По умолчанию — самый свежий год, за который ЕСТЬ отчёты (а не календарный год).
+  // Иначе артист с отчётами только за прошлый год видит «Нет отчётов за 2026».
+  const [currentYear, setCurrentYear] = useState<number>(() => {
+    const ys = [
+      ...new Set(
+        initialReports
+          .map((r) => r.year)
+          .filter((y): y is number => typeof y === "number")
+      ),
+    ].sort((a, b) => b - a)
+    return ys[0] ?? new Date().getFullYear()
+  })
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null)
   const [ackMessage, setAckMessage] = useState<string | null>(null)
