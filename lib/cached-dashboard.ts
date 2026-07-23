@@ -116,21 +116,31 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
   ])
 
   const playlistCount = playlistsForCount.length
-  const reports = reportsRaw.map((r) => ({
-    id: r.id,
-    artistId: r.artistId,
-    artistName: r.artistName,
-    quarter: r.quarter,
-    year: r.year,
-    fileName: r.fileName,
-    uploadDate: r.uploadDate,
-    status: r.status,
-    isRegistered: r.isRegistered,
-    totalPlays: r.totalPlays,
-    totalAmount: r.totalAmount,
-    isSigned: r.isSigned,
-    isPaid: r.isPaid,
-  }))
+  // C4: один отчёт на (quarter, year) — берём последний загруженный (reportsRaw
+  // отсортирован uploadedAt desc), чтобы дубли не задваивали «Заработок».
+  const seenReportKeys = new Set<string>()
+  const reports = reportsRaw
+    .filter((r) => {
+      const key = `${r.quarter}|${r.year}`
+      if (seenReportKeys.has(key)) return false
+      seenReportKeys.add(key)
+      return true
+    })
+    .map((r) => ({
+      id: r.id,
+      artistId: r.artistId,
+      artistName: r.artistName,
+      quarter: r.quarter,
+      year: r.year,
+      fileName: r.fileName,
+      uploadDate: r.uploadDate,
+      status: r.status,
+      isRegistered: r.isRegistered,
+      totalPlays: r.totalPlays,
+      totalAmount: r.totalAmount,
+      isSigned: r.isSigned,
+      isPaid: r.isPaid,
+    }))
 
   return {
     ok: true,

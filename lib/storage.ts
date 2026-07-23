@@ -809,19 +809,25 @@ export interface ReportData extends Omit<Report, 'status'> {
 
 // Функция для получения баланса артиста
 export async function getArtistBalance(artistId: string): Promise<ArtistBalance> {
-  const [totalAgg, paidAgg] = await Promise.all([
-    prisma.report.aggregate({
-      where: { artistId },
-      _sum: { totalAmount: true },
-    }),
-    prisma.report.aggregate({
-      where: { artistId, isPaid: true },
-      _sum: { totalAmount: true },
-    }),
-  ])
+  // C4: один отчёт на (quarter, year) — при наличии дублей берём ПОСЛЕДНИЙ
+  // загруженный, чтобы баланс не задваивался (согласовано с админ-дашбордом).
+  const reports = await prisma.report.findMany({
+    where: { artistId },
+    select: { quarter: true, year: true, totalAmount: true, isPaid: true },
+    orderBy: { uploadedAt: "desc" },
+  })
 
-  const totalBalance = totalAgg._sum.totalAmount ?? 0
-  const paidAmount = paidAgg._sum.totalAmount ?? 0
+  const seen = new Set<string>()
+  let totalBalance = 0
+  let paidAmount = 0
+  for (const r of reports) {
+    const key = `${r.quarter}|${r.year}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const amt = r.totalAmount ?? 0
+    totalBalance += amt
+    if (r.isPaid) paidAmount += amt
+  }
 
   // Доступно к выплате = общий баланс минус выплаченное
   // Минимальная сумма для выплаты 3000 рублей
