@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { normalizeArtistName } from "@/lib/storage"
-import { reportFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
+import { reportFromPrisma, userFromPrisma, releaseFromPrisma } from "@/lib/storage-adapters"
 import {
   CACHE_TAG_ADMIN_DASHBOARD,
   CACHE_TAG_ARTIST_DASHBOARD,
@@ -11,7 +11,7 @@ import {
   dedupePlaylistsByUrlAndName,
   playlistRowVisibleToCabinetUser,
 } from "@/lib/playlist-artist-match"
-import { getActivitiesFiltered, type Activity, type Report, type User } from "@/lib/storage"
+import { getActivitiesFiltered, type Activity, type Report, type User, type Release } from "@/lib/storage"
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 
@@ -379,7 +379,12 @@ async function loadArtistReportsUncached(artistId: string): Promise<ArtistReport
       acknowledgedAt: true,
     },
   })
-  return rows
+  // acknowledgedAt из Prisma — Date; тип ArtistReportItem ждёт ISO-строку
+  // (иначе Date утекает на клиент через RSC-барьер, F-UI-8).
+  return rows.map((r) => ({
+    ...r,
+    acknowledgedAt: r.acknowledgedAt ? r.acknowledgedAt.toISOString() : null,
+  }))
 }
 
 export const getCachedArtistReports = unstable_cache(

@@ -9,9 +9,9 @@ import { AdminSelect, AdminSelectContent, AdminSelectItem, AdminSelectTrigger, A
 import { SelectContent, SelectItem } from "@/components/ui/select"
 import Image from "next/image"
 import Link from "next/link"
-import type { AdminReleaseItem } from "@/lib/cached-dashboard"
+import type { ReleaseListItem } from "@/lib/release-list-dto"
 
-type ReleaseRow = AdminReleaseItem & { artistName?: string }
+type ReleaseRow = ReleaseListItem & { artistName?: string }
 
 function getStatusVariant(status?: string): "live" | "delivered" | "moderation" | "rejected" | "draft" {
   switch (status) {
@@ -561,11 +561,7 @@ export default function AdminReleasesClient() {
                     <td className="px-6 py-4 text-center text-gray-400 font-mono">
                       <span className="flex items-center justify-center gap-1">
                         <span className="material-symbols-outlined text-emerald-500/60" style={{ fontSize: 14 }}>music_note</span>
-                        {typeof release.trackCount === "number"
-                          ? release.trackCount
-                          : Array.isArray(release.tracks)
-                            ? release.tracks.length
-                            : 0}
+                        {release.trackCount ?? 0}
                       </span>
                     </td>
 

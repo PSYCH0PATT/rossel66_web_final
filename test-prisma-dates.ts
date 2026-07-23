@@ -8,7 +8,7 @@ async function main() {
 
   console.log("Raw from DB (first 5):", allMatches.slice(0, 5).map(m => m.releaseDate))
 
-  const parseDate = (dStr) => {
+  const parseDate = (dStr: string | null | undefined) => {
     if (!dStr || dStr === "--") return 0
     const parts = dStr.split(".")
     if (parts.length === 3) {
