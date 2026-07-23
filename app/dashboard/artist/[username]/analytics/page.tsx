@@ -37,6 +37,16 @@ interface AnalyticsData {
   totalStreams?: number
 }
 
+/** Календарная дата в Europe/Moscow (совпадает с ключами данных rossel_flash). */
+function mskDateString(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
 function getDateRange(period: string): { startDate: string; endDate: string } {
   const end = new Date()
   const start = new Date()
@@ -50,9 +60,10 @@ function getDateRange(period: string): { startDate: string; endDate: string } {
     default: start.setDate(end.getDate() - 30); break
   }
 
+  // A7: МСК-даты (не UTC), чтобы диапазон не сдвигался на день
   return {
-    startDate: start.toISOString().split("T")[0],
-    endDate: end.toISOString().split("T")[0],
+    startDate: mskDateString(start),
+    endDate: mskDateString(end),
   }
 }
 
@@ -107,8 +118,9 @@ export default function ArtistAnalyticsPage() {
       let endDate: string
 
       if (period === "custom" && customStart && customEnd) {
-        startDate = customStart.toISOString().split("T")[0]
-        endDate = customEnd.toISOString().split("T")[0]
+        // A7: выбранная дата — локальная полночь; mskDateString не даёт сдвига на день
+        startDate = mskDateString(customStart)
+        endDate = mskDateString(customEnd)
       } else if (period !== "custom") {
         const range = getDateRange(period)
         startDate = range.startDate

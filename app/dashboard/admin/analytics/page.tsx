@@ -104,8 +104,8 @@ function getDateRange(period: string): { startDate: string; endDate: string } {
   }
 
   return {
-    startDate: start.toISOString().split("T")[0],
-    endDate: end.toISOString().split("T")[0],
+    startDate: mskDateString(start),
+    endDate: mskDateString(end),
   }
 }
 
@@ -194,8 +194,10 @@ export default function AdminAnalyticsPage() {
       let endDate: string
 
       if (period === "custom" && customStart && customEnd) {
-        startDate = customStart.toISOString().split("T")[0]
-        endDate = customEnd.toISOString().split("T")[0]
+        // A7: выбранная в календаре дата — локальная полночь; toISOString сдвигал
+        // её на день. mskDateString даёт календарную дату в МСК (как ключи данных).
+        startDate = mskDateString(customStart)
+        endDate = mskDateString(customEnd)
       } else if (period !== "custom") {
         const range = getDateRange(period)
         startDate = range.startDate
