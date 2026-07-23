@@ -55,7 +55,9 @@ export async function GET(request: Request) {
       }),
       prisma.report.count({ where }),
       prisma.report.count({
-        where: { isRegistered: true, ...unpaidClause },
+        // D4: счётчик неоплаченных должен учитывать фильтр по артисту (baseWhere),
+        // иначе при выбранном артисте показывает глобальное число неоплаченных.
+        where: { ...baseWhere, ...unpaidClause },
       }),
     ])
 
