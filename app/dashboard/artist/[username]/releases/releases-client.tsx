@@ -282,7 +282,19 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
           ) : releases.length === 0 ? (
             <div className="py-20 text-center">
               <span className="material-symbols-outlined text-5xl text-gray-600 block mb-4">library_music</span>
-              <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">No releases found</p>
+              {debouncedQ ? (
+                <>
+                  <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">Ничего не найдено</p>
+                  <button
+                    onClick={() => handleSearch("")}
+                    className="mt-4 text-[#10b981] font-mono text-xs uppercase tracking-wider hover:underline"
+                  >
+                    Сбросить поиск
+                  </button>
+                </>
+              ) : (
+                <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">Пока нет релизов</p>
+              )}
             </div>
           ) : (
             <>
