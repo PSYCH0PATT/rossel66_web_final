@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import type { Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
+import { formatDateRu } from "@/lib/format-date"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 
@@ -178,11 +179,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
                             Отчёт за {quarter} {report.year}
                           </h4>
                           <p className="text-xs text-gray-400 mt-1 font-mono tabular-nums">
-                            {(report as any).generatedDate
-                              ? `Сгенерирован: ${new Date((report as any).generatedDate).toLocaleDateString("ru-RU")}`
-                              : report.uploadDate
-                                ? `Загружен: ${new Date(report.uploadDate).toLocaleDateString("ru-RU")}`
-                                : "—"}
+                            {report.uploadDate ? `Загружен: ${formatDateRu(report.uploadDate)}` : "—"}
                           </p>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] font-mono uppercase tracking-wider">
                             <span className={`inline-flex items-center gap-1 ${report.isSigned ? "text-emerald-400" : "text-red-400"}`}>
