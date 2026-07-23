@@ -36,6 +36,15 @@ export default function ArtistDashboardClient({
     () => reports.reduce((sum, report) => sum + (report.totalAmount || 0), 0),
     [reports]
   )
+  // C5: честные под-метрики для KPI-бейджей (вместо фейковых «+X%»)
+  const signedCount = useMemo(
+    () => reports.filter((r) => r.isSigned).length,
+    [reports]
+  )
+  const unpaidEarnings = useMemo(
+    () => reports.reduce((sum, r) => sum + (r.isPaid ? 0 : r.totalAmount || 0), 0),
+    [reports]
+  )
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="mb-6 flex flex-col gap-3 md:mb-8 md:gap-6">
@@ -91,9 +100,6 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releaseCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary">
-                +{releasedCount} <span className="material-symbols-outlined">arrow_upward</span>
-              </span>
             </div>
           </div>
         </div>
@@ -111,8 +117,8 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{reports.length}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure">
-                +1 <span className="material-symbols-outlined">trending_up</span>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure" title="Подписано">
+                <span className="material-symbols-outlined">task_alt</span> {signedCount}
               </span>
             </div>
           </div>
@@ -143,8 +149,8 @@ export default function ArtistDashboardClient({
                   {formatRubPlain(totalEarnings)}
                 </TooltipContent>
               </Tooltip>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary shrink-0">
-                +5.4% <span className="material-symbols-outlined">arrow_upward</span>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary shrink-0" title="К выплате (неоплачено)">
+                <span className="material-symbols-outlined">schedule</span> {formatRubKpiShort(unpaidEarnings)}
               </span>
             </div>
           </div>
@@ -163,9 +169,6 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{playlistCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple">
-                +{playlistCount} <span className="material-symbols-outlined">add</span>
-              </span>
             </div>
           </div>
         </div>

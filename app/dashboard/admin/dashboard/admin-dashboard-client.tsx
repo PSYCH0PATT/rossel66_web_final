@@ -106,9 +106,6 @@ export default function AdminDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-4xl font-bold text-white font-display">{metrics.artistCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary">
-                +2 <span className="material-symbols-outlined">arrow_upward</span>
-              </span>
             </div>
           </div>
         </div>
@@ -126,9 +123,6 @@ export default function AdminDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-4xl font-bold text-white font-display">{metrics.releaseCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure">
-                +{metrics.pendingReleases} <span className="material-symbols-outlined">trending_up</span>
-              </span>
             </div>
           </div>
         </div>
@@ -146,9 +140,6 @@ export default function AdminDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-4xl font-bold text-white font-display">{metrics.reportCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary">
-                +4 <span className="material-symbols-outlined">arrow_upward</span>
-              </span>
             </div>
           </div>
         </div>
@@ -178,8 +169,8 @@ export default function AdminDashboardClient({
                   {formatRubExact(metrics.totalPayments)}
                 </TooltipContent>
               </Tooltip>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple shrink-0">
-                +{metrics.pendingPayments} <span className="material-symbols-outlined">add</span>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple shrink-0" title="Неоплачено">
+                <span className="material-symbols-outlined">schedule</span> {metrics.pendingPayments}
               </span>
             </div>
           </div>
