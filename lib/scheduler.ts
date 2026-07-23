@@ -159,18 +159,9 @@ export function initScheduler() {
     timezone: 'Europe/Moscow'
   });
   
-  // ============================================================
-  // ANALYTICS YEARLY CLEANUP - 1 января в 00:00 по Москве
-  // ============================================================
-  
-  cron.schedule('0 0 1 1 *', async () => {
-    console.log('');
-    console.log('🧹 [Jan 1, 00:00 MSK] Analytics Yearly Cleanup...');
-    await runAnalyticsCleanup();
-  }, {
-    timezone: 'Europe/Moscow'
-  });
-  
+  // Годовая агрегация/очистка аналитики отключена: храним все дневные данные
+  // (см. решение по C2). Месячные агрегаты больше не создаются.
+
   // ============================================================
   // PLAYLIST COVER SCRAPER — суббота и воскресенье 06:00 МСК (по 20 кандидатов за вызов API)
   // После первого прогона у строк обновляется coverFetchedAt → второй день берёт следующих 20.
@@ -533,29 +524,6 @@ async function runZvonkoParser() {
     }
   } catch (error) {
     console.error('❌ Ошибка запуска Zvonko Parser:', error);
-  }
-}
-
-/**
- * Запускает годовую очистку аналитики
- */
-async function runAnalyticsCleanup() {
-  try {
-    if (!process.env.CRON_SECRET) {
-      console.error('❌ CRON_SECRET не задан — пропуск analytics cleanup');
-      return;
-    }
-    
-    const response = await fetchCronGet('/api/cron/analytics-cleanup');
-    const result = await response.json();
-    
-    if (result.success) {
-      console.log(`✅ Analytics Cleanup завершен: ${result.stats?.aggregated || 0} агрегатов, ${result.stats?.deleted || 0} удалено`);
-    } else {
-      console.error(`❌ Analytics Cleanup ошибка: ${result.error}`);
-    }
-  } catch (error) {
-    console.error('❌ Ошибка запуска Analytics Cleanup:', error);
   }
 }
 
