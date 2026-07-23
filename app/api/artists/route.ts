@@ -448,14 +448,21 @@ export async function PUT(request: Request) {
       if (!existingUser) {
         return NextResponse.json({ error: "Artist not found" }, { status: 404 })
       }
-      if (session.role !== "admin") {
+      // Текущий пароль обязателен при смене СВОЕГО пароля (в т.ч. для админа).
+      // Админ может сбросить пароль ДРУГОМУ пользователю без currentPassword.
+      const isSelfChange = session.id === id
+      if (session.role !== "admin" || isSelfChange) {
         if (!currentPassword) {
           return NextResponse.json(
-            { error: "Для смены пароля укажите currentPassword" },
+            { error: "Для смены пароля укажите текущий пароль" },
             { status: 400 }
           )
         }
-        const match = await bcrypt.compare(currentPassword, existingUser.password)
+        // Пароль может храниться как bcrypt ($2...) или как legacy-плейнтекст
+        const stored = existingUser.password
+        const match = stored.startsWith("$2")
+          ? await bcrypt.compare(currentPassword, stored)
+          : currentPassword === stored
         if (!match) {
           return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 401 })
         }

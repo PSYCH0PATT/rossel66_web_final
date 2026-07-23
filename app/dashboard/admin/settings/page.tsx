@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { AdminInput } from "@/components/ui/admin-input"
-import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -41,9 +40,6 @@ export default function AdminSettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [labelName, setLabelName] = useState("ROSSEL 66")
-  const [contactEmail, setContactEmail] = useState("contact@rossel66.com")
-  const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [backups, setBackups] = useState<Backup[]>([])
   const [loadingBackups, setLoadingBackups] = useState(false)
   const [banner, setBanner] = useState<Banner | null>(null)
@@ -82,13 +78,6 @@ export default function AdminSettingsPage() {
     }
   }
 
-  const handleProfileSave = async () => {
-    try {
-      setBanner({ variant: "info", message: "Профиль обновлён (локально, API в разработке)." })
-    } catch {
-      setBanner({ variant: "error", message: "Ошибка при обновлении профиля" })
-    }
-  }
 
   const handlePasswordChange = async () => {
     if (!adminId) {
@@ -101,10 +90,9 @@ export default function AdminSettingsPage() {
       return
     }
 
-    if (currentPassword !== adminPassword) {
-      setBanner({ variant: "error", message: "Неверный текущий пароль" })
-      return
-    }
+    // H3/F-UI-9: текущий пароль проверяет СЕРВЕР (bcrypt в PUT /api/artists).
+    // Прежняя клиентская сверка с adminPassword всегда падала: /api/users
+    // не отдаёт поле password, поэтому adminPassword был пустым.
 
     if (!newPassword) {
       setBanner({ variant: "error", message: "Введите новый пароль" })
@@ -130,6 +118,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({
           id: adminId,
           password: newPassword,
+          currentPassword,
         }),
       })
 
@@ -137,7 +126,6 @@ export default function AdminSettingsPage() {
 
       if (result.success) {
         setBanner({ variant: "success", message: "Пароль успешно обновлён" })
-        setAdminPassword(newPassword)
         setCurrentPassword("")
         setNewPassword("")
         setConfirmPassword("")
@@ -150,14 +138,6 @@ export default function AdminSettingsPage() {
     } catch (error) {
       console.error("Error updating password:", error)
       setBanner({ variant: "error", message: "Ошибка при обновлении пароля" })
-    }
-  }
-
-  const handleSystemSettings = async () => {
-    try {
-      setBanner({ variant: "info", message: "Настройки сохранены (локально, API в разработке)." })
-    } catch {
-      setBanner({ variant: "error", message: "Ошибка при сохранении настроек" })
     }
   }
 
@@ -343,7 +323,7 @@ export default function AdminSettingsPage() {
           </div>
           <div className="border-b border-white/5 pb-8">
             <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Настройки</h1>
-            <p className="text-sm text-gray-400 font-light mt-2">Профиль, система и резервные копии</p>
+            <p className="text-sm text-gray-400 font-light mt-2">Пароль и управление данными</p>
           </div>
         </div>
 
@@ -364,40 +344,7 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card-glass rounded-2xl border border-white/5 p-6">
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-              <span className="w-1.5 h-6 bg-primary rounded-full" />
-              <span className="material-symbols-outlined text-primary text-xl">person</span>
-              Профиль
-            </h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-mono uppercase text-gray-500">
-                  Имя
-                </Label>
-                <AdminInput id="name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-mono uppercase text-gray-500">
-                  Email
-                </Label>
-                <AdminInput
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputClass}
-                  autoComplete="email"
-                  spellCheck={false}
-                />
-              </div>
-              <Button type="button" onClick={handleProfileSave} className="w-full rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
-                Сохранить
-              </Button>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:max-w-md gap-6">
           <div className="card-glass rounded-2xl border border-white/5 p-6">
             <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
               <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
@@ -446,49 +393,6 @@ export default function AdminSettingsPage() {
               </div>
               <Button type="button" onClick={handlePasswordChange} className="w-full rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
                 Обновить пароль
-              </Button>
-            </div>
-          </div>
-
-          <div className="card-glass rounded-2xl border border-white/5 p-6">
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-              <span className="w-1.5 h-6 bg-purple-400 rounded-full opacity-80" />
-              <span className="material-symbols-outlined text-purple-400 text-xl">tune</span>
-              Система
-            </h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="label-name" className="text-xs font-mono uppercase text-gray-500">
-                  Название лейбла
-                </Label>
-                <AdminInput id="label-name" value={labelName} onChange={(e) => setLabelName(e.target.value)} className={inputClass} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-email" className="text-xs font-mono uppercase text-gray-500">
-                  Контактный email
-                </Label>
-                <AdminInput
-                  id="contact-email"
-                  type="email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className={inputClass}
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex items-center justify-between py-2 gap-4">
-                <Label htmlFor="maintenance-mode" className="text-sm text-gray-400 flex-1 cursor-pointer">
-                  Режим обслуживания
-                </Label>
-                <Switch
-                  id="maintenance-mode"
-                  checked={maintenanceMode}
-                  onCheckedChange={setMaintenanceMode}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
-              <Button type="button" onClick={handleSystemSettings} className="w-full rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
-                Сохранить системные
               </Button>
             </div>
           </div>
