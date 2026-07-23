@@ -2,18 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
 import { getSessionUser, requireAuth, requireAdmin } from '@/lib/server-auth'
 
-const ACTIVITY_TYPES: ActivityType[] = [
-  'release_added',
-  'playlist_found',
-  'report_received',
-  'payment_sent',
-  'user_data_updated',
-  'reports_generated',
-  'artist_added',
-  'artist_removed',
-  'release_status_updated'
-]
-
 // GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
 export async function GET(request: NextRequest) {
   try {
@@ -28,9 +16,12 @@ export async function GET(request: NextRequest) {
     if (session?.role === 'artist') {
       userId = session.id
     }
+    // H5: не фильтруем по неполному хардкод-вайтлисту (иначе валидный, но не
+    // перечисленный тип отбрасывался → фильтр не применялся → возвращались ВСЕ).
+    // Запрос параметризован; несуществующие типы просто не дадут совпадений.
     const typeParam = searchParams.getAll('type').filter(Boolean)
     const types: ActivityType[] | undefined = typeParam.length
-      ? typeParam.filter((t): t is ActivityType => ACTIVITY_TYPES.includes(t as ActivityType))
+      ? (typeParam as ActivityType[])
       : undefined
     const dateFrom = searchParams.get('dateFrom') || undefined
     const dateTo = searchParams.get('dateTo') || undefined
