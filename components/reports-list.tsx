@@ -103,6 +103,8 @@ export default function ReportsList() {
           pageSize: String(pageSize),
           year: String(pair.year),
         })
+        // D3: фильтр применяется на сервере, чтобы total/пагинация совпадали с видимыми строками
+        if (filter !== "all") params.set("filter", filter)
         const res = await fetch(`/api/reports/list/${encodeURIComponent(pair.quarter)}?${params}`)
         const data = await res.json()
         const reports: Report[] = Array.isArray(data.reports) ? data.reports : []
@@ -124,8 +126,17 @@ export default function ReportsList() {
         }))
       }
     },
-    []
+    [filter]
   )
+
+  // D3: при смене фильтра перезагружаем уже открытые кварталы с 1-й страницы
+  useEffect(() => {
+    for (const key of Object.keys(cache)) {
+      const pair = pairs.find((p) => pairLabel(p) === key)
+      if (pair) void loadQuarterPage(pair, 1, cache[key].pageSize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter])
 
   const toggleQuarter = (pair: QuarterYear) => {
     const key = pairLabel(pair)

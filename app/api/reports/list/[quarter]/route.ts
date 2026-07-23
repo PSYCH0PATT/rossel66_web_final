@@ -37,6 +37,16 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     const yearSql =
       yearFilter !== null ? Prisma.sql`AND year = ${yearFilter}` : Prisma.empty
 
+    // D3: серверный фильтр «неподписанные / неоплаченные», чтобы total и пагинация
+    // соответствовали видимым строкам (раньше фильтр был page-local на клиенте).
+    const statusFilter = searchParams.get("filter")
+    const filterSql =
+      statusFilter === "unsigned"
+        ? Prisma.sql`AND "isSigned" IS NOT TRUE`
+        : statusFilter === "unpaid"
+          ? Prisma.sql`AND "isPaid" IS NOT TRUE`
+          : Prisma.empty
+
     const countRows = await prisma.$queryRaw<[{ c: bigint }]>(
       Prisma.sql`
         SELECT COUNT(*)::bigint AS c FROM (
@@ -46,6 +56,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
             AND "isRegistered" = true
             ${artistFilter}
             ${yearSql}
+            ${filterSql}
           ORDER BY year DESC, lower(trim(COALESCE("artistName", ''))), "uploadedAt" DESC
         ) deduped
       `
@@ -61,6 +72,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
             AND "isRegistered" = true
             ${artistFilter}
             ${yearSql}
+            ${filterSql}
           ORDER BY year DESC, lower(trim(COALESCE("artistName", ''))), "uploadedAt" DESC
         ) deduped
         ORDER BY year DESC, "uploadedAt" DESC
