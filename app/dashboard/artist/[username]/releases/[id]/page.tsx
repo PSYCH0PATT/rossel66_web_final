@@ -101,10 +101,11 @@ function StatusBadge({ status }: { status?: string }) {
   )
 }
 
-function parseDurationSeconds(duration?: string): number {
-  if (!duration || typeof duration !== "string") return 0
-  const parts = duration.split(":").map((p) => Number(p.trim()))
+function parseDurationSeconds(duration?: string | number): number {
+  if (duration == null || duration === "") return 0
+  const parts = String(duration).split(":").map((p) => Number(p.trim()))
   if (parts.some((n) => Number.isNaN(n))) return 0
+  if (parts.length === 1) return parts[0] // число секунд, напр. "215"
   if (parts.length === 2) return parts[0] * 60 + parts[1]
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
   return 0
