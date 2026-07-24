@@ -136,14 +136,22 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setAvatarFile(file)
-      const reader = new FileReader()
-      reader.onload = () => {
-        setAvatarPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      setError("Выберите изображение")
+      return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Файл больше 5 МБ")
+      return
+    }
+    setError("")
+    setAvatarFile(file)
+    const reader = new FileReader()
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,6 +196,23 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     }
 
     try {
+      // F-UI-10: новый файл — грузим в Storage (короткий URL); иначе оставляем
+      // текущий URL. base64 в avatarUrl не проходил (max 2000).
+      let finalAvatarUrl =
+        avatarPreview && !avatarPreview.startsWith("data:") ? avatarPreview : undefined
+      if (avatarFile) {
+        const fd = new FormData()
+        fd.append("file", avatarFile)
+        const up = await fetch("/api/uploads/avatars", { method: "POST", body: fd })
+        const upJson = await up.json()
+        if (!up.ok || !upJson.success) {
+          setError(upJson.error || "Не удалось загрузить аватар")
+          setIsSubmitting(false)
+          return
+        }
+        finalAvatarUrl = upJson.url
+      }
+
       // Обновляем артиста через API
       const response = await fetch('/api/artists', {
         method: 'PUT',
@@ -203,7 +228,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           vkMusicUrl: vkMusicUrl || undefined,
           yandexMusicUrl: yandexMusicUrl || undefined,
           spotifyUrl: spotifyUrl || undefined,
-          avatarUrl: avatarPreview || undefined,
+          avatarUrl: finalAvatarUrl,
           // Новые поля
           fio: fio || undefined,
           fioShort: fioShort || undefined,
