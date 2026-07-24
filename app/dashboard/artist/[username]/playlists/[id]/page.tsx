@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/server-auth"
 import { prisma } from "@/lib/prisma"
 import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
 
 function platformBadgeClass(platform: string): string {
@@ -100,8 +101,9 @@ export default async function ArtistPlaylistDetailPage({
       <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="relative w-full max-w-[220px] mx-auto lg:mx-0 aspect-square rounded-xl overflow-hidden border border-white/10 flex-shrink-0">
-            <Image
+            <PlaylistCoverImage
               src={cover || "/placeholder.svg"}
+              fallbackSrc={getPlaylistCoverUrl(playlist.platform, null)}
               alt={playlist.playlistName}
               fill
               className="object-cover"

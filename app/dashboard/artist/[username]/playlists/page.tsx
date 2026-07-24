@@ -4,6 +4,7 @@ import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
 function firstTrackLabel(trackDataJson: string): string {
   try {
@@ -102,8 +103,9 @@ export default async function PlaylistsPage({ params }: { params: { username: st
                   <div className="absolute inset-0 z-[1] overflow-hidden rounded-2xl bg-card [clip-path:inset(0_round_1rem)] [transform:translateZ(0)]">
                     <div className="absolute inset-0 z-0 transition-[filter] duration-300 ease-out group-hover:blur-[3px] group-hover:brightness-90 [transform:translateZ(0)]">
                       <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl">
-                        <Image
+                        <PlaylistCoverImage
                           src={cover || "/placeholder.svg"}
+                          fallbackSrc={getPlaylistCoverUrl(playlist.platform, null)}
                           alt={playlist.playlist_name}
                           fill
                           className="object-cover brightness-[0.88] grayscale-[12%] rounded-2xl"
