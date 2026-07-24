@@ -123,6 +123,9 @@ export default function AdminDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-4xl font-bold text-white font-display">{metrics.releaseCount}</p>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure" title="В работе (не доставлено)">
+                <span className="material-symbols-outlined">schedule</span> {metrics.pendingReleases}
+              </span>
             </div>
           </div>
         </div>

@@ -18,6 +18,12 @@ import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlis
 /** Серверный кеш дашбордов — 60s (Timeweb: cold start OK; мутации сбрасывают теги) */
 export const DASHBOARD_REVALIDATE_SEC = 60
 
+/**
+ * Статусы «доставлен/выпущен» релиза. В данных используется «Доставлен»;
+ * 'released' — legacy. Метрики раньше искали только 'released' → всегда 0/все.
+ */
+const DELIVERED_RELEASE_STATUSES = ["Доставлен", "released"]
+
 export type ArtistDashboardPayload = {
   artist: {
     id: string
@@ -91,7 +97,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
   const [releaseCount, releasedCount, reportsRaw, playlistsForCount] = await Promise.all([
     prisma.release.count({ where: releaseScope }),
     prisma.release.count({
-      where: { AND: [releaseScope, { status: "released" }] },
+      where: { AND: [releaseScope, { status: { in: DELIVERED_RELEASE_STATUSES } }] },
     }),
     prisma.report.findMany({
       where: { artistId, isRegistered: true },
@@ -227,7 +233,7 @@ async function loadAdminDashboardUncached(): Promise<AdminDashboardPayload> {
     await Promise.all([
       prisma.user.count({ where: { role: "artist" } }),
       prisma.release.count(),
-      prisma.release.count({ where: { status: { not: "released" } } }),
+      prisma.release.count({ where: { status: { notIn: DELIVERED_RELEASE_STATUSES } } }),
       prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.report.findMany({
         where: { isRegistered: true },

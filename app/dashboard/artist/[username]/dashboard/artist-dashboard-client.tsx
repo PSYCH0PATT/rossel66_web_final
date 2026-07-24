@@ -100,6 +100,9 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releaseCount}</p>
+              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary" title="Доставлено">
+                <span className="material-symbols-outlined">check_circle</span> {releasedCount}
+              </span>
             </div>
           </div>
         </div>
