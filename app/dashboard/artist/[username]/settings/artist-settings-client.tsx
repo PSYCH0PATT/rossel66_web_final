@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -28,83 +29,101 @@ export default function ArtistSettingsClient({
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initialArtist.avatarUrl)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
+  const router = useRouter()
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  // H2: раздельные состояния — отправка одной формы не блокирует другую
+  const [avatarSubmitting, setAvatarSubmitting] = useState(false)
+  const [pwSubmitting, setPwSubmitting] = useState(false)
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setAvatarFile(file)
-      const reader = new FileReader()
-      reader.onload = () => {
-        setAvatarPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+    // F-UI-4: валидация типа/размера до загрузки
+    if (!file.type.startsWith("image/")) {
+      setError("Выберите изображение")
+      return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Файл больше 5 МБ")
+      return
+    }
+    setError("")
+    setAvatarFile(file)
+    const reader = new FileReader()
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleAvatarSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
+    if (!avatarFile) {
+      setError("Пожалуйста, выберите изображение")
+      return
+    }
+    setAvatarSubmitting(true)
     setSuccess("")
     setError("")
 
     try {
-      if (!avatarPreview) {
-        setError("Пожалуйста, выберите изображение")
-        setIsSubmitting(false)
+      // F-UI-1: грузим файл в Storage и сохраняем короткий URL, а не base64
+      // (avatarUrl ограничен 2000 символами — base64 всегда падал).
+      const fd = new FormData()
+      fd.append("file", avatarFile)
+      const up = await fetch("/api/uploads/avatars", { method: "POST", body: fd })
+      const upJson = await up.json()
+      if (!up.ok || !upJson.success) {
+        setError(upJson.error || "Не удалось загрузить изображение")
         return
       }
 
       const response = await fetch(`/api/artists`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: artist.id,
-          avatarUrl: avatarPreview,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: artist.id, avatarUrl: upJson.url }),
       })
-
       const result = await response.json()
 
       if (result.success) {
         setSuccess("Аватарка успешно обновлена")
-        setArtist({ ...artist, avatarUrl: avatarPreview })
+        setArtist({ ...artist, avatarUrl: upJson.url })
+        setAvatarPreview(upJson.url)
+        setAvatarFile(null)
+        router.refresh() // H1: обновить аватар в навбаре (серверный layout)
       } else {
-        setError("Ошибка при обновлении аватарки")
+        setError(result.error || "Ошибка при обновлении аватарки")
       }
     } catch {
       setError("Произошла ошибка при обновлении аватарки")
     } finally {
-      setIsSubmitting(false)
+      setAvatarSubmitting(false)
     }
   }
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
+    setPwSubmitting(true)
     setSuccess("")
     setError("")
 
     try {
       if (!currentPassword.trim()) {
         setError("Введите текущий пароль")
-        setIsSubmitting(false)
+        setPwSubmitting(false)
         return
       }
 
       if (newPassword !== confirmPassword) {
         setError("Новые пароли не совпадают")
-        setIsSubmitting(false)
+        setPwSubmitting(false)
         return
       }
 
       if (newPassword.length < 6) {
         setError("Пароль должен содержать минимум 6 символов")
-        setIsSubmitting(false)
+        setPwSubmitting(false)
         return
       }
 
@@ -133,7 +152,7 @@ export default function ArtistSettingsClient({
     } catch {
       setError("Произошла ошибка при обновлении пароля")
     } finally {
-      setIsSubmitting(false)
+      setPwSubmitting(false)
     }
   }
 
@@ -223,10 +242,10 @@ export default function ArtistSettingsClient({
           </div>
           <button
             type="submit"
-            disabled={isSubmitting || !avatarFile}
+            disabled={avatarSubmitting || !avatarFile}
             className="w-full bg-[#10b981] hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-xl h-12 text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
-            {isSubmitting ? "Сохранение…" : "Сохранить аватарку"}
+            {avatarSubmitting ? "Сохранение…" : "Сохранить аватарку"}
           </button>
         </form>
       </div>
@@ -286,10 +305,10 @@ export default function ArtistSettingsClient({
           </div>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={pwSubmitting}
             className="w-full bg-[#10b981] hover:bg-emerald-400 disabled:opacity-50 text-black font-bold rounded-xl h-12 text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
-            {isSubmitting ? "Обновление…" : "Обновить пароль"}
+            {pwSubmitting ? "Обновление…" : "Обновить пароль"}
           </button>
         </form>
       </div>
