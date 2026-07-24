@@ -1,17 +1,15 @@
 /**
- * Обложки плейлистов по платформам (плейсхолдеры — фоллбэк, когда coverUrl не распарсен).
+ * Плейсхолдер обложки по платформе — фоллбэк, когда coverUrl не распарсен.
+ * I4: матчим по ключевым словам без учёта регистра/написания, иначе «VK Music»,
+ * «Яндекс.Музыка», «вк музыка» и т.п. падали в серый /placeholder.svg вместо лого.
  */
-const COVER_BY_PLATFORM: Record<string, string> = {
-  'Яндекс Музыка': '/images/playlists/yandex-music.png',
-  'VK Музыка': '/images/playlists/vk-music.png',
-  'МТС Музыка': '/images/playlists/mts-music.png',
-  'MTS Music': '/images/playlists/mts-music.png',
-  'Сбер Музыка': '/images/playlists/sber-music.png',
-  'Sber Music': '/images/playlists/sber-music.png',
-  'Одноклассники': '/placeholder.svg',
-  'Spotify': '/placeholder.svg',
-  'Apple Music': '/placeholder.svg',
-  'YouTube Music': '/placeholder.svg',
+function placeholderForPlatform(platform: string): string {
+  const p = platform.trim().toLowerCase()
+  if (p.includes('яндекс') || p.includes('yandex')) return '/images/playlists/yandex-music.png'
+  if (p.includes('vk') || p.includes('вк')) return '/images/playlists/vk-music.png'
+  if (p.includes('мтс') || p.includes('mts')) return '/images/playlists/mts-music.png'
+  if (p.includes('сбер') || p.includes('sber')) return '/images/playlists/sber-music.png'
+  return '/placeholder.svg'
 }
 
 /** Макс. сторона обложки для UI (карточки ~200–350px; 400 хватает под retina). */
@@ -76,5 +74,5 @@ export function getPlaylistCoverUrl(
     return optimizePlaylistCoverForDisplay(coverUrl.trim())
   }
   if (!platform || !platform.trim()) return '/placeholder.svg'
-  return COVER_BY_PLATFORM[platform.trim()] ?? '/placeholder.svg'
+  return placeholderForPlatform(platform)
 }
