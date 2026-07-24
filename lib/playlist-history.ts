@@ -1,4 +1,5 @@
 import { prisma } from "./prisma"
+import { mskDateString } from "@/lib/msk-date"
 import { enqueuePlaylistHistorySync } from "@/lib/buildin/sync-hooks"
 import type { Prisma } from "@prisma/client"
 
@@ -133,7 +134,7 @@ export async function cleanupRemovedPlaylists(
       },
     })
 
-    const now = new Date().toISOString().split("T")[0]
+    const now = mskDateString() // A5: МСК-дата
 
     for (const playlist of allPlaylists) {
       const key = `${playlist.playlistUrl}|${playlist.playlistName}`

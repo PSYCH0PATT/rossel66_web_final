@@ -1,6 +1,7 @@
 import { ParsedPlaylist, ParsedTrack } from './sftp-playlist-parser';
 import { recordPlaylistChange } from './playlist-history';
 import { normalizeArtistName } from '@/lib/storage';
+import { mskDateString } from '@/lib/msk-date';
 import { tokenizeCollaborationArtistField } from '@/lib/playlist-artist-match';
 import { userFromPrisma } from '@/lib/storage-adapters';
 import { prisma } from './prisma';
@@ -85,7 +86,7 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
           }
         });
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = mskDateString(); // A5: МСК-дата, не UTC (сдвиг на границе суток)
         
         if (existing) {
           // Проверяем, изменились ли треки

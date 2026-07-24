@@ -1,13 +1,14 @@
 import type { ParsedPlaylist as SftpParsedPlaylist } from "@/lib/sftp-playlist-parser"
 import { savePlaylists } from "@/lib/sftp-playlist-storage"
 import type { ParsedPlaylist as VkHtmlPlaylist } from "@/lib/vk-parser"
+import { mskDateString } from "@/lib/msk-date"
 
 export async function persistVkHtmlPlaylistsForArtist(
   artistId: string,
   artistName: string,
   playlists: VkHtmlPlaylist[]
 ): Promise<{ added: number; updated: number; unchanged: number }> {
-  const parsedDate = new Date().toISOString().split("T")[0]
+  const parsedDate = mskDateString() // A5: МСК-дата
   const toSave: SftpParsedPlaylist[] = playlists.map((p) => ({
     playlistUrl: p.playlistUrl,
     playlistName: p.name,
