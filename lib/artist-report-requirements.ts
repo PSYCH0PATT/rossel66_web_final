@@ -27,7 +27,8 @@ export function getArtistReportMissingFields(artist: {
   const missing: ArtistReportRequiredField[] = []
   if (isEmptyReportValue(artist.fio)) missing.push("fio")
   if (isEmptyReportValue(artist.contract)) missing.push("contract")
-  if (artist.percentage === null || artist.percentage === undefined) {
+  // I6: 0% — тоже «не заполнено» (для отчёта нужен положительный процент)
+  if (artist.percentage == null || artist.percentage <= 0) {
     missing.push("percentage")
   }
   return missing

@@ -101,7 +101,7 @@ export default function AdminActivityPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [categoryId, setCategoryId] = useState("all")
-  const [role, setRole] = useState<string>("admin")
+  const [role, setRole] = useState<string>("all")
   const [userId, setUserId] = useState<string>("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")

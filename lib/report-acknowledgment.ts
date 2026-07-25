@@ -21,7 +21,7 @@ export function canAcknowledgeReports(reports: ReportAmountRow[]): {
   reason?: string
 } {
   const unpaidTotal = sumUnpaidReports(reports)
-  if (unpaidTotal > ACKNOWLEDGE_MIN_UNPAID_RUB - 1) {
+  if (unpaidTotal >= ACKNOWLEDGE_MIN_UNPAID_RUB) {
     return { allowed: true, unpaidTotal }
   }
 
