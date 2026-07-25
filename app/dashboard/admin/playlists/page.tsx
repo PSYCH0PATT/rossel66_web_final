@@ -19,6 +19,16 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
+import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
+
+/**
+ * B3: основной артист из поля исполнителя (первый токен коллаба).
+ * «Artist feat Guest» → «Artist», чтобы фит не был отдельной записью в фильтре.
+ */
+function primaryArtistName(name?: string | null): string {
+  if (!name) return ""
+  return splitCollaboratingArtistDisplayNames(name)[0] || name.trim()
+}
 
 /** Строка платформы из CSV может не совпадать с канонич. «Яндекс Музыка» — группируем по подстроке */
 function platformNorm(p: string | undefined) {
@@ -730,10 +740,9 @@ export default function PlaylistsPage() {
     // Фильтрация по артисту
     let filtered = playlists
     if (artistFilter !== 'all') {
-      filtered = playlists.filter(playlist => 
-      playlist.artist_name === artistFilter || playlist.artist_name?.includes(artistFilter)
-    )
-  }
+      // B3: матчим по ОСНОВНОМУ артисту, чтобы «Artist» ловил и «Artist feat Guest»
+      filtered = playlists.filter(playlist => primaryArtistName(playlist.artist_name) === artistFilter)
+    }
 
     // Сортировка
     return filtered.sort((a, b) => {
@@ -776,8 +785,9 @@ export default function PlaylistsPage() {
   // Получение уникальных артистов из результатов
   const getUniqueArtists = () => {
     const artistsSet = new Set<string>()
-    vkResults.forEach(p => artistsSet.add(p.artist_name))
-    bandlinkResults.forEach(p => artistsSet.add(p.artist_name))
+    vkResults.forEach(p => artistsSet.add(primaryArtistName(p.artist_name)))
+    bandlinkResults.forEach(p => artistsSet.add(primaryArtistName(p.artist_name)))
+    artistsSet.delete("")
     return Array.from(artistsSet).sort()
   }
 
@@ -1346,9 +1356,9 @@ export default function PlaylistsPage() {
             {/* Группировка плейлистов по артистам. VK только из vkResults; Bandlink — всё кроме VK (чтобы не дублировать). */}
             {getUniqueArtists().map(artistName => {
               const artist = artists.find(a => a.name === artistName)
-              const artistVKPlaylists = vkResults.filter(p => p.artist_name === artistName)
+              const artistVKPlaylists = vkResults.filter(p => primaryArtistName(p.artist_name) === artistName)
               const artistBandlinkPlaylists = bandlinkResults.filter(
-                (p) => p.artist_name === artistName && !isVkMusicPlatform(p.platform)
+                (p) => primaryArtistName(p.artist_name) === artistName && !isVkMusicPlatform(p.platform)
               )
               const totalPlaylists = artistVKPlaylists.length + artistBandlinkPlaylists.length
 
