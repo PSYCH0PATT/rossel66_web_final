@@ -38,10 +38,27 @@ export async function GET(request: NextRequest) {
       limit
     });
 
+    // A10: Prisma отдаёт camelCase, а страница истории читает snake_case
+    // (playlist_name, change_date, …) → все ячейки таблицы были пустыми.
+    const results = history.map((row) => ({
+      id: row.id,
+      playlist_url: row.playlistUrl,
+      playlist_name: row.playlistName,
+      platform: row.platform,
+      change_type: row.changeType,
+      change_date: row.changeDate,
+      artist_name: row.artistName,
+      artist_id: row.artistId,
+      track_title: row.trackTitle,
+      old_position: row.oldPosition,
+      new_position: row.newPosition,
+      created_at: row.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       success: true,
-      results: history,
-      count: history.length
+      results,
+      count: results.length
     });
 
   } catch (error) {

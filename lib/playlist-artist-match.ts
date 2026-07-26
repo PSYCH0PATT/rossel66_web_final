@@ -58,26 +58,75 @@ function trackDataLength(row: UrlNameRow): number {
   return Array.isArray(td) ? td.length : 0
 }
 
+function asTrackArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? (value as Record<string, unknown>[]) : []
+}
+
+/** Ключ трека для объединения: ISRC (или название) + позиция в плейлисте. */
+function trackKey(track: Record<string, unknown>): string {
+  const isrc = String(track.isrc ?? "").trim().toLowerCase()
+  const title = String(track.trackTitle ?? track.titleArtist ?? "").trim().toLowerCase()
+  const position = String(track.position ?? "")
+  return `${isrc || title}@${position}`
+}
+
+/**
+ * H7: объединяет трек-листы схлопнутых строк одного плейлиста.
+ *
+ * Один и тот же плейлист хранится несколькими строками, если поле исполнителя
+ * написано по-разному («Artist» и «Artist feat Guest») — уникальный ключ в БД
+ * включает artistName. Раньше дедуп оставлял одну строку, и треки остальных
+ * просто исчезали из карточки. Теперь треки объединяются по ISRC/названию + позиции.
+ */
+function mergeTrackData<T extends UrlNameRow>(winner: T, losers: T[]): T {
+  const seen = new Set<string>()
+  const merged: Record<string, unknown>[] = []
+
+  // Победитель первым — сохраняем его порядок треков.
+  for (const row of [winner, ...losers]) {
+    for (const track of asTrackArray(row.trackData)) {
+      const k = trackKey(track)
+      if (seen.has(k)) continue
+      seen.add(k)
+      merged.push(track)
+    }
+  }
+
+  if (merged.length === trackDataLength(winner)) return winner
+  return { ...winner, trackData: merged }
+}
+
 /** Одна карточка на плейлист: приоритет привязки по artistId, затем строка с большим числом треков. */
 export function dedupePlaylistsByUrlAndName<T extends UrlNameRow>(rows: T[], userId: string): T[] {
   const key = (r: T) => `${r.playlistUrl}\u0000${r.playlistName}`
-  const map = new Map<string, T>()
+  const groups = new Map<string, T[]>()
+  const order: string[] = []
   const score = (x: T) => (x.artistId === userId ? 2 : x.artistId ? 1 : 0)
 
   for (const r of rows) {
     const k = key(r)
-    const prev = map.get(k)
-    if (!prev) {
-      map.set(k, r)
+    const group = groups.get(k)
+    if (!group) {
+      groups.set(k, [r])
+      order.push(k)
       continue
     }
-    if (score(r) > score(prev)) map.set(k, r)
-    else if (score(r) === score(prev)) {
-      const lenR = trackDataLength(r)
-      const lenP = trackDataLength(prev)
-      if (lenR > lenP) map.set(k, r)
-      else if (lenR === lenP && r.updatedAt > prev.updatedAt) map.set(k, r)
-    }
+    group.push(r)
   }
-  return [...map.values()]
+
+  return order.map((k) => {
+    const group = groups.get(k)!
+    let winner = group[0]
+    for (const r of group.slice(1)) {
+      if (score(r) > score(winner)) winner = r
+      else if (score(r) === score(winner)) {
+        const lenR = trackDataLength(r)
+        const lenW = trackDataLength(winner)
+        if (lenR > lenW) winner = r
+        else if (lenR === lenW && r.updatedAt > winner.updatedAt) winner = r
+      }
+    }
+    if (group.length === 1) return winner
+    return mergeTrackData(winner, group.filter((r) => r !== winner))
+  })
 }

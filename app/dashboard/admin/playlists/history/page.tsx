@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
+import { formatDateRu } from "@/lib/format-date"
 
 interface HistoryRecord {
-  id: number
+  id: string
   playlist_url: string
   playlist_name: string
   platform: string
@@ -84,13 +85,21 @@ export default function PlaylistHistoryPage() {
     return map[type] || "bg-white/5 text-gray-400 border-white/10"
   }
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+  /**
+   * A10: change_date — это календарная дата ("YYYY-MM-DD") без времени.
+   * `new Date(...)` давал UTC-полночь → в МСК рисовалось фиктивное «03:00».
+   * Показываем дату изменения, а точное время — из created_at.
+   */
+  const formatChangeDate = (dateString: string) => formatDateRu(dateString)
+
+  const formatChangeTime = (createdAt: string | null | undefined) => {
+    if (!createdAt) return null
+    const ts = new Date(createdAt).getTime()
+    if (Number.isNaN(ts)) return null
+    return new Date(ts).toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Europe/Moscow",
     })
   }
 
@@ -239,7 +248,10 @@ export default function PlaylistHistoryPage() {
                       <td className="p-3 text-gray-300 whitespace-nowrap [font-variant-numeric:tabular-nums] text-xs">
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
-                          {formatDateTime(record.change_date)}
+                          <span>{formatChangeDate(record.change_date)}</span>
+                          {formatChangeTime(record.created_at) && (
+                            <span className="text-gray-500">{formatChangeTime(record.created_at)}</span>
+                          )}
                         </div>
                       </td>
                       <td className="p-3">
