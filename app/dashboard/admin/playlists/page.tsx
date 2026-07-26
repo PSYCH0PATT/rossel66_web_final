@@ -33,6 +33,9 @@ import {
  * B3: основной артист из поля исполнителя (первый токен коллаба).
  * «Artist feat Guest» → «Artist», чтобы фит не был отдельной записью в фильтре.
  */
+/** G4: как часто перепроверять системное предупреждение о cookies */
+const COOKIES_POLL_MS = 60_000
+
 function primaryArtistName(name?: string | null): string {
   if (!name) return ""
   return splitCollaboratingArtistDisplayNames(name)[0] || name.trim()
@@ -104,6 +107,8 @@ export default function PlaylistsPage() {
   const [cookiesInput, setCookiesInput] = useState('')
   const [isUpdatingCookies, setIsUpdatingCookies] = useState(false)
   const [cookiesStatus, setCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
+  /** G4: системное предупреждение о cookies — отдельно от результата ручного обновления */
+  const [cookiesAlert, setCookiesAlert] = useState<string | null>(null)
   const [lastCookiesUpdate, setLastCookiesUpdate] = useState<string | null>(null)
   const [vkCookiesInput, setVkCookiesInput] = useState('')
   const [isUpdatingVkCookies, setIsUpdatingVkCookies] = useState(false)
@@ -119,6 +124,8 @@ export default function PlaylistsPage() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<{id: number, name: string, type: 'vk' | 'bandlink'} | null>(null)
   const [selectedArtistForAssign, setSelectedArtistForAssign] = useState<string>('')
   const [isAssigning, setIsAssigning] = useState(false)
+  /** H3: подтверждение переназначения плейлиста, если он уже принадлежит другому артисту */
+  const [reassignConfirm, setReassignConfirm] = useState<{ previousArtistName: string } | null>(null)
   const [actionBanner, setActionBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: "vk" | "bandlink" } | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -144,7 +151,14 @@ export default function PlaylistsPage() {
       void loadVkCookiesStatus()
       void loadSftpLocalCsvList()
     }, 0)
-    return () => window.clearTimeout(idle)
+    // G4: предупреждение о cookies должно исчезать само, когда парсинг ожил
+    const poll = window.setInterval(() => {
+      void checkCookiesNotification()
+    }, COOKIES_POLL_MS)
+    return () => {
+      window.clearTimeout(idle)
+      window.clearInterval(poll)
+    }
   }, [])
 
   useEffect(() => {
@@ -478,17 +492,22 @@ export default function PlaylistsPage() {
     }
   }
 
-  // Проверка уведомлений о необходимости новых cookies
+  /**
+   * G4: системное предупреждение «нужны новые cookies».
+   * Раньше оно писалось в тот же state, что и результат ручного обновления
+   * cookies, поэтому «✅ cookies обновлены» затирало предупреждение (и наоборот),
+   * а само предупреждение выставлялось один раз при загрузке и уже не снималось,
+   * даже когда парсинг снова начинал работать. Теперь отдельный state + поллинг.
+   */
   const checkCookiesNotification = async () => {
     try {
       const response = await fetch('/api/notifications')
       const data = await response.json()
-      if (data.hasNotification) {
-        setCookiesStatus({ 
-          type: 'destructive', 
-          message: data.message || '⚠️ Требуются новые cookies! Парсинг не работает.' 
-        })
-      }
+      setCookiesAlert(
+        data.hasNotification
+          ? data.message || '⚠️ Требуются новые cookies! Парсинг не работает.'
+          : null
+      )
     } catch (error) {
       console.error('Ошибка проверки уведомлений:', error)
     }
@@ -546,8 +565,9 @@ export default function PlaylistsPage() {
         setLastCookiesUpdate(new Date().toLocaleString('ru-RU'))
         setCookiesInput('')
         
-        // Перезагружаем статус cookies
+        // Перезагружаем статус cookies и системное предупреждение (G4)
         await loadCookiesStatus()
+        await checkCookiesNotification()
       } else {
         setCookiesStatus({ type: 'destructive', message: `❌ ${data.error || 'Ошибка обновления'}` })
       }
@@ -809,7 +829,7 @@ export default function PlaylistsPage() {
     setAssignModalOpen(true)
   }
 
-  const assignPlaylistToArtist = async () => {
+  const assignPlaylistToArtist = async (force = false) => {
     if (!selectedPlaylist || !selectedArtistForAssign) {
       setActionBanner({ type: "err", text: "Выберите артиста" })
       return
@@ -825,14 +845,30 @@ export default function PlaylistsPage() {
         body: JSON.stringify({
           playlistId: selectedPlaylist.id,
           artistId: selectedArtistForAssign,
+          ...(force ? { force: true } : {}),
         }),
       })
 
       const data = await response.json()
 
+      // H3: плейлист уже принадлежит другому артисту — спрашиваем подтверждение,
+      // а не забираем молча (прежний владелец теряет видимость).
+      if (response.status === 409 && data.needsConfirmation) {
+        setReassignConfirm({ previousArtistName: data.previousArtistName || "другой артист" })
+        return
+      }
+
       if (data.success) {
-        setActionBanner({ type: "ok", text: "Плейлист привязан к артисту" })
+        setActionBanner({
+          type: "ok",
+          text: data.unchanged
+            ? "Плейлист уже был привязан к этому артисту"
+            : data.reassignedFrom
+              ? `Плейлист переназначен с «${data.reassignedFrom}»`
+              : "Плейлист привязан к артисту",
+        })
         setAssignModalOpen(false)
+        setReassignConfirm(null)
         loadResults()
       } else {
         setActionBanner({ type: "err", text: "Ошибка привязки: " + (data.error || "") })
@@ -1841,12 +1877,19 @@ export default function PlaylistsPage() {
                 )}
               </Button>
               
+              {/* G4: системное предупреждение живёт отдельно от результата ручного обновления */}
+              {cookiesAlert && (
+                <Alert variant="destructive">
+                  <AlertDescription>{cookiesAlert}</AlertDescription>
+                </Alert>
+              )}
+
               {cookiesStatus && (
                 <Alert variant={cookiesStatus.type}>
                   <AlertDescription>{cookiesStatus.message}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
                 <p>Последнее обновление:</p>
                 <p className="text-gray-300">{lastCookiesUpdate || "Не обновлялись"}</p>
@@ -1955,7 +1998,7 @@ export default function PlaylistsPage() {
                   Отмена
                 </Button>
                 <Button
-                  onClick={assignPlaylistToArtist}
+                  onClick={() => assignPlaylistToArtist()}
                   className="flex-1"
                   disabled={isAssigning || !selectedArtistForAssign}
                 >
@@ -1976,6 +2019,35 @@ export default function PlaylistsPage() {
           </div>
         </div>
       )}
+
+      {/* H3: переназначение плейлиста забирает его у прежнего артиста — спрашиваем явно */}
+      <Dialog
+        open={reassignConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setReassignConfirm(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase text-amber-400">
+              Переназначить плейлист
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Плейлист «{selectedPlaylist?.name}» уже привязан к артисту «
+              {reassignConfirm?.previousArtistName}». Если продолжить, он перестанет
+              видеть этот плейлист в своём кабинете.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignConfirm(null)} disabled={isAssigning}>
+              Отмена
+            </Button>
+            <Button onClick={() => assignPlaylistToArtist(true)} disabled={isAssigning}>
+              {isAssigning ? "Переназначение..." : "Переназначить"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={sftpConfirmOpen} onOpenChange={setSftpConfirmOpen}>
         <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">

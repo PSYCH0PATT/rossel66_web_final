@@ -5,6 +5,7 @@ import { reportFromPrisma, userFromPrisma, releaseFromPrisma } from "@/lib/stora
 import {
   CACHE_TAG_ADMIN_DASHBOARD,
   CACHE_TAG_ARTIST_DASHBOARD,
+  CACHE_TAG_ARTIST_PLAYLISTS,
   CACHE_TAG_STREAM_ANALYTICS,
 } from "@/lib/dashboard-cache-tags"
 import {
@@ -481,7 +482,9 @@ async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlay
 export const getCachedArtistPlaylists = unstable_cache(
   async (artistId: string) => loadArtistPlaylistsUncached(artistId),
   ["artist-playlists-v3"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
+  // H2: без тега привязку плейлиста нельзя было сбросить — артист не видел
+  // новый плейлист до истечения revalidate.
+  { revalidate: DASHBOARD_REVALIDATE_SEC, tags: [CACHE_TAG_ARTIST_PLAYLISTS] }
 )
 
 export type AdminPaymentItem = {

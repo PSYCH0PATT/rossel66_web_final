@@ -419,30 +419,52 @@ export async function assignPlaylistsToArtist(
   }
 }
 
+export type ManualAssignResult =
+  | { status: 'assigned'; previousArtistId: string | null }
+  | { status: 'unchanged'; previousArtistId: string }
+  | { status: 'not_found' }
+  | { status: 'needs_confirmation'; previousArtistId: string }
+  | { status: 'error'; message: string }
+
 /**
- * Вручную назначает конкретный плейлист артисту
+ * Вручную назначает конкретный плейлист артисту.
+ *
+ * H3: раньше функция всегда делала update и возвращала true — переназначение
+ * молча забирало плейлист у другого артиста (он терял видимость без всякого
+ * предупреждения), а ветка «already assigned» в роуте была недостижима.
+ * Теперь смена владельца требует явного `force`.
  */
 export async function assignPlaylistToArtistManually(
   playlistId: string,
-  artistId: string
-): Promise<boolean> {
+  artistId: string,
+  options?: { force?: boolean }
+): Promise<ManualAssignResult> {
   try {
     const playlist = await prisma.playlist.findUnique({
-      where: { id: playlistId }
+      where: { id: playlistId },
+      select: { id: true, artistId: true },
     });
-    
+
     if (!playlist) {
-      return false;
+      return { status: 'not_found' };
     }
-    
+
+    if (playlist.artistId === artistId) {
+      return { status: 'unchanged', previousArtistId: artistId };
+    }
+
+    if (playlist.artistId && !options?.force) {
+      return { status: 'needs_confirmation', previousArtistId: playlist.artistId };
+    }
+
     await prisma.playlist.update({
       where: { id: playlistId },
       data: { artistId }
     });
-    
-    return true;
+
+    return { status: 'assigned', previousArtistId: playlist.artistId };
   } catch (error) {
     console.error('❌ Ошибка ручного назначения плейлиста:', error);
-    return false;
+    return { status: 'error', message: error instanceof Error ? error.message : String(error) };
   }
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import {
   CACHE_TAG_ADMIN_DASHBOARD,
   CACHE_TAG_ARTIST_DASHBOARD,
+  CACHE_TAG_ARTIST_PLAYLISTS,
 } from "@/lib/dashboard-cache-tags"
 
 /**
@@ -24,6 +25,34 @@ export async function revalidateArtistDashboardsForArtistIds(
     for (const { username } of users) {
       revalidatePath(`/dashboard/artist/${username}/dashboard`)
       revalidatePath(`/dashboard/artist/${username}/releases`)
+    }
+  } catch {
+    /* вне контекста Next (скрипты) — тихо */
+  }
+}
+
+/**
+ * H2: сбрасывает кэш плейлистов после привязки/переназначения.
+ * Без этого артист не видел новый плейлист до истечения revalidate (10 мин),
+ * а бывший владелец продолжал его видеть.
+ */
+export async function revalidateArtistPlaylistsForArtistIds(
+  ids: (string | null | undefined)[]
+): Promise<void> {
+  const uniq = [...new Set(ids.filter(Boolean) as string[])]
+  if (uniq.length === 0) return
+
+  try {
+    revalidateTag(CACHE_TAG_ARTIST_PLAYLISTS)
+    revalidateTag(CACHE_TAG_ARTIST_DASHBOARD)
+    revalidateTag(CACHE_TAG_ADMIN_DASHBOARD)
+    const users = await prisma.user.findMany({
+      where: { id: { in: uniq }, role: "artist" },
+      select: { username: true },
+    })
+    for (const { username } of users) {
+      revalidatePath(`/dashboard/artist/${username}/playlists`)
+      revalidatePath(`/dashboard/artist/${username}/dashboard`)
     }
   } catch {
     /* вне контекста Next (скрипты) — тихо */
