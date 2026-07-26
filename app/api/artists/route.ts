@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
+import { isHashedPassword, verifyPassword } from "@/lib/password"
 import type { Prisma } from "@prisma/client"
 import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
@@ -316,14 +316,23 @@ export async function GET(request: Request) {
     }
 
     if (idParam) {
+      // J1: карточка одного артиста — отдаём пароль, чтобы админ мог зайти в
+      // профиль. Только этот путь (роут целиком под requireAdmin); в списках
+      // пароль не отдаётся. Для legacy-bcrypt показать нечего — сообщаем это.
       const row = await prisma.user.findFirst({
         where: { id: idParam, role: "artist" },
-        select: artistSelect,
+        select: { ...artistSelect, password: true },
       })
       if (!row) {
         return NextResponse.json({ success: false, error: "Артист не найден" }, { status: 404 })
       }
-      const artist = { ...row, verified: row.verified ?? true }
+      const { password: storedPassword, ...publicFields } = row
+      const artist = {
+        ...publicFields,
+        verified: row.verified ?? true,
+        password: isHashedPassword(storedPassword) ? null : storedPassword,
+        passwordIsHashed: isHashedPassword(storedPassword),
+      }
       const isUnverified = artist.verified === false
       return NextResponse.json({
         success: true,
@@ -464,11 +473,8 @@ export async function PUT(request: Request) {
             { status: 400 }
           )
         }
-        // Пароль может храниться как bcrypt ($2...) или как legacy-плейнтекст
-        const stored = existingUser.password
-        const match = stored.startsWith("$2")
-          ? await bcrypt.compare(currentPassword, stored)
-          : currentPassword === stored
+        // J1: открытый текст или legacy-bcrypt (см. lib/password.ts)
+        const match = await verifyPassword(currentPassword, existingUser.password)
         if (!match) {
           return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 401 })
         }

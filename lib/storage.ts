@@ -1,5 +1,4 @@
 
-import bcrypt from 'bcryptjs'
 import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { reportEffectiveYear } from './report-year'
@@ -200,13 +199,11 @@ export async function saveReleases(releases: Release[]): Promise<void> {
 }
 
 export async function addUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-  // Хешируем пароль если он ещё не захеширован
-  let hashedPassword = user.password
-  if (user.password && !user.password.startsWith('$2')) {
-    hashedPassword = bcrypt.hashSync(user.password, 10)
-  }
-  
-  const data = userToPrismaCreate({ ...user, password: hashedPassword })
+  // J1 (решение владельца): пароли хранятся открытым текстом, чтобы админ мог
+  // заходить в профили артистов. Хеширование убрано.
+  // Старые bcrypt-пароли остаются рабочими — логин их всё ещё сверяет (см.
+  // app/api/auth/login/route.ts), но прочитать их нельзя: нужен сброс админом.
+  const data = userToPrismaCreate(user)
   const prismaUser = await prisma.user.create({
     data: {
       ...data,
@@ -232,11 +229,8 @@ function toUserUpdateInput(updates: Partial<User>): Prisma.UserUpdateInput {
   if (updates.contract !== undefined) data.contract = updates.contract
   if (updates.percentage !== undefined) data.percentage = updates.percentage
   if (updates.verified !== undefined) data.verified = updates.verified
-  if (updates.password !== undefined) {
-    data.password = updates.password.startsWith('$2')
-      ? updates.password
-      : bcrypt.hashSync(updates.password, 10)
-  }
+  // J1: пароль сохраняется как есть (без хеширования)
+  if (updates.password !== undefined) data.password = updates.password
   return data
 }
 

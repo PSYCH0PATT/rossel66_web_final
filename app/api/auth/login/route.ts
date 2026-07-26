@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getUserByUsername } from "@/lib/storage"
 import { buildSessionCookieValue } from "@/lib/server-auth"
 import { rateLimitLogin } from "@/lib/rate-limit"
-import bcrypt from "bcryptjs"
+import { verifyPassword } from "@/lib/password"
 import { z } from "zod"
 
 const loginBodySchema = z.object({
@@ -65,14 +65,10 @@ export async function POST(request: Request) {
     }
 
     const tPassword = performance.now()
-    let isValidPassword = false
-
-    if (user.password.startsWith("$2")) {
-      isValidPassword = await bcrypt.compare(password, user.password)
-    } else {
-      isValidPassword = user.password === password
-    }
-    debugLog("password check (bcrypt/plain)", tPassword)
+    // J1: пароли хранятся открытым текстом, но старые bcrypt-хеши должны
+    // продолжать работать — иначе все существующие пользователи заблокированы.
+    const isValidPassword = await verifyPassword(password, user.password)
+    debugLog("password check (plain/legacy-bcrypt)", tPassword)
 
     if (!isValidPassword) {
       return NextResponse.json(

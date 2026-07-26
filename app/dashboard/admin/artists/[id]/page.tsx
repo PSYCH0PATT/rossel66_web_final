@@ -18,6 +18,9 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  /** J1: текущий пароль артиста; null — сохранён старым bcrypt-хешем, показать нельзя */
+  const [currentPassword, setCurrentPassword] = useState<string | null>(null)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [vkMusicUrl, setVkMusicUrl] = useState("")
@@ -63,6 +66,8 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           
           if (artist) {
             setUsername(artist.username)
+            // J1: null, если пароль ещё в старом bcrypt-хеше
+            setCurrentPassword(artist.password ?? null)
             setName(artist.name)
             setEmail(artist.email || "")
             setVkMusicUrl(artist.vkMusicUrl || "")
@@ -383,16 +388,46 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                     <p className="text-xs text-muted-foreground">Логин для входа в систему</p>
                   </div>
 
+                  {/* J1: пароль артиста доступен админу — чтобы можно было зайти в его профиль */}
+                  <div className="space-y-2">
+                    <Label className="text-white">Текущий пароль</Label>
+                    {currentPassword !== null ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          readOnly
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 font-mono text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword((v) => !v)}
+                          className="h-11 shrink-0 rounded-lg border border-white/10 px-3 text-gray-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          title={showCurrentPassword ? "Скрыть пароль" : "Показать пароль"}
+                        >
+                          <span className="material-symbols-outlined text-lg leading-none">
+                            {showCurrentPassword ? "visibility_off" : "visibility"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-400">
+                        Пароль этого артиста сохранён по старой схеме (зашифрован) и показать его
+                        нельзя. Задайте новый пароль ниже — после этого он будет виден здесь.
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-white">
                       Новый пароль
                     </Label>
                     <Input
                       id="password"
-                      type="password"
+                      type="text"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 font-mono text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Оставьте пустым, чтобы не менять"
                     />
                     <p className="text-xs text-muted-foreground">Оставьте пустым, если не хотите менять пароль</p>
