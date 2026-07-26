@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -20,6 +20,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
+import { formatDateRu } from "@/lib/format-date"
 import {
   isMtsMusicPlatform,
   isOdnoklassnikiPlatform,
@@ -36,10 +37,189 @@ import {
 /** G4: как часто перепроверять системное предупреждение о cookies */
 const COOKIES_POLL_MS = 60_000
 
+/** Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.) */
+function getPlatformBadgeStyle(platform: string) {
+  const n = normalizePlatform(platform)
+  if (n.includes("vk") || n.includes("вк")) return { bg: "#0077FF", color: "#FFFFFF" }
+  if (n.includes("yandex") || n.includes("яндекс")) return { bg: "#FFCC00", color: "#000000" }
+  if (n.includes("mts") || n.includes("мтс")) return { bg: "#E30611", color: "#FFFFFF" }
+  if (n.includes("sber") || n.includes("сбер")) return { bg: "#21A038", color: "#FFFFFF" }
+  if (n.includes("одноклассник") || n.includes("odnoklassniki")) return { bg: "#EE8208", color: "#FFFFFF" }
+  return { bg: "#6b7280", color: "#FFFFFF" }
+}
+
+/** F-PARS-7: сколько плейлистов тянем за раз (максимум /api/playlists/sftp) */
+const PLAYLISTS_PAGE_TAKE = 500
+
 function primaryArtistName(name?: string | null): string {
   if (!name) return ""
   return splitCollaboratingArtistDisplayNames(name)[0] || name.trim()
 }
+
+type PlaylistCardProps = {
+  playlist: VKPlaylist | BandlinkPlaylist
+  type: "vk" | "bandlink"
+  onAssign: (id: number, name: string, type: "vk" | "bandlink") => void
+  onDelete: (target: { id: number; type: "vk" | "bandlink" }) => void
+}
+
+/**
+ * F-PARS-12: карточка объявлялась ВНУТРИ рендера страницы, поэтому на каждый
+ * из ~40 useState React видел новый тип компонента и полностью перемонтировал
+ * все карточки вместе с <Image> — обложки перезагружались на любой чих.
+ * Теперь компонент на уровне модуля и обёрнут в memo.
+ */
+const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDelete }: PlaylistCardProps) {
+  const tracksCount = (playlist as any).tracks_count || ((playlist as any).multiple_tracks ? 2 : 1)
+  const isVK = type === "vk"
+  const vkPlaylist = playlist as VKPlaylist
+  const bandlinkPlaylist = playlist as BandlinkPlaylist
+  const platformName = isVK ? vkPlaylist.platform || "VK Музыка" : bandlinkPlaylist.platform
+  const dotColor = getPlatformBadgeStyle(platformName).bg
+  const playlistUrl = isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url
+  const coverUrl = isVK ? vkPlaylist.playlist_cover_url || "/placeholder.svg" : bandlinkPlaylist.playlist_cover_url || "/placeholder.svg"
+  const title = isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name
+  const artistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name
+
+  const getTrackPosition = () => {
+    if (isVK) {
+      if (vkPlaylist.track_position != null && !isNaN(vkPlaylist.track_position)) {
+        return vkPlaylist.track_position
+      }
+      if (vkPlaylist.tracks_info && vkPlaylist.tracks_info.length > 0) {
+        const positions = vkPlaylist.tracks_info
+          .map((t: any) => t.position)
+          .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
+        if (positions.length > 0) return Math.min(...positions)
+      }
+    } else {
+      if (bandlinkPlaylist.track_position != null && !isNaN(bandlinkPlaylist.track_position)) {
+        return bandlinkPlaylist.track_position
+      }
+      if (bandlinkPlaylist.tracks_info && bandlinkPlaylist.tracks_info.length > 0) {
+        const positions = bandlinkPlaylist.tracks_info
+          .map((t: any) => t.position)
+          .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
+        if (positions.length > 0) return Math.min(...positions)
+      }
+    }
+    return null
+  }
+
+  const trackPosition = getTrackPosition()
+
+  // A5: даты плейлистов — календарные строки; общий хелпер форматирует их в UTC
+  const formatDate = (dateString: string | undefined) => formatDateRu(dateString, "")
+
+  const displayDate = isVK
+    ? formatDate(vkPlaylist.added_at || vkPlaylist.parsed_at)
+    : formatDate(bandlinkPlaylist.added_at || bandlinkPlaylist.parsed_at)
+
+  const tracksInfo = isVK ? vkPlaylist.tracks_info || [] : bandlinkPlaylist.tracks_info || []
+  const artistReleases = tracksInfo
+    .map((t: any) => t.title || t.releaseName)
+    .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index)
+  const releaseNames = isVK
+    ? vkPlaylist.track_names || artistReleases.join(", ")
+    : bandlinkPlaylist.track_names || artistReleases.join(", ")
+
+  const trackLine =
+    tracksCount > 0
+      ? `${tracksCount} ${tracksCount === 1 ? "трек" : tracksCount < 5 ? "трека" : "треков"}`
+      : "Треки"
+  const metaLine = [displayDate, trackPosition != null && !isNaN(trackPosition) ? `${trackPosition} место` : null]
+    .filter(Boolean)
+    .join(" · ")
+
+  return (
+    <div className="playlist-card group relative aspect-square rounded-2xl overflow-hidden card-glass">
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={coverUrl}
+          alt={title}
+          fill
+          className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+        />
+      </div>
+      <a
+        href={playlistUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute inset-0 z-[5]"
+        aria-label="Открыть плейлист"
+      />
+
+      <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10 pointer-events-none">
+        <div className="flex justify-between items-start gap-2 pointer-events-auto">
+          <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1 max-w-[70%]">
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+            <span className="truncate">{platformName}</span>
+          </span>
+          <div className="flex gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onAssign(playlist.id, title, type)
+              }}
+              className="p-1.5 rounded-full bg-primary/90 hover:bg-primary text-black transition-colors"
+              title="Привязать к артисту"
+            >
+              <span className="material-symbols-outlined text-lg leading-none">person_add</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onDelete({ id: playlist.id, type })
+              }}
+              className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition-colors"
+              title="Удалить плейлист"
+            >
+              <span className="material-symbols-outlined text-lg leading-none">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="self-center pointer-events-auto">
+          <a
+            href={playlistUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors hover:border-primary hover:bg-primary group/play"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Открыть плейлист в новой вкладке"
+          >
+            <span className="material-symbols-outlined text-lg leading-none text-white group-hover/play:text-black">
+              open_in_new
+            </span>
+          </a>
+        </div>
+
+        <div className="pointer-events-none">
+          <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{title}</h3>
+          <p className="text-xs text-gray-400 font-mono line-clamp-1">{artistName}</p>
+          <p className="text-xs text-gray-500 font-mono mt-1 line-clamp-1">
+            {trackLine} {metaLine ? `· ${metaLine}` : ""}
+          </p>
+          {releaseNames && releaseNames.trim() ? (
+            <p className="text-[10px] text-gray-500 font-mono mt-2 line-clamp-2 leading-relaxed">Релизы: {releaseNames}</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
+        <h3 className="font-bold text-white text-lg truncate">{title}</h3>
+        <p className="text-xs text-gray-400 font-mono mt-1 line-clamp-2 min-h-[2.5rem]">
+          {platformName} · {releaseNames?.trim() ? releaseNames : artistName}
+        </p>
+      </div>
+    </div>
+  )
+})
 
 interface Artist {
   id: string
@@ -158,6 +338,8 @@ export default function PlaylistsPage() {
     return () => {
       window.clearTimeout(idle)
       window.clearInterval(poll)
+      // F-PARS-13: таймер debounce жил после unmount → setState на размонтированном компоненте
+      if (playlistDebounceRef.current) clearTimeout(playlistDebounceRef.current)
     }
   }, [])
 
@@ -222,12 +404,33 @@ export default function PlaylistsPage() {
 
   const loadResults = async () => {
     try {
-      const params = new URLSearchParams({ take: "100", skip: "0" })
-      if (debouncedPlaylistQuery) params.set("q", debouncedPlaylistQuery)
-      if (selectedArtistFilter !== "all") {
-        const artist = artists.find((a) => a.name === selectedArtistFilter)
-        if (artist?.id) params.set("artistId", artist.id)
+      /**
+       * F-PARS-7: фильтр по артисту работал поверх первых 100 записей.
+       * Имя из CSV часто не совпадает с именем профиля, поэтому artistId
+       * не находился, серверный фильтр не применялся, и при >100 плейлистах
+       * фильтр молча показывал неполные данные.
+       *
+       * Теперь: если artistId известен — фильтруем на сервере точно; если нет —
+       * сужаем выборку по подстроке имени (`q` ищет по artistName/playlistName),
+       * а точное совпадение по основному артисту доделывает клиент (см. B3).
+       * take поднят до максимума роута.
+       */
+      const params = new URLSearchParams({ take: String(PLAYLISTS_PAGE_TAKE), skip: "0" })
+      const artistMatch =
+        selectedArtistFilter !== "all"
+          ? artists.find((a) => a.name === selectedArtistFilter)
+          : undefined
+
+      if (selectedArtistFilter !== "all" && artistMatch?.id) {
+        params.set("artistId", artistMatch.id)
       }
+
+      if (debouncedPlaylistQuery) {
+        params.set("q", debouncedPlaylistQuery)
+      } else if (selectedArtistFilter !== "all" && !artistMatch?.id) {
+        params.set("q", selectedArtistFilter)
+      }
+
       const response = await fetch(`/api/playlists/sftp?${params}`)
       const data = await response.json()
 
@@ -823,11 +1026,12 @@ export default function PlaylistsPage() {
     }
   }
 
-  const openAssignModal = (id: number, name: string, type: 'vk' | 'bandlink') => {
+  // F-PARS-12: ссылка должна быть стабильной, иначе memo(PlaylistCard) не спасёт
+  const openAssignModal = useCallback((id: number, name: string, type: 'vk' | 'bandlink') => {
     setSelectedPlaylist({ id, name, type })
     setSelectedArtistForAssign('')
     setAssignModalOpen(true)
-  }
+  }, [])
 
   const assignPlaylistToArtist = async (force = false) => {
     if (!selectedPlaylist || !selectedArtistForAssign) {
@@ -881,181 +1085,10 @@ export default function PlaylistsPage() {
     }
   }
 
-  // Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.)
-  const getPlatformBadgeStyle = (platform: string) => {
-    const n = normalizePlatform(platform)
-    if (n.includes("vk") || n.includes("вк")) return { bg: "#0077FF", color: "#FFFFFF" }
-    if (n.includes("yandex") || n.includes("яндекс")) return { bg: "#FFCC00", color: "#000000" }
-    if (n.includes("mts") || n.includes("мтс")) return { bg: "#E30611", color: "#FFFFFF" }
-    if (n.includes("sber") || n.includes("сбер")) return { bg: "#21A038", color: "#FFFFFF" }
-    if (n.includes("одноклассник") || n.includes("odnoklassniki")) return { bg: "#EE8208", color: "#FFFFFF" }
-    return { bg: "#6b7280", color: "#FFFFFF" }
-  }
 
   const inputCls =
     "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
-  const PlaylistCard = ({ playlist, type }: { playlist: VKPlaylist | BandlinkPlaylist; type: "vk" | "bandlink" }) => {
-    const tracksCount = (playlist as any).tracks_count || ((playlist as any).multiple_tracks ? 2 : 1)
-    const isVK = type === "vk"
-    const vkPlaylist = playlist as VKPlaylist
-    const bandlinkPlaylist = playlist as BandlinkPlaylist
-    const platformName = isVK ? vkPlaylist.platform || "VK Музыка" : bandlinkPlaylist.platform
-    const dotColor = getPlatformBadgeStyle(platformName).bg
-    const playlistUrl = isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url
-    const coverUrl = isVK ? vkPlaylist.playlist_cover_url || "/placeholder.svg" : bandlinkPlaylist.playlist_cover_url || "/placeholder.svg"
-    const title = isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name
-    const artistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name
-
-    const getTrackPosition = () => {
-      if (isVK) {
-        if (vkPlaylist.track_position != null && !isNaN(vkPlaylist.track_position)) {
-          return vkPlaylist.track_position
-        }
-        if (vkPlaylist.tracks_info && vkPlaylist.tracks_info.length > 0) {
-          const positions = vkPlaylist.tracks_info
-            .map((t: any) => t.position)
-            .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
-          if (positions.length > 0) return Math.min(...positions)
-        }
-      } else {
-        if (bandlinkPlaylist.track_position != null && !isNaN(bandlinkPlaylist.track_position)) {
-          return bandlinkPlaylist.track_position
-        }
-        if (bandlinkPlaylist.tracks_info && bandlinkPlaylist.tracks_info.length > 0) {
-          const positions = bandlinkPlaylist.tracks_info
-            .map((t: any) => t.position)
-            .filter((p: number) => p != null && !isNaN(p) && isFinite(p))
-          if (positions.length > 0) return Math.min(...positions)
-        }
-      }
-      return null
-    }
-
-    const trackPosition = getTrackPosition()
-
-    const formatDate = (dateString: string | undefined) => {
-      if (!dateString) return ""
-      try {
-        return new Date(dateString).toLocaleDateString("ru-RU", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
-      } catch {
-        return dateString
-      }
-    }
-
-    const displayDate = isVK
-      ? formatDate(vkPlaylist.added_at || vkPlaylist.parsed_at)
-      : formatDate(bandlinkPlaylist.added_at || bandlinkPlaylist.parsed_at)
-
-    const tracksInfo = isVK ? vkPlaylist.tracks_info || [] : bandlinkPlaylist.tracks_info || []
-    const artistReleases = tracksInfo
-      .map((t: any) => t.title || t.releaseName)
-      .filter((name: string, index: number, arr: string[]) => name && arr.indexOf(name) === index)
-    const releaseNames = isVK
-      ? vkPlaylist.track_names || artistReleases.join(", ")
-      : bandlinkPlaylist.track_names || artistReleases.join(", ")
-
-    const trackLine =
-      tracksCount > 0
-        ? `${tracksCount} ${tracksCount === 1 ? "трек" : tracksCount < 5 ? "трека" : "треков"}`
-        : "Треки"
-    const metaLine = [displayDate, trackPosition != null && !isNaN(trackPosition) ? `${trackPosition} место` : null]
-      .filter(Boolean)
-      .join(" · ")
-
-    return (
-      <div className="playlist-card group relative aspect-square rounded-2xl overflow-hidden card-glass">
-        <div className="absolute inset-0 z-0">
-          <Image
-            src={coverUrl}
-            alt={title}
-            fill
-            className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
-        </div>
-        <a
-          href={playlistUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute inset-0 z-[5]"
-          aria-label="Открыть плейлист"
-        />
-
-        <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10 pointer-events-none">
-          <div className="flex justify-between items-start gap-2 pointer-events-auto">
-            <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1 max-w-[70%]">
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
-              <span className="truncate">{platformName}</span>
-            </span>
-            <div className="flex gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  openAssignModal(playlist.id, title, type)
-                }}
-                className="p-1.5 rounded-full bg-primary/90 hover:bg-primary text-black transition-colors"
-                title="Привязать к артисту"
-              >
-                <span className="material-symbols-outlined text-lg leading-none">person_add</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDeleteTarget({ id: playlist.id, type })
-                }}
-                className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition-colors"
-                title="Удалить плейлист"
-              >
-                <span className="material-symbols-outlined text-lg leading-none">delete</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="self-center pointer-events-auto">
-            <a
-              href={playlistUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-colors hover:border-primary hover:bg-primary group/play"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Открыть плейлист в новой вкладке"
-            >
-              <span className="material-symbols-outlined text-lg leading-none text-white group-hover/play:text-black">
-                open_in_new
-              </span>
-            </a>
-          </div>
-
-          <div className="pointer-events-none">
-            <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{title}</h3>
-            <p className="text-xs text-gray-400 font-mono line-clamp-1">{artistName}</p>
-            <p className="text-xs text-gray-500 font-mono mt-1 line-clamp-1">
-              {trackLine} {metaLine ? `· ${metaLine}` : ""}
-            </p>
-            {releaseNames && releaseNames.trim() ? (
-              <p className="text-[10px] text-gray-500 font-mono mt-2 line-clamp-2 leading-relaxed">Релизы: {releaseNames}</p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
-          <h3 className="font-bold text-white text-lg truncate">{title}</h3>
-          <p className="text-xs text-gray-400 font-mono mt-1 line-clamp-2 min-h-[2.5rem]">
-            {platformName} · {releaseNames?.trim() ? releaseNames : artistName}
-          </p>
-        </div>
-      </div>
-    )
-  }
 
   const totalPlaylistsCount =
     vkPlaylists.length +
@@ -1129,8 +1162,9 @@ export default function PlaylistsPage() {
               value="parsing"
               className="rounded-lg border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:bg-primary/10 inline-flex items-center gap-2"
             >
+              {/* DS14: «резерв» — внутреннее понятие (был дубль-страницы parsers, удалён) */}
               <span className="material-symbols-outlined text-lg">settings</span>
-              Парсинг (резерв)
+              Парсеры
             </TabsTrigger>
           </TabsList>
 
@@ -1148,6 +1182,15 @@ export default function PlaylistsPage() {
                 />
                 <p className="text-xs font-mono uppercase tracking-widest text-gray-500 ml-auto">
                   Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
+                  {/* F-PARS-7: список усечён — фильтр работает поверх загруженного, честно говорим об этом */}
+                  {playlistTotal > PLAYLISTS_PAGE_TAKE && (
+                    <span
+                      className="ml-2 text-amber-400"
+                      title={`Загружены первые ${PLAYLISTS_PAGE_TAKE} записей. Уточните поиск, чтобы фильтр охватил все данные.`}
+                    >
+                      (усечено)
+                    </span>
+                  )}
                 </p>
                 <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
                   <SelectTrigger className={`w-64 ${inputCls} h-10`}>
@@ -1213,7 +1256,7 @@ export default function PlaylistsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {vkPlaylists.map((playlist) => (
-                    <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" />
+                    <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1241,7 +1284,7 @@ export default function PlaylistsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {yandexPlaylists.map((playlist) => (
-                    <PlaylistCard key={`yandex-${playlist.id}`} playlist={playlist} type="bandlink" />
+                    <PlaylistCard key={`yandex-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1269,7 +1312,7 @@ export default function PlaylistsPage() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {mtsPlaylists.map((playlist) => (
-                    <PlaylistCard key={`mts-${playlist.id}`} playlist={playlist} type="bandlink" />
+                    <PlaylistCard key={`mts-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1296,7 +1339,7 @@ export default function PlaylistsPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {sberPlaylists.map((playlist) => (
-                    <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" />
+                    <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1324,7 +1367,7 @@ export default function PlaylistsPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {okPlaylists.map((playlist) => (
-                    <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" />
+                    <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1341,7 +1384,7 @@ export default function PlaylistsPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {otherPlaylists.map((playlist) => (
-                    <PlaylistCard key={`other-${playlist.id}`} playlist={playlist} type="bandlink" />
+                    <PlaylistCard key={`other-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
                 </div>
               </div>
@@ -1429,10 +1472,10 @@ export default function PlaylistsPage() {
                   {/* Плейлисты артиста */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {artistVKPlaylists.map((playlist) => (
-                      <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" />
+                      <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                     ))}
                     {artistBandlinkPlaylists.map((playlist) => (
-                      <PlaylistCard key={`bandlink-${playlist.id}`} playlist={playlist} type="bandlink" />
+                      <PlaylistCard key={`bandlink-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                     ))}
                   </div>
                 </div>

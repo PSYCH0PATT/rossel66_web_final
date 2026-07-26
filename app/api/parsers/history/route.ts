@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { listParserRuns, recordParserRun } from '@/lib/parser-run-history';
+import { isMissingParserRunTable, listParserRuns, recordParserRun } from '@/lib/parser-run-history';
 import { requireAdminOrCron } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +20,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, history });
   } catch (error) {
+    // История переехала в Postgres — до деплоя (prisma migrate deploy) таблицы нет.
+    // Отдаём пустой список с понятной причиной, а не «непонятную ошибку».
+    if (isMissingParserRunTable(error)) {
+      console.warn('История парсинга: таблица ParserRun ещё не создана (нужна миграция).');
+      return NextResponse.json({
+        success: true,
+        history: [],
+        notice: 'История парсинга появится после применения миграций (деплой).',
+      });
+    }
     console.error('Ошибка получения истории парсинга:', error);
     return NextResponse.json({
       success: false,

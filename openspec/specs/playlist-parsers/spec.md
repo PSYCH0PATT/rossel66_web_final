@@ -103,7 +103,7 @@ The system SHALL display parsed playlists for artists.
 - Final scroll down and back up to ensure all elements are loaded
 
 ### Components
-- `app/dashboard/admin/playlists/parsers/page.tsx` — parser management
+- `app/dashboard/admin/playlists/page.tsx` — playlists + parser management (единая страница)
 - `app/dashboard/artist/[username]/playlists/page.tsx` — artist playlists
 
 ### Libraries

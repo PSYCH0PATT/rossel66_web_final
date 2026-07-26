@@ -173,19 +173,29 @@ export default function AdminAnalyticsPage() {
 
   // Загрузка треков при смене артиста
   useEffect(() => {
-    const params = artistFilterParams(selectedArtist, artists)
+    const controller = new AbortController()
+    // F-PARS-8: сброс делаем СРАЗУ, до ответа сервера. Раньше он был внутри
+    // .then(), поэтому loadData успевал уйти с isrc трека ПРОШЛОГО артиста
+    // (график мигал «Нет данных»), а ответы для артистов A и B гонялись
+    // за setTracks — выигрывал тот, кто ответил последним.
+    setSelectedTrack("all")
+    setTracks([])
 
-    fetch(`/api/analytics/tracks?${params}`)
+    const params = artistFilterParams(selectedArtist, artists)
+    fetch(`/api/analytics/tracks?${params}`, { signal: controller.signal })
       .then(r => r.json())
       .then(d => {
         if (d.success) setTracks(d.tracks)
-        setSelectedTrack("all") // сброс при смене артиста
       })
-      .catch(console.error)
+      .catch(err => {
+        if (err?.name !== "AbortError") console.error(err)
+      })
+
+    return () => controller.abort()
   }, [selectedArtist, artists])
 
   // Загрузка данных
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
 
     try {
@@ -214,21 +224,27 @@ export default function AdminAnalyticsPage() {
         if (track) params.set("isrc", track.isrc)
       }
 
-      const res = await fetch(`/api/analytics/streams?${params}`)
+      const res = await fetch(`/api/analytics/streams?${params}`, { signal })
       const json = await res.json()
 
       if (json.success) {
         setData(json.data)
       }
     } catch (err) {
+      // F-PARS-8: отменённый запрос — не ошибка, просто фильтр успели сменить
+      if ((err as { name?: string })?.name === "AbortError") return
       console.error("Ошибка загрузки аналитики:", err)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [period, selectedArtist, selectedTrack, customStart, customEnd, tracks, artists])
 
   useEffect(() => {
-    if (currentUser) loadData()
+    if (!currentUser) return
+    // F-PARS-8: отменяем предыдущий запрос, чтобы его ответ не перезаписал новый
+    const controller = new AbortController()
+    loadData(controller.signal)
+    return () => controller.abort()
   }, [currentUser, loadData])
 
   // Ручной импорт CSV

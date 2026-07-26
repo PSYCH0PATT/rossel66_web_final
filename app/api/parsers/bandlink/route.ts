@@ -3,6 +3,8 @@ import type { NextRequest as NextRequestType } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import { randomUUID } from 'crypto';
 import { addActivity, getUserByUsername } from '@/lib/storage';
 import { requireAdmin, requireAdminOrCron } from '@/lib/server-auth';
 import { rateLimitParser } from '@/lib/rate-limit';
@@ -66,7 +68,10 @@ export async function POST(request: NextRequest) {
     console.log(`🍪 Загружено ${Object.keys(cookies).length} кук из Postgres`);
 
     // Создаем временный конфиг файл
-    const configPath = path.join(process.cwd(), 'temp_bandlink_config.json');
+    // F-PARS-9: имя было фиксированным — два одновременных запуска
+    // перезаписывали конфиг друг друга, а unlinkSync первого удалял файл
+    // из-под второго. Уникальное имя на каждый запуск снимает гонку.
+    const configPath = path.join(os.tmpdir(), `temp_bandlink_config_${Date.now()}_${randomUUID()}.json`);
     const config = {
       target_artists: artists, // Для bandlink передаем только никнеймы
       bright_data_proxy_username: proxyUsername, // Residential Proxy username

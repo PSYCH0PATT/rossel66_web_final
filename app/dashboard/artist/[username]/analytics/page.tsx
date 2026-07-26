@@ -101,14 +101,19 @@ export default function ArtistAnalyticsPage() {
   // Загрузка треков
   useEffect(() => {
     if (!currentUser?.id) return
-    fetch(`/api/analytics/tracks?artistId=${currentUser.id}`)
+    // F-PARS-8: отменяем предыдущий запрос, чтобы его ответ не перезаписал новый
+    const controller = new AbortController()
+    fetch(`/api/analytics/tracks?artistId=${currentUser.id}`, { signal: controller.signal })
       .then(r => r.json())
       .then(d => { if (d.success) setTracks(d.tracks) })
-      .catch(console.error)
+      .catch(err => {
+        if (err?.name !== "AbortError") console.error(err)
+      })
+    return () => controller.abort()
   }, [currentUser?.id])
 
   // Загрузка данных
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     if (!currentUser?.id) return
     setLoading(true)
 
@@ -140,21 +145,25 @@ export default function ArtistAnalyticsPage() {
         if (track) params.set("isrc", track.isrc)
       }
 
-      const res = await fetch(`/api/analytics/streams?${params}`)
+      const res = await fetch(`/api/analytics/streams?${params}`, { signal })
       const json = await res.json()
 
       if (json.success) {
         setData(json.data)
       }
     } catch (err) {
+      // F-PARS-8: отменённый запрос — не ошибка, просто фильтр успели сменить
+      if ((err as { name?: string })?.name === "AbortError") return
       console.error("Ошибка загрузки аналитики:", err)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [currentUser?.id, period, selectedTrack, customStart, customEnd, tracks])
 
   useEffect(() => {
-    loadData()
+    const controller = new AbortController()
+    loadData(controller.signal)
+    return () => controller.abort()
   }, [loadData])
 
     if (!currentUser) {

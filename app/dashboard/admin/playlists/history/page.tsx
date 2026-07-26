@@ -23,6 +23,9 @@ interface HistoryRecord {
   created_at: string
 }
 
+/** F-PARS-13: пауза перед запросом, чтобы не стрелять на каждый символ */
+const FILTER_DEBOUNCE_MS = 350
+
 const filterInput =
   "h-10 rounded-lg border border-white/10 bg-white/5 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
@@ -37,11 +40,24 @@ export default function PlaylistHistoryPage() {
     playlistUrl: "",
   })
 
+  /**
+   * F-PARS-13: раньше каждый символ в текстовых фильтрах («Артист», «URL»)
+   * отправлял запрос — без debounce и без отмены, поэтому ответы гонялись
+   * и в таблицу мог попасть результат уже неактуального фильтра.
+   */
   useEffect(() => {
-    loadHistory()
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      void loadHistory(controller.signal)
+    }, FILTER_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
   }, [filters])
 
-  const loadHistory = async () => {
+  const loadHistory = async (signal?: AbortSignal) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -52,16 +68,17 @@ export default function PlaylistHistoryPage() {
       if (filters.playlistUrl) params.append("playlistUrl", filters.playlistUrl)
       params.append("limit", "100")
 
-      const response = await fetch(`/api/playlists/history?${params.toString()}`)
+      const response = await fetch(`/api/playlists/history?${params.toString()}`, { signal })
       const data = await response.json()
 
       if (data.success) {
         setHistory(data.results || [])
       }
     } catch (error) {
+      if ((error as { name?: string })?.name === "AbortError") return
       console.error("Ошибка загрузки истории:", error)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }
 
@@ -201,7 +218,7 @@ export default function PlaylistHistoryPage() {
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
               type="button"
-              onClick={loadHistory}
+              onClick={() => void loadHistory()}
               disabled={loading}
               className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
             >

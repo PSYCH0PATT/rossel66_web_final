@@ -12,6 +12,13 @@ import { prisma } from "@/lib/prisma"
 
 export type ParserType = "vk" | "bandlink"
 
+/** Таблицы ещё нет — миграция не применена (deploy запускает prisma migrate deploy). */
+export function isMissingParserRunTable(error: unknown): boolean {
+  const code = (error as { code?: string })?.code
+  // P2021 — таблица не существует; 42P01 — то же от драйвера Postgres
+  return code === "P2021" || code === "P2010" || code === "42P01"
+}
+
 /** Запуск, зависший в `running` дольше этого времени, считаем провалившимся. */
 export const STALE_RUN_TIMEOUT_MINUTES = 30
 
