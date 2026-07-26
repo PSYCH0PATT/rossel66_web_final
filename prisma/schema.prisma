@@ -180,6 +180,30 @@ model ParserCookie {
   @@index([platform])
 }
 
+/**
+ * История запусков парсеров. Раньше жила в SQLite (parsing_history в
+ * vk_playlists.db / bandlink_playlists.db) — терялась при каждом ребилде
+ * Timeweb и требовала нативный sqlite3. Теперь в Postgres.
+ */
+model ParserRun {
+  id             String    @id @default(cuid())
+  /** vk | bandlink */
+  parserType     String
+  /** Список артистов через запятую (как показывает UI) */
+  artists        String
+  playlistsFound Int       @default(0)
+  playlistsAdded Int       @default(0)
+  errors         String?   @db.Text
+  /** running | completed | failed */
+  status         String    @default("running")
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@index([parserType, startedAt])
+  @@index([status])
+  @@index([startedAt])
+}
+
 /** Parser run status / cookie alerts — survives Timeweb rebuild */
 model ParserRunStatus {
   platform          String   @id

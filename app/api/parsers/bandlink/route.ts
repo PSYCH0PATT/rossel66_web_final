@@ -6,9 +6,11 @@ import fs from 'fs';
 import { addActivity, getUserByUsername } from '@/lib/storage';
 import { requireAdmin, requireAdminOrCron } from '@/lib/server-auth';
 import { rateLimitParser } from '@/lib/rate-limit';
-import { isCronAuthorized, internalCronFetchJsonHeaders, internalCronAuthHeaderOnly } from '@/lib/cron-auth';
+import { isCronAuthorized } from '@/lib/cron-auth';
 import { getParserCookiesRecord } from '@/lib/parser-cookies';
 import { syncBandlinkSqliteRowsToPostgres } from '@/lib/parser-results-sync';
+import { recordParserRun } from '@/lib/parser-run-history';
+import { MAX_TAKE, loadFormattedSftpPlaylists } from '@/lib/sftp-playlist-response';
 import { syncBandlinkParserStatusFromSqlite } from '@/lib/parser-status-sqlite-bridge';
 
 export async function POST(request: NextRequest) {
@@ -138,16 +140,12 @@ export async function POST(request: NextRequest) {
                 return diffMinutes < 5; // Плейлисты, добавленные в последние 5 минут
               }).length;
               
-              await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parsers/history`, {
-                method: 'POST',
-                headers: internalCronFetchJsonHeaders(),
-                body: JSON.stringify({
-                  parserType: 'bandlink',
-                  artists: artists,
-                  playlistsFound: totalFound,
-                  playlistsAdded: newPlaylists,
-                  status: 'completed'
-                })
+              await recordParserRun({
+                parserType: 'bandlink',
+                artists,
+                playlistsFound: totalFound,
+                playlistsAdded: newPlaylists,
+                status: 'completed'
               });
             } catch (historyError) {
               console.error('Ошибка сохранения истории парсинга:', historyError);
@@ -218,17 +216,13 @@ export async function POST(request: NextRequest) {
         } else {
           // Сохраняем историю парсинга с ошибкой
           try {
-            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parsers/history`, {
-              method: 'POST',
-              headers: internalCronFetchJsonHeaders(),
-              body: JSON.stringify({
-                parserType: 'bandlink',
-                artists: artists,
-                playlistsFound: 0,
-                playlistsAdded: 0,
-                errors: error || `Python процесс завершился с кодом ${code}`,
-                status: 'failed'
-              })
+            await recordParserRun({
+              parserType: 'bandlink',
+              artists,
+              playlistsFound: 0,
+              playlistsAdded: 0,
+              errors: error || `Python процесс завершился с кодом ${code}`,
+              status: 'failed'
             });
           } catch (historyError) {
             console.error('Ошибка сохранения истории парсинга:', historyError);
@@ -380,12 +374,10 @@ export async function GET(request: NextRequestType) {
     if (useSftpSync) {
       // Используем данные из SFTP
       try {
-        const sftpResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/playlists/sftp`,
-          { headers: internalCronAuthHeaderOnly() }
-        );
-        const sftpData = await sftpResponse.json();
-        
+        // F-PARS-4: self-fetch на /api/playlists/sftp с cron-Bearer всегда
+        // получал 401 (роут закрыт requireAdmin) → «Результаты» были пустыми.
+        const sftpData = await loadFormattedSftpPlaylists({ take: MAX_TAKE });
+
         // Преобразуем в формат Bandlink
         const formattedResults = (sftpData.results || []).map((p: any) => {
           // Формируем список названий релизов

@@ -20,6 +20,14 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
+import {
+  isMtsMusicPlatform,
+  isOdnoklassnikiPlatform,
+  isSberMusicPlatform,
+  isVkMusicPlatform,
+  isYandexMusicPlatform,
+  normalizePlatform,
+} from "@/lib/playlist-platform"
 
 /**
  * B3: основной артист из поля исполнителя (первый токен коллаба).
@@ -28,31 +36,6 @@ import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 function primaryArtistName(name?: string | null): string {
   if (!name) return ""
   return splitCollaboratingArtistDisplayNames(name)[0] || name.trim()
-}
-
-/** Строка платформы из CSV может не совпадать с канонич. «Яндекс Музыка» — группируем по подстроке */
-function platformNorm(p: string | undefined) {
-  return (p || "").trim().toLowerCase()
-}
-function isVkMusicPlatform(platform: string | undefined) {
-  const n = platformNorm(platform)
-  return n.includes("vk") || n.includes("вк")
-}
-function isYandexMusicPlatform(platform: string | undefined) {
-  const n = platformNorm(platform)
-  return n.includes("yandex") || n.includes("яндекс")
-}
-function isMtsMusicPlatform(platform: string | undefined) {
-  const n = platformNorm(platform)
-  return n.includes("mts") || n.includes("мтс")
-}
-function isSberMusicPlatform(platform: string | undefined) {
-  const n = platformNorm(platform)
-  return n.includes("sber") || n.includes("сбер")
-}
-function isOdnoklassnikiPlatform(platform: string | undefined) {
-  const n = platformNorm(platform)
-  return n.includes("одноклассник") || n.includes("odnoklassniki")
 }
 
 interface Artist {
@@ -864,7 +847,7 @@ export default function PlaylistsPage() {
 
   // Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.)
   const getPlatformBadgeStyle = (platform: string) => {
-    const n = platformNorm(platform)
+    const n = normalizePlatform(platform)
     if (n.includes("vk") || n.includes("вк")) return { bg: "#0077FF", color: "#FFFFFF" }
     if (n.includes("yandex") || n.includes("яндекс")) return { bg: "#FFCC00", color: "#000000" }
     if (n.includes("mts") || n.includes("мтс")) return { bg: "#E30611", color: "#FFFFFF" }
