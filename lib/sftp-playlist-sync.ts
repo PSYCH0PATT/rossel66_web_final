@@ -283,17 +283,6 @@ export async function syncSftpPlaylists(): Promise<SyncResult> {
 }
 
 /**
- * Получает список необработанных файлов
- */
-export function getUnprocessedFiles(): string[] {
-  const index = loadSyncIndex();
-  return index.downloadedFiles
-    .filter(f => !f.processed)
-    .map(f => path.join(DOWNLOADS_DIR, f.filename))
-    .filter(filePath => fs.existsSync(filePath));
-}
-
-/**
  * Возвращает количество строк данных в CSV (без заголовка).
  * Пустой файл или только заголовок → 0.
  */
@@ -315,6 +304,13 @@ export function countCsvDataRows(filePath: string): number {
  * Получает последний (самый новый) CSV файл.
  * Если он полностью пустой (только заголовок, без строк данных),
  * возвращает последний непустой файл.
+ *
+ * F-PARS-14: обрабатывается ИМЕННО последний файл, и это не недоработка —
+ * каждый CSV из SFTP является полным снимком текущих плейлистов, а не
+ * приращением. Проигрывать старые снимки нельзя: это переписало бы
+ * firstSeenDate и засыпало историю ложными изменениями (корень A11).
+ * Поэтому мёртвая функция getUnprocessedFiles() удалена, чтобы не наводила
+ * на мысль о «пропущенных» файлах.
  */
 export function getLatestCsvFile(): string | null {
   try {

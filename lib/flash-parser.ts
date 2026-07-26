@@ -8,6 +8,7 @@
  */
 
 import * as fs from 'fs'
+import { parseCsvLine, splitCsvLines } from '@/lib/csv-line'
 
 export interface FlashRecord {
   date: Date
@@ -25,51 +26,11 @@ export interface FlashRecord {
 }
 
 /**
- * Разбирает строку CSV с учётом кавычек.
- * Разделитель — точка с запятой (;).
- */
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = []
-  let current = ''
-  let inQuotes = false
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-
-    if (inQuotes) {
-      if (ch === '"') {
-        // Проверяем escaped кавычку ""
-        if (i + 1 < line.length && line[i + 1] === '"') {
-          current += '"'
-          i++ // пропускаем следующую кавычку
-        } else {
-          inQuotes = false
-        }
-      } else {
-        current += ch
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true
-      } else if (ch === ';') {
-        fields.push(current.trim())
-        current = ''
-      } else {
-        current += ch
-      }
-    }
-  }
-
-  fields.push(current.trim())
-  return fields
-}
-
-/**
  * Парсит CSV файл из rossel_flash и возвращает массив записей.
  */
 export function parseFlashCSV(filePath: string): FlashRecord[] {
-  const content = fs.readFileSync(filePath, 'utf-8')
-  const lines = content.split('\n').filter(l => l.trim().length > 0)
+  // F-PARS-14: общий разбор CSV — здесь раньше не срезался BOM
+  const lines = splitCsvLines(fs.readFileSync(filePath, 'utf-8'))
 
   if (lines.length < 2) {
     return []

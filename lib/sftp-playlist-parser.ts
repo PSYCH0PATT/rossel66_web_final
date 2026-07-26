@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { findArtistByName, normalizeArtistName } from '@/lib/storage';
+import { parseCsvLine, splitCsvLines } from '@/lib/csv-line';
 
 export interface CsvRecord {
   title_artist: string;
@@ -111,11 +112,8 @@ export function mapDspToPlatform(dsp: string): string {
  * Парсит CSV файл с разделителем ;
  */
 export function parseCsvFile(filePath: string): CsvRecord[] {
-  let content = fs.readFileSync(filePath, 'utf-8');
-  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
-    content = content.slice(1);
-  }
-  const lines = content.split('\n').filter((line) => line.trim());
+  // F-PARS-14: общий разбор CSV (BOM, CRLF, экранированные кавычки)
+  const lines = splitCsvLines(fs.readFileSync(filePath, 'utf-8'));
 
   if (lines.length === 0) {
     return [];
@@ -153,29 +151,6 @@ export function parseCsvFile(filePath: string): CsvRecord[] {
 /**
  * Парсит строку CSV с учетом кавычек и разделителя ;
  */
-function parseCsvLine(line: string): string[] {
-  const values: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ';' && !inQuotes) {
-      values.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  
-  // Добавляем последнее значение
-  values.push(current.trim());
-  
-  return values;
-}
 
 /**
  * Группирует записи по плейлистам
