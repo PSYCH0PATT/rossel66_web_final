@@ -51,7 +51,8 @@ temp_*_config.json
 
 # Local / deploy artifacts (не коммитить)
 deploy-logs*.txt
-backups/
+# Только каталог бэкапов в корне: неанкоренный "backups/" глушил и app/api/backups/
+/backups/
 sftp_downloads/*
 !sftp_downloads/.gitkeep
 *.xlsx

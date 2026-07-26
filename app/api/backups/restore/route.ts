@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { restoreFromBackup } from '@/lib/backup'
+import { requireAdmin } from '@/lib/server-auth'
 
+/**
+ * F-SEC-1: restore — разрушительная операция (перезапись данных из архива),
+ * а роут был открыт анонимно. Требуем админа.
+ */
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+
     const { backupId } = await request.json()
     
     if (!backupId) {
