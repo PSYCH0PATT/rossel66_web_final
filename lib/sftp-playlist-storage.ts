@@ -331,6 +331,29 @@ export async function deletePlaylist(
 }
 
 /**
+ * Удаляет плейлист по его Postgres id (id, который отдаёт /api/playlists/sftp).
+ * Возвращает false, если записи с таким id нет.
+ */
+export async function deletePlaylistById(id: string): Promise<boolean> {
+  try {
+    const { count } = await prisma.playlist.deleteMany({ where: { id } });
+    return count > 0;
+  } catch (error) {
+    console.error('❌ Ошибка удаления плейлиста по id:', error);
+    return false;
+  }
+}
+
+/**
+ * Полная очистка результатов парсинга плейлистов (кнопка «Очистить» в админке).
+ * История изменений (PlaylistHistory) сохраняется — это отдельный журнал.
+ */
+export async function deleteAllPlaylists(): Promise<number> {
+  const { count } = await prisma.playlist.deleteMany({});
+  return count;
+}
+
+/**
  * Автоматически назначает плейлисты артисту по имени
  */
 export async function assignPlaylistsToArtist(

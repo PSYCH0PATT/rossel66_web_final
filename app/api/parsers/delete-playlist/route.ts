@@ -1,38 +1,38 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import path from 'path'
-import { openSqlite } from '@/lib/sqlite3-lazy'
+import { deletePlaylistById } from '@/lib/sftp-playlist-storage'
 import { requireAdminOrCron } from '@/lib/server-auth'
 
+/**
+ * DELETE /api/parsers/delete-playlist
+ * Удаляет одну карточку плейлиста по id.
+ *
+ * F-PARS-2: раньше удаление шло в SQLite (`artist_playlists.db` вообще не существует),
+ * а `id` из UI — строковый Postgres id. Роут отвечал success, но карточка
+ * возвращалась после перезагрузки. Теперь удаляем из prisma.playlist.
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const denied = await requireAdminOrCron(request)
     if (denied) return denied
 
-    const { id, type } = await request.json()
+    const { id } = await request.json()
 
-    if (!id || !type) {
+    if (!id) {
       return NextResponse.json(
-        { success: false, error: 'Missing id or type' },
+        { success: false, error: 'Missing id' },
         { status: 400 }
       )
     }
 
-    // Определяем базу данных и таблицу
-    const dbFile = type === 'vk' ? 'artist_playlists.db' : 'bandlink_playlists.db'
-    const tableName = type === 'vk' ? 'artist_playlists' : 'bandlink_playlists'
+    const removed = await deletePlaylistById(String(id))
 
-    // Подключаемся к базе данных
-    const db = openSqlite(path.join(process.cwd(), dbFile))
-
-    await new Promise<void>((resolve, reject) => {
-      db.run(`DELETE FROM ${tableName} WHERE id = ?`, [id], (err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-
-    db.close()
+    if (!removed) {
+      return NextResponse.json(
+        { success: false, error: 'Плейлист не найден' },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -43,4 +43,3 @@ export async function DELETE(request: NextRequest) {
     )
   }
 }
-

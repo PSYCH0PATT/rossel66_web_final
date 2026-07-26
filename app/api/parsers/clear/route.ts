@@ -1,54 +1,44 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import { requireAdminOrCron } from '@/lib/server-auth';
+import { deleteAllPlaylists } from '@/lib/sftp-playlist-storage';
+import { getSessionUser, requireAdminOrCron } from '@/lib/server-auth';
+import { addActivity } from '@/lib/storage';
 
+/**
+ * DELETE /api/parsers/clear
+ * Очищает все результаты парсинга плейлистов.
+ *
+ * F-PARS-1: раньше роут удалял из SQLite (`artist_playlists`/`bandlink_playlists`),
+ * причём из таблиц, которых в этих файлах нет → 500 «no such table».
+ * Список в UI приходит из Postgres (`/api/playlists/sftp` → prisma.playlist),
+ * поэтому очищаем именно его.
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const denied = await requireAdminOrCron(request);
     if (denied) return denied;
 
-    const sqlite3 = require('sqlite3').verbose();
-    
-    // Очищаем VK результаты
-    const vkDbPath = path.join(process.cwd(), 'vk_playlists.db');
-    if (fs.existsSync(vkDbPath)) {
-      const vkDb = new sqlite3.Database(vkDbPath);
-      await new Promise((resolve, reject) => {
-        vkDb.run('DELETE FROM artist_playlists', (err: any) => {
-          if (err) reject(err);
-          else resolve(true);
-        });
-        vkDb.close();
-      });
-    }
-    
-    // Очищаем Bandlink результаты
-    const bandlinkDbPath = path.join(process.cwd(), 'bandlink_playlists.db');
-    if (fs.existsSync(bandlinkDbPath)) {
-      const bandlinkDb = new sqlite3.Database(bandlinkDbPath);
-      await new Promise((resolve, reject) => {
-        bandlinkDb.run('DELETE FROM bandlink_playlists', (err: any) => {
-          if (err) reject(err);
-          else resolve(true);
-        });
-        bandlinkDb.close();
-      });
-    }
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Все результаты парсинга очищены' 
+    const deleted = await deleteAllPlaylists();
+
+    await addActivity({
+      type: 'playlist_found',
+      userId: getSessionUser()?.id ?? 'cron',
+      userRole: 'admin',
+      title: 'Результаты парсинга очищены',
+      description: `Удалено плейлистов: ${deleted}`,
+      metadata: { deleted, action: 'clear_playlists' },
     });
-    
+
+    return NextResponse.json({
+      success: true,
+      deleted,
+      message: `Все результаты парсинга очищены (удалено: ${deleted})`,
+    });
   } catch (error) {
     console.error('Ошибка очистки результатов:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Ошибка очистки результатов' 
+    return NextResponse.json({
+      success: false,
+      error: 'Ошибка очистки результатов',
     }, { status: 500 });
   }
 }
-
-
