@@ -1,4 +1,5 @@
 import { releaseDateToSortDate } from "@/lib/release-date-sort"
+import { normalizeReleaseDate } from "@/lib/release-date"
 import type {
   User as PrismaUser,
   Release as PrismaRelease,
@@ -169,11 +170,16 @@ export function releaseToPrismaCreate(release: Omit<Release, 'id' | 'createdAt' 
     ...metadata 
   } = release
   
+  // A1: единая точка нормализации формата даты (см. lib/release-date.ts).
+  // Парсеры Koala/Zvonko приносят "DD.MM.YYYY", форма — "YYYY-MM-DD";
+  // в БД должен попадать только канонический "YYYY-MM-DD".
+  const normalizedReleaseDate = normalizeReleaseDate(releaseDate)
+
   return {
     title,
     artistId: artistId || null,
-    releaseDate,
-    releaseDateSort: releaseDateToSortDate(releaseDate),
+    releaseDate: normalizedReleaseDate,
+    releaseDateSort: releaseDateToSortDate(normalizedReleaseDate),
     type,
     coverUrl,
     upc,

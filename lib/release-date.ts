@@ -25,6 +25,34 @@ export function parseReleaseDateToTimestamp(dStr: string | null | undefined): nu
   return Number.isNaN(t) ? 0 : t
 }
 
+/**
+ * A1: канонический формат хранения даты релиза — "YYYY-MM-DD".
+ *
+ * Release.releaseDate — строка, и писатели приносили её в двух форматах:
+ * парсеры Koala/Zvonko дают "DD.MM.YYYY", форма добавления — "YYYY-MM-DD".
+ * Из-за этого строковые сравнения (`where: { releaseDate }`), строковая
+ * сортировка и голый `new Date(releaseDate)` работали неверно — это корень
+ * всех date-багов раздела A.
+ *
+ * Нормализуем на записи, в одном месте, чтобы никакой новый писатель не мог
+ * снова занести «свой» формат. Непарсящееся значение возвращаем как есть —
+ * молча терять введённое пользователем нельзя.
+ */
+export function normalizeReleaseDate(input: string | null | undefined): string {
+  if (input == null) return ""
+  const trimmed = String(input).trim()
+  if (!trimmed || trimmed === "--") return ""
+
+  const ts = parseReleaseDateToTimestamp(trimmed)
+  if (!ts) return trimmed
+
+  const d = new Date(ts)
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(d.getUTCDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 /** Сортировка по убыванию даты релиза (новые сверху), при равенстве — по createdAt. */
 export function compareReleasesByDateDesc(
   a: { releaseDate: string; createdAt: Date },

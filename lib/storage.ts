@@ -15,6 +15,7 @@ import {
 } from './storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
 import { releaseDateToSortDate } from '@/lib/release-date-sort'
+import { normalizeReleaseDate } from '@/lib/release-date'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -392,8 +393,10 @@ function toReleaseUpdateInput(updates: Partial<Release>): Prisma.ReleaseUpdateIn
   if (updates.title !== undefined) data.title = updates.title
   if (updates.artistId !== undefined) data.artistId = updates.artistId || null
   if (updates.releaseDate !== undefined) {
-    data.releaseDate = updates.releaseDate
-    data.releaseDateSort = releaseDateToSortDate(updates.releaseDate)
+    // A1: в БД только канонический "YYYY-MM-DD" (см. lib/release-date.ts)
+    const normalized = normalizeReleaseDate(updates.releaseDate)
+    data.releaseDate = normalized
+    data.releaseDateSort = releaseDateToSortDate(normalized)
   }
   if (updates.type !== undefined) data.type = updates.type
   if (updates.coverUrl !== undefined) data.coverUrl = updates.coverUrl

@@ -11,6 +11,8 @@ import { releaseFromPrisma, userFromPrisma } from '@/lib/storage-adapters'
 import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard'
 import { requireAdminOrCron } from '@/lib/server-auth'
 import { rateLimitParser } from '@/lib/rate-limit'
+import { normalizeReleaseDate } from '@/lib/release-date'
+import { releaseDateToSortDate } from '@/lib/release-date-sort'
 
 interface ParseStats {
   total: number
@@ -282,20 +284,20 @@ async function syncReleasesJsonToDb() {
         }
       }
       
-      // Нормализуем дату в формат YYYY-MM-DD
-      if (finalReleaseDate.includes('.')) {
-        const dateParts = finalReleaseDate.split('.');
-        if (dateParts.length === 3) {
-          finalReleaseDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-        }
-      }
-      
+      // A1: нормализация даты — общим хелпером, а не своей копией логики
+      finalReleaseDate = normalizeReleaseDate(finalReleaseDate);
+      // A3: этот upsert идёт мимо releaseToPrismaCreate и раньше НЕ заполнял
+      // releaseDateSort — такие релизы получали null и при сортировке desc
+      // (NULLS FIRST) всплывали наверх списка.
+      const finalReleaseDateSort = releaseDateToSortDate(finalReleaseDate);
+
       await prisma.release.upsert({
         where: { id },
         update: {
           title,
           artistId: artistId || null,
           releaseDate: finalReleaseDate,
+          releaseDateSort: finalReleaseDateSort,
           type: type || (finalTracks.length > 1 ? 'album' : 'single'),
           coverUrl: coverUrl || null,
           upc: upc || null,
@@ -313,6 +315,7 @@ async function syncReleasesJsonToDb() {
           title,
           artistId: artistId || null,
           releaseDate: finalReleaseDate,
+          releaseDateSort: finalReleaseDateSort,
           type: type || (finalTracks.length > 1 ? 'album' : 'single'),
           coverUrl: coverUrl || null,
           upc: upc || null,

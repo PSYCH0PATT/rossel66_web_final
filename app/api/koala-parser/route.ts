@@ -13,6 +13,7 @@ import {
   assignReleasesToNewArtist
 } from '@/lib/storage';
 import { nicknameToUsername } from '@/lib/utils';
+import { normalizeReleaseDate } from '@/lib/release-date';
 import { prisma } from '@/lib/prisma';
 import { releaseFromPrisma } from '@/lib/storage-adapters';
 import { splitCollaboratingArtistDisplayNames } from '@/lib/split-artist-names';
@@ -389,12 +390,8 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         // Обновляем дату релиза (приводим к формату YYYY-MM-DD)
         if (koalaRelease.release_date) {
           let parsedDate = koalaRelease.release_date;
-          if (parsedDate.includes('.')) {
-            const dateParts = parsedDate.split('.');
-            if (dateParts.length === 3) {
-              parsedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-            }
-          }
+          // A1: нормализация даты общим хелпером вместо своей копии логики
+          parsedDate = normalizeReleaseDate(parsedDate);
           const existingDate = existingRelease.releaseDate;
           if (!existingDate || existingDate.includes('.') || existingDate !== parsedDate) {
             updates.releaseDate = parsedDate;
@@ -435,13 +432,10 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         console.log(`🔄 Обновлен релиз "${koalaRelease.title}"`);
         stats.updated++;
       } else {
-        let releaseDate = new Date().toISOString().split('T')[0];
-        if (koalaRelease.release_date) {
-          const dateParts = koalaRelease.release_date.split('.');
-          if (dateParts.length === 3) {
-            releaseDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-          }
-        }
+        // A1: нормализация даты общим хелпером (Koala отдаёт DD.MM.YYYY)
+        const releaseDate =
+          normalizeReleaseDate(koalaRelease.release_date) ||
+          new Date().toISOString().split('T')[0];
         
         let tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
           id: `track_${Date.now()}_${index}`,
