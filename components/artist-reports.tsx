@@ -5,6 +5,7 @@ import Link from "next/link"
 import type { Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { formatDateRu } from "@/lib/format-date"
+import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 
@@ -22,7 +23,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
     const ys = [
       ...new Set(
         initialReports
-          .map((r) => r.year)
+          .map((r) => reportEffectiveYear(r))
           .filter((y): y is number => typeof y === "number")
       ),
     ].sort((a, b) => b - a)
@@ -34,14 +35,18 @@ export default function ArtistReports({ username, reports: initialReports, artis
 
   const acknowledgeGate = useMemo(() => canAcknowledgeReports(reports), [reports])
 
+  // D2: отчёт без заполненного year не попадал ни в одну вкладку (был невидим),
+  // хотя его сумма учитывалась в балансе. Год выводим из даты загрузки.
   const years = [
     ...new Set(
-      reports.map((report) => report.year).filter((y): y is number => typeof y === "number")
+      reports
+        .map((report) => reportEffectiveYear(report))
+        .filter((y): y is number => typeof y === "number")
     ),
   ].sort((a, b) => b - a)
 
   const reportsByQuarter = reports
-    .filter((report) => report.year === currentYear)
+    .filter((report) => reportEffectiveYear(report) === currentYear)
     .reduce<Record<string, Report[]>>((acc, report) => {
       if (!acc[report.quarter]) {
         acc[report.quarter] = []
@@ -176,7 +181,15 @@ export default function ArtistReports({ username, reports: initialReports, artis
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-white font-bold text-sm truncate">
-                            Отчёт за {quarter} {report.year}
+                            Отчёт за {quarter} {reportEffectiveYear(report) ?? ""}
+                            {isReportYearDerived(report) && (
+                              <span
+                                className="ml-1 text-[10px] font-normal text-amber-400/80"
+                                title="Год в отчёте не указан — определён по дате загрузки"
+                              >
+                                (год по дате загрузки)
+                              </span>
+                            )}
                           </h4>
                           <p className="text-xs text-gray-400 mt-1 font-mono tabular-nums">
                             {report.uploadDate ? `Загружен: ${formatDateRu(report.uploadDate)}` : "—"}

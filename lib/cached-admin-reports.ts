@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
 import type { Report } from "@/lib/storage"
 import { DASHBOARD_REVALIDATE_SEC } from "@/lib/cached-dashboard"
+import { reportEffectiveYear } from "@/lib/report-year"
 
 export type AdminReportItem = {
   id: string
@@ -24,7 +25,8 @@ export type AdminReportItem = {
 function dedupeReportsByArtistQuarterYear<T extends Report>(rows: T[]): T[] {
   const seen = new Set<string>()
   return rows.filter((r) => {
-    const key = `${r.quarter}|${r.year}|${(r.artistName || "").trim().toLowerCase()}`
+    // D2: у отчёта без year берём год из даты загрузки (см. lib/report-year.ts)
+    const key = `${r.quarter}|${reportEffectiveYear(r)}|${(r.artistName || "").trim().toLowerCase()}`
     if (seen.has(key)) return false
     seen.add(key)
     return true

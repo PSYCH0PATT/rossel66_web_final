@@ -15,6 +15,7 @@ import {
 import { getActivitiesFiltered, type Activity, type Report, type User, type Release } from "@/lib/storage"
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
+import { reportEffectiveYear } from "@/lib/report-year"
 
 /** Серверный кеш дашбордов — 60s (Timeweb: cold start OK; мутации сбрасывают теги) */
 export const DASHBOARD_REVALIDATE_SEC = 60
@@ -128,7 +129,8 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
   const seenReportKeys = new Set<string>()
   const reports = reportsRaw
     .filter((r) => {
-      const key = `${r.quarter}|${r.year}`
+      // D2: год из uploadDate, если в отчёте не заполнен (см. lib/report-year.ts)
+      const key = `${r.quarter}|${reportEffectiveYear(r)}`
       if (seenReportKeys.has(key)) return false
       seenReportKeys.add(key)
       return true
@@ -222,7 +224,10 @@ export type AdminDashboardPayload = {
 function dedupeReportsByArtistQuarterYear<T extends Report>(rows: T[]): T[] {
   const seen = new Set<string>()
   return rows.filter((r) => {
-    const key = `${r.quarter}|${r.year}|${(r.artistName || "").trim().toLowerCase()}`
+    // D2: у отчёта без year берём год из даты загрузки — иначе несколько таких
+    // отчётов за один квартал не схлопнутся (ключ "…|null|…" один и тот же
+    // только на вид: их суммы всё равно складывались бы в балансе).
+    const key = `${r.quarter}|${reportEffectiveYear(r)}|${(r.artistName || "").trim().toLowerCase()}`
     if (seen.has(key)) return false
     seen.add(key)
     return true

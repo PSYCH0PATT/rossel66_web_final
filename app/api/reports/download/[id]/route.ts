@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import { supabase } from "@/lib/supabase"
+import { attachmentContentDisposition } from "@/lib/content-disposition"
 
 function getStoragePath(dbPath: string): string {
   const reportsIndex = dbPath.indexOf('reports/')
@@ -59,7 +60,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(report.fileName)}"`,
+        // F9: без filename*=UTF-8'' браузер сохранял файл как «%D0%98%D0%BC%D1%8F.xlsx»
+        'Content-Disposition': attachmentContentDisposition(report.fileName),
         'Content-Length': fileBuffer.length.toString(),
       },
     })

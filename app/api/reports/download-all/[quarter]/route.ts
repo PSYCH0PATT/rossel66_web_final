@@ -5,6 +5,7 @@ import { reportFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import type { Prisma } from "@prisma/client"
 import { supabase } from "@/lib/supabase"
+import { attachmentContentDisposition, uniqueArchiveName } from "@/lib/content-disposition"
 
 function getStoragePath(dbPath: string): string {
   const reportsIndex = dbPath.indexOf('reports/')
@@ -43,6 +44,10 @@ export async function GET(request: Request, { params }: { params: { quarter: str
 
     // Создаем ZIP-архив
     const zip = new JSZip()
+    // F9: JSZip молча перезаписывает запись с тем же именем — у тёзок в архив
+    // попадал только последний отчёт. Ведём набор уже занятых имён.
+    const usedNames = new Set<string>()
+    let addedCount = 0
 
     // Добавляем файлы в архив
     for (const report of quarterReports) {
@@ -65,7 +70,15 @@ export async function GET(request: Request, { params }: { params: { quarter: str
       const arrayBuffer = await data.arrayBuffer()
       fileData = Buffer.from(arrayBuffer)
       
-      zip.file(report.fileName, new Uint8Array(fileData))
+      zip.file(uniqueArchiveName(report.fileName, usedNames), new Uint8Array(fileData))
+      addedCount++
+    }
+
+    if (addedCount === 0) {
+      return NextResponse.json(
+        { error: "Ни один файл отчёта не удалось скачать из хранилища" },
+        { status: 404 }
+      )
     }
 
     // Генерируем ZIP-архив
@@ -74,7 +87,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     // Отправляем архив клиенту
     const headers = new Headers()
     headers.set("Content-Type", "application/zip")
-    headers.set("Content-Disposition", `attachment; filename="${quarter}_reports.zip"`)
+    headers.set("Content-Disposition", attachmentContentDisposition(`${quarter}_reports.zip`))
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,

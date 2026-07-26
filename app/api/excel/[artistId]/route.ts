@@ -4,6 +4,7 @@ import * as XLSX from "xlsx"
 import { prisma } from "@/lib/prisma"
 import { releaseFromPrisma, userFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { attachmentContentDisposition } from "@/lib/content-disposition"
 
 export async function GET(request: Request, { params }: { params: { artistId: string } }) {
   const denied = await requireAuth(request)
@@ -31,6 +32,17 @@ export async function GET(request: Request, { params }: { params: { artistId: st
     })
     const releases = releaseRows.map(releaseFromPrisma)
 
+    const HEADERS = [
+      "Никнейм артиста",
+      "Название релиза",
+      "Название трека",
+      "Дата",
+      "UPC",
+      "ISRC",
+      "Длительность",
+      "Статус",
+    ] as const
+
     const excelData: Record<string, string | number | undefined>[] = []
     for (const release of releases) {
       for (const track of release.tracks) {
@@ -48,7 +60,12 @@ export async function GET(request: Request, { params }: { params: { artistId: st
     }
 
     const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
+    // F10: json_to_sheet([]) отдавал полностью пустой лист без строки заголовков —
+    // у артиста без релизов выгрузка выглядела как битый файл.
+    const worksheet =
+      excelData.length > 0
+        ? XLSX.utils.json_to_sheet(excelData, { header: [...HEADERS] })
+        : XLSX.utils.aoa_to_sheet([[...HEADERS]])
 
     const colWidths = [
       { wch: 20 },
@@ -68,7 +85,7 @@ export async function GET(request: Request, { params }: { params: { artistId: st
 
     return new Response(excelBuffer, {
       headers: {
-        "Content-Disposition": `attachment; filename="${artist.username}_tracks.xlsx"`,
+        "Content-Disposition": attachmentContentDisposition(`${artist.username}_tracks.xlsx`),
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       },
     })

@@ -54,6 +54,44 @@ def _sanitize_filename(name):
     safe = safe.strip().strip('.')
     return safe or 'artist'
 
+
+# Excel запрещает в имени листа : \ / ? * [ ] и ограничивает длину 31 символом
+_INVALID_SHEET_CHARS = re.compile(r'[\[\]:*?/\\\x00-\x1f]')
+MAX_SHEET_TITLE_LEN = 31
+
+
+def _sanitize_sheet_title(name, used_titles=None):
+    """
+    F7: Безопасное имя листа Excel.
+
+    openpyxl падает на именах длиннее 31 символа и на символах : \\ / ? * [ ],
+    поэтому одно «неудачное» имя артиста роняло генерацию ВСЕХ отчётов.
+    Плюс имена листов должны быть уникальными в книге — при обрезке длинные
+    имена могут совпасть, поэтому добавляем суффикс.
+    """
+    safe = _INVALID_SHEET_CHARS.sub('_', str(name)).strip().strip("'")
+    if not safe:
+        safe = 'Артист'
+    safe = safe[:MAX_SHEET_TITLE_LEN]
+
+    if used_titles is None:
+        return safe
+
+    if safe.casefold() not in used_titles:
+        used_titles.add(safe.casefold())
+        return safe
+
+    # Имя занято — добавляем числовой суффикс, не выходя за 31 символ
+    for suffix in range(2, 1000):
+        tail = f'_{suffix}'
+        candidate = safe[: MAX_SHEET_TITLE_LEN - len(tail)] + tail
+        if candidate.casefold() not in used_titles:
+            used_titles.add(candidate.casefold())
+            return candidate
+
+    used_titles.add(safe.casefold())
+    return safe
+
 # Ожидаемые колонки отчёта и возможные варианты названий в Excel
 COLUMN_ALIASES = {
     'Код': ['Код', 'код', 'Код трека', 'ISRC', 'isrc'],
@@ -574,7 +612,10 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
         _set_cell(ws, 'C30', approval_date)                    # C30 Дата утверждения
         _set_cell(ws, 'D32', artists_data[artist][0])          # D32 Лицензиар ФИО
         _set_cell(ws, 'E37', artists_data[artist][1])          # E37 ФИО кратко
-        ws_artist = wb.create_sheet(title=artist)
+        # F7: имя листа нельзя брать «как есть» — длинное/со спецсимволами роняло генерацию
+        ws_artist = wb.create_sheet(
+            title=_sanitize_sheet_title(artist, {s.casefold() for s in wb.sheetnames})
+        )
         ws_artist.append(['Код', 'Исполнитель', 'Наименование', 'Альбом', 'Количество', 'Сумма, руб.', 'Доля, %'])
         total_quantity = 0
         total_amount_sheet = 0

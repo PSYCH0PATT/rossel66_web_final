@@ -2,6 +2,7 @@
 import bcrypt from 'bcryptjs'
 import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
+import { reportEffectiveYear } from './report-year'
 import { 
   userFromPrisma, 
   releaseFromPrisma, 
@@ -551,17 +552,51 @@ export function normalizeArtistName(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
-// Find artist by name or username (case-insensitive)
-export async function findArtistByName(name: string): Promise<User | null> {
+/**
+ * F8: все артисты, чьё имя или ник совпадает с переданным (тёзки).
+ * Порядок детерминированный — по дате создания, сначала совпадения по `name`.
+ */
+export async function findArtistsByName(name: string): Promise<User[]> {
   const normalized = normalizeArtistName(name)
-  const rows = await prisma.user.findMany({ where: { role: "artist" } })
+  // orderBy обязателен: без него Postgres возвращает строки в произвольном
+  // порядке, и у тёзок «победитель» менялся от вызова к вызову.
+  const rows = await prisma.user.findMany({
+    where: { role: "artist" },
+    orderBy: { createdAt: "asc" },
+  })
+
+  const byName: User[] = []
+  const byUsername: User[] = []
   for (const row of rows) {
     const u = userFromPrisma(row)
-    if (normalizeArtistName(u.name) === normalized || normalizeArtistName(u.username) === normalized) {
-      return u
-    }
+    if (normalizeArtistName(u.name) === normalized) byName.push(u)
+    else if (normalizeArtistName(u.username) === normalized) byUsername.push(u)
   }
-  return null
+
+  // Совпадение по отображаемому имени приоритетнее совпадения по нику
+  return [...byName, ...byUsername]
+}
+
+/**
+ * Find artist by name or username (case-insensitive).
+ *
+ * F8: раньше выборка шла без orderBy и возвращала первого попавшегося —
+ * у артистов-тёзок роялти могли уйти то одному, то другому. Теперь порядок
+ * стабильный (старейший профиль), а неоднозначность попадает в лог.
+ */
+export async function findArtistByName(name: string): Promise<User | null> {
+  const matches = await findArtistsByName(name)
+  if (matches.length === 0) return null
+
+  if (matches.length > 1) {
+    console.warn(
+      `⚠️ Тёзки: имени «${name}» соответствует ${matches.length} артистов ` +
+        `(${matches.map((m) => `${m.name}/@${m.username}`).join(", ")}). ` +
+        `Выбран старейший профиль @${matches[0].username} — проверьте привязку вручную.`
+    )
+  }
+
+  return matches[0]
 }
 
 // Assign existing unassigned reports to new artist by name matching
@@ -813,7 +848,7 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   // загруженный, чтобы баланс не задваивался (согласовано с админ-дашбордом).
   const reports = await prisma.report.findMany({
     where: { artistId },
-    select: { quarter: true, year: true, totalAmount: true, isPaid: true },
+    select: { quarter: true, year: true, totalAmount: true, isPaid: true, uploadedAt: true },
     orderBy: { uploadedAt: "desc" },
   })
 
@@ -821,7 +856,9 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   let totalBalance = 0
   let paidAmount = 0
   for (const r of reports) {
-    const key = `${r.quarter}|${r.year}`
+    // D2: год из даты загрузки, если в отчёте не заполнен — тот же ключ,
+    // что использует список отчётов в кабинете.
+    const key = `${r.quarter}|${reportEffectiveYear(r)}`
     if (seen.has(key)) continue
     seen.add(key)
     const amt = r.totalAmount ?? 0
