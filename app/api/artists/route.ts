@@ -107,6 +107,12 @@ export async function POST(request: Request) {
       fioShort,
       contract,
       percentage,
+      // G7: артиста завёл админ вручную — он сразу подтверждён.
+      // Раньше это полагалось на @default(true) в схеме, то есть было неявным:
+      // любой новый путь создания молча получал verified=true. Парсеры,
+      // наоборот, ставят verified=false — их артисты ждут подтверждения
+      // во вкладке «Новые».
+      verified: true,
     })
 
     // Auto-assign existing data to this artist by name matching

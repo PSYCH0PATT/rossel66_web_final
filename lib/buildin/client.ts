@@ -42,7 +42,11 @@ export async function buildinFetch<T = unknown>(
     "Content-Type": "application/json",
   }
   if (options.idempotencyKey) {
-    headers["Idempotency-Key"] = options.idempotencyKey
+    // HTTP headers must be ByteString (ASCII); Cyrillic local IDs need encoding.
+    const raw = options.idempotencyKey.slice(0, 200)
+    headers["Idempotency-Key"] = /^[\x20-\x7E]+$/.test(raw)
+      ? raw
+      : Buffer.from(raw, "utf8").toString("base64url").slice(0, 200)
   }
 
   const res = await fetch(url, {

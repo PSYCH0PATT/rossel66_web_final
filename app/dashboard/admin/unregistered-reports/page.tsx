@@ -213,7 +213,11 @@ export default function UnregisteredReportsPage() {
                           {report.quarter} {report.year}
                         </span>
                       </TableCell>
-                      <TableCell className="text-gray-300 [font-variant-numeric:tabular-nums]">
+                      {/* C7: у коллабов число учитывается у каждого участника — не суммировать */}
+                      <TableCell
+                        className="text-gray-300 [font-variant-numeric:tabular-nums]"
+                        title="У совместных треков одно и то же число прослушиваний учитывается у каждого участника — складывать по разным артистам нельзя."
+                      >
                         {report.totalPlays.toLocaleString("ru-RU")}
                       </TableCell>
                       <TableCell className="font-display text-primary [font-variant-numeric:tabular-nums]">

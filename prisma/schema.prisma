@@ -25,6 +25,12 @@ model User {
   fioShort   String?
   contract   String?
   percentage Int?
+  /**
+   * G7: подтверждён ли артист админом. Парсеры (koala/zvonko) создают
+   * автоматически найденных артистов с verified=false — они попадают во вкладку
+   * «Новые» в админке и ждут подтверждения. default(true) нужен для legacy-строк
+   * и артистов, заведённых админом вручную (тот путь передаёт true явно).
+   */
   verified   Boolean  @default(true)
 
   @@index([role, verified])

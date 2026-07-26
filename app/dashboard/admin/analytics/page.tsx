@@ -21,6 +21,7 @@ import dynamic from "next/dynamic"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
 import TrackPaidFreeDistribution from "@/components/analytics/TrackPaidFreeDistribution"
 import { UnmappedArtistsPanel, UnmappedArtistsTrigger } from "@/components/analytics/unmapped-artists-panel"
+import { formatDayMonthUtc } from "@/lib/format-date"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -109,10 +110,8 @@ function getDateRange(period: string): { startDate: string; endDate: string } {
   }
 }
 
-function formatDate(dateStr: any) {
-  const d = new Date(String(dateStr))
-  return `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}`
-}
+/** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
+const formatDate = formatDayMonthUtc
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()

@@ -192,7 +192,7 @@ export default function AdminDashboardClient({
               className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
               href="/dashboard/admin/activity"
             >
-              View All
+              Все события
             </Link>
           </div>
           <div className="card-glass rounded-2xl overflow-hidden border border-white/5">

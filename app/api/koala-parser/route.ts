@@ -424,7 +424,7 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
           updates.tracks = isrcCodes.map((isrc, index) => ({
             id: `track_${Date.now()}_${index}`,
             title: koalaRelease.title,
-            duration: '0:00',
+            duration: '', // E2: у Koala нет длительности — пустая строка честнее фиктивного «0:00»
             isrc: isrc || undefined,
           }));
         } else if (tracksUpdated) {
@@ -446,7 +446,7 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         let tracks = koalaRelease.isrc_codes.map((isrc, index) => ({
           id: `track_${Date.now()}_${index}`,
           title: koalaRelease.title,
-          duration: '0:00',
+          duration: '', // E2: у Koala нет длительности — пустая строка честнее фиктивного «0:00»
           isrc: isrc || undefined,
         }));
         if (tracks.length === 0) {
@@ -454,7 +454,7 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
             {
               id: `track_${Date.now()}_0`,
               title: koalaRelease.title,
-              duration: '0:00',
+              duration: '', // E2: у Koala нет длительности — пустая строка честнее фиктивного «0:00»
               isrc: undefined,
             },
           ];

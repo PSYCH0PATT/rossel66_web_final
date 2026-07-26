@@ -5,6 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from 'recharts'
+import { formatDayMonthUtc } from "@/lib/format-date"
 
 interface StreamPoint {
   date: string
@@ -24,10 +25,8 @@ function formatNum(n: number): string {
   return String(n)
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}`
-}
+/** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
+const formatDate = formatDayMonthUtc
 
 function statsFromSortedPoints(sorted: StreamPoint[]) {
   const totalStreams = sorted.reduce((s, p) => s + p.streams, 0)

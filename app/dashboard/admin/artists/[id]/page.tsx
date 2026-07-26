@@ -727,7 +727,12 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                               <p className="text-lg font-display font-semibold text-primary">
                                 {report.totalAmount?.toLocaleString('ru-RU')} ₽
                               </p>
-                              <p className="text-sm text-gray-400">
+                              {/* C7: у коллабов прослушивания начисляются полностью КАЖДОМУ участнику,
+                                  поэтому суммировать это число по артистам нельзя. */}
+                              <p
+                                className="text-sm text-gray-400"
+                                title="Прослушивания по этому отчёту. У совместных треков одно и то же число учитывается у каждого участника — складывать по разным артистам нельзя."
+                              >
                                 {report.totalPlays?.toLocaleString('ru-RU')} прослушиваний
                               </p>
                             </div>

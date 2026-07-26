@@ -185,11 +185,12 @@ export default function ArtistDashboardClient({
               <span className="w-1.5 h-6 bg-primary rounded-full"></span>
               ПОСЛЕДНЯЯ АКТИВНОСТЬ
             </h2>
+            {/* G9: раньше href="#" — ссылка вела в никуда, страницы активности у артиста не было */}
             <Link
               className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
-              href="#"
+              href={`/dashboard/artist/${artist.username}/activity`}
             >
-              View All
+              Все события
             </Link>
           </div>
           <div className="card-glass rounded-2xl overflow-hidden border border-white/5">

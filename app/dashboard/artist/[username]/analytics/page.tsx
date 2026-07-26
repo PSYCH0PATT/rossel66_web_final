@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { BarChart3, CalendarIcon, Loader2 } from "lucide-react"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
+import { formatDayMonthUtc } from "@/lib/format-date"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -67,10 +68,8 @@ function getDateRange(period: string): { startDate: string; endDate: string } {
   }
 }
 
-function formatDate(dateStr: any) {
-  const d = new Date(String(dateStr))
-  return `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}`
-}
+/** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
+const formatDate = formatDayMonthUtc
 
 export default function ArtistAnalyticsPage() {
   const router = useRouter()

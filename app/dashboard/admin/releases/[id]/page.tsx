@@ -67,7 +67,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
         {
           id: `track_${Date.now()}_0`,
           title: release.title,
-          duration: '0:00',
+          duration: '', // E2: длительность неизвестна — пусто, а не фиктивное «0:00»
           isrc: ''
         }
       ]

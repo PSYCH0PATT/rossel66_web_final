@@ -35,8 +35,49 @@ export function userFromPrisma(prismaUser: PrismaUser): User {
   }
 }
 
+/** Название для трека без заполненного title — чтобы не рисовать пустую ячейку. */
+const UNTITLED_TRACK = "Без названия"
+
+/**
+ * E3: приведение поля `tracks` (Json) к массиву Track.
+ *
+ * Раньше это был просто `as unknown as Track[]` — то есть слепое доверие
+ * содержимому JSON. Любой не-массив (или объект вместо массива) ронял
+ * `.map`/`.length` вниз по коду, а трек с пустым `title` рисовал пустую
+ * ячейку в списке и в выгрузке Excel.
+ */
+export function normalizeTracks(value: unknown): Track[] {
+  if (!Array.isArray(value)) return []
+
+  const tracks: Track[] = []
+  for (const [index, raw] of value.entries()) {
+    if (raw == null || typeof raw !== "object") continue
+    const item = raw as Record<string, unknown>
+
+    const title = typeof item.title === "string" ? item.title.trim() : ""
+    const duration = typeof item.duration === "string" ? item.duration.trim() : ""
+    const id =
+      typeof item.id === "string" && item.id.trim() !== ""
+        ? item.id
+        : `track_${index + 1}`
+
+    tracks.push({
+      ...(item as unknown as Track),
+      id,
+      title: title === "" ? UNTITLED_TRACK : title,
+      duration,
+      trackNumber:
+        typeof item.trackNumber === "number" && Number.isFinite(item.trackNumber)
+          ? item.trackNumber
+          : index + 1,
+      isrc: typeof item.isrc === "string" ? item.isrc : undefined,
+    })
+  }
+  return tracks
+}
+
 export function releaseFromPrisma(prismaRelease: PrismaRelease): Release {
-  const tracks = prismaRelease.tracks as unknown as Track[]
+  const tracks = normalizeTracks(prismaRelease.tracks)
   const metadata = prismaRelease.metadata as Record<string, any> | null
   
   return {
