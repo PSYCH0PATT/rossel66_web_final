@@ -89,14 +89,44 @@ export default function ArtistAnalyticsPage() {
     setChartMounted(true)
   }, [])
 
+  /**
+   * DS15: раньше админа отсюда выкидывало на свой дашборд — единственный
+   * артистский экран, закрытый для админа (релизы, отчёты, выплаты, плейлисты
+   * он смотреть может). Теперь админ видит аналитику артиста из URL.
+   */
+  const isAdminViewer = profile?.role === "admin"
+  const [viewedArtistId, setViewedArtistId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!profile) return
-    if (profile.role !== "artist") {
-      router.push("/dashboard/admin/dashboard")
+    if (profile.role === "artist") {
+      setViewedArtistId(profile.id)
+      return
     }
-  }, [profile, router])
+    if (profile.role !== "admin") {
+      router.push("/dashboard/login")
+      return
+    }
+    // Админ смотрит чужой кабинет — id артиста берём по username из URL
+    let cancelled = false
+    fetch(`/api/artists?q=${encodeURIComponent(username)}&pageSize=50`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return
+        const match = (d.artists || []).find(
+          (a: { username?: string }) => a.username?.toLowerCase() === username.toLowerCase()
+        )
+        setViewedArtistId(match?.id ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setViewedArtistId(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [profile, router, username])
 
-  const currentUser = profile?.role === "artist" ? profile : null
+  const currentUser = viewedArtistId ? { id: viewedArtistId } : null
 
   // Загрузка треков
   useEffect(() => {

@@ -170,7 +170,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
           {/* Navigation Links */}
           <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
             <div className="px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">
-              {role === "artist" ? "Artist Panel" : "Control Panel"}
+              {role === "artist" ? "Кабинет артиста" : "Панель управления"}
             </div>
             {navItems.map((item) => (
               <SidebarNavItem
@@ -196,7 +196,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
               </div>
               <div className="ml-3 overflow-hidden">
                 <p className="text-sm font-bold text-white truncate">{currentUsername || "User"}</p>
-                <p className="text-[10px] text-primary uppercase tracking-widest">{role}</p>
+                <p className="text-[10px] text-primary uppercase tracking-widest">{role === "artist" ? "Артист" : "Админ"}</p>
               </div>
             </div>
           </Link>
