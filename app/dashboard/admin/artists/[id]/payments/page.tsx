@@ -7,6 +7,7 @@ import { DollarSign, Calendar, CheckCircle, Clock, Plus, Edit, ArrowLeft } from 
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { formatDateRu } from "@/lib/format-date"
 
 type UiPayment = {
   id: string
@@ -189,7 +190,7 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                                   <Calendar className="h-4 w-4" />
                                   <span>
                                     {payment.date
-                                      ? new Date(payment.date).toLocaleDateString()
+                                      ? formatDateRu(payment.date)
                                       : "—"}
                                   </span>
                                 </div>
@@ -197,7 +198,7 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                             </div>
 
                             <div className="text-right">
-                              <div className="text-xl font-bold">{payment.amount.toLocaleString()} ₽</div>
+                              <div className="text-xl font-bold">{payment.amount.toLocaleString("ru-RU")} ₽</div>
                               <div className="text-xs text-gray-400">
                                 {payment.status === "completed" ? "Выплачено" : "В обработке"}
                               </div>

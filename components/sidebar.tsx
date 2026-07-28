@@ -35,7 +35,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
     case "Релизы":
       iconName = "library_music"
       break
-    case "Отчеты":
+    case "Отчёты":
       iconName = "analytics"
       break
     case "Выплаты":
@@ -47,7 +47,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
     case "Артисты":
       iconName = "groups"
       break
-    case "Генератор отчетов":
+    case "Генератор отчётов":
       iconName = "receipt_long"
       break
     case "История плейлистов":
@@ -108,7 +108,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
     () => [
       { href: `${artistBasePath}/dashboard`, label: "Главная" },
       { href: `${artistBasePath}/releases`, label: "Релизы" },
-      { href: `${artistBasePath}/reports`, label: "Отчеты" },
+      { href: `${artistBasePath}/reports`, label: "Отчёты" },
       { href: `${artistBasePath}/payments`, label: "Выплаты" },
       { href: `${artistBasePath}/playlists`, label: "Плейлисты" },
       { href: `${artistBasePath}/analytics`, label: "Аналитика" },
@@ -121,9 +121,9 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
       { href: "/dashboard/admin/dashboard", label: "Главная" },
       { href: "/dashboard/admin/artists", label: "Артисты" },
       { href: "/dashboard/admin/releases", label: "Релизы" },
-      { href: "/dashboard/admin/reports", label: "Отчеты" },
+      { href: "/dashboard/admin/reports", label: "Отчёты" },
       { href: "/dashboard/admin/payments", label: "Выплаты" },
-      { href: "/dashboard/admin/reports-generator", label: "Генератор отчетов" },
+      { href: "/dashboard/admin/reports-generator", label: "Генератор отчётов" },
       { href: "/dashboard/admin/playlists", label: "Плейлисты" },
       { href: "/dashboard/admin/playlists/history", label: "История плейлистов" },
       { href: "/dashboard/admin/analytics", label: "Аналитика" },

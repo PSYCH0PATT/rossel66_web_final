@@ -20,7 +20,7 @@ export default async function AdminArtistReportsPage({ params }: { params: { id:
   return (
     
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Отчеты: {artist.name}</h1>
+        <h1 className="text-2xl font-bold text-white">Отчёты: {artist.name}</h1>
         <ArtistReports username={artist.username} reports={reports} artistName={artist.name} />
       </div>
     )

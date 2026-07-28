@@ -96,11 +96,11 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     fetchArtist()
   }, [artistId])
 
-  // Функция загрузки отчетов для артиста
+  // Функция загрузки отчётов для артиста
   const fetchReports = async () => {
     setIsLoadingReports(true)
     try {
-      console.log(`🔍 Загружаем отчеты для артиста ${artistId}`)
+      console.log(`🔍 Загружаем отчёты для артиста ${artistId}`)
       
       // Загружаем все кварталы
       const quartersResponse = await fetch('/api/reports/quarters')
@@ -109,13 +109,13 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
       if (quartersData.quarters && quartersData.quarters.length > 0) {
         const artistReports: any[] = []
         
-        // Загружаем отчеты для каждого квартала
+        // Загружаем отчёты для каждого квартала
         for (const quarter of quartersData.quarters) {
           const reportsResponse = await fetch(`/api/reports/list/${quarter}`)
           const reportsData = await reportsResponse.json()
           
           if (reportsData.reports) {
-            // Фильтруем отчеты для текущего артиста
+            // Фильтруем отчёты для текущего артиста
             const quarterReports = reportsData.reports.filter((report: any) => 
               report.artistId === artistId
             )
@@ -123,17 +123,17 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           }
         }
         
-        console.log(`✅ Найдено ${artistReports.length} отчетов для артиста`)
+        console.log(`✅ Найдено ${artistReports.length} отчётов для артиста`)
         setReports(artistReports)
       }
     } catch (error) {
-      console.error('Ошибка при загрузке отчетов:', error)
+      console.error('Ошибка при загрузке отчётов:', error)
     } finally {
       setIsLoadingReports(false)
     }
   }
 
-  // Загружаем отчеты при монтировании компонента
+  // Загружаем отчёты при монтировании компонента
   useEffect(() => {
     if (artistId) {
       fetchReports()
@@ -716,7 +716,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
             </div>
           </TabsContent>
 
-          {/* Вкладка Отчеты */}
+          {/* Вкладка Отчёты */}
           <TabsContent value="reports" className="space-y-4">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
               <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">

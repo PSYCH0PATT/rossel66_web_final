@@ -147,10 +147,10 @@ export default function ReportProcessor() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Обработка отчетов
+            Обработка отчётов
           </CardTitle>
           <CardDescription>
-            Загрузите файл с данными и настройте маппинг столбцов для автоматического распределения отчетов
+            Загрузите файл с данными и настройте маппинг столбцов для автоматического распределения отчётов
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -160,7 +160,7 @@ export default function ReportProcessor() {
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
                   <strong>ℹ️ Информация:</strong> Данные артистов (ФИО, договор, процент) берутся из профилей артистов в системе. 
-                  Отчеты создаются только для артистов с указанным процентом. Доли роялти берутся из настроек треков в релизах (если указаны).
+                  Отчёты создаются только для артистов с указанным процентом. Доли роялти берутся из настроек треков в релизах (если указаны).
                 </p>
               </div>
 
@@ -370,7 +370,7 @@ export default function ReportProcessor() {
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Обработать отчет
+                  Обработать отчёт
                 </>
               )}
             </Button>
@@ -470,7 +470,7 @@ export default function ReportProcessor() {
                   )}
                   
                   <div className="space-y-2">
-                    <h4 className="font-medium">Созданные отчеты:</h4>
+                    <h4 className="font-medium">Созданные отчёты:</h4>
                     {result.reports.map((report) => (
                       <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-3">
@@ -480,7 +480,7 @@ export default function ReportProcessor() {
                           </Badge>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {report.totalPlays.toLocaleString()} прослушиваний • {formatCurrency(report.totalAmount)}
+                          {report.totalPlays.toLocaleString("ru-RU")} прослушиваний • {formatCurrency(report.totalAmount)}
                         </div>
                       </div>
                     ))}

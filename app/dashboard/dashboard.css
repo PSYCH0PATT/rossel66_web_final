@@ -112,6 +112,22 @@
   }
 }
 
+/**
+ * DS3: заголовки страниц не ужимались на узких вьюпортах.
+ *
+ * Крупный display-шрифт задан фиксированными классами (text-4xl / text-5xl) в
+ * ~30 местах, поэтому длинный заголовок обрезался справа. Вместо правки каждого
+ * экрана ограничиваем размер только на узких экранах — десктоп не трогаем.
+ * `overflow-wrap: anywhere` страхует от очень длинного слова без пробелов.
+ */
+@media (max-width: 640px) {
+  .dashboard-theme h1 {
+    font-size: clamp(1.5rem, 7.5vw, 2.25rem);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* Специальные стили для админских input через data-атрибут */
 input[data-admin-input="true"],
 input[data-admin-input="true"]:focus,

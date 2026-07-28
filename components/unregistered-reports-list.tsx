@@ -34,7 +34,7 @@ export default function UnregisteredReportsList() {
           setReports(data.reports)
         }
       } catch (error) {
-        console.error("Ошибка при загрузке отчетов:", error)
+        console.error("Ошибка при загрузке отчётов:", error)
       } finally {
         setIsLoading(false)
       }
@@ -67,7 +67,7 @@ export default function UnregisteredReportsList() {
   }
 
   const handleDelete = async (reportId: string, artistName: string) => {
-    if (!confirm(`Вы уверены, что хотите удалить отчет для ${artistName}?`)) {
+    if (!confirm(`Вы уверены, что хотите удалить отчёт для ${artistName}?`)) {
       return
     }
 
@@ -77,14 +77,14 @@ export default function UnregisteredReportsList() {
       })
       
       if (!response.ok) {
-        throw new Error('Ошибка при удалении отчета')
+        throw new Error('Ошибка при удалении отчёта')
       }
 
-      // Обновляем список отчетов
+      // Обновляем список отчётов
       setReports(reports.filter(report => report.id !== reportId))
     } catch (error) {
       console.error('Ошибка при удалении:', error)
-      alert('Ошибка при удалении отчета')
+      alert('Ошибка при удалении отчёта')
     }
   }
 
@@ -106,7 +106,7 @@ export default function UnregisteredReportsList() {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-400">Загрузка отчетов...</span>
+        <span className="ml-2 text-gray-400">Загрузка отчётов...</span>
       </div>
     )
   }
@@ -118,10 +118,10 @@ export default function UnregisteredReportsList() {
           <Users className="h-10 w-10 text-emerald-400" />
         </div>
         <h3 className="text-2xl font-bold text-white mb-3">
-          Отлично! Нет незарегистрированных отчетов
+          Отлично! Нет незарегистрированных отчётов
         </h3>
         <p className="text-slate-400 text-lg max-w-md mx-auto">
-          Все отчеты успешно назначены зарегистрированным артистам
+          Все отчёты успешно назначены зарегистрированным артистам
         </p>
         <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
           <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
@@ -131,7 +131,7 @@ export default function UnregisteredReportsList() {
     )
   }
 
-  // Группируем отчеты по кварталам
+  // Группируем отчёты по кварталам
   const reportsByQuarter = reports.reduce((acc, report) => {
     const key = `${report.quarter} ${report.year}`
     if (!acc[key]) {
@@ -145,11 +145,11 @@ export default function UnregisteredReportsList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Незарегистрированные отчеты</h3>
-          <p className="text-sm text-slate-400">Отчеты артистов без кабинета</p>
+          <h3 className="text-lg font-semibold text-white">Незарегистрированные отчёты</h3>
+          <p className="text-sm text-slate-400">Отчёты артистов без кабинета</p>
         </div>
         <div className="text-sm text-slate-400">
-          Всего: {reports.length} отчетов
+          Всего: {reports.length} отчётов
         </div>
       </div>
 
@@ -168,7 +168,7 @@ export default function UnregisteredReportsList() {
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold text-white">{quarter}</h4>
-                    <p className="text-sm text-slate-400">{quarterReports.length} отчетов</p>
+                    <p className="text-sm text-slate-400">{quarterReports.length} отчётов</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export default function UnregisteredReportsList() {
                     <div className="flex items-center flex-wrap gap-4 text-sm">
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <Play className="h-4 w-4 text-green-400 flex-shrink-0" />
-                        <span className="text-white font-medium">{report.totalPlays.toLocaleString()}</span>
+                        <span className="text-white font-medium">{report.totalPlays.toLocaleString("ru-RU")}</span>
                         <span className="text-slate-400">прослушиваний</span>
                       </div>
                       

@@ -111,10 +111,10 @@ export default function SimpleReportUploader() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <Upload className="h-5 w-5 text-emerald-400" />
-            Загрузка отчета
+            Загрузка отчёта
           </CardTitle>
           <CardDescription className="text-slate-300">
-            Загрузите Excel файл с отчетом и укажите основные данные
+            Загрузите Excel файл с отчётом и укажите основные данные
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -222,7 +222,7 @@ export default function SimpleReportUploader() {
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Загрузить отчет
+                  Загрузить отчёт
                 </>
               )}
             </Button>

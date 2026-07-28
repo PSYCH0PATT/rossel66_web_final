@@ -28,24 +28,25 @@ export default function ReportsPage() {
           <TabsList className="grid w-full grid-cols-3 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
             <TabsTrigger
               value="reports"
-              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400 text-xs sm:text-sm"
+              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
             >
               <span className="material-symbols-outlined text-lg sm:text-base">description</span>
-              <span className="hidden sm:inline font-mono uppercase">Зарегистрированные</span>
+              <span className="font-mono uppercase leading-tight sm:hidden">С кабинетом</span>
+              <span className="hidden font-mono uppercase sm:inline">Зарегистрированные</span>
             </TabsTrigger>
             <TabsTrigger
               value="unregistered"
-              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400 text-xs sm:text-sm"
+              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
             >
               <span className="material-symbols-outlined text-lg sm:text-base">person_off</span>
-              <span className="hidden sm:inline font-mono uppercase">Без кабинета</span>
+              <span className="font-mono uppercase leading-tight">Без кабинета</span>
             </TabsTrigger>
             <TabsTrigger
               value="upload"
-              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400 text-xs sm:text-sm"
+              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
             >
               <span className="material-symbols-outlined text-lg sm:text-base">upload</span>
-              <span className="hidden sm:inline font-mono uppercase">Загрузка</span>
+              <span className="font-mono uppercase leading-tight">Загрузка</span>
             </TabsTrigger>
           </TabsList>
 

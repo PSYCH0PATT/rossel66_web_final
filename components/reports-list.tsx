@@ -73,7 +73,7 @@ export default function ReportsList() {
         setCollapsedQuarters(new Set(list.map((p) => pairLabel(p))))
       }
     } catch (error) {
-      console.error("Ошибка при загрузке отчетов:", error)
+      console.error("Ошибка при загрузке отчётов:", error)
       setPairs([])
     } finally {
       setIsLoading(false)
@@ -189,12 +189,12 @@ export default function ReportsList() {
   }
 
   const handleDeleteReport = async (reportId: string, artistName: string, pair: QuarterYear) => {
-    if (!confirm(`Вы уверены, что хотите удалить отчет для ${artistName}?`)) {
+    if (!confirm(`Вы уверены, что хотите удалить отчёт для ${artistName}?`)) {
       return
     }
     try {
       const response = await fetch(`/api/reports/delete/${reportId}`, { method: "DELETE" })
-      if (!response.ok) throw new Error("Ошибка при удалении отчета")
+      if (!response.ok) throw new Error("Ошибка при удалении отчёта")
       const key = pairLabel(pair)
       setCache((prev) => {
         const c = prev[key]
@@ -210,7 +210,7 @@ export default function ReportsList() {
       })
     } catch (error) {
       console.error("Ошибка при удалении:", error)
-      alert("Ошибка при удалении отчета")
+      alert("Ошибка при удалении отчёта")
     }
   }
 
@@ -270,7 +270,7 @@ export default function ReportsList() {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-400">Загрузка отчетов...</span>
+        <span className="ml-2 text-gray-400">Загрузка отчётов…</span>
       </div>
     )
   }
@@ -281,9 +281,9 @@ export default function ReportsList() {
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 mb-6">
           <FileText className="h-10 w-10 text-blue-400" />
         </div>
-        <h3 className="text-2xl font-bold text-white mb-3">Нет готовых отчетов</h3>
+        <h3 className="text-2xl font-bold text-white mb-3">Нет готовых отчётов</h3>
         <p className="text-slate-400 text-lg max-w-md mx-auto">
-          Готовые отчеты будут появляться здесь после обработки данных
+          Готовые отчёты будут появляться здесь после обработки данных
         </p>
       </div>
     )
@@ -293,8 +293,8 @@ export default function ReportsList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Готовые отчеты</h3>
-          <p className="text-sm text-slate-400">Отчеты зарегистрированных артистов (по кварталам и годам)</p>
+          <h3 className="text-lg font-semibold text-white">Готовые отчёты</h3>
+          <p className="text-sm text-slate-400">Отчёты зарегистрированных артистов (по кварталам и годам)</p>
         </div>
       </div>
 
@@ -311,7 +311,7 @@ export default function ReportsList() {
             color: filter === "all" ? "white" : "#cbd5e1",
           }}
         >
-          Все отчеты
+          Все отчёты
         </Button>
         <Button
           variant="outline"
@@ -324,8 +324,8 @@ export default function ReportsList() {
             color: filter === "unsigned" ? "white" : "#cbd5e1",
           }}
         >
-          <XCircle className="h-4 w-4 sm:mr-1 flex-shrink-0" />
-          <span className="hidden sm:inline">Неподписанные</span>
+          <XCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+          <span>Неподписанные</span>
         </Button>
         <Button
           variant="outline"
@@ -338,8 +338,8 @@ export default function ReportsList() {
             color: filter === "unpaid" ? "white" : "#cbd5e1",
           }}
         >
-          <DollarSign className="h-4 w-4 sm:mr-1 flex-shrink-0" />
-          <span className="hidden sm:inline">Невыплаченные</span>
+          <DollarSign className="h-4 w-4 mr-1 flex-shrink-0" />
+          <span>Невыплаченные</span>
         </Button>
       </div>
 
@@ -361,19 +361,20 @@ export default function ReportsList() {
               className="pb-3 cursor-pointer hover:bg-slate-700/20 transition-colors"
               onClick={() => toggleQuarter(pair)}
             >
-              <div className="flex items-center justify-between">
+              {/* DS11: на мобильном кнопки не влезали в строку и «Удалить» обрезалась справа */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/20 shrink-0">
                     <FileText className="h-4 w-4 text-blue-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h4 className="text-lg font-semibold text-white">{key}</h4>
                     <p className="text-sm text-slate-400">
                       {block?.loading ? "Загрузка…" : `${total} отчётов`}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -434,7 +435,7 @@ export default function ReportsList() {
                               <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm mb-2 sm:mb-3">
                                 <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
                                   <Play className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
-                                  <span className="text-white font-medium">{report.totalPlays.toLocaleString()}</span>
+                                  <span className="text-white font-medium">{report.totalPlays.toLocaleString("ru-RU")}</span>
                                   <span className="text-slate-400 hidden sm:inline">прослушиваний</span>
                                 </div>
                                 <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">

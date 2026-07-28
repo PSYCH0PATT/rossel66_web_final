@@ -54,7 +54,7 @@ export default function UnregisteredReportsPage() {
         setReports(data.reports)
       }
     } catch (error) {
-      console.error("Ошибка при загрузке отчетов:", error)
+      console.error("Ошибка при загрузке отчётов:", error)
     } finally {
       setLoading(false)
     }
@@ -98,7 +98,7 @@ export default function UnregisteredReportsPage() {
         setBanner({ type: "err", text: "Ошибка: " + (data.error || "") })
       }
     } catch (error) {
-      console.error("Ошибка при назначении отчета:", error)
+      console.error("Ошибка при назначении отчёта:", error)
       setBanner({ type: "err", text: "Ошибка при назначении отчёта" })
     }
   }

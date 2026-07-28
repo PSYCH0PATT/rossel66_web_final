@@ -100,7 +100,7 @@ export default function ReportUploader() {
       <TabsList className="grid grid-cols-2 mb-4">
         <TabsTrigger value="generation">
           <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Генерация отчетов
+          Генерация отчётов
         </TabsTrigger>
         <TabsTrigger value="bulk-upload">
           <Upload className="mr-2 h-4 w-4" />
@@ -110,23 +110,23 @@ export default function ReportUploader() {
 
       <TabsContent value="generation">
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Генерация отчетов</h2>
-          <p className="text-gray-500 mb-4">Загрузите Excel-файл с данными для генерации отчетов для всех артистов.</p>
-          {/* Здесь будет форма для генерации отчетов */}
+          <h2 className="text-xl font-bold mb-4">Генерация отчётов</h2>
+          <p className="text-gray-500 mb-4">Загрузите Excel-файл с данными для генерации отчётов для всех артистов.</p>
+          {/* Здесь будет форма для генерации отчётов */}
         </Card>
       </TabsContent>
 
       <TabsContent value="bulk-upload">
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Массовая загрузка отчетов</h2>
+          <h2 className="text-xl font-bold mb-4">Массовая загрузка отчётов</h2>
           <p className="text-gray-500 mb-4">
-            Загрузите готовые отчеты для артистов. Имя файла должно соответствовать имени артиста (например,
+            Загрузите готовые отчёты для артистов. Имя файла должно соответствовать имени артиста (например,
             "передоз.xlsx").
           </p>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="files">Загрузите файлы отчетов (.xlsx)</Label>
+              <Label htmlFor="files">Загрузите файлы отчётов (.xlsx)</Label>
               <div
                 className="border-2 border-dashed border-gray-300 rounded-lg p-8 mt-2 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                 onDrop={handleDrop}
@@ -185,7 +185,7 @@ export default function ReportUploader() {
             </div>
 
             <Button onClick={handleUpload} disabled={isUploading || selectedFiles.length === 0} className="w-full">
-              {isUploading ? "Загрузка..." : "Загрузить отчеты"}
+              {isUploading ? "Загрузка..." : "Загрузить отчёты"}
             </Button>
 
             {uploadStatus !== "idle" && (

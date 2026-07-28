@@ -46,7 +46,7 @@ export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuTog
         // Перевод пути на русский
         if (lastPath === "dashboard") label = "Главная"
         if (lastPath === "releases") label = "Релизы"
-        if (lastPath === "reports") label = "Отчеты"
+        if (lastPath === "reports") label = "Отчёты"
         if (lastPath === "payments") label = "Выплаты"
         if (lastPath === "playlists") label = "Плейлисты"
         if (lastPath === "artists") label = "Артисты"
