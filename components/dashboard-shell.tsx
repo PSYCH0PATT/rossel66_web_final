@@ -1,7 +1,8 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import Sidebar from "./sidebar"
 import TopNav from "./top-nav"
 import type { UserRole } from "@/lib/storage"
@@ -24,6 +25,18 @@ export default function DashboardShell({
   profile,
 }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
+  const pathname = usePathname()
+
+  /**
+   * DS6: скроллит не страница, а контейнер <main class="overflow-y-auto">,
+   * поэтому встроенное в Next восстановление прокрутки (оно работает по
+   * window) не срабатывало — после перехода новая страница открывалась уже
+   * прокрученной на позицию предыдущей. Сбрасываем сами.
+   */
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 })
+  }, [pathname])
 
   return (
     <DashboardUserProvider profile={profile}>
@@ -40,7 +53,7 @@ export default function DashboardShell({
           mobileMenuOpen={mobileMenuOpen}
           onMobileMenuToggle={() => setMobileMenuOpen((o) => !o)}
         />
-        <main className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto max-w-7xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] md:p-10 md:pb-12">
             {children}
           </div>

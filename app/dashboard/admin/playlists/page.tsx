@@ -1255,7 +1255,7 @@ export default function PlaylistsPage() {
                   </Badge>
                       </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {vkPlaylists.map((playlist) => (
                     <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1283,7 +1283,7 @@ export default function PlaylistsPage() {
                   </Badge>
                         </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {yandexPlaylists.map((playlist) => (
                     <PlaylistCard key={`yandex-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1311,7 +1311,7 @@ export default function PlaylistsPage() {
                   </Badge>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {mtsPlaylists.map((playlist) => (
                     <PlaylistCard key={`mts-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1338,7 +1338,7 @@ export default function PlaylistsPage() {
                     {sberPlaylists.length}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {sberPlaylists.map((playlist) => (
                     <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1366,7 +1366,7 @@ export default function PlaylistsPage() {
                     {okPlaylists.length}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {okPlaylists.map((playlist) => (
                     <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1383,7 +1383,7 @@ export default function PlaylistsPage() {
                   <h2 className="text-xl font-semibold text-white">Другие площадки</h2>
                   <Badge className="border-0 bg-white/15 text-gray-200">{otherPlaylists.length}</Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {otherPlaylists.map((playlist) => (
                     <PlaylistCard key={`other-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                   ))}
@@ -1471,7 +1471,7 @@ export default function PlaylistsPage() {
                   </div>
 
                   {/* Плейлисты артиста */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                     {artistVKPlaylists.map((playlist) => (
                       <PlaylistCard key={`vk-${playlist.id}`} playlist={playlist} type="vk" onAssign={openAssignModal} onDelete={setDeleteTarget} />
                     ))}

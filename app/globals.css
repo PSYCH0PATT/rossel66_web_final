@@ -103,6 +103,23 @@ body > main {
     outline-offset: 2px;
     border-radius: inherit;
   }
+
+  /**
+   * DS5: уважаем системную настройку «уменьшить движение».
+   * В интерфейсе много бесконечных animate-pulse / animate-ping / animate-spin
+   * и анимированный блоб на fixed-слое — для чувствительных к движению
+   * пользователей это неприятно, а на слабых устройствах ещё и дорого.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
