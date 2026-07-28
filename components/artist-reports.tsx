@@ -217,7 +217,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
                           <button
                             type="button"
                             onClick={() => setPreviewReportId(report.id)}
-                            className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             aria-label="Предпросмотр"
                             title="Предпросмотр"
                           >
@@ -226,7 +226,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
                           <button
                             type="button"
                             onClick={() => handleDownloadReport(report.id)}
-                            className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             aria-label="Скачать"
                             title="Скачать"
                           >
@@ -245,7 +245,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
                               type="button"
                               disabled={acknowledgingId === report.id}
                               onClick={() => handleAcknowledge(report.id)}
-                              className="bg-[#10b981] hover:bg-emerald-400 disabled:opacity-60 text-black font-bold rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 transition-all"
+                              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#10b981] px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-black shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 hover:bg-emerald-400 disabled:opacity-60"
                             >
                               {acknowledgingId === report.id ? "Сохранение..." : "Ознакомился"}
                             </button>
