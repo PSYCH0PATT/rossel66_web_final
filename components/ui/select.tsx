@@ -19,6 +19,10 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
+      // A11y-3: минимальный тач-таргет 44px на узких экранах и при сенсорном
+      // вводе. Часть селектов переопределяет высоту через className (h-9 = 36px),
+      // поэтому нужен min-height — он не конфликтует с их `h-*`.
+      "max-md:min-h-11 pointer-coarse:min-h-11",
       "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
       className
     )}

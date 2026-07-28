@@ -160,10 +160,10 @@ export default function AdminDashboardClient({
               </span>
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Выплаты</h3>
             </div>
-            <div className="flex flex-col items-start gap-1 md:flex-row md:items-end md:justify-between md:gap-2">
+            <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="min-w-0 cursor-default truncate whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
+                  <p className="cursor-default whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
                     {formatRubKpiShort(metrics.totalPayments)}
                   </p>
                 </TooltipTrigger>
@@ -208,14 +208,16 @@ export default function AdminDashboardClient({
               <span className="w-1.5 h-6 bg-accent-azure rounded-full"></span>
               СТАТИСТИКА СТРИМОВ
             </h2>
-            <div className="flex gap-4">
-              <span className="flex items-center text-[10px] text-gray-400 font-mono uppercase tracking-widest">
-                <span className="w-2 h-2 rounded-full bg-primary mr-2"></span> Current
-              </span>
-              <span className="flex items-center text-[10px] text-gray-400 font-mono uppercase tracking-widest">
-                <span className="w-2 h-2 rounded-full bg-accent-azure mr-2"></span> Target
-              </span>
-            </div>
+            {/*
+              DS7: легенда «CURRENT / TARGET» была декоративной — на графике
+              одна серия (реальные прослушивания), никакого «target» не
+              существует, а англоязычные подписи нарушали единый язык.
+              Оставляем честную подпись одной серии.
+            */}
+            <span className="flex items-center text-[10px] font-mono uppercase tracking-widest text-gray-400">
+              <span className="mr-2 h-2 w-2 rounded-full bg-primary" />
+              Прослушивания
+            </span>
           </div>
 
           <div className="card-glass rounded-2xl flex-1 border border-white/5 p-8 flex flex-col relative min-h-[360px]">

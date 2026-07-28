@@ -139,10 +139,10 @@ export default function ArtistDashboardClient({
               </span>
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Заработок</h3>
             </div>
-            <div className="flex flex-col items-start gap-1 md:flex-row md:items-end md:justify-between md:gap-2">
+            <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="min-w-0 cursor-default truncate whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
+                  <p className="cursor-default whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
                     {formatRubKpiShort(totalEarnings)}
                   </p>
                 </TooltipTrigger>

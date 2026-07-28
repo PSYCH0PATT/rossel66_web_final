@@ -36,6 +36,13 @@ export default function AdminArtistsClient() {
     setPage(1)
   }, [debouncedQ, filter])
 
+  /**
+   * A11y-3: интерактивный размер не может быть меньше 44px, даже когда
+   * карточка узкая. getAdaptiveSize при 2 колонках давал 36*0.5 = 18px —
+   * кнопка удаления была вдвое меньше минимального тач-таргета.
+   */
+  const getAdaptiveTapSize = (baseSize: number) => Math.max(44, getAdaptiveSize(baseSize))
+
   const getAdaptiveSize = (baseSize: number) => {
     if (gridCols <= 2) return Math.round(baseSize * 0.5)
     if (gridCols <= 3) return Math.round(baseSize * 0.6)
@@ -170,7 +177,7 @@ export default function AdminArtistsClient() {
 
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
+          <Link href="/dashboard/admin/dashboard" className="inline-flex min-h-11 items-center transition-colors hover:text-primary">
             ДАШБОРД
           </Link>
           <span className="material-symbols-outlined text-[10px]">chevron_right</span>
@@ -233,7 +240,7 @@ export default function AdminArtistsClient() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Поиск по имени или username…"
-            className="bg-black/40 border border-white/10 text-white text-sm rounded-lg focus:ring-[#10b981] focus:border-[#10b981] block w-full p-2.5 pl-10 placeholder-gray-600 font-mono transition-all group-hover:border-white/20 outline-none"
+            className="bg-black/40 border border-white/10 text-white text-sm rounded-lg focus:ring-[#10b981] focus:border-[#10b981] block min-h-11 w-full p-2.5 pl-10 placeholder-gray-600 font-mono transition-all group-hover:border-white/20 outline-none"
             spellCheck={false}
             autoComplete="off"
           />
@@ -251,7 +258,7 @@ export default function AdminArtistsClient() {
                 setPageSize(size)
                 setPage(1)
               }}
-              className={`px-2 py-1 rounded text-xs border transition-colors font-mono ${
+              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded border px-2 py-1 font-mono text-xs transition-colors ${
                 pageSize === size
                   ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
                   : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
@@ -278,7 +285,7 @@ export default function AdminArtistsClient() {
             key={tab.id}
             type="button"
             onClick={() => setFilter(tab.id)}
-            className={`px-3 py-2 rounded-lg text-xs font-mono border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+            className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 font-mono text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
               filter === tab.id
                 ? "bg-primary/20 border-primary/30 text-primary"
                 : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
@@ -321,8 +328,8 @@ export default function AdminArtistsClient() {
                       className="rounded-full flex items-center justify-center bg-emerald-600/90 hover:bg-emerald-500 text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       style={{
                         padding: `${getAdaptiveSize(8)}px`,
-                        width: `${getAdaptiveSize(36)}px`,
-                        height: `${getAdaptiveSize(36)}px`,
+                        width: `${getAdaptiveTapSize(36)}px`,
+                        height: `${getAdaptiveTapSize(36)}px`,
                       }}
                       aria-label="Подтвердить артиста"
                       title="Подтвердить артиста"
@@ -353,8 +360,8 @@ export default function AdminArtistsClient() {
                     disabled={isDeleting[artist.id]}
                     className="rounded-full flex items-center justify-center bg-red-600/90 hover:bg-red-500 text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50"
                     style={{
-                      width: `${getAdaptiveSize(36)}px`,
-                      height: `${getAdaptiveSize(36)}px`,
+                      width: `${getAdaptiveTapSize(36)}px`,
+                      height: `${getAdaptiveTapSize(36)}px`,
                     }}
                     aria-label="Удалить артиста"
                     title="Удалить артиста"
@@ -464,7 +471,7 @@ export default function AdminArtistsClient() {
               type="button"
               disabled={!hasPrev}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-mono inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="inline-flex min-h-11 items-center gap-1 rounded border border-white/5 bg-white/5 px-3 py-1 font-mono text-xs text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <span className="material-symbols-outlined text-sm">chevron_left</span>
               Назад
@@ -473,7 +480,7 @@ export default function AdminArtistsClient() {
               type="button"
               disabled={!hasNext}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-mono inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="inline-flex min-h-11 items-center gap-1 rounded border border-white/5 bg-white/5 px-3 py-1 font-mono text-xs text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               Далее
               <span className="material-symbols-outlined text-sm">chevron_right</span>

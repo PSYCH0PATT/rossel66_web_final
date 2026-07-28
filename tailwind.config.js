@@ -124,5 +124,16 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    /**
+     * A11y-3: вариант `pointer-coarse:` (сенсорный ввод). В Tailwind 3 его нет —
+     * появился только в v4. Нужен, чтобы поднимать тач-таргеты до 44px на
+     * телефонах/планшетах, не меняя плотность вёрстки под мышью.
+     */
+    function ({ addVariant }) {
+      addVariant("pointer-coarse", "@media (pointer: coarse)")
+      addVariant("pointer-fine", "@media (pointer: fine)")
+    },
+  ],
 } 

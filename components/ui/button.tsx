@@ -19,11 +19,19 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
+      /**
+       * A11y-3: минимальный тач-таргет 44px.
+       * Раньше `sm` давал 36px, `default` — 40px, и на мобильном десятки кнопок
+       * были ниже минимума. Поднимаем в двух случаях: узкий экран (max-md —
+       * практически всегда телефон) и сенсорный ввод (pointer-coarse — ловит
+       * планшеты шире md). На десктопе с мышью размеры прежние, чтобы не менять
+       * плотность вёрстки.
+       */
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
+        default: "h-10 px-4 py-2 max-md:h-11 pointer-coarse:h-11",
+        sm: "h-9 rounded-md px-3 max-md:h-11 pointer-coarse:h-11",
         lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        icon: "h-10 w-10 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11",
       },
     },
     defaultVariants: {
