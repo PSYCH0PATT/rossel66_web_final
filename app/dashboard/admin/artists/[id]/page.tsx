@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import Link from "next/link"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 export default function EditArtistPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -845,16 +846,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           </TabsContent>
         </Tabs>
 
-        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-            </span>
-            System Operational
-          </div>
-          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
-        </footer>
+        <DashboardFooter />
       </div>
     )
 }

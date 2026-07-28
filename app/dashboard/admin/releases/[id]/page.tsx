@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 type Release = {
   id: string
@@ -512,16 +513,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           </div>
         </div>
 
-        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-            </span>
-            System Operational
-          </div>
-          <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
-        </footer>
+        <DashboardFooter />
       </div>
     )
 }

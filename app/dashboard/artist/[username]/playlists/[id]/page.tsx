@@ -7,6 +7,7 @@ import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 function platformBadgeClass(platform: string): string {
   switch (platform) {
@@ -176,13 +177,7 @@ export default async function ArtistPlaylistDetailPage({
         )}
       </div>
 
-      <div className="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
-      </div>
+      <DashboardFooter role="artist" />
       </div>
     )
 }

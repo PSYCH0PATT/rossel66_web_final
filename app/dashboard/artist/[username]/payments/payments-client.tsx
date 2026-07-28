@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface Report {
   id: string
@@ -230,13 +231,7 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
         </div>
       )}
 
-      <div className="mt-8 mb-6 flex justify-between items-center border-t border-white/5 pt-6 text-sm md:mb-0">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
-      </div>
+      <DashboardFooter role="artist" />
       </div>
     </>
   )

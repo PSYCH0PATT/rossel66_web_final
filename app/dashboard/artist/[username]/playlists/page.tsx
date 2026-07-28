@@ -6,6 +6,7 @@ import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
+import { DashboardFooter } from "@/components/dashboard-footer"
 function firstTrackLabel(trackDataJson: string): string {
   try {
     const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
@@ -150,15 +151,17 @@ export default async function PlaylistsPage({ params }: { params: { username: st
           </div>
         )}
 
-        <div className="mt-12 mb-6 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-6 text-sm sm:flex-row md:mb-0">
-          <div className="text-gray-500 font-mono flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary inline-block animate-pulse" />
-            System Operational
+        <DashboardFooter role="artist">
+          {/* DS8: было «TOTAL FOUND: N PLAYLISTS» */}
+          <div className="uppercase tracking-widest text-gray-400">
+            Найдено: <span className="font-bold text-white">{total}</span>{" "}
+            {total % 10 === 1 && total % 100 !== 11
+              ? "плейлист"
+              : total % 10 >= 2 && total % 10 <= 4 && (total % 100 < 12 || total % 100 > 14)
+                ? "плейлиста"
+                : "плейлистов"}
           </div>
-          <div className="text-gray-400 font-mono text-xs uppercase tracking-widest">
-            TOTAL FOUND: <span className="text-white font-bold">{total}</span> PLAYLISTS
-          </div>
-        </div>
+        </DashboardFooter>
       </div>
     )
 }

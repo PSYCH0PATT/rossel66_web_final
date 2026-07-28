@@ -183,7 +183,7 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
     return (
       <div className="flex flex-col items-center justify-center py-10 text-gray-500">
         <span className="material-symbols-outlined text-4xl mb-2 opacity-30">inbox</span>
-        <p className="text-sm font-mono uppercase tracking-widest">No Activity Found</p>
+        <p className="text-sm font-mono uppercase tracking-widest">Событий пока нет</p>
       </div>
     )
   }

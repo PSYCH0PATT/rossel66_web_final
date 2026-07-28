@@ -8,6 +8,7 @@ import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
 import { formatRubKpiShort, formatRubPlain } from "@/lib/format-dashboard-rub"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 type StreamDay = { date: string; streams: number }
 
@@ -221,13 +222,7 @@ export default function ArtistDashboardClient({
         </div>
       </div>
 
-      <div className="mt-8 mb-6 flex justify-between items-center border-t border-white/5 pt-6 text-sm md:mb-0">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse"></span>
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
-      </div>
+      <DashboardFooter role="artist" />
       </div>
     )
 }

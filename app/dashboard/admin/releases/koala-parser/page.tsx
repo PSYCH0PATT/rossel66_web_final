@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import Link from "next/link"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface ParseStats {
   total: number
@@ -331,16 +332,7 @@ export default function KoalaParserPage() {
           </div>
         )}
 
-        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-            </span>
-            System Operational
-          </div>
-          <span>ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
-        </footer>
+        <DashboardFooter />
       </div>
     )
 }

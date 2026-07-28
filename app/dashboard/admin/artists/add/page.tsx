@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 const inputClass =
   "h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -435,16 +436,7 @@ export default function AddArtistPage() {
           </form>
         </div>
 
-        <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-            </span>
-            System Operational
-          </div>
-          <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
-        </footer>
+        <DashboardFooter />
       </div>
     )
 }

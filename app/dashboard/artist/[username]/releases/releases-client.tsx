@@ -363,13 +363,13 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
-                  <th className="px-6 py-5 font-mono">Cover</th>
-                  <th className="px-6 py-5 font-mono">Title / Version</th>
-                  <th className="px-6 py-5 font-mono">Artists</th>
+                  <th className="px-6 py-5 font-mono">Обложка</th>
+                  <th className="px-6 py-5 font-mono">Название / версия</th>
+                  <th className="px-6 py-5 font-mono">Артисты</th>
                   <th className="px-6 py-5 font-mono">UPC</th>
-                  <th className="px-6 py-5 font-mono">Date</th>
-                  <th className="px-6 py-5 font-mono">Status</th>
-                  <th className="px-6 py-5 font-mono text-right">Action</th>
+                  <th className="px-6 py-5 font-mono">Дата</th>
+                  <th className="px-6 py-5 font-mono">Статус</th>
+                  <th className="px-6 py-5 font-mono text-right">Действие</th>
                 </tr>
               </thead>
               <tbody className="text-sm">

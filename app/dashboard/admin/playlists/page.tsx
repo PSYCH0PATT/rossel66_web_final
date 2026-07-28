@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 import { formatDateRu } from "@/lib/format-date"
+import { DashboardFooter } from "@/components/dashboard-footer"
 import {
   isMtsMusicPlatform,
   isOdnoklassnikiPlatform,
@@ -1990,17 +1991,21 @@ export default function PlaylistsPage() {
 
     </Tabs>
 
-        <footer className="border-t border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-gray-500 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary inline-block animate-pulse" />
-            System Operational
+        <DashboardFooter>
+          {/* DS8: было «TOTAL FOUND: N PLAYLISTS» */}
+          <div className="uppercase tracking-widest text-gray-400">
+            Найдено:{" "}
+            <span className="font-bold text-white">{vkResults.length + bandlinkResults.length}</span>{" "}
+            {(() => {
+              const n = vkResults.length + bandlinkResults.length
+              const mod10 = n % 10
+              const mod100 = n % 100
+              if (mod10 === 1 && mod100 !== 11) return "плейлист"
+              if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "плейлиста"
+              return "плейлистов"
+            })()}
           </div>
-          <div className="text-gray-400 uppercase tracking-widest">
-            TOTAL FOUND:{" "}
-            <span className="text-white font-bold">{vkResults.length + bandlinkResults.length}</span> PLAYLISTS
-          </div>
-          <span className="sm:text-right">ROSSEL LABEL ENGINE V2.4 | ADMIN</span>
-        </footer>
+        </DashboardFooter>
       </div>
 
       {/* Модальное окно для привязки плейлиста к артисту */}

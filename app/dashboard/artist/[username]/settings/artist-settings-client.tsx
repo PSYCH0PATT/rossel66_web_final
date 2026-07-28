@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 export type ArtistSettingsInitial = {
   id: string
@@ -198,12 +199,12 @@ export default function ArtistSettingsClient({
             <p className="text-xs text-gray-600 mt-1">Имя может изменить только администратор</p>
           </div>
           <div>
-            <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Email</dt>
+            <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Почта</dt>
             <dd className="text-lg text-white mt-1">{artist.email || "Не указан"}</dd>
             <p className="text-xs text-gray-600 mt-1">Email может изменить только администратор</p>
           </div>
           <div>
-            <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Username</dt>
+            <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Логин</dt>
             <dd className="text-lg text-white font-mono mt-1">{artist.username}</dd>
           </div>
         </dl>
@@ -332,13 +333,7 @@ export default function ArtistSettingsClient({
         </div>
       )}
 
-      <div className="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
-      </div>
+      <DashboardFooter role="artist" />
       </div>
     </>
   )

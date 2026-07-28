@@ -129,14 +129,14 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
       <div className="flex flex-col h-full min-h-[280px]">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Monthly Performance</p>
+            <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Прослушивания за месяц</p>
             <div className="h-9 w-32 bg-white/5 rounded animate-pulse" />
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-gray-500">
             <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Loading...</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest">Загрузка…</span>
           </div>
         </div>
       </div>
@@ -148,14 +148,14 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
       <div className="flex flex-col h-full min-h-[280px]">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Monthly Performance</p>
+            <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Прослушивания за месяц</p>
             <h3 className="text-3xl font-display font-bold text-white">—</h3>
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-600">
           <span className="material-symbols-outlined text-4xl opacity-30">bar_chart</span>
-          <p className="text-xs font-mono uppercase tracking-widest">No analytics data</p>
-          <p className="text-[10px] text-gray-700">Import flash CSV to see streams</p>
+          <p className="text-xs font-mono uppercase tracking-widest">Нет данных аналитики</p>
+          <p className="text-[10px] text-gray-700">Импортируйте CSV, чтобы увидеть прослушивания</p>
         </div>
       </div>
     )
@@ -166,7 +166,7 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Total Listeners</p>
+          <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Всего прослушиваний</p>
           <h3 className="text-3xl font-display font-bold text-white leading-none">
             {formatNum(total)}
             <span className={`text-sm font-sans font-normal ml-2 ${changePositive ? 'text-primary' : 'text-red-400'}`}>

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { AdminPaymentItem } from "@/lib/cached-dashboard"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 export default function AdminPaymentsClient() {
   const [payments, setPayments] = useState<AdminPaymentItem[]>([])
@@ -331,16 +332,7 @@ export default function AdminPaymentsClient() {
         </div>
       )}
 
-      <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-          </span>
-          System Operational
-        </div>
-        <div>ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
-      </footer>
+      <DashboardFooter />
     </div>
   )
 }

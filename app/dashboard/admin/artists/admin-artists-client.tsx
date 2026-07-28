@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import Link from "next/link"
 import type { AdminArtistItem } from "@/lib/cached-dashboard"
+import { DashboardFooter } from "@/components/dashboard-footer"
 import {
   ARTIST_REPORT_FIELD_LABELS,
   getArtistReportMissingFields,
@@ -481,13 +482,7 @@ export default function AdminArtistsClient() {
         </>
       )}
 
-      <div className="mt-10 flex justify-between items-center text-sm border-t border-white/5 pt-6">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4 | ADMIN</div>
-      </div>
+      <DashboardFooter />
 
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:rounded-xl max-w-md">

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound, useRouter } from "next/navigation"
+import { DashboardFooter } from "@/components/dashboard-footer"
 
 type StatusVariant = "live" | "delivered" | "moderation" | "draft" | "rejected"
 
@@ -415,13 +416,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
         </div>
       </div>
 
-      <div className="mt-8 flex justify-between items-center text-sm border-t border-white/5 pt-6">
-        <div className="text-gray-500 font-mono">
-          <span className="w-2 h-2 rounded-full bg-primary inline-block mr-2 animate-pulse" />
-          System Operational
-        </div>
-        <div className="text-gray-400 font-mono text-xs">ROSSEL LABEL ENGINE V2.4</div>
-      </div>
+      <DashboardFooter role="artist" />
       </div>
     )
 }
