@@ -484,7 +484,7 @@ export default function AdminSettingsPage() {
                                 variant="outline"
                                 size="sm"
                                 aria-label="Скачать бэкап"
-                                className="rounded-lg border-white/15 h-9 w-9 p-0 text-gray-300 hover:bg-white/5"
+                                className="rounded-lg border-white/15 h-9 w-9 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 text-gray-300 hover:bg-white/5"
                               >
                                 <span className="material-symbols-outlined text-lg">download</span>
                               </Button>
@@ -494,7 +494,7 @@ export default function AdminSettingsPage() {
                                 variant="outline"
                                 size="sm"
                                 aria-label="Восстановить из бэкапа"
-                                className="rounded-lg border-primary/40 h-9 w-9 p-0 text-primary hover:bg-primary/10"
+                                className="rounded-lg border-primary/40 h-9 w-9 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 text-primary hover:bg-primary/10"
                               >
                                 <span className="material-symbols-outlined text-lg">restore</span>
                               </Button>
@@ -504,7 +504,7 @@ export default function AdminSettingsPage() {
                                 variant="outline"
                                 size="sm"
                                 aria-label="Удалить бэкап"
-                                className="rounded-lg border-red-500/40 h-9 w-9 p-0 text-red-400 hover:bg-red-500/10"
+                                className="rounded-lg border-red-500/40 h-9 w-9 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 text-red-400 hover:bg-red-500/10"
                               >
                                 <span className="material-symbols-outlined text-lg">delete</span>
                               </Button>

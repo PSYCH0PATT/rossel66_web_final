@@ -293,7 +293,7 @@ export default function BulkAddArtistsPage() {
                         type="button"
                         onClick={() => removeArtist(index)}
                         aria-label={`Удалить ${name} из списка`}
-                        className="opacity-0 group-hover:opacity-100 motion-safe:transition-opacity h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20 focus-visible:opacity-100"
+                        className="opacity-0 group-hover:opacity-100 motion-safe:transition-opacity h-8 w-8 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 text-red-400 hover:text-red-300 hover:bg-red-500/20 focus-visible:opacity-100"
                       >
                         <span className="material-symbols-outlined text-base">delete</span>
                       </Button>
