@@ -138,7 +138,7 @@ export default function ArtistDashboardClient({
               </span>
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Заработок</h3>
             </div>
-            <div className="flex items-end justify-between gap-2">
+            <div className="flex flex-col items-start gap-1 md:flex-row md:items-end md:justify-between md:gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <p className="min-w-0 cursor-default truncate whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
@@ -187,7 +187,7 @@ export default function ArtistDashboardClient({
             </h2>
             {/* G9: раньше href="#" — ссылка вела в никуда, страницы активности у артиста не было */}
             <Link
-              className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
+              className="inline-flex min-h-11 items-center text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 hover:border-primary transition-all"
               href={`/dashboard/artist/${artist.username}/activity`}
             >
               Все события

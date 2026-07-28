@@ -52,7 +52,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-[#0a0a0a]">
+    // A11y-1: lang="ru" — контент русский, иначе скринридер читает его
+    // английской фонетикой (было lang="en").
+    <html lang="ru" className="bg-[#0a0a0a]">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>

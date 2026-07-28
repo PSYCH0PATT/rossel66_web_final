@@ -149,7 +149,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
               href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
               onClick={handleNavigation}
               aria-label="На главную дашборда"
-              className="flex min-w-0 flex-1 items-center justify-center px-2"
+              className="flex h-full min-h-11 min-w-0 flex-1 items-center justify-center px-2"
             >
               <img
                 src="/images/logo.png"
@@ -159,7 +159,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
             </Link>
             <button
               type="button"
-              className="md:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 tap-highlight-transparent hover:bg-white/5 hover:text-white [-webkit-tap-highlight-color:transparent]"
+              className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-400 tap-highlight-transparent hover:bg-white/5 hover:text-white [-webkit-tap-highlight-color:transparent]"
               onClick={() => onMobileMenuOpenChange(false)}
               aria-label="Закрыть меню"
             >

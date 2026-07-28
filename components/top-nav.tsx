@@ -92,7 +92,11 @@ export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuTog
         }`}
       >
         <DropdownMenu>
-          <DropdownMenuTrigger className="focus:outline-none">
+          {/* A11y-3: сам аватар остаётся 32px, но зона нажатия — 44px (было 32×32) */}
+          <DropdownMenuTrigger
+            aria-label="Меню профиля"
+            className="flex h-11 w-11 items-center justify-center rounded-full focus:outline-none"
+          >
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-800 border border-primary/50 text-white text-sm font-bold">
               {avatarUrl ? (
                 avatarUrl.startsWith('data:') ? (

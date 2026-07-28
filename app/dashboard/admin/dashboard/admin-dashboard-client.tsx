@@ -72,14 +72,14 @@ export default function AdminDashboardClient({
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest border border-white/10 rounded-lg px-3 py-2"
+              className="inline-flex min-h-11 items-center text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest border border-white/10 rounded-lg px-3 py-2"
             >
               Обновить данные
             </button>
             <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-500 font-mono uppercase">Last Updated</p>
+              <p className="text-xs text-gray-500 font-mono uppercase">Обновлено</p>
               <p className="text-white font-mono text-sm">
-                {new Date().toLocaleString("en-GB", {
+                {new Date().toLocaleString("ru-RU", {
                   month: "short",
                   day: "numeric",
                   hour: "2-digit",
@@ -92,8 +92,9 @@ export default function AdminDashboardClient({
       </div>
 
       <TooltipProvider delayDuration={200}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
-        <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+      {/* DS10/DS2: та же сетка и плотность, что у артиста — было grid-cols-1 и gap-6 на мобильном */}
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-12">
+        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
             <span className="material-symbols-outlined stat-dash-bg-icon text-white">groups</span>
           </div>
@@ -105,12 +106,12 @@ export default function AdminDashboardClient({
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Артисты</h3>
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-4xl font-bold text-white font-display">{metrics.artistCount}</p>
+              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.artistCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
             <span className="material-symbols-outlined stat-dash-bg-icon text-[#0ea5e9]">album</span>
           </div>
@@ -122,7 +123,7 @@ export default function AdminDashboardClient({
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Релизы</h3>
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-4xl font-bold text-white font-display">{metrics.releaseCount}</p>
+              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.releaseCount}</p>
               <span className="stat-dash-metric-badge stat-dash-metric-badge--azure" title="В работе (не доставлено)">
                 <span className="material-symbols-outlined">schedule</span> {metrics.pendingReleases}
               </span>
@@ -130,7 +131,7 @@ export default function AdminDashboardClient({
           </div>
         </div>
 
-        <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
             <span className="material-symbols-outlined stat-dash-bg-icon text-[#10b981]">bar_chart</span>
           </div>
@@ -139,15 +140,15 @@ export default function AdminDashboardClient({
               <span className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary mb-3 border border-primary/20">
                 <span className="material-symbols-outlined text-xl">description</span>
               </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Отчеты</h3>
+              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Отчёты</h3>
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-4xl font-bold text-white font-display">{metrics.reportCount}</p>
+              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.reportCount}</p>
             </div>
           </div>
         </div>
 
-        <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
+        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
             <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">currency_ruble</span>
           </div>
@@ -158,10 +159,10 @@ export default function AdminDashboardClient({
               </span>
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Выплаты</h3>
             </div>
-            <div className="flex items-end justify-between gap-2">
+            <div className="flex flex-col items-start gap-1 md:flex-row md:items-end md:justify-between md:gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="min-w-0 cursor-default truncate whitespace-nowrap text-4xl font-bold text-white font-display tabular-nums">
+                  <p className="min-w-0 cursor-default truncate whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
                     {formatRubKpiShort(metrics.totalPayments)}
                   </p>
                 </TooltipTrigger>
@@ -189,7 +190,7 @@ export default function AdminDashboardClient({
               ПОСЛЕДНЯЯ АКТИВНОСТЬ
             </h2>
             <Link
-              className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
+              className="inline-flex min-h-11 items-center text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 hover:border-primary transition-all"
               href="/dashboard/admin/activity"
             >
               Все события

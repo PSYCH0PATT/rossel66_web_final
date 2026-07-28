@@ -88,6 +88,21 @@ body > main {
   :root {
     --content-scale: 1;
   }
+
+  /**
+   * A11y-2 (WCAG 2.4.7): видимый индикатор фокуса по умолчанию.
+   * Раньше сфокусированная кнопка имела outline-style:none и box-shadow:none —
+   * навигация с клавиатуры шла вслепую.
+   *
+   * :where() даёт нулевую специфичность, поэтому компоненты со своим
+   * focus-visible:ring-* продолжают работать как раньше, а элементы без
+   * собственного стиля получают видимую обводку.
+   */
+  :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
 }
 
 @layer components {

@@ -120,8 +120,13 @@ input[data-admin-input="true"]:hover,
 input[data-admin-input="true"]:active {
   background: #1a1d24 !important;
   background-color: #1a1d24 !important;
-  outline: none !important;
-  box-shadow: none !important;
+}
+
+/* A11y-2: раньше здесь стояли outline:none + box-shadow:none !important —
+   поле в фокусе выглядело как обычное, и навигация с клавиатуры шла вслепую. */
+input[data-admin-input="true"]:focus-visible {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
 }
 
 /* Force Radix Dialog to respect max width (matches Tailwind max-w-lg = 32rem) */
@@ -159,8 +164,12 @@ button[data-admin-select="true"][data-state="open"],
 button[data-admin-select="true"][data-state="closed"] {
   background: #1a1d24 !important;
   background-color: #1a1d24 !important;
-  outline: none !important;
-  box-shadow: none !important;
+}
+
+/* A11y-2: видимый фокус вместо прежних outline:none + box-shadow:none */
+button[data-admin-select="true"]:focus-visible {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
 }
 
 /* Фикс для Dialog - гарантируем правильную ширину */
