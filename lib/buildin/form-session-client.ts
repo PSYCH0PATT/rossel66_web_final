@@ -306,9 +306,21 @@ export async function submitFormSession(opts: {
   if (!finRes.ok) {
     throw new Error(finJson.message || "Ошибка финализации")
   }
+  if (finJson.status === "completed") {
+    onProgress?.({
+      phase: "done",
+      percent: 100,
+      message: "Готово",
+    })
+    return {
+      sessionId,
+      buildinPageId: createJson.buildinPageId ?? null,
+    }
+  }
 
-  // Poll until completed or failed
-  for (let i = 0; i < 60; i++) {
+  // Poll until completed (outbox fallback) — do not fail-fast on transient states
+  let failStreak = 0
+  for (let i = 0; i < 90; i++) {
     const st = await fetch(
       `/api/forms/sessions/${sessionId}?accessToken=${encodeURIComponent(accessToken)}`
     )
@@ -326,7 +338,12 @@ export async function submitFormSession(opts: {
         }
       }
       if (status.status === "failed") {
-        throw new Error(status.lastError || "Финализация не удалась")
+        failStreak++
+        if (failStreak >= 5) {
+          throw new Error(status.lastError || "Финализация не удалась")
+        }
+      } else {
+        failStreak = 0
       }
       onProgress?.({
         phase: "finalize",
@@ -338,7 +355,7 @@ export async function submitFormSession(opts: {
     await sleep(1500)
   }
 
-  // 202 accepted — treat as success with resume possible
+  // Accepted into outbox — treat as success with resume possible
   onProgress?.({
     phase: "done",
     percent: 100,

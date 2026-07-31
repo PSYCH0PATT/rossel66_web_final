@@ -606,14 +606,27 @@ export async function finalizeFormSession(opts: {
     data: { status: "finalizing" },
   })
 
-  await enqueueBuildinOutbox({
-    eventType: "form_session_finalize",
-    entityKey: session.id,
-    payload: { sessionId: session.id },
-    delayMs: 0,
-  })
-
-  return { accepted: true, status: "finalizing" as const }
+  // Prefer inline finalize so the browser is not racing a slow outbox cron.
+  try {
+    await runFormSessionFinalize(session.id)
+    return { accepted: true, status: "completed" as const }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await enqueueBuildinOutbox({
+      eventType: "form_session_finalize",
+      entityKey: session.id,
+      payload: { sessionId: session.id },
+      delayMs: 0,
+    })
+    await prisma.formDeliverySession.update({
+      where: { id: session.id },
+      data: {
+        status: "finalizing",
+        lastError: message.slice(0, 2000),
+      },
+    })
+    return { accepted: true, status: "finalizing" as const }
+  }
 }
 
 export async function runFormSessionFinalize(sessionId: string) {

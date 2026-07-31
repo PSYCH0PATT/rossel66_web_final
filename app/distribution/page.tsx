@@ -570,7 +570,10 @@ export default function DistributionPage() {
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <Select value={value} onValueChange={onChange} required={required}>
-        <SelectTrigger className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40">
+        <SelectTrigger
+          id={name as string}
+          className="w-full bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 border-opacity-50 hover:border-emerald-500 hover:border-opacity-40"
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className="bg-neutral-800 border-neutral-700 text-gray-200">
