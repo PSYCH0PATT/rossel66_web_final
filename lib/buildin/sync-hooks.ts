@@ -9,12 +9,13 @@ function syncEnabled(): boolean {
 async function safeEnqueue(
   eventType: OutboxEventType,
   payload: Record<string, unknown>,
-  dbKey?: Parameters<typeof getBuildinDatabaseId>[0]
+  dbKey?: Parameters<typeof getBuildinDatabaseId>[0],
+  entityKey?: string
 ) {
   if (!syncEnabled()) return
   if (dbKey && !getBuildinDatabaseId(dbKey)) return
   try {
-    await enqueueBuildinOutbox({ eventType, payload })
+    await enqueueBuildinOutbox({ eventType, payload, entityKey })
   } catch (err) {
     console.error(`[buildin] enqueue ${eventType} failed:`, err)
   }
@@ -41,9 +42,10 @@ export async function enqueueArtistSync(artist: {
       vkMusicUrl: artist.vkMusicUrl ?? null,
       yandexMusicUrl: artist.yandexMusicUrl ?? null,
       spotifyUrl: artist.spotifyUrl ?? null,
-      // Never sync password / role / session
+      // Never sync password / role / session; never send ops fields
     },
-    "artists"
+    "artists",
+    artist.id
   )
 }
 
@@ -69,13 +71,13 @@ export async function enqueueReleaseSync(release: {
       upc: release.upc ?? null,
       releaseDate: release.releaseDate ?? null,
       type: release.type ?? null,
-      // Auto status from Koala/Zvonko — mirror only, never overwritten by opsStatus
+      // Auto status from Koala/Zvonko — mirror only; never set Ops Status
       autoStatus: release.autoStatus ?? null,
-      opsStatus: "intake",
       coverUrl: release.coverUrl ?? null,
       bandlinkUrl: release.bandlinkUrl ?? null,
     },
-    "releases"
+    "releases",
+    release.id
   )
 }
 
@@ -105,7 +107,8 @@ export async function enqueueTrackSync(track: {
       focus: track.focus ?? false,
       duration: track.duration ?? null,
     },
-    "tracks"
+    "tracks",
+    track.id
   )
 }
 
@@ -131,7 +134,7 @@ export async function enqueueReportSync(report: {
       artistName: report.artistName,
       quarter: report.quarter,
       year: report.year ?? null,
-      // Financial fields mirrored read-only
+      // Financial fields mirrored read-only; never send ops fields
       totalAmount: report.totalAmount ?? null,
       totalPlays: report.totalPlays ?? null,
       isPaid: report.isPaid ?? false,
@@ -140,25 +143,45 @@ export async function enqueueReportSync(report: {
       isRegistered: report.isRegistered ?? true,
       fileUrl: report.fileUrl ?? null,
     },
-    "reports"
+    "reports",
+    report.id
   )
 }
 
 export async function enqueuePlaylistSync(pl: {
   id: string
+  trackTitle: string
+  artistName: string
   playlistName: string
   playlistUrl: string
-  platform: string
-  artistId?: string | null
-  artistName?: string | null
   firstSeenDate?: string | null
-  lastSeenDate?: string | null
-  coverUrl?: string | null
+  archived?: boolean
 }) {
-  await safeEnqueue("sync_playlist", { ...pl }, "playlists")
+  await safeEnqueue(
+    pl.archived ? "archive_playlist" : "sync_playlist",
+    {
+      id: pl.id,
+      trackTitle: pl.trackTitle,
+      artistName: pl.artistName,
+      playlistName: pl.playlistName,
+      playlistUrl: pl.playlistUrl,
+      firstSeenDate: pl.firstSeenDate ?? null,
+      archived: pl.archived === true,
+    },
+    "playlists",
+    pl.id
+  )
 }
 
-export async function enqueueActivitySync(a: {
+/** @deprecated alias — same as enqueuePlaylistSync for placements */
+export async function enqueuePlaylistPlacementSync(
+  pl: Parameters<typeof enqueuePlaylistSync>[0]
+) {
+  return enqueuePlaylistSync(pl)
+}
+
+/** Activity mirroring disabled — archive DB only; history stays in Postgres. */
+export async function enqueueActivitySync(_a: {
   id: string
   type: string
   userId?: string | null
@@ -167,19 +190,7 @@ export async function enqueueActivitySync(a: {
   description: string
   createdAt: Date | string
 }) {
-  await safeEnqueue(
-    "sync_activity",
-    {
-      id: a.id,
-      type: a.type,
-      userId: a.userId ?? null,
-      userRole: a.userRole,
-      title: a.title,
-      description: a.description,
-      createdAt: a.createdAt,
-    },
-    "activity"
-  )
+  return
 }
 
 export async function enqueueParserRunSync(run: {
@@ -202,11 +213,13 @@ export async function enqueueParserRunSync(run: {
       lastError: run.lastError ? String(run.lastError).slice(0, 500) : null,
       adminLink: `/dashboard/admin/parsers`,
     },
-    "automation_runs"
+    "automation_runs",
+    run.platform
   )
 }
 
-export async function enqueuePlaylistHistorySync(h: {
+/** PlaylistHistory mirroring disabled — archive DB only. */
+export async function enqueuePlaylistHistorySync(_h: {
   id: string
   playlistName: string
   playlistUrl: string
@@ -216,5 +229,29 @@ export async function enqueuePlaylistHistorySync(h: {
   artistName?: string | null
   trackTitle?: string | null
 }) {
-  await safeEnqueue("sync_playlist_history", { ...h }, "playlist_history")
+  return
+}
+
+export async function enqueueArchiveEntity(opts: {
+  entityType: "artist" | "release" | "report" | "playlist" | "track"
+  id: string
+  title?: string
+}) {
+  const eventType = `archive_${opts.entityType}` as OutboxEventType
+  const dbKey =
+    opts.entityType === "artist"
+      ? "artists"
+      : opts.entityType === "release"
+        ? "releases"
+        : opts.entityType === "report"
+          ? "reports"
+          : opts.entityType === "playlist"
+            ? "playlists"
+            : "tracks"
+  await safeEnqueue(
+    eventType,
+    { id: opts.id, title: opts.title ?? opts.id, archived: true },
+    dbKey,
+    opts.id
+  )
 }

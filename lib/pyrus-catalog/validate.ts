@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { CATALOG_MAX_RELEASES } from "./field-map"
 
 const previewStartRegex = /^\d{2}:\d{2}$/
 
@@ -80,6 +79,7 @@ export const catalogReleaseSchema = catalogReleaseBaseSchema.superRefine((releas
 export const catalogReleasesSchema = z
   .array(catalogReleaseSchema)
   .min(1, "добавьте хотя бы один релиз")
-  .max(CATALOG_MAX_RELEASES, `за раз можно отправить до ${CATALOG_MAX_RELEASES} релизов`)
+  // Product cap removed for Buildin; keep a high safety ceiling only.
+  .max(200, "слишком много релизов за одну отправку")
 
 export type CatalogReleaseInput = z.infer<typeof catalogReleaseSchema>

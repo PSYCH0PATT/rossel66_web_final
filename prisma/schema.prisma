@@ -128,6 +128,39 @@ model Playlist {
   @@index([coverFetchedAt])
 }
 
+/**
+ * One row per playlist URL + track identity.
+ * firstSeenDate = earliest system/parser observation (MSK day): min of
+ * existing, CSV parsed_date, parent Playlist.firstSeenDate, history.
+ * NOT DSP add date. Survives disappear/return without resetting forward.
+ */
+model PlaylistTrackPlacement {
+  id             String   @id @default(cuid())
+  /** Deterministic Buildin/local key: url::isrc:X or url::track:artist::title */
+  placementKey   String   @unique
+  playlistUrl    String
+  playlistName   String
+  platform       String
+  artistName     String
+  artistId       String?
+  trackTitle     String
+  isrc           String?
+  firstSeenDate  String
+  lastSeenDate   String
+  isActive       Boolean  @default(true)
+  /** Optional link to aggregate Playlist row (dashboard card). */
+  playlistRowId  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([playlistUrl])
+  @@index([artistId])
+  @@index([isActive])
+  @@index([lastSeenDate])
+  @@index([playlistRowId])
+  @@index([playlistUrl, artistName])
+}
+
 model AnalyticsArtistAlias {
   id          String   @id @default(cuid())
   trackArtist String
@@ -225,9 +258,13 @@ model ParserRunStatus {
  * Canonical form submission (source of truth for dual-write to Pyrus + Buildin).
  * Payload is stored as JSON; files live in Pyrus/Buildin/Supabase depending on adapter.
  */
+/**
+ * Canonical form submission (legacy dual-write + Buildin-only contact/simple forms).
+ * Large catalog/release payloads use FormDeliverySession instead.
+ */
 model FormSubmission {
   id              String   @id @default(cuid())
-  /** release_upload | catalog_upload | distribution | data_rf | data_not_rf */
+  /** release_upload | catalog_upload | distribution | data_rf | data_not_rf | contact */
   formType        String
   /** pending | dual_writing | completed | partial | failed */
   status          String   @default("pending")
@@ -236,7 +273,7 @@ model FormSubmission {
   contactEmail    String?
   contactTelegram String?
   artistNickname  String?
-  /** Canonical validated payload (no file binaries) */
+  /** Canonical validated payload (no file binaries); cleared for delivery-session flows */
   payload         Json
   /** Snapshot of file metadata: name, size, contentType, adapters' file refs */
   filesMeta       Json     @default("[]")
@@ -248,11 +285,114 @@ model FormSubmission {
 
   externalIds BuildinExternalId[]
   outbox      BuildinOutbox[]
+  deliverySessions FormDeliverySession[]
 
   @@index([formType, createdAt])
   @@index([status, createdAt])
   @@index([pyrusTaskId])
   @@index([buildinPageId])
+}
+
+/**
+ * Temporary delivery ledger for Buildin form sessions (not business SoT).
+ * Encrypted manifest cleared on completed; rows TTL-cleaned by cron.
+ */
+model FormDeliverySession {
+  id                 String    @id @default(cuid())
+  /** Opaque token returned to browser for ownership */
+  accessTokenHash    String
+  idempotencyKey     String    @unique
+  formType           String
+  /** created | materializing | uploading | finalizing | completed | failed | abandoned */
+  status             String    @default("created")
+  title              String
+  contactEmail       String?
+  contactTelegram    String?
+  artistNickname     String?
+  clientIp           String?
+  buildinPageId      String?
+  submissionId       String?
+  submission         FormSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  totalReleases      Int       @default(0)
+  totalTracks        Int       @default(0)
+  totalFiles         Int       @default(0)
+  totalBytes         BigInt    @default(0)
+  completedFiles     Int       @default(0)
+  /** AES-GCM ciphertext of manifest JSON; null after successful finalize */
+  encryptedManifest  Bytes?
+  manifestIv         Bytes?
+  attempts           Int       @default(0)
+  leaseUntil         DateTime?
+  lastError          String?   @db.Text
+  expiresAt          DateTime
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  items FormDeliveryItem[]
+  files FormDeliveryFile[]
+
+  @@index([status, expiresAt])
+  @@index([clientIp, status])
+  @@index([buildinPageId])
+  @@index([submissionId])
+}
+
+model FormDeliveryItem {
+  id              String   @id @default(cuid())
+  sessionId       String
+  session         FormDeliverySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /** release | track */
+  kind            String
+  releaseIndex    Int
+  trackIndex      Int?
+  localKey        String
+  buildinPageId   String?
+  /** pending | created | failed */
+  status          String   @default("pending")
+  title           String
+  lastError       String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  files FormDeliveryFile[]
+
+  @@unique([sessionId, localKey])
+  @@index([sessionId, kind, status])
+  @@index([buildinPageId])
+}
+
+model FormDeliveryFile {
+  id              String   @id @default(cuid())
+  sessionId       String
+  session         FormDeliverySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  itemId          String?
+  item            FormDeliveryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  fieldKey        String
+  filename        String
+  contentType     String
+  sizeBytes       BigInt
+  checksumSha256  String?
+  parentPageId    String?
+  /** pending | presigned | uploaded | attached | failed */
+  status          String   @default("pending")
+  buildinOssName  String?
+  lastError       String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sessionId, fieldKey])
+  @@index([sessionId, status])
+  @@index([itemId])
+}
+
+/** Distributed rate-limit buckets for public form APIs */
+model FormRateBucket {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 /** Maps local entity IDs to Buildin page/database record IDs */

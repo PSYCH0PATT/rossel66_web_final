@@ -6,6 +6,7 @@ import {
   markOutboxFailed,
 } from "@/lib/buildin/outbox"
 import { createSubmissionInBuildin } from "@/lib/buildin/adapters/submissions"
+import { downloadStagedSubmissionFiles } from "@/lib/buildin/file-staging"
 import {
   syncArtistToBuildin,
   syncReleaseToBuildin,
@@ -18,7 +19,8 @@ import {
   syncPlaylistToBuildin,
   syncReportToBuildin,
 } from "@/lib/buildin/adapters/ops-mirrors"
-import type { FormType } from "@/lib/buildin/types"
+import type { FileMeta, FormType } from "@/lib/buildin/types"
+import type { Prisma } from "@prisma/client"
 
 export type ProcessOutboxResult = {
   processed: number
@@ -73,7 +75,14 @@ async function handleOutboxEvent(eventType: string, payload: Record<string, unkn
         where: { id: submissionId },
       })
       if (!submission) throw new Error(`submission ${submissionId} not found`)
-      if (submission.buildinPageId) return
+
+      const existingMeta = (submission.filesMeta as FileMeta[]) || []
+      const expectedFileCount =
+        typeof payload.expectedFileCount === "number"
+          ? payload.expectedFileCount
+          : existingMeta.length
+
+      let files = await downloadStagedSubmissionFiles(existingMeta)
 
       const created = await createSubmissionInBuildin({
         submissionId: submission.id,
@@ -84,14 +93,59 @@ async function handleOutboxEvent(eventType: string, payload: Record<string, unkn
         artistNickname: submission.artistNickname,
         payload: submission.payload as Record<string, unknown>,
         pyrusTaskId: submission.pyrusTaskId,
-        files: [], // binary replay not available; metadata-only recovery
-        idempotencyKey: `${submission.idempotencyKey}:retry`,
+        files,
+        expectedFileCount,
       })
+
+      const mergedMeta: FileMeta[] = existingMeta.map((m) => {
+        const uploaded = created.filesMeta.find(
+          (u) => u.fieldKey === m.fieldKey && u.filename === m.filename
+        )
+        return uploaded
+          ? {
+              ...m,
+              buildinOssName: uploaded.buildinOssName,
+              buildinFileUrl: uploaded.buildinFileUrl,
+            }
+          : m
+      })
+      for (const u of created.filesMeta) {
+        if (
+          !mergedMeta.some(
+            (m) => m.fieldKey === u.fieldKey && m.filename === u.filename
+          )
+        ) {
+          mergedMeta.push(u)
+        }
+      }
+
+      const uploadedCount = mergedMeta.filter((m) => m.buildinOssName).length
+      const isPii =
+        submission.formType === "data_rf" || submission.formType === "data_not_rf"
+      const filesComplete =
+        isPii || expectedFileCount === 0 || uploadedCount >= expectedFileCount
+
+      if (!filesComplete) {
+        await prisma.formSubmission.update({
+          where: { id: submission.id },
+          data: {
+            buildinPageId: created.pageId,
+            status: "partial",
+            filesMeta: mergedMeta as unknown as Prisma.InputJsonValue,
+            lastError: `Files incomplete: ${uploadedCount}/${expectedFileCount}`,
+          },
+        })
+        throw new Error(
+          `Submission files incomplete: ${uploadedCount}/${expectedFileCount}`
+        )
+      }
+
       await prisma.formSubmission.update({
         where: { id: submission.id },
         data: {
           buildinPageId: created.pageId,
           status: "completed",
+          filesMeta: mergedMeta as unknown as Prisma.InputJsonValue,
           lastError: null,
         },
       })
@@ -118,6 +172,7 @@ async function handleOutboxEvent(eventType: string, payload: Record<string, unkn
       return
     }
     case "sync_activity": {
+      // Legacy jobs may still be in outbox; process but new enqueues are no-ops
       await syncActivityToBuildin(payload as never)
       return
     }
@@ -127,6 +182,61 @@ async function handleOutboxEvent(eventType: string, payload: Record<string, unkn
     }
     case "sync_playlist_history": {
       await syncPlaylistHistoryToBuildin(payload as never)
+      return
+    }
+    case "archive_artist": {
+      const { getExternalId } = await import("@/lib/buildin/outbox")
+      const { buildinUpdatePage } = await import("@/lib/buildin/client")
+      const existing = await getExternalId("artist", String(payload.id))
+      if (existing) await buildinUpdatePage(existing.buildinPageId, { in_trash: true })
+      return
+    }
+    case "archive_release": {
+      await syncReleaseToBuildin({
+        id: String(payload.id),
+        title: String(payload.title || payload.id),
+        archived: true,
+      })
+      return
+    }
+    case "archive_report": {
+      await syncReportToBuildin({
+        id: String(payload.id),
+        artistName: String(payload.title || "report"),
+        quarter: "",
+        archived: true,
+      })
+      return
+    }
+    case "archive_playlist": {
+      await syncPlaylistToBuildin({
+        id: String(payload.id),
+        trackTitle: String(payload.trackTitle || payload.title || payload.id),
+        artistName: String(payload.artistName || ""),
+        playlistName: String(payload.playlistName || payload.title || ""),
+        playlistUrl: String(payload.playlistUrl || ""),
+        firstSeenDate: (payload.firstSeenDate as string) || null,
+        archived: true,
+      })
+      return
+    }
+    case "archive_track": {
+      await syncTrackToBuildin({
+        id: String(payload.id),
+        title: String(payload.title || payload.id),
+        releaseLocalId: "",
+        archived: true,
+      })
+      return
+    }
+    case "form_session_materialize": {
+      const { materializeFormSession } = await import("@/lib/buildin/form-session")
+      await materializeFormSession(String(payload.sessionId || ""))
+      return
+    }
+    case "form_session_finalize": {
+      const { runFormSessionFinalize } = await import("@/lib/buildin/form-session")
+      await runFormSessionFinalize(String(payload.sessionId || ""))
       return
     }
     default:

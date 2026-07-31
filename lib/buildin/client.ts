@@ -49,24 +49,31 @@ export async function buildinFetch<T = unknown>(
       : Buffer.from(raw, "utf8").toString("base64url").slice(0, 200)
   }
 
-  const res = await fetch(url, {
-    method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  })
+  const maxAttempts = 4
+  let lastError: BuildinApiError | null = null
 
-  const text = await res.text()
-  let parsed: unknown = null
-  if (text) {
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      parsed = text
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const res = await fetch(url, {
+      method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    })
+
+    const text = await res.text()
+    let parsed: unknown = null
+    if (text) {
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = text
+      }
     }
-  }
 
-  if (!res.ok) {
+    if (res.ok) {
+      return parsed as T
+    }
+
     const msg =
       typeof parsed === "object" &&
       parsed &&
@@ -74,10 +81,23 @@ export async function buildinFetch<T = unknown>(
       typeof (parsed as { message: unknown }).message === "string"
         ? (parsed as { message: string }).message
         : `Buildin API ${res.status}`
-    throw new BuildinApiError(msg, res.status, parsed)
+    lastError = new BuildinApiError(msg, res.status, parsed)
+
+    const retryable = res.status === 429 || res.status >= 500
+    if (!retryable || attempt === maxAttempts - 1) {
+      throw lastError
+    }
+
+    const retryAfterHeader = res.headers.get("retry-after")
+    const retryAfterSec = retryAfterHeader ? Number(retryAfterHeader) : NaN
+    const baseMs = Number.isFinite(retryAfterSec)
+      ? retryAfterSec * 1000
+      : 500 * Math.pow(2, attempt)
+    const jitter = Math.floor(Math.random() * 250)
+    await new Promise((r) => setTimeout(r, baseMs + jitter))
   }
 
-  return parsed as T
+  throw lastError ?? new BuildinApiError("Buildin API request failed", 500, null)
 }
 
 export async function buildinGetMe() {

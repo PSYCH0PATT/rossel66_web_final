@@ -4,12 +4,14 @@ import {
   checkboxProp,
   dateProp,
   numberProp,
+  relationProp,
   selectProp,
   textProp,
   titleProp,
   urlProp,
 } from "@/lib/buildin/types"
 import { getExternalId, upsertExternalId } from "@/lib/buildin/outbox"
+import { REPORT_OPS_STATUS_LABELS, labelFor } from "@/lib/buildin/labels"
 
 export type ReportSyncInput = {
   id: string
@@ -33,12 +35,17 @@ export type ReportSyncInput = {
 /** Financial flags are mirrored read-only; ops fields are allowlisted for reverse sync later */
 export const REPORT_OPS_ALLOWLIST = ["opsStatus", "assignee", "deadline", "notes"] as const
 
-export async function syncReportToBuildin(report: ReportSyncInput) {
-  const dbId = requireBuildinDatabaseId("reports")
-  const existing = await getExternalId("report", report.id)
-  const title = `${report.artistName} — ${report.quarter} ${report.year ?? ""}`.trim()
+/** Buildin property names owned by ops (never overwritten by forward sync updates). */
+export const REPORT_OPS_PROPERTY_KEYS = [
+  "Ops Status",
+  "Assignee",
+  "Deadline",
+  "Notes",
+] as const
 
-  const properties = {
+async function reportMirrorProperties(report: ReportSyncInput) {
+  const title = `${report.artistName} — ${report.quarter} ${report.year ?? ""}`.trim()
+  const props: Record<string, unknown> = {
     Название: titleProp(title),
     "Local ID": textProp(report.id),
     "Artist ID": textProp(report.artistId || ""),
@@ -51,15 +58,38 @@ export async function syncReportToBuildin(report: ReportSyncInput) {
     Signed: checkboxProp(report.isSigned === true),
     Acknowledged: checkboxProp(report.isAcknowledged === true),
     Registered: checkboxProp(report.isRegistered !== false),
-    "Ops Status": selectProp(report.opsStatus || (report.isPaid ? "paid" : "queue")),
-    Assignee: textProp(report.assignee || ""),
-    Notes: textProp(report.notes || ""),
     "File URL": urlProp(report.fileUrl || null),
     "Sync Version": numberProp(report.version ?? 1),
   }
 
+  if (report.artistId) {
+    const artistPage = await getExternalId("artist", report.artistId)
+    if (artistPage) {
+      props["АртистRel"] = relationProp([artistPage.buildinPageId])
+    }
+  }
+
+  return props
+}
+
+function reportCreateOpsProperties(report: ReportSyncInput) {
+  const machine = report.opsStatus || (report.isPaid ? "paid" : "queue")
+  return {
+    "Ops Status": selectProp(labelFor(REPORT_OPS_STATUS_LABELS, machine)),
+    Notes: textProp(report.notes || ""),
+  }
+}
+
+export async function syncReportToBuildin(report: ReportSyncInput & { archived?: boolean }) {
+  const dbId = requireBuildinDatabaseId("reports")
+  const existing = await getExternalId("report", report.id)
+  const mirror = await reportMirrorProperties(report)
+
   if (existing) {
-    await buildinUpdatePage(existing.buildinPageId, { properties })
+    await buildinUpdatePage(existing.buildinPageId, {
+      properties: mirror,
+      ...(report.archived ? { in_trash: true } : {}),
+    })
     await upsertExternalId({
       entityType: "report",
       localId: report.id,
@@ -70,8 +100,13 @@ export async function syncReportToBuildin(report: ReportSyncInput) {
     return existing.buildinPageId
   }
 
+  if (report.archived) return null
+
   const page = await buildinCreatePage(
-    { parent: { database_id: dbId }, properties },
+    {
+      parent: { database_id: dbId },
+      properties: { ...mirror, ...reportCreateOpsProperties(report) },
+    },
     `report:${report.id}`
   )
   await upsertExternalId({
@@ -85,50 +120,69 @@ export async function syncReportToBuildin(report: ReportSyncInput) {
 }
 
 export type PlaylistSyncInput = {
+  /** placementKey — stable local id for BuildinExternalId */
   id: string
+  trackTitle: string
+  artistName: string
   playlistName: string
   playlistUrl: string
-  platform: string
-  artistId?: string | null
-  artistName?: string | null
   firstSeenDate?: string | null
+  /** @deprecated ignored — kept for old outbox payloads */
+  platform?: string
+  artistId?: string | null
   lastSeenDate?: string | null
   coverUrl?: string | null
 }
 
-export async function syncPlaylistToBuildin(pl: PlaylistSyncInput) {
+/**
+ * Sync one track placement page (slim 5-field schema).
+ * entityType: playlist_placement, localId: placementKey
+ */
+export async function syncPlaylistToBuildin(
+  pl: PlaylistSyncInput & { archived?: boolean }
+) {
   const dbId = requireBuildinDatabaseId("playlists")
-  const existing = await getExternalId("playlist", pl.id)
-  const properties = {
-    Название: titleProp(pl.playlistName),
-    "Local ID": textProp(pl.id),
-    Platform: textProp(pl.platform),
-    "Artist ID": textProp(pl.artistId || ""),
+  const localId = pl.id
+  const existing =
+    (await getExternalId("playlist_placement", localId)) ||
+    // Legacy 1:1 playlist-row mappings during migration window
+    (await getExternalId("playlist", localId))
+
+  const properties: Record<string, unknown> = {
+    Трек: titleProp(pl.trackTitle?.trim() || "Untitled"),
     Артист: textProp(pl.artistName || ""),
+    Плейлист: textProp(pl.playlistName || ""),
     URL: urlProp(pl.playlistUrl || null),
-    "First Seen": textProp(pl.firstSeenDate || ""),
-    "Last Seen": textProp(pl.lastSeenDate || ""),
-    Cover: urlProp(pl.coverUrl || null),
+    "Впервые обнаружен": dateProp(
+      pl.firstSeenDate && /^\d{4}-\d{2}-\d{2}/.test(pl.firstSeenDate)
+        ? pl.firstSeenDate.slice(0, 10)
+        : null
+    ),
   }
 
   if (existing) {
-    await buildinUpdatePage(existing.buildinPageId, { properties })
+    await buildinUpdatePage(existing.buildinPageId, {
+      properties,
+      ...(pl.archived ? { in_trash: true } : {}),
+    })
     await upsertExternalId({
-      entityType: "playlist",
-      localId: pl.id,
+      entityType: "playlist_placement",
+      localId,
       buildinPageId: existing.buildinPageId,
       buildinDbKey: "playlists",
     })
     return existing.buildinPageId
   }
 
+  if (pl.archived) return null
+
   const page = await buildinCreatePage(
     { parent: { database_id: dbId }, properties },
-    `playlist:${pl.id}`
+    `playlist_placement:${localId}`
   )
   await upsertExternalId({
-    entityType: "playlist",
-    localId: pl.id,
+    entityType: "playlist_placement",
+    localId,
     buildinPageId: page.id,
     buildinDbKey: "playlists",
   })

@@ -27,12 +27,23 @@
     "setup:buildin": "npx tsx scripts/setup-buildin-databases.ts",
     "process:buildin-outbox": "npx tsx scripts/process-buildin-outbox.ts",
     "reconcile:buildin": "npx tsx scripts/reconcile-buildin-submissions.ts",
+    "reconcile:buildin-mirrors": "npx tsx scripts/reconcile-buildin-mirrors.ts",
+    "migrate:buildin-relations": "npx tsx scripts/migrate-buildin-relations.ts",
+    "migrate:buildin-playlist-placements": "npx tsx scripts/migrate-buildin-playlist-placements.ts",
+    "backfill:playlist-first-seen": "npx tsx scripts/backfill-playlist-first-seen.ts",
     "export:buildin-id-map": "npx tsx scripts/export-buildin-id-map.ts",
     "smoke:buildin": "npx tsx scripts/smoke-buildin.ts",
     "backfill:buildin": "npx tsx scripts/backfill-buildin.ts",
+    "cleanup:form-sessions": "npx tsx scripts/cleanup-form-sessions.ts",
+    "cleanup:e2e": "npx tsx scripts/cleanup-e2e-artifacts.ts",
+    "setup:buildin-e2e": "npx tsx scripts/setup-buildin-e2e-workspace.ts",
     "test": "npx tsx --test lib/*.test.ts lib/*/*.test.ts",
     "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts",
-    "test:buildin": "npx tsx --test lib/buildin/*.test.ts"
+    "test:buildin": "npx tsx --test lib/buildin/*.test.ts lib/playlist-placements.test.ts",
+    "test:db:migrate": "npx tsx scripts/test-db-migrate.ts",
+    "test:integration": "npx tsx --test tests/integration/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:forms": "pnpm test && pnpm test:integration"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
@@ -109,6 +120,7 @@
   },
   "devDependencies": {
     "@fission-ai/openspec": "^0.17.2",
+    "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "20.10.5",
     "@types/node-cron": "^3.0.11",

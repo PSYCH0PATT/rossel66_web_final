@@ -7,29 +7,31 @@ import { getBuildinDatabaseId } from "@/lib/buildin/env"
 export const dynamic = "force-dynamic"
 
 /**
- * Optional: publish a periodic KPI snapshot page into Buildin activity DB
- * (aggregates only — never raw StreamAnalytics rows).
+ * Optional: publish a periodic KPI snapshot into Buildin automation_runs (tech)
+ * instead of the archived Activity mirror. Aggregates only — never raw StreamAnalytics.
  */
 export async function POST(request: NextRequest) {
   const denied = await requireAdmin(request)
   if (denied) return denied
 
-  if (!getBuildinDatabaseId("activity")) {
+  if (!getBuildinDatabaseId("automation_runs")) {
     return NextResponse.json(
-      { error: "BUILDIN_DB_ACTIVITY not configured; KPI snapshots skipped" },
+      { error: "BUILDIN_DB_AUTOMATION_RUNS not configured; KPI snapshots skipped" },
       { status: 503 }
     )
   }
 
-  const [artists, releases, reportsUnpaid, playlists, submissionsOpen] = await Promise.all([
-    prisma.user.count({ where: { role: "artist" } }),
-    prisma.release.count(),
-    prisma.report.count({ where: { isPaid: false } }),
-    prisma.playlist.count(),
-    prisma.formSubmission.count({
-      where: { status: { in: ["pending", "partial", "dual_writing"] } },
-    }),
-  ])
+  const [artists, releases, reportsUnpaid, playlists, submissionsOpen, outboxDead] =
+    await Promise.all([
+      prisma.user.count({ where: { role: "artist" } }),
+      prisma.release.count(),
+      prisma.report.count({ where: { isPaid: false } }),
+      prisma.playlist.count(),
+      prisma.formSubmission.count({
+        where: { status: { in: ["pending", "partial", "dual_writing"] } },
+      }),
+      prisma.buildinOutbox.count({ where: { status: "dead" } }),
+    ])
 
   const snapshot = {
     at: new Date().toISOString(),
@@ -38,25 +40,26 @@ export async function POST(request: NextRequest) {
     reportsUnpaid,
     playlists,
     submissionsOpen,
+    outboxDead,
   }
 
-  const id = `kpi_${Date.now()}`
   await enqueueBuildinOutbox({
-    eventType: "sync_activity",
+    eventType: "sync_parser",
+    entityKey: "kpi_snapshot",
     payload: {
-      id,
-      type: "kpi_snapshot",
-      userId: "system",
-      userRole: "admin",
-      title: `KPI snapshot ${snapshot.at.slice(0, 10)}`,
-      description: JSON.stringify(snapshot),
-      createdAt: snapshot.at,
+      platform: "kpi_snapshot",
+      status: outboxDead > 0 ? "error" : "ok",
+      lastRun: snapshot.at,
+      needsNewCookies: false,
+      failedAttempts: outboxDead,
+      lastError: JSON.stringify(snapshot).slice(0, 500),
+      adminLink: "/dashboard/admin",
     },
   })
 
   return NextResponse.json({
     success: true,
     snapshot,
-    note: "Raw StreamAnalytics are NOT mirrored. Internal docs / FAQ CMS remain optional and out of core migration.",
+    note: "Activity/PlaylistHistory mirrors are archived. KPI goes to automation_runs.",
   })
 }

@@ -1,6 +1,7 @@
 import { prisma } from "./prisma"
 import { mskDateString } from "@/lib/msk-date"
 import { enqueuePlaylistHistorySync } from "@/lib/buildin/sync-hooks"
+import { deactivatePlacementsForPlaylistRows } from "@/lib/playlist-placements"
 import type { Prisma } from "@prisma/client"
 
 export interface PlaylistHistoryRecord {
@@ -150,6 +151,26 @@ export async function cleanupRemovedPlaylists(
             artistName: playlist.artistName ?? undefined,
             artistId: playlist.artistId,
           })
+
+          const deactivated = await deactivatePlacementsForPlaylistRows([
+            playlist.id,
+          ])
+          try {
+            const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+            for (const p of deactivated) {
+              await enqueuePlaylistSync({
+                id: p.placementKey,
+                trackTitle: p.trackTitle,
+                artistName: p.artistName,
+                playlistName: p.playlistName,
+                playlistUrl: p.playlistUrl,
+                firstSeenDate: p.firstSeenDate,
+                archived: true,
+              })
+            }
+          } catch (err) {
+            console.error("Buildin placement archive on cleanup failed:", err)
+          }
 
           await prisma.playlist.delete({ where: { id: playlist.id } })
           result.removed++

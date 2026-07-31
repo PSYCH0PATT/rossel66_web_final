@@ -10,6 +10,10 @@ import {
   type PendingFileUpload,
 } from "@/lib/buildin/adapters/submissions"
 import { enqueueBuildinOutbox } from "@/lib/buildin/outbox"
+import {
+  downloadStagedSubmissionFiles,
+  stageSubmissionFiles,
+} from "@/lib/buildin/file-staging"
 import type { FileMeta, FormType } from "@/lib/buildin/types"
 
 export type DualWriteResult = {
@@ -87,6 +91,30 @@ export async function recordAndDualWriteSubmission(opts: {
   let buildinPageId: string | null = submission.buildinPageId
   let buildinUrl: string | undefined
   let filesMeta: FileMeta[] = (submission.filesMeta as FileMeta[]) || []
+  const expectedFileCount = opts.files?.length ?? 0
+
+  // Stage binaries early so outbox retry can replay uploads
+  let stagedFiles = opts.files ?? []
+  if (isBuildinDualWriteEnabled() && stagedFiles.length > 0) {
+    try {
+      stagedFiles = await stageSubmissionFiles(submission.id, stagedFiles)
+      const stagedMeta: FileMeta[] = stagedFiles.map((f) => ({
+        fieldKey: f.fieldKey,
+        filename: f.filename,
+        contentType: f.contentType,
+        size: f.bytes.byteLength,
+        stagingPath: f.stagingPath ?? null,
+      }))
+      await prisma.formSubmission.update({
+        where: { id: submission.id },
+        data: { filesMeta: stagedMeta as unknown as Prisma.InputJsonValue },
+      })
+      filesMeta = stagedMeta
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      warnings.push(`File staging failed: ${message}`)
+    }
+  }
 
   if (isBuildinDualWriteEnabled()) {
     try {
@@ -104,23 +132,56 @@ export async function recordAndDualWriteSubmission(opts: {
         artistNickname: opts.artistNickname,
         payload: opts.payload,
         pyrusTaskId: opts.pyrusTaskId ?? submission.pyrusTaskId,
-        files: opts.files,
-        idempotencyKey,
+        files: stagedFiles,
+        expectedFileCount,
+        adminLink: `/dashboard/admin`,
       })
 
       buildinPageId = created.pageId
       buildinUrl = created.url
-      filesMeta = created.filesMeta
+      // Merge staging paths into uploaded meta
+      filesMeta = created.filesMeta.map((m, i) => ({
+        ...m,
+        stagingPath: m.stagingPath ?? stagedFiles[i]?.stagingPath ?? null,
+      }))
+      if (created.filesMeta.length === 0 && stagedFiles.length > 0) {
+        filesMeta = stagedFiles.map((f) => ({
+          fieldKey: f.fieldKey,
+          filename: f.filename,
+          contentType: f.contentType,
+          size: f.bytes.byteLength,
+          stagingPath: f.stagingPath ?? null,
+        }))
+      }
 
+      const status = created.filesComplete ? "completed" : "partial"
       await prisma.formSubmission.update({
         where: { id: submission.id },
         data: {
-          status: "completed",
+          status,
           buildinPageId,
-          filesMeta,
-          lastError: null,
+          filesMeta: filesMeta as unknown as Prisma.InputJsonValue,
+          lastError: created.filesComplete
+            ? null
+            : "Waiting for Buildin file uploads",
         },
       })
+
+      if (!created.filesComplete) {
+        await enqueueBuildinOutbox({
+          eventType: "create_submission",
+          submissionId: submission.id,
+          entityKey: submission.id,
+          payload: {
+            submissionId: submission.id,
+            formType: opts.formType,
+            title: opts.title,
+            expectedFileCount,
+            pyrusTaskId: opts.pyrusTaskId ?? null,
+          },
+          delayMs: 15_000,
+        })
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       warnings.push(`Buildin dual-write failed: ${message}`)
@@ -134,12 +195,12 @@ export async function recordAndDualWriteSubmission(opts: {
       await enqueueBuildinOutbox({
         eventType: "create_submission",
         submissionId: submission.id,
+        entityKey: submission.id,
         payload: {
           submissionId: submission.id,
           formType: opts.formType,
           title: opts.title,
-          // files cannot be replayed from outbox without storage — retry metadata-only
-          metadataOnly: true,
+          expectedFileCount,
           pyrusTaskId: opts.pyrusTaskId ?? null,
         },
         delayMs: 30_000,
@@ -175,3 +236,5 @@ export function fileFromFormDataFile(
     bytes: new Uint8Array(ab),
   }))
 }
+
+export { downloadStagedSubmissionFiles }

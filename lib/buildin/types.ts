@@ -7,6 +7,7 @@ export type FormType =
   | "distribution"
   | "data_rf"
   | "data_not_rf"
+  | "contact"
 
 export type SubmissionStatus =
   | "pending"
@@ -17,6 +18,8 @@ export type SubmissionStatus =
 
 export type OutboxEventType =
   | "create_submission"
+  | "form_session_materialize"
+  | "form_session_finalize"
   | "sync_artist"
   | "sync_release"
   | "sync_track"
@@ -25,6 +28,23 @@ export type OutboxEventType =
   | "sync_activity"
   | "sync_parser"
   | "sync_playlist_history"
+  | "archive_artist"
+  | "archive_release"
+  | "archive_report"
+  | "archive_playlist"
+  | "archive_track"
+
+/** Resource quotas for Buildin form delivery sessions */
+export const FORM_SESSION_MAX_FILE_BYTES = BUILDIN_MAX_FILE_BYTES
+export const FORM_SESSION_MAX_FILES = 500
+export const FORM_SESSION_MAX_TOTAL_BYTES = 30 * 1024 * 1024 * 1024
+export const FORM_SESSION_MAX_MANIFEST_BYTES = 5 * 1024 * 1024
+export const FORM_SESSION_MATERIALIZE_BATCH = 25
+export const FORM_SESSION_CLIENT_PUT_CONCURRENCY = 3
+export const FORM_SESSION_ACTIVE_PER_IP = 2
+export const FORM_SESSION_TTL_COMPLETED_DAYS = 7
+export const FORM_SESSION_TTL_ABANDONED_DAYS = 30
+
 
 export type FileMeta = {
   fieldKey: string
@@ -37,6 +57,8 @@ export type FileMeta = {
   buildinOssName?: string | null
   /** Buildin CDN / file_url if available */
   buildinFileUrl?: string | null
+  /** Supabase Storage path for outbox retry replay */
+  stagingPath?: string | null
 }
 
 export type RichTextItem = {
@@ -131,5 +153,19 @@ export function filesExternalProp(
       type: "external" as const,
       external: { url: f.url },
     })),
+  }
+}
+
+export function peopleProp(userIds: string[]) {
+  return {
+    type: "people" as const,
+    people: userIds.map((id) => ({ object: "user" as const, id })),
+  }
+}
+
+export function relationProp(pageIds: string[]) {
+  return {
+    type: "relation" as const,
+    relation: pageIds.map((id) => ({ id })),
   }
 }

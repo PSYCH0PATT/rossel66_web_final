@@ -178,12 +178,22 @@ export default function DataRFFormPage() {
         inn: formData.inn.replace(/\D/g, '')
       }
 
-      const response = await fetch("/api/submit-pyrus-data-rf", {
+      const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)
+
+      const response = await fetch("/api/forms/simple", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(cleanedData),
+        body: JSON.stringify({
+          formType: "data_rf",
+          title: cleanedData.nickname || "Данные РФ",
+          contactEmail: cleanedData.email,
+          contactTelegram: cleanedData.telegramProfile,
+          artistNickname: cleanedData.nickname,
+          payload: cleanedData,
+          uploadId,
+        }),
       })
 
       const result = await response.json()
@@ -288,6 +298,7 @@ export default function DataRFFormPage() {
           <div className="max-w-6xl mx-auto shadow-2xl relative overflow-hidden z-10">
             <form
               onSubmit={handleSubmit}
+              data-testid="data-rf-form"
               className="w-full h-full bg-neutral-990/60 backdrop-blur-sm p-6 sm:p-8 relative z-[1]"
               style={{
                 borderWidth: '1px',
@@ -387,6 +398,8 @@ export default function DataRFFormPage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
+                  data-testid="form-submit-status"
+                  data-status={submitStatus}
                   className={`mt-6 p-3 rounded-md text-sm ${
                     submitStatus === "success"
                       ? "bg-emerald-500/20 text-emerald-300"
@@ -400,6 +413,7 @@ export default function DataRFFormPage() {
               <div className="mt-8 text-center md:col-span-2">
                 <Button
                   type="submit"
+                  data-testid="form-submit"
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]"
                   disabled={isSubmitting}
                 >

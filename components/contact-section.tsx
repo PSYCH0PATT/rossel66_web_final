@@ -69,50 +69,46 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
     }))
   }
 
-  // Изменяем функцию handleSubmit, чтобы отправлять данные на Google Apps Script
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // URL Google Apps Script
-    const scriptURL =
-      "https://script.google.com/macros/s/AKfycbw3nUVeT_xqlK97hrqxQmb6KTN99AKig2B0RiyRWICbT-bUREDO7bhUTPHSaxbalud6/exec"
-
-    // Отправляем данные на сервер
-    fetch(scriptURL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        nickname: formData.nickname,
-        telegram: formData.telegram,
-        about: formData.about,
-      }),
-    })
-      .then(() => {
-        // Успешная отправка
-        setIsSubmitting(false)
-        setIsSubmitted(true)
-        setFormData({
-          nickname: "",
-          telegram: "",
-          about: "",
-        })
-
-        // Сбрасываем сообщение об успешной отправке через 5 секунд
-        setTimeout(() => {
-          setIsSubmitted(false)
-        }, 5000)
+    try {
+      const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)
+      const response = await fetch("/api/forms/simple", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formType: "contact",
+          title: formData.nickname.trim() || "Контакт",
+          contactTelegram: formData.telegram,
+          artistNickname: formData.nickname,
+          payload: { about: formData.about },
+          uploadId,
+        }),
       })
-      .catch((error) => {
-        // Обработка ошибки
-        console.error("Error:", error)
-        setIsSubmitting(false)
-        // Можно добавить состояние для отображения ошибки
-        // setSubmitError(true)
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(result.message || "Ошибка при отправке")
+      }
+
+      setIsSubmitted(true)
+      setFormData({
+        nickname: "",
+        telegram: "",
+        about: "",
       })
+
+      setTimeout(() => {
+        setIsSubmitted(false)
+      }, 5000)
+    } catch (error) {
+      console.error("Error:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -212,12 +208,14 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-6 text-center"
+              data-testid="form-submit-status"
+              data-status="success"
             >
               <h3 className="text-xl font-bold text-white mb-2">Спасибо за заявку!</h3>
               <p className="text-gray-300">Мы рассмотрим вашу заявку и свяжемся с вами в ближайшее время.</p>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" data-testid="contact-form">
               <div className="space-y-2">
                 <label htmlFor="nickname" className="flex items-center text-white">
                   <User className="w-4 h-4 mr-2" />
@@ -269,6 +267,7 @@ export default function ContactSection({ windowSize }: ContactSectionProps) {
               <Button
                 type="submit"
                 disabled={isSubmitting}
+                data-testid="form-submit"
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-6 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]"
               >
                 {isSubmitting ? (

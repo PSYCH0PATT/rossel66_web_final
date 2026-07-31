@@ -7,6 +7,12 @@ import { userFromPrisma } from '@/lib/storage-adapters';
 import { prisma } from './prisma';
 import { findManyPlaylistRows } from '@/lib/prisma-playlist-read';
 import { revalidateArtistDashboardsForArtistIds } from '@/lib/revalidate-artist-dashboard';
+import {
+  deactivatePlacementsForPlaylistRows,
+  earliestObservationDate,
+  earliestPlacementFirstSeenForPlaylist,
+  syncPlacementsForArtistPlaylist,
+} from '@/lib/playlist-placements';
 
 /**
  * Инициализирует базу данных (заглушка для обратной совместимости)
@@ -87,24 +93,44 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
         });
         
         const today = mskDateString(); // A5: МСК-дата, не UTC (сдвиг на границе суток)
-        
+        const snapshotFirstSeen =
+          earliestObservationDate(
+            playlist.parsedDate,
+            ...artistTracks.map((t) => t.parsedDate),
+            today
+          ) || today
+
         if (existing) {
           // Проверяем, изменились ли треки
           const existingTracks = existing.trackData as unknown as ParsedTrack[];
           const tracksChanged = JSON.stringify(existingTracks) !== JSON.stringify(artistTracks);
           const shouldFillArtistId = !existing.artistId && !!artistId;
+          const nextPlaylistFirstSeen =
+            earliestObservationDate(existing.firstSeenDate, snapshotFirstSeen) ||
+            existing.firstSeenDate ||
+            snapshotFirstSeen
+          const shouldBackfillFirstSeen =
+            nextPlaylistFirstSeen !== (existing.firstSeenDate || null)
 
-          if (tracksChanged || existing.lastSeenDate !== today || shouldFillArtistId) {
-            await prisma.playlist.update({
+          if (
+            tracksChanged ||
+            existing.lastSeenDate !== today ||
+            shouldFillArtistId ||
+            shouldBackfillFirstSeen
+          ) {
+            const updatedPlaylist = await prisma.playlist.update({
               where: { id: existing.id },
               data: {
                 trackData: artistTracks as any,
                 lastSeenDate: today,
                 updatedAt: new Date(),
                 ...(shouldFillArtistId ? { artistId } : {}),
+                ...(shouldBackfillFirstSeen
+                  ? { firstSeenDate: nextPlaylistFirstSeen }
+                  : {}),
               }
             });
-            
+
             // Записываем изменение в историю
             if (tracksChanged) {
               for (const track of artistTracks) {
@@ -120,12 +146,47 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
                 });
               }
             }
-            
+
+            await enqueuePlacementMirrors({
+              playlistUrl: playlist.playlistUrl,
+              playlistName: playlist.playlistName,
+              platform: playlist.platform,
+              artistName,
+              artistId,
+              playlistRowId: updatedPlaylist.id,
+              tracks: artistTracks,
+              today,
+              playlistFirstSeenDate: updatedPlaylist.firstSeenDate,
+            })
+
             stats.updated++;
           } else {
+            await enqueuePlacementMirrors({
+              playlistUrl: playlist.playlistUrl,
+              playlistName: playlist.playlistName,
+              platform: playlist.platform,
+              artistName,
+              artistId,
+              playlistRowId: existing.id,
+              tracks: artistTracks,
+              today,
+              playlistFirstSeenDate: existing.firstSeenDate,
+            })
             stats.unchanged++;
           }
         } else {
+          // Recreate after cleanup: keep earliest placement/history age, not "today".
+          const preservedFirstSeen = await earliestPlacementFirstSeenForPlaylist({
+            playlistUrl: playlist.playlistUrl,
+            artistName,
+          })
+          const firstSeenDate =
+            earliestObservationDate(
+              preservedFirstSeen,
+              snapshotFirstSeen,
+              today
+            ) || today
+
           // Создаем новый плейлист
           const createdPlaylist = await prisma.playlist.create({
             data: {
@@ -136,28 +197,11 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
               artistName: artistName,
               artistId: artistId,
               trackData: artistTracks as any,
-              firstSeenDate: today,
+              firstSeenDate,
               lastSeenDate: today
             }
           });
 
-          try {
-            const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
-            await enqueuePlaylistSync({
-              id: createdPlaylist.id,
-              playlistName: createdPlaylist.playlistName,
-              playlistUrl: createdPlaylist.playlistUrl,
-              platform: createdPlaylist.platform,
-              artistId: createdPlaylist.artistId,
-              artistName: createdPlaylist.artistName,
-              firstSeenDate: createdPlaylist.firstSeenDate,
-              lastSeenDate: createdPlaylist.lastSeenDate,
-              coverUrl: createdPlaylist.coverUrl,
-            })
-          } catch (err) {
-            console.error("Buildin playlist sync enqueue failed:", err)
-          }
-          
           // Записываем добавление в историю
           for (const track of artistTracks) {
             await recordPlaylistChange({
@@ -171,7 +215,19 @@ export async function savePlaylists(playlists: ParsedPlaylist[]): Promise<{
               trackTitle: track.titleArtist
             });
           }
-          
+
+          await enqueuePlacementMirrors({
+            playlistUrl: playlist.playlistUrl,
+            playlistName: playlist.playlistName,
+            platform: playlist.platform,
+            artistName,
+            artistId,
+            playlistRowId: createdPlaylist.id,
+            tracks: artistTracks,
+            today,
+            playlistFirstSeenDate: createdPlaylist.firstSeenDate,
+          })
+
           stats.added++;
           const firstTrack = artistTracks[0]
           const releaseName =
@@ -316,12 +372,35 @@ export async function deletePlaylist(
   playlistName: string
 ): Promise<boolean> {
   try {
+    const rows = await prisma.playlist.findMany({
+      where: { playlistUrl, playlistName },
+      select: { id: true, playlistName: true },
+    })
     await prisma.playlist.deleteMany({
       where: {
         playlistUrl,
         playlistName
       }
     });
+    try {
+      const deactivated = await deactivatePlacementsForPlaylistRows(
+        rows.map((r) => r.id)
+      )
+      const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+      for (const p of deactivated) {
+        await enqueuePlaylistSync({
+          id: p.placementKey,
+          trackTitle: p.trackTitle,
+          artistName: p.artistName,
+          playlistName: p.playlistName,
+          playlistUrl: p.playlistUrl,
+          firstSeenDate: p.firstSeenDate,
+          archived: true,
+        })
+      }
+    } catch (err) {
+      console.error("Buildin playlist archive enqueue failed:", err)
+    }
     
     return true;
   } catch (error) {
@@ -336,7 +415,30 @@ export async function deletePlaylist(
  */
 export async function deletePlaylistById(id: string): Promise<boolean> {
   try {
+    const row = await prisma.playlist.findUnique({
+      where: { id },
+      select: { id: true, playlistName: true },
+    })
     const { count } = await prisma.playlist.deleteMany({ where: { id } });
+    if (count > 0 && row) {
+      try {
+        const deactivated = await deactivatePlacementsForPlaylistRows([row.id])
+        const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+        for (const p of deactivated) {
+          await enqueuePlaylistSync({
+            id: p.placementKey,
+            trackTitle: p.trackTitle,
+            artistName: p.artistName,
+            playlistName: p.playlistName,
+            playlistUrl: p.playlistUrl,
+            firstSeenDate: p.firstSeenDate,
+            archived: true,
+          })
+        }
+      } catch (err) {
+        console.error("Buildin playlist archive enqueue failed:", err)
+      }
+    }
     return count > 0;
   } catch (error) {
     console.error('❌ Ошибка удаления плейлиста по id:', error);
@@ -349,7 +451,40 @@ export async function deletePlaylistById(id: string): Promise<boolean> {
  * История изменений (PlaylistHistory) сохраняется — это отдельный журнал.
  */
 export async function deleteAllPlaylists(): Promise<number> {
+  const rows = await prisma.playlist.findMany({ select: { id: true, playlistName: true } })
   const { count } = await prisma.playlist.deleteMany({});
+  try {
+    const deactivated = await deactivatePlacementsForPlaylistRows(rows.map((r) => r.id))
+    // Also deactivate any orphans without playlistRowId
+    const orphans = await prisma.playlistTrackPlacement.findMany({
+      where: { isActive: true },
+    })
+    const today = mskDateString()
+    if (orphans.length > 0) {
+      await prisma.playlistTrackPlacement.updateMany({
+        where: { isActive: true },
+        data: { isActive: false, lastSeenDate: today },
+      })
+    }
+    const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+    const toArchive = [
+      ...deactivated,
+      ...orphans.filter((o) => !deactivated.some((d) => d.id === o.id)),
+    ]
+    for (const p of toArchive) {
+      await enqueuePlaylistSync({
+        id: p.placementKey,
+        trackTitle: p.trackTitle,
+        artistName: p.artistName,
+        playlistName: p.playlistName,
+        playlistUrl: p.playlistUrl,
+        firstSeenDate: p.firstSeenDate,
+        archived: true,
+      })
+    }
+  } catch (err) {
+    console.error("Buildin playlist archive enqueue failed:", err)
+  }
   return count;
 }
 
@@ -411,6 +546,28 @@ export async function assignPlaylistsToArtist(
         artistId
       }
     });
+
+    try {
+      const updated = await prisma.playlist.findMany({
+        where: { id: { in: playlists.map((p) => p.id) } },
+      })
+      for (const pl of updated) {
+        const tracks = (pl.trackData as unknown as ParsedTrack[]) || []
+        await enqueuePlacementMirrors({
+          playlistUrl: pl.playlistUrl,
+          playlistName: pl.playlistName,
+          platform: pl.platform,
+          artistName: pl.artistName,
+          artistId: pl.artistId,
+          playlistRowId: pl.id,
+          tracks,
+          today: mskDateString(),
+          playlistFirstSeenDate: pl.firstSeenDate,
+        })
+      }
+    } catch (err) {
+      console.error("Buildin playlist assign sync enqueue failed:", err)
+    }
     
     return playlists.length;
   } catch (error) {
@@ -462,9 +619,70 @@ export async function assignPlaylistToArtistManually(
       data: { artistId }
     });
 
+    try {
+      const full = await prisma.playlist.findUnique({ where: { id: playlistId } })
+      if (full) {
+        const tracks = (full.trackData as unknown as ParsedTrack[]) || []
+        await enqueuePlacementMirrors({
+          playlistUrl: full.playlistUrl,
+          playlistName: full.playlistName,
+          platform: full.platform,
+          artistName: full.artistName,
+          artistId: full.artistId,
+          playlistRowId: full.id,
+          tracks,
+          today: mskDateString(),
+          playlistFirstSeenDate: full.firstSeenDate,
+        })
+      }
+    } catch (err) {
+      console.error("Buildin playlist manual assign sync failed:", err)
+    }
+
     return { status: 'assigned', previousArtistId: playlist.artistId };
   } catch (error) {
     console.error('❌ Ошибка ручного назначения плейлиста:', error);
     return { status: 'error', message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function enqueuePlacementMirrors(opts: {
+  playlistUrl: string
+  playlistName: string
+  platform: string
+  artistName: string
+  artistId?: string | null
+  playlistRowId: string
+  tracks: ParsedTrack[]
+  today: string
+  playlistFirstSeenDate?: string | null
+}) {
+  try {
+    const { upserted, deactivated } = await syncPlacementsForArtistPlaylist(opts)
+    const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
+    for (const p of upserted) {
+      if (!p.changed) continue
+      await enqueuePlaylistSync({
+        id: p.placementKey,
+        trackTitle: p.trackTitle,
+        artistName: p.artistName,
+        playlistName: p.playlistName,
+        playlistUrl: p.playlistUrl,
+        firstSeenDate: p.firstSeenDate,
+      })
+    }
+    for (const p of deactivated) {
+      await enqueuePlaylistSync({
+        id: p.placementKey,
+        trackTitle: p.trackTitle,
+        artistName: p.artistName,
+        playlistName: p.playlistName,
+        playlistUrl: p.playlistUrl,
+        firstSeenDate: p.firstSeenDate,
+        archived: true,
+      })
+    }
+  } catch (err) {
+    console.error("Buildin playlist placement sync failed:", err)
   }
 }

@@ -299,6 +299,58 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
+async function enqueueReleaseMirror(created: Release) {
+  try {
+    const { enqueueReleaseSync, enqueueTrackSync } = await import("@/lib/buildin/sync-hooks")
+    const {
+      ensureStableTrackIds,
+      trackLocalId,
+    } = await import("@/lib/buildin/adapters/artists-releases")
+    await enqueueReleaseSync({
+      id: created.id,
+      title: created.title,
+      artistId: created.artistId,
+      upc: created.upc,
+      releaseDate: created.releaseDate,
+      autoStatus: created.status,
+      coverUrl: created.coverUrl,
+      bandlinkUrl: created.bandlinkUrl,
+    })
+    if (!Array.isArray(created.tracks) || created.tracks.length === 0) return
+    const rawTracks = created.tracks as unknown as Array<Record<string, unknown>>
+    const withIds = ensureStableTrackIds(created.id, rawTracks)
+    const needsPersist = withIds.some((t, i) => t.id !== rawTracks[i]?.id)
+    if (needsPersist) {
+      await prisma.release.update({
+        where: { id: created.id },
+        data: { tracks: withIds as unknown as Prisma.InputJsonValue },
+      })
+      created.tracks = withIds as unknown as Release["tracks"]
+    }
+    for (let i = 0; i < withIds.length; i++) {
+      const t = withIds[i]
+      const tid = trackLocalId(
+        created.id,
+        { id: t.id as string | null, isrc: t.isrc as string | null },
+        i
+      )
+      await enqueueTrackSync({
+        id: tid,
+        title: String(t.title || t.name || "Untitled"),
+        releaseLocalId: created.id,
+        isrc: (t.isrc as string) || null,
+        artists: (t.artists as string) || null,
+        language: (t.language as string) || null,
+        explicit: t.explicit === true,
+        focus: t.focus === true,
+        duration: (t.duration as string) || null,
+      })
+    }
+  } catch (err) {
+    console.error("Buildin release sync enqueue failed:", err)
+  }
+}
+
 export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'updatedAt'>): Promise<Release> {
   const data = releaseToPrismaCreate(release)
   const prismaRelease = await prisma.release.create({
@@ -314,21 +366,7 @@ export async function addRelease(release: Omit<Release, 'id' | 'createdAt' | 'up
   ])
 
   const created = releaseFromPrisma(prismaRelease)
-  try {
-    const { enqueueReleaseSync } = await import("@/lib/buildin/sync-hooks")
-    await enqueueReleaseSync({
-      id: created.id,
-      title: created.title,
-      artistId: created.artistId,
-      upc: created.upc,
-      releaseDate: created.releaseDate,
-      autoStatus: created.status,
-      coverUrl: created.coverUrl,
-    })
-  } catch (err) {
-    console.error("Buildin release sync enqueue failed:", err)
-  }
-
+  await enqueueReleaseMirror(created)
   return created
 }
 
@@ -364,20 +402,7 @@ export async function addReleaseWithActivities(
   await trimActivitiesOlderThanDays(ACTIVITY_RETENTION_DAYS)
 
   const created = releaseFromPrisma(prismaRelease)
-  try {
-    const { enqueueReleaseSync } = await import("@/lib/buildin/sync-hooks")
-    await enqueueReleaseSync({
-      id: created.id,
-      title: created.title,
-      artistId: created.artistId,
-      upc: created.upc,
-      releaseDate: created.releaseDate,
-      autoStatus: created.status,
-      coverUrl: created.coverUrl,
-    })
-  } catch (err) {
-    console.error("Buildin release sync enqueue failed:", err)
-  }
+  await enqueueReleaseMirror(created)
 
   return created
 }
@@ -409,7 +434,7 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
   try {
     const existing = await prisma.release.findUnique({
       where: { id },
-      select: { artistId: true, featuredArtistIds: true, metadata: true },
+      select: { artistId: true, featuredArtistIds: true, metadata: true, tracks: true },
     })
 
     const data = toReleaseUpdateInput(updates)
@@ -429,6 +454,15 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
       data.metadata = { ...prev, ...metaPatch } as Prisma.InputJsonValue
     }
 
+    // Normalize stable track IDs before persist when tracks are updated
+    if (updates.tracks !== undefined && Array.isArray(updates.tracks)) {
+      const { ensureStableTrackIds } = await import("@/lib/buildin/adapters/artists-releases")
+      data.tracks = ensureStableTrackIds(
+        id,
+        updates.tracks as unknown as Array<Record<string, unknown>>
+      ) as unknown as Prisma.InputJsonValue
+    }
+
     if (Object.keys(data).length === 0) {
       const r = await prisma.release.findUnique({ where: { id } })
       return r ? releaseFromPrisma(r) : null
@@ -446,8 +480,74 @@ export async function updateRelease(id: string, updates: Partial<Release>): Prom
       ...(prismaRelease.featuredArtistIds ?? []),
     ]
     await revalidateArtistDashboardsForArtistIds(touchedIds)
-    
-    return releaseFromPrisma(prismaRelease)
+
+    const updated = releaseFromPrisma(prismaRelease)
+    try {
+      const {
+        enqueueReleaseSync,
+        enqueueTrackSync,
+        enqueueArchiveEntity,
+      } = await import("@/lib/buildin/sync-hooks")
+      const { trackLocalId } = await import("@/lib/buildin/adapters/artists-releases")
+
+      await enqueueReleaseSync({
+        id: updated.id,
+        title: updated.title,
+        artistId: updated.artistId,
+        upc: updated.upc,
+        releaseDate: updated.releaseDate,
+        type: updated.type,
+        autoStatus: updated.status,
+        coverUrl: updated.coverUrl,
+        bandlinkUrl: updated.bandlinkUrl,
+      })
+
+      if (updates.tracks !== undefined) {
+        const tracks = Array.isArray(updated.tracks)
+          ? (updated.tracks as unknown as Array<Record<string, unknown>>)
+          : []
+        const currentIds = new Set<string>()
+        for (let i = 0; i < tracks.length; i++) {
+          const t = tracks[i]
+          const tid = trackLocalId(
+            updated.id,
+            { id: t.id as string | null, isrc: t.isrc as string | null },
+            i
+          )
+          currentIds.add(tid)
+          await enqueueTrackSync({
+            id: tid,
+            title: String(t.title || t.name || "Untitled"),
+            releaseLocalId: updated.id,
+            isrc: (t.isrc as string) || null,
+            artists: (t.artists as string) || null,
+            language: (t.language as string) || null,
+            explicit: t.explicit === true,
+            focus: t.focus === true,
+            duration: (t.duration as string) || null,
+          })
+        }
+
+        const prevTracks = Array.isArray(existing?.tracks)
+          ? (existing!.tracks as unknown as Array<Record<string, unknown>>)
+          : []
+        for (let i = 0; i < prevTracks.length; i++) {
+          const t = prevTracks[i]
+          const tid = trackLocalId(
+            id,
+            { id: t.id as string | null, isrc: t.isrc as string | null },
+            i
+          )
+          if (!currentIds.has(tid)) {
+            await enqueueArchiveEntity({ entityType: "track", id: tid, title: String(t.title || tid) })
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Buildin release update sync enqueue failed:", err)
+    }
+
+    return updated
   } catch (error) {
     console.error('Error updating release:', error)
     return null
@@ -458,13 +558,23 @@ export async function deleteRelease(id: string): Promise<boolean> {
   try {
     const existing = await prisma.release.findUnique({
       where: { id },
-      select: { artistId: true, featuredArtistIds: true },
+      select: { artistId: true, featuredArtistIds: true, title: true },
     })
     await prisma.release.delete({ where: { id } })
     await revalidateArtistDashboardsForArtistIds([
       existing?.artistId,
       ...(existing?.featuredArtistIds ?? []),
     ])
+    try {
+      const { enqueueArchiveEntity } = await import("@/lib/buildin/sync-hooks")
+      await enqueueArchiveEntity({
+        entityType: "release",
+        id,
+        title: existing?.title,
+      })
+    } catch (err) {
+      console.error("Buildin release archive enqueue failed:", err)
+    }
     return true
   } catch (error) {
     console.error('Error deleting release:', error)
@@ -902,10 +1012,29 @@ export async function moveReportToArtist(reportId: string, artistId: string): Pr
 // Функция для обновления статуса подписи отчета
 export async function updateReportSignedStatus(reportId: string, isSigned: boolean): Promise<boolean> {
   try {
-    await prisma.report.update({
+    const report = await prisma.report.update({
       where: { id: reportId },
-      data: { isSigned }
+      data: { isSigned },
     })
+    try {
+      const { enqueueReportSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueReportSync({
+        id: report.id,
+        artistId: report.artistId,
+        artistName: report.artistName,
+        quarter: report.quarter,
+        year: report.year,
+        totalAmount: report.totalAmount,
+        totalPlays: report.totalPlays,
+        isPaid: report.isPaid,
+        isSigned: report.isSigned,
+        isAcknowledged: report.isAcknowledged,
+        isRegistered: report.isRegistered,
+        fileUrl: report.fileUrl,
+      })
+    } catch (err) {
+      console.error("Buildin report signed sync enqueue failed:", err)
+    }
     return true
   } catch (error) {
     console.error('Error updating report signed status:', error)
@@ -916,10 +1045,29 @@ export async function updateReportSignedStatus(reportId: string, isSigned: boole
 // Функция для обновления статуса оплаты отчета
 export async function updateReportPaidStatus(reportId: string, isPaid: boolean): Promise<boolean> {
   try {
-    await prisma.report.update({
+    const report = await prisma.report.update({
       where: { id: reportId },
-      data: { isPaid }
+      data: { isPaid },
     })
+    try {
+      const { enqueueReportSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueReportSync({
+        id: report.id,
+        artistId: report.artistId,
+        artistName: report.artistName,
+        quarter: report.quarter,
+        year: report.year,
+        totalAmount: report.totalAmount,
+        totalPlays: report.totalPlays,
+        isPaid: report.isPaid,
+        isSigned: report.isSigned,
+        isAcknowledged: report.isAcknowledged,
+        isRegistered: report.isRegistered,
+        fileUrl: report.fileUrl,
+      })
+    } catch (err) {
+      console.error("Buildin report paid sync enqueue failed:", err)
+    }
     return true
   } catch (error) {
     console.error('Error updating report paid status:', error)
@@ -932,13 +1080,32 @@ export async function updateReportAcknowledgedStatus(
   acknowledged: boolean
 ): Promise<boolean> {
   try {
-    await prisma.report.update({
+    const report = await prisma.report.update({
       where: { id: reportId },
       data: {
         isAcknowledged: acknowledged,
         acknowledgedAt: acknowledged ? new Date() : null,
       },
     })
+    try {
+      const { enqueueReportSync } = await import("@/lib/buildin/sync-hooks")
+      await enqueueReportSync({
+        id: report.id,
+        artistId: report.artistId,
+        artistName: report.artistName,
+        quarter: report.quarter,
+        year: report.year,
+        totalAmount: report.totalAmount,
+        totalPlays: report.totalPlays,
+        isPaid: report.isPaid,
+        isSigned: report.isSigned,
+        isAcknowledged: report.isAcknowledged,
+        isRegistered: report.isRegistered,
+        fileUrl: report.fileUrl,
+      })
+    } catch (err) {
+      console.error("Buildin report ack sync enqueue failed:", err)
+    }
     return true
   } catch (error) {
     console.error('Error updating report acknowledged status:', error)

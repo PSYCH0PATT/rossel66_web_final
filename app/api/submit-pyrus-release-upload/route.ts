@@ -17,6 +17,7 @@ import {
   isBuildinDualWriteEnabled,
   isPyrusWriteDisabled,
 } from "@/lib/buildin/env";
+import { legacyPyrusFormGoneBody } from "@/lib/buildin/legacy-form-cutover";
 
 const PYRUS_FORM_ID_RELEASE_UPLOAD = 1534238;
 
@@ -168,6 +169,10 @@ export async function POST(request: NextRequest) {
       { message: "Приём заявок временно недоступен: нет настроенного бэкенда форм." },
       { status: 503 }
     );
+  }
+
+  if (pyrusDisabled && buildinEnabled) {
+    return NextResponse.json(legacyPyrusFormGoneBody, { status: 410 });
   }
 
   try {

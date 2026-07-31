@@ -7,6 +7,7 @@
  */
 import {
   BUILDIN_DATABASE_DEFS,
+  propertiesWithoutRelations,
   type BuildinDatabaseDefKey,
 } from "../lib/buildin/database-defs"
 import { buildinCreateDatabase, buildinGetMe } from "../lib/buildin/client"
@@ -14,6 +15,8 @@ import { getBuildinApiToken, getBuildinDatabaseId } from "../lib/buildin/env"
 
 const ENV_NAMES: Record<BuildinDatabaseDefKey, string> = {
   submissions: "BUILDIN_DB_SUBMISSIONS",
+  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
+  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
   artists: "BUILDIN_DB_ARTISTS",
   releases: "BUILDIN_DB_RELEASES",
   tracks: "BUILDIN_DB_TRACKS",
@@ -61,7 +64,9 @@ async function main() {
     const db = await buildinCreateDatabase({
       title: def.title,
       icon: def.icon,
-      properties: def.properties,
+      properties: propertiesWithoutRelations(
+        def.properties as Record<string, { type: string }>
+      ),
     })
     console.log(`  → ${envName}=${db.id}`)
     results.push({ key, env: envName, id: db.id })

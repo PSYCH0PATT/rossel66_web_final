@@ -13,6 +13,10 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
 
 # next.js
 /.next/
@@ -73,3 +77,7 @@ data_backup_*/
 *.db-journal
 *.db-shm
 *.db-wal
+.tmp/
+.vercel-bypass.secret
+.env.vercel.staging.*
+.env.e2e.run.local

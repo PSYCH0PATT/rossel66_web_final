@@ -11,12 +11,12 @@ import { SparklesCore } from "@/components/sparkles";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, UploadCloud } from "lucide-react";
+import { submitFormSession } from "@/lib/buildin/form-session-client";
 
 // --- Interfaces for State Management (based on Pyrus Form ID 1534238) ---
 interface TrackRelease {
   id: string; // Client-side unique ID
   audioFile?: File;
-  audioGuid?: string; // Pyrus file guid after upload
   trackName: string;
   mainArtists: string;
   previewStart: string; // Format HH:MM:SS or MM:SS
@@ -26,7 +26,6 @@ interface TrackRelease {
   explicit: string; // Pyrus choice_id for Yes/No (field 66)
   isFocusTrack: boolean;
   lyricsFile?: File;
-  lyricsGuid?: string; // Pyrus file guid after upload
 }
 
 interface ReleaseUploadFormData {
@@ -35,7 +34,6 @@ interface ReleaseUploadFormData {
   releaseType: string; // Pyrus choice_id (field 11), required
   releaseDate: string; // YYYY-MM-DD, required
   coverArtFile?: File;
-  coverArtGuid?: string; // Pyrus file guid after upload
   genre: string; // Pyrus choice_id (field 15), required
   otherGenre: string;
   tracks: TrackRelease[];
@@ -143,8 +141,6 @@ export default function ReleaseUploadPage() {
   const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(null);
   const [submitMessage, setSubmitMessage] = useState("");
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const [coverArtUploading, setCoverArtUploading] = useState(false);
-  const [trackFileUploading, setTrackFileUploading] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Отгрузка релиза | ROSSEL 66 MUSIC';
@@ -178,31 +174,14 @@ export default function ReleaseUploadPage() {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (!files || !files[0]) return;
     const file = files[0];
     if (name === "coverArtFile") {
-      setCoverArtUploading(true);
       setSubmitStatus(null);
       setSubmitMessage("");
-      try {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/pyrus-file-upload", { method: "POST", body: fd });
-        const data = await res.json();
-        if (res.ok && data.guid) {
-          setFormData((prev) => ({ ...prev, coverArtFile: file, coverArtGuid: data.guid }));
-        } else {
-          setSubmitStatus("error");
-          setSubmitMessage(data.message || "Не удалось загрузить обложку.");
-        }
-      } catch {
-        setSubmitStatus("error");
-        setSubmitMessage("Сетевая ошибка при загрузке обложки.");
-      } finally {
-        setCoverArtUploading(false);
-      }
+      setFormData((prev) => ({ ...prev, coverArtFile: file }));
     }
     e.target.value = "";
   };
@@ -244,41 +223,17 @@ export default function ReleaseUploadPage() {
     }));
   };
 
-  const handleTrackFileChange = async (trackId: string, name: "audioFile" | "lyricsFile", files: FileList | null) => {
+  const handleTrackFileChange = (trackId: string, name: "audioFile" | "lyricsFile", files: FileList | null) => {
     if (!files || !files[0]) return;
     const file = files[0];
-    const key = `${trackId}_${name}`;
-    setTrackFileUploading(key);
     setSubmitStatus(null);
     setSubmitMessage("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/pyrus-file-upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (res.ok && data.guid) {
-        setFormData((prev) => ({
-          ...prev,
-          tracks: prev.tracks.map((track) =>
-            track.id === trackId
-              ? {
-                  ...track,
-                  [name]: file,
-                  [name === "audioFile" ? "audioGuid" : "lyricsGuid"]: data.guid,
-                }
-              : track
-          ),
-        }));
-      } else {
-        setSubmitStatus("error");
-        setSubmitMessage(data.message || `Не удалось загрузить файл (${name === "audioFile" ? "аудио" : "текст"}).`);
-      }
-    } catch {
-      setSubmitStatus("error");
-      setSubmitMessage("Сетевая ошибка при загрузке файла.");
-    } finally {
-      setTrackFileUploading(null);
-    }
+    setFormData((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((track) =>
+        track.id === trackId ? { ...track, [name]: file } : track
+      ),
+    }));
   };
 
   const addTrackRow = useCallback(() => {
@@ -329,14 +284,9 @@ export default function ReleaseUploadPage() {
       return;
     }
     
-    if (coverArtUploading || trackFileUploading) {
+    if (!formData.coverArtFile) {
       setSubmitStatus("error");
-      setSubmitMessage("Дождитесь завершения загрузки всех файлов.");
-      return;
-    }
-    if (!formData.coverArtGuid) {
-      setSubmitStatus("error");
-      setSubmitMessage("Ошибка: Необходимо загрузить обложку (выберите файл и дождитесь загрузки).");
+      setSubmitMessage("Ошибка: Необходимо загрузить обложку.");
       return;
     }
     
@@ -374,9 +324,9 @@ export default function ReleaseUploadPage() {
     for (let i = 0; i < formData.tracks.length; i++) {
       const track = formData.tracks[i];
 
-      if (!track.audioGuid) {
+      if (!track.audioFile) {
         setSubmitStatus("error");
-        setSubmitMessage(`Ошибка: Необходимо загрузить аудио-файл для трека ${i + 1} (выберите файл и дождитесь загрузки).`);
+        setSubmitMessage(`Ошибка: Необходимо загрузить аудио-файл для трека ${i + 1}.`);
         return;
       }
       
@@ -442,60 +392,115 @@ export default function ReleaseUploadPage() {
     setSubmitStatus(null);
     setSubmitMessage("");
 
-    const { coverArtFile, coverArtGuid, tracks, ...rest } = formData;
-    const cleanedTracks = tracks.map(({ audioFile, lyricsFile, audioGuid, lyricsGuid, ...trackRest }) => ({
-      ...trackRest,
-      audioGuid,
-      lyricsGuid,
+    const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    const { coverArtFile, tracks, ...rest } = formData;
+
+    const releaseTracks = tracks.map((track) => ({
+      trackTitle: track.trackName,
+      artists: track.mainArtists,
+      language: track.language,
+      explicit: track.explicit === "1",
+      focus: track.isFocusTrack,
+      previewStart: track.previewStart,
+      musicAuthor: track.musicAuthor,
+      wordsAuthor: track.wordsAuthor,
     }));
-    const payloadData = { ...rest, coverArtGuid, tracks: cleanedTracks };
+
+    const files: Array<{
+      fieldKey: string;
+      file: File;
+      parentKind: "release" | "track";
+      releaseIndex?: number;
+      trackIndex?: number;
+    }> = [];
+
+    if (coverArtFile) {
+      files.push({
+        fieldKey: "coverArtFile",
+        file: coverArtFile,
+        parentKind: "release",
+        releaseIndex: 0,
+      });
+    }
+    tracks.forEach((track, i) => {
+      if (track.audioFile) {
+        files.push({
+          fieldKey: `track_${i}_audioFile`,
+          file: track.audioFile,
+          parentKind: "track",
+          releaseIndex: 0,
+          trackIndex: i,
+        });
+      }
+      if (track.lyricsFile) {
+        files.push({
+          fieldKey: `track_${i}_lyricsFile`,
+          file: track.lyricsFile,
+          parentKind: "track",
+          releaseIndex: 0,
+          trackIndex: i,
+        });
+      }
+    });
 
     try {
-      const res = await fetch("/api/submit-pyrus-release-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadData),
+      await submitFormSession({
+        uploadId,
+        manifest: {
+          formType: "release_upload",
+          title: formData.releaseTitle,
+          artistNickname: formData.artistNicknames,
+          releases: [
+            {
+              releaseTitle: formData.releaseTitle,
+              artists: formData.artistNicknames,
+              releaseType: formData.releaseType,
+              genre: formData.genre,
+              otherGenre: formData.otherGenre,
+              releaseDate: formData.releaseDate,
+              tracks: releaseTracks,
+            },
+          ],
+          payload: rest,
+          files,
+        },
       });
-      const data = await res.json();
-      setIsSubmitting(false);
-      if (res.ok) {
-        setSubmitStatus("success");
-        setSubmitMessage("Спасибо! Данные успешно отправлены.");
-        setFormData({
-          artistNicknames: "",
-          releaseTitle: "",
-          releaseType: "0",
-          releaseDate: "",
-          genre: "0",
-          otherGenre: "",
-          tracks: [initialTrack()],
-          videoSnippetNeeded: "0",
-          submitToPromo: "0",
-          artistInfo: "",
-          releaseInfo: "",
-          releaseSupport: "",
-          artistPhotosLink: "",
-          specifySocialMedia: "0",
-          vkLink: "",
-          tiktokLink: "",
-          youtubeLink: "",
-          instagramLink: "",
-          soundcloudLink: "",
-          specifyStreamingLinks: "0",
-          yandexMusicLink: "",
-          spotifyLink: "",
-          appleMusicLink: "",
-          vkMusicLink: "",
-          otherComments: "",
-        });
-      } else {
-        setSubmitStatus("error");
-        setSubmitMessage(data.message || "Ошибка при отправке.");
-      }
-    } catch {
-      setIsSubmitting(false);
+      setSubmitStatus("success");
+      setSubmitMessage("Спасибо! Данные успешно отправлены.");
+      setFormData({
+        artistNicknames: "",
+        releaseTitle: "",
+        releaseType: "0",
+        releaseDate: "",
+        genre: "0",
+        otherGenre: "",
+        tracks: [initialTrack()],
+        videoSnippetNeeded: "0",
+        submitToPromo: "0",
+        artistInfo: "",
+        releaseInfo: "",
+        releaseSupport: "",
+        artistPhotosLink: "",
+        specifySocialMedia: "0",
+        vkLink: "",
+        tiktokLink: "",
+        youtubeLink: "",
+        instagramLink: "",
+        soundcloudLink: "",
+        specifyStreamingLinks: "0",
+        yandexMusicLink: "",
+        spotifyLink: "",
+        appleMusicLink: "",
+        vkMusicLink: "",
+        otherComments: "",
+      });
+    } catch (error) {
       setSubmitStatus("error");
-      setSubmitMessage("Сетевая ошибка.");
+      setSubmitMessage(
+        error instanceof Error ? error.message : "Сетевая ошибка."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -669,6 +674,7 @@ export default function ReleaseUploadPage() {
             <form
               onSubmit={handleSubmit}
               noValidate
+              data-testid="release-upload-form"
               className="w-full h-full bg-neutral-990/60 backdrop-blur-sm p-6 sm:p-8 relative z-[1]"
               style={{
                 borderWidth: '1px',
@@ -687,7 +693,7 @@ export default function ReleaseUploadPage() {
                 {renderSelectField("releaseType", "Тип релиза", formData.releaseType, (value) => handleSelectChange("releaseType", value), releaseTypeOptionsRelease, "Выберите тип", true, "md:col-span-1")}
                 {renderInputField("releaseDate", "Планируемая дата релиза", formData.releaseDate, handleChange, "", "date", true, "md:col-span-1")}
                 {renderSelectField("genre", "Жанр", formData.genre, (value) => handleSelectChange("genre", value), genreOptionsRelease, "Выберите жанр", true, "md:col-span-1")}
-                {renderFileField("coverArtFile_input", "coverArtFile", "Обложка (3000x3000px, .jpg/.png)", handleFileChange, "image/jpeg,image/png", formData.coverArtFile, true, "md:col-span-1", coverArtUploading, !!formData.coverArtGuid)}
+                {renderFileField("coverArtFile_input", "coverArtFile", "Обложка (3000x3000px, .jpg/.png)", handleFileChange, "image/jpeg,image/png", formData.coverArtFile, true, "md:col-span-1")}
                 {formData.genre === "7" && // "Другой"
                   renderInputField("otherGenre", "Уточните жанр", formData.otherGenre, handleChange, "Инди-фолк-рок", "text", true, "md:col-span-2")
                 }
@@ -697,8 +703,8 @@ export default function ReleaseUploadPage() {
               {(() => {
                 const totalRequiredFiles = 1 + formData.tracks.length;
                 const uploadedRequiredFiles =
-                  (formData.coverArtGuid ? 1 : 0) +
-                  formData.tracks.filter((t) => t.audioGuid).length;
+                  (formData.coverArtFile ? 1 : 0) +
+                  formData.tracks.filter((t) => t.audioFile).length;
                 const filesPercent =
                   totalRequiredFiles > 0
                     ? Math.round((uploadedRequiredFiles / totalRequiredFiles) * 100)
@@ -751,16 +757,10 @@ export default function ReleaseUploadPage() {
                           <td className="py-2 px-3 whitespace-nowrap">
                             <label
                               htmlFor={`track_audioFile_${track.id}`}
-                              className={`w-full h-10 flex items-center justify-between bg-white/5 border border-dashed border-white/20 hover:border-emerald-500 hover:border-opacity-40 transition-colors duration-200 cursor-pointer rounded-md px-3 py-2 text-xs min-w-[150px] max-w-[200px] ${trackFileUploading === `${track.id}_audioFile` ? "pointer-events-none opacity-70" : ""}`}
+                              className="w-full h-10 flex items-center justify-between bg-white/5 border border-dashed border-white/20 hover:border-emerald-500 hover:border-opacity-40 transition-colors duration-200 cursor-pointer rounded-md px-3 py-2 text-xs min-w-[150px] max-w-[200px]"
                             >
-                              <span className={`truncate max-w-[calc(100%-3rem)] ${track.audioGuid || track.audioFile ? "text-white" : "text-gray-400"}`}>
-                                {trackFileUploading === `${track.id}_audioFile`
-                                  ? "Загрузка..."
-                                  : track.audioFile
-                                    ? track.audioFile.name
-                                    : track.audioGuid
-                                      ? "Загружено"
-                                      : "Загрузить .wav"}
+                              <span className={`truncate max-w-[calc(100%-3rem)] ${track.audioFile ? "text-white" : "text-gray-400"}`}>
+                                {track.audioFile ? track.audioFile.name : "Загрузить .wav"}
                               </span>
                               <div className="flex items-center justify-center w-6 h-6 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-md transition-colors duration-200 ml-1.5 flex-shrink-0">
                                 <UploadCloud className="w-3 h-3 text-emerald-400" />
@@ -775,9 +775,8 @@ export default function ReleaseUploadPage() {
                                 e.target.value = "";
                               }}
                               accept=".wav"
-                              required={!track.audioGuid}
+                              required={!track.audioFile}
                               className="hidden"
-                              disabled={trackFileUploading === `${track.id}_audioFile`}
                             />
                           </td>
                           <td className="py-2 px-3">
@@ -832,16 +831,10 @@ export default function ReleaseUploadPage() {
                           <td className="py-2 px-3 whitespace-nowrap">
                             <label
                               htmlFor={`track_lyricsFile_${track.id}`}
-                              className={`w-full h-10 flex items-center justify-between bg-white/5 border border-dashed border-white/20 hover:border-emerald-500 hover:border-opacity-40 transition-colors duration-200 cursor-pointer rounded-md px-3 py-2 text-xs min-w-[150px] max-w-[200px] ${trackFileUploading === `${track.id}_lyricsFile` ? "pointer-events-none opacity-70" : ""}`}
+                              className="w-full h-10 flex items-center justify-between bg-white/5 border border-dashed border-white/20 hover:border-emerald-500 hover:border-opacity-40 transition-colors duration-200 cursor-pointer rounded-md px-3 py-2 text-xs min-w-[150px] max-w-[200px]"
                             >
-                              <span className={`truncate max-w-[calc(100%-3rem)] ${track.lyricsGuid || track.lyricsFile ? "text-white" : "text-gray-400"}`}>
-                                {trackFileUploading === `${track.id}_lyricsFile`
-                                  ? "Загрузка..."
-                                  : track.lyricsFile
-                                    ? track.lyricsFile.name
-                                    : track.lyricsGuid
-                                      ? "Загружено"
-                                      : "Текст (необяз.)"}
+                              <span className={`truncate max-w-[calc(100%-3rem)] ${track.lyricsFile ? "text-white" : "text-gray-400"}`}>
+                                {track.lyricsFile ? track.lyricsFile.name : "Текст (необяз.)"}
                               </span>
                               <div className="flex items-center justify-center w-6 h-6 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-md transition-colors duration-200 ml-1.5 flex-shrink-0">
                                 <UploadCloud className="w-3 h-3 text-emerald-400" />
@@ -857,7 +850,6 @@ export default function ReleaseUploadPage() {
                               }}
                               accept=".txt,.doc,.docx,.pdf"
                               className="hidden"
-                              disabled={trackFileUploading === `${track.id}_lyricsFile`}
                             />
                           </td>
                           <td className="py-2 px-1 text-center">
@@ -950,6 +942,8 @@ export default function ReleaseUploadPage() {
 
               {submitStatus && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  data-testid="form-submit-status"
+                  data-status={submitStatus}
                   className={`mt-6 p-3 rounded-md text-sm ${
                     submitStatus === "success" ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"
                   }`}
@@ -958,7 +952,7 @@ export default function ReleaseUploadPage() {
                 </motion.div>
               )}
               <div className="mt-8 text-center">
-                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]" disabled={isSubmitting}>
+                <Button type="submit" data-testid="form-submit" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]" disabled={isSubmitting}>
                   {isSubmitting ? "Отправка..." : "Отправить релиз"}
                 </Button>
               </div>

@@ -43,6 +43,8 @@ export function assertBuildinConfigured(): void {
 /** Database IDs from env (created by scripts/setup-buildin-databases.ts) */
 export type BuildinDbKey =
   | "submissions"
+  | "submission_releases"
+  | "submission_tracks"
   | "artists"
   | "releases"
   | "tracks"
@@ -56,6 +58,8 @@ export type BuildinDbKey =
 
 const ENV_BY_KEY: Record<BuildinDbKey, string> = {
   submissions: "BUILDIN_DB_SUBMISSIONS",
+  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
+  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
   artists: "BUILDIN_DB_ARTISTS",
   releases: "BUILDIN_DB_RELEASES",
   tracks: "BUILDIN_DB_TRACKS",

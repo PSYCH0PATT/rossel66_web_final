@@ -61,6 +61,69 @@ function multiSelectSchema(
   }
 }
 
+function peopleSchema(name: string) {
+  return { name, type: "people" as const, people: {} }
+}
+
+function relationSchema(
+  name: string,
+  databaseIdEnvKey: string,
+  dual = false
+) {
+  return {
+    name,
+    type: "relation" as const,
+    /** Placeholder env key; resolve via resolveRelationDatabaseIds() before create/mutate */
+    relation: {
+      database_id: databaseIdEnvKey,
+      type: dual ? ("dual_property" as const) : ("single_property" as const),
+    },
+  }
+}
+
+/** Drop relation props (need real UUIDs) — used by setup scripts on first create. */
+export function propertiesWithoutRelations(
+  properties: Record<string, { type: string }>
+) {
+  return Object.fromEntries(
+    Object.entries(properties).filter(([, p]) => p.type !== "relation")
+  )
+}
+
+/**
+ * Replace BUILDIN_DB_* placeholders in relation schemas with live UUIDs from env.
+ * Returns null for a property if the target env is missing.
+ */
+export function resolveRelationDatabaseIds(
+  properties: Record<string, unknown>,
+  resolveEnv: (key: string) => string | null | undefined
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [name, raw] of Object.entries(properties)) {
+    const p = raw as {
+      type?: string
+      relation?: { database_id?: string; type?: string }
+      name?: string
+    }
+    if (p.type !== "relation" || !p.relation?.database_id) {
+      out[name] = raw
+      continue
+    }
+    const envKey = p.relation.database_id
+    const uuid =
+      /^[0-9a-f-]{36}$/i.test(envKey) ? envKey : resolveEnv(envKey)
+    if (!uuid) continue
+    out[name] = {
+      ...p,
+      relation: {
+        ...p.relation,
+        database_id: uuid,
+      },
+    }
+  }
+  return out
+}
+
 function pageTitle(content: string): RichTextItem[] {
   return richText(content)
 }
@@ -77,15 +140,20 @@ export const BUILDIN_DATABASE_DEFS = {
         { name: "distribution", color: "green" },
         { name: "data_rf", color: "orange" },
         { name: "data_not_rf", color: "yellow" },
+        { name: "contact", color: "pink" },
       ]),
       Статус: selectSchema("Статус", [
-        { name: "new", color: "grey" },
-        { name: "in_review", color: "yellow" },
-        { name: "needs_info", color: "orange" },
-        { name: "approved", color: "green" },
-        { name: "rejected", color: "red" },
-        { name: "done", color: "blue" },
+        { name: "Загружается", color: "grey" },
+        { name: "Новая", color: "blue" },
+        { name: "В работе", color: "yellow" },
+        { name: "Ждём артиста", color: "orange" },
+        { name: "Одобрена", color: "green" },
+        { name: "Отклонена", color: "red" },
+        { name: "Готово", color: "purple" },
       ]),
+      "Кол-во релизов": numberSchema("Кол-во релизов"),
+      "Кол-во треков": numberSchema("Кол-во треков"),
+      "Session ID": richTextSchema("Session ID"),
       "ID заявки": richTextSchema("ID заявки"),
       Email: emailSchema("Email"),
       Telegram: richTextSchema("Telegram"),
@@ -93,11 +161,25 @@ export const BUILDIN_DATABASE_DEFS = {
       "Pyrus Task ID": richTextSchema("Pyrus Task ID"),
       "Payload JSON": richTextSchema("Payload JSON"),
       "Кол-во файлов": numberSchema("Кол-во файлов"),
+      Приоритет: selectSchema("Приоритет", [
+        { name: "Низкий", color: "grey" },
+        { name: "Обычный", color: "blue" },
+        { name: "Высокий", color: "orange" },
+        { name: "Срочный", color: "red" },
+      ]),
+      Дедлайн: dateSchema("Дедлайн"),
+      Ответственный: peopleSchema("Ответственный"),
+      "Admin Link": urlSchema("Admin Link"),
       Источник: selectSchema("Источник", [
         { name: "site", color: "green" },
         { name: "dual_write", color: "blue" },
         { name: "manual", color: "grey" },
       ]),
+      /** Text Local ID kept for diagnostics/rollback; relations are canonical links */
+      "Artist Local ID": richTextSchema("Artist Local ID"),
+      "Release Local ID": richTextSchema("Release Local ID"),
+      АртистRel: relationSchema("АртистRel", "BUILDIN_DB_ARTISTS"),
+      РелизRel: relationSchema("РелизRel", "BUILDIN_DB_RELEASES"),
     },
   },
   artists: {
@@ -110,12 +192,12 @@ export const BUILDIN_DATABASE_DEFS = {
       Email: emailSchema("Email"),
       Verified: checkboxSchema("Verified"),
       "Ops Status": selectSchema("Ops Status", [
-        { name: "active", color: "green" },
-        { name: "onboarding", color: "yellow" },
-        { name: "paused", color: "orange" },
-        { name: "archived", color: "grey" },
+        { name: "Активен", color: "green" },
+        { name: "Онбординг", color: "yellow" },
+        { name: "Пауза", color: "orange" },
+        { name: "Архив", color: "grey" },
       ]),
-      Assignee: richTextSchema("Assignee"),
+      Assignee: peopleSchema("Assignee"),
       Tags: multiSelectSchema("Tags", [
         { name: "priority", color: "red" },
         { name: "new", color: "green" },
@@ -142,18 +224,19 @@ export const BUILDIN_DATABASE_DEFS = {
       Type: richTextSchema("Type"),
       "Auto Status": richTextSchema("Auto Status"),
       "Ops Status": selectSchema("Ops Status", [
-        { name: "intake", color: "grey" },
-        { name: "prep", color: "yellow" },
-        { name: "ready", color: "blue" },
-        { name: "delivered", color: "green" },
-        { name: "blocked", color: "red" },
+        { name: "Приёмка", color: "grey" },
+        { name: "Подготовка", color: "yellow" },
+        { name: "Готов", color: "blue" },
+        { name: "Доставлен", color: "green" },
+        { name: "Блок", color: "red" },
       ]),
-      Assignee: richTextSchema("Assignee"),
+      Assignee: peopleSchema("Assignee"),
       Deadline: dateSchema("Deadline"),
       Notes: richTextSchema("Notes"),
       Cover: urlSchema("Cover"),
       Bandlink: urlSchema("Bandlink"),
       "Sync Version": numberSchema("Sync Version"),
+      АртистRel: relationSchema("АртистRel", "BUILDIN_DB_ARTISTS"),
     },
   },
   tracks: {
@@ -170,6 +253,7 @@ export const BUILDIN_DATABASE_DEFS = {
       Explicit: checkboxSchema("Explicit"),
       Focus: checkboxSchema("Focus"),
       Duration: richTextSchema("Duration"),
+      РелизRel: relationSchema("РелизRel", "BUILDIN_DB_RELEASES"),
     },
   },
   reports: {
@@ -189,32 +273,31 @@ export const BUILDIN_DATABASE_DEFS = {
       Acknowledged: checkboxSchema("Acknowledged"),
       Registered: checkboxSchema("Registered"),
       "Ops Status": selectSchema("Ops Status", [
-        { name: "queue", color: "grey" },
-        { name: "review", color: "yellow" },
-        { name: "ready_to_pay", color: "orange" },
-        { name: "paid", color: "green" },
-        { name: "blocked", color: "red" },
+        { name: "Очередь", color: "grey" },
+        { name: "Проверка", color: "yellow" },
+        { name: "К выплате", color: "orange" },
+        { name: "Выплачен", color: "green" },
+        { name: "Блок", color: "red" },
       ]),
-      Assignee: richTextSchema("Assignee"),
+      Assignee: peopleSchema("Assignee"),
       Deadline: dateSchema("Deadline"),
       Notes: richTextSchema("Notes"),
       "File URL": urlSchema("File URL"),
       "Sync Version": numberSchema("Sync Version"),
+      АртистRel: relationSchema("АртистRel", "BUILDIN_DB_ARTISTS"),
     },
   },
   playlists: {
     title: pageTitle("ROSSEL — Плейлистные размещения"),
     icon: { type: "emoji" as const, emoji: "📻" },
     properties: {
-      Название: titleSchema("Название"),
-      "Local ID": richTextSchema("Local ID"),
-      Platform: richTextSchema("Platform"),
-      "Artist ID": richTextSchema("Artist ID"),
+      /** Title column = track name (one row per track placement). */
+      Трек: titleSchema("Трек"),
       Артист: richTextSchema("Артист"),
+      Плейлист: richTextSchema("Плейлист"),
       URL: urlSchema("URL"),
-      "First Seen": richTextSchema("First Seen"),
-      "Last Seen": richTextSchema("Last Seen"),
-      Cover: urlSchema("Cover"),
+      /** First system observation (MSK day), not DSP add date. */
+      "Впервые обнаружен": dateSchema("Впервые обнаружен"),
     },
   },
   automation_runs: {
@@ -260,7 +343,8 @@ export const BUILDIN_DATABASE_DEFS = {
       BIK: richTextSchema("BIK"),
       BankINN: richTextSchema("BankINN"),
       KPP: richTextSchema("KPP"),
-      "Payload JSON": richTextSchema("Payload JSON"),
+      /** Payload JSON removed — structured fields only */
+      ЗаявкаRel: relationSchema("ЗаявкаRel", "BUILDIN_DB_SUBMISSIONS"),
     },
   },
   pii_not_rf: {
@@ -280,11 +364,54 @@ export const BUILDIN_DATABASE_DEFS = {
       Address: richTextSchema("Address"),
       Bank: richTextSchema("Bank"),
       Account: richTextSchema("Account"),
-      "Payload JSON": richTextSchema("Payload JSON"),
+      ЗаявкаRel: relationSchema("ЗаявкаRel", "BUILDIN_DB_SUBMISSIONS"),
+    },
+  },
+  submission_releases: {
+    title: pageTitle("ROSSEL — Релизы заявок"),
+    icon: { type: "emoji" as const, emoji: "💿" },
+    properties: {
+      Название: titleSchema("Название"),
+      "Session ID": richTextSchema("Session ID"),
+      "Release Index": numberSchema("Release Index"),
+      "Тип релиза": selectSchema("Тип релиза", [
+        { name: "1", color: "blue" },
+        { name: "2", color: "purple" },
+        { name: "3", color: "green" },
+      ]),
+      Артисты: richTextSchema("Артисты"),
+      UPC: richTextSchema("UPC"),
+      Жанр: richTextSchema("Жанр"),
+      "Дата релиза": dateSchema("Дата релиза"),
+      "Кол-во треков": numberSchema("Кол-во треков"),
+      ЗаявкаRel: relationSchema("ЗаявкаRel", "BUILDIN_DB_SUBMISSIONS"),
+    },
+  },
+  submission_tracks: {
+    title: pageTitle("ROSSEL — Треки заявок"),
+    icon: { type: "emoji" as const, emoji: "🎵" },
+    properties: {
+      Название: titleSchema("Название"),
+      "Session ID": richTextSchema("Session ID"),
+      "Release Index": numberSchema("Release Index"),
+      "Track Index": numberSchema("Track Index"),
+      Артисты: richTextSchema("Артисты"),
+      ISRC: richTextSchema("ISRC"),
+      Язык: richTextSchema("Язык"),
+      Explicit: checkboxSchema("Explicit"),
+      Focus: checkboxSchema("Focus"),
+      "Preview Start": richTextSchema("Preview Start"),
+      "Music Author": richTextSchema("Music Author"),
+      "Words Author": richTextSchema("Words Author"),
+      РелизЗаявкиRel: relationSchema(
+        "РелизЗаявкиRel",
+        "BUILDIN_DB_SUBMISSION_RELEASES"
+      ),
+      ЗаявкаRel: relationSchema("ЗаявкаRel", "BUILDIN_DB_SUBMISSIONS"),
     },
   },
   activity: {
-    title: pageTitle("ROSSEL — Активность"),
+    title: pageTitle("ROSSEL — Активность (архив)"),
     icon: { type: "emoji" as const, emoji: "📋" },
     properties: {
       Title: titleSchema("Title"),
@@ -297,7 +424,7 @@ export const BUILDIN_DATABASE_DEFS = {
     },
   },
   playlist_history: {
-    title: pageTitle("ROSSEL — История плейлистов"),
+    title: pageTitle("ROSSEL — История плейлистов (архив)"),
     icon: { type: "emoji" as const, emoji: "🕘" },
     properties: {
       Playlist: titleSchema("Playlist"),

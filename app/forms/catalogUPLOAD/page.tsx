@@ -11,6 +11,8 @@ import { SparklesCore } from "@/components/sparkles";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, ChevronDown, ChevronUp, UploadCloud } from "lucide-react";
+import { submitFormSession } from "@/lib/buildin/form-session-client";
+import { FORM_SESSION_MAX_FILE_BYTES } from "@/lib/buildin/types";
 
 // --- Interfaces for State Management ---
 interface Track {
@@ -59,7 +61,7 @@ const languageOptions = [
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-const MAX_FILE_BYTES = 150 * 1024 * 1024;
+const MAX_FILE_BYTES = FORM_SESSION_MAX_FILE_BYTES;
 
 function formatFileSizeMb(bytes: number): string {
   return `${Math.round(bytes / (1024 * 1024))} МБ`;
@@ -100,7 +102,6 @@ export default function CatalogUploadPage() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [eventSource, setEventSource] = useState<EventSource | null>(null);
 
   useEffect(() => {
     document.title = 'Перенос каталога | ROSSEL 66 MUSIC';
@@ -413,91 +414,90 @@ export default function CatalogUploadPage() {
     setSubmitMessage("");
     setUploadProgress(0);
 
-    // 1. Create a deep copy and remove file objects for JSON payload
-    const releasesForJson = formData.releases.map(release => {
-      const { coverArt, tracks, ...restOfRelease } = release;
-      const cleanedTracks = tracks.map(track => {
-        const { audioFile, lyricsFile, ...restOfTrack } = track;
-        return restOfTrack;
-      });
-      return { ...restOfRelease, tracks: cleanedTracks };
-    });
+    const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
 
-    const submissionData = new FormData();
-    submissionData.append('form_data_json', JSON.stringify(releasesForJson));
+    const releases = formData.releases.map((release) => ({
+      releaseTitle: release.releaseTitle,
+      artists: release.artists,
+      releaseType: release.releaseType,
+      upc: release.upc,
+      genre: release.genre,
+      releaseDate: release.originalReleaseDate,
+      tracks: release.tracks.map((track) => ({
+        trackTitle: track.trackName,
+        artists: track.mainArtists,
+        isrc: track.isrc,
+        language: track.language,
+        explicit: track.explicit,
+        focus: track.isFocusTrack,
+        previewStart: track.previewStart,
+        musicAuthor: track.musicAuthor,
+        wordsAuthor: track.wordsAuthor,
+      })),
+    }));
 
-    // 2. Append files with indexed keys
+    const files: Array<{
+      fieldKey: string;
+      file: File;
+      parentKind: "release" | "track";
+      releaseIndex?: number;
+      trackIndex?: number;
+    }> = [];
+
     formData.releases.forEach((release, releaseIndex) => {
       if (release.coverArt) {
-        submissionData.append(`release_${releaseIndex}_coverArt`, release.coverArt);
+        files.push({
+          fieldKey: `release_${releaseIndex}_coverArt`,
+          file: release.coverArt,
+          parentKind: "release",
+          releaseIndex,
+        });
       }
       release.tracks.forEach((track, trackIndex) => {
         if (track.audioFile) {
-          submissionData.append(`release_${releaseIndex}_track_${trackIndex}_audioFile`, track.audioFile);
+          files.push({
+            fieldKey: `release_${releaseIndex}_track_${trackIndex}_audioFile`,
+            file: track.audioFile,
+            parentKind: "track",
+            releaseIndex,
+            trackIndex,
+          });
         }
         if (track.lyricsFile) {
-          submissionData.append(`release_${releaseIndex}_track_${trackIndex}_lyricsFile`, track.lyricsFile);
+          files.push({
+            fieldKey: `release_${releaseIndex}_track_${trackIndex}_lyricsFile`,
+            file: track.lyricsFile,
+            parentKind: "track",
+            releaseIndex,
+            trackIndex,
+          });
         }
       });
     });
-    
-    const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
-    submissionData.append('upload_id', uploadId);
-    const es = new EventSource(`/api/upload-progress/${uploadId}`);
-    es.onmessage = (ev) => {
-      const p = parseInt(ev.data, 10);
-      if (!isNaN(p)) setUploadProgress(p);
-    };
-    es.onerror = () => { es.close(); };
-    setEventSource(es);
 
     try {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/submit-pyrus-catalog-upload');
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        setIsSubmitting(false);
-        setUploadProgress(0);
-        try {
-          const result = JSON.parse(xhr.responseText);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setSubmitStatus('success');
-            setSubmitMessage('Спасибо! Данные успешно отправлены.');
-        setFormData({ releases: [initialRelease()] }); 
-      } else {
-            setSubmitStatus('error');
-            setSubmitMessage(result.message || 'Ошибка при отправке данных.');
-          }
-        } catch (_) {
-          setSubmitStatus('error');
-          setSubmitMessage('Ошибка обработки ответа сервера.');
-        }
-        if (eventSource) eventSource.close();
-      };
-
-      xhr.onerror = () => {
-        setIsSubmitting(false);
-        setUploadProgress(0);
-        setSubmitStatus('error');
-        setSubmitMessage('Произошла сетевая ошибка. Пожалуйста, попробуйте снова.');
-        if (eventSource) eventSource.close();
-      };
-
-      xhr.send(submissionData);
+      await submitFormSession({
+        uploadId,
+        manifest: {
+          formType: "catalog_upload",
+          title: formData.releases[0]?.releaseTitle?.trim() || "Каталог",
+          releases,
+          files,
+        },
+        onProgress: (p) => setUploadProgress(p.percent),
+      });
+      setSubmitStatus("success");
+      setSubmitMessage("Спасибо! Данные успешно отправлены.");
+      setFormData({ releases: [initialRelease()] });
     } catch (error) {
-      console.error('Client-side submission error:', error);
+      console.error("Client-side submission error:", error);
+      setSubmitStatus("error");
+      setSubmitMessage(
+        error instanceof Error ? error.message : "Произошла ошибка при отправке."
+      );
+    } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
-      setSubmitStatus('error');
-      setSubmitMessage('Произошла ошибка при отправке.');
-      if (eventSource) eventSource.close();
     }
   };
   
@@ -673,6 +673,7 @@ export default function CatalogUploadPage() {
             <form
               onSubmit={handleSubmit}
               noValidate
+              data-testid="catalog-upload-form"
               className="w-full h-full bg-neutral-950/60 backdrop-blur-[2px] p-6 sm:p-8 relative z-[1]"
               style={{
                 borderWidth: '1px',
@@ -956,17 +957,11 @@ export default function CatalogUploadPage() {
                     type="button"
                     onClick={addRelease}
                     variant="default"
-                  className="bg-neutral-800 text-emerald-500 border border-neutral-700 hover:bg-neutral-700 hover:text-emerald-400 px-6 py-2.5 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={formData.releases.length >= 5}
+                  className="bg-neutral-800 text-emerald-500 border border-neutral-700 hover:bg-neutral-700 hover:text-emerald-400 px-6 py-2.5 transition-opacity"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Добавить еще релиз
                 </Button>
-                {formData.releases.length >= 5 && (
-                  <p className="text-sm text-gray-400 mt-3 max-w-md mx-auto">
-                    За раз можно отправить до 5 релизов. Чтобы добавить больше, отправьте текущую форму и создайте новую.
-                  </p>
-                )}
               </div>
               
               {isSubmitting && (
@@ -983,6 +978,8 @@ export default function CatalogUploadPage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
+                  data-testid="form-submit-status"
+                  data-status={submitStatus}
                   className={`mt-6 p-3 rounded-md text-sm ${
                     submitStatus === "success"
                       ? "bg-emerald-500/20 text-emerald-300"
@@ -995,6 +992,7 @@ export default function CatalogUploadPage() {
               <div className="mt-10 text-center md:col-span-2">
                 <Button
                   type="submit"
+                  data-testid="form-submit"
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]"
                   disabled={isSubmitting}
                 >

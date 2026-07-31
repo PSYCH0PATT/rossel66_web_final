@@ -116,10 +116,18 @@ async function withRetry<T>(
     } catch (err) {
       attempt++
       const status = err instanceof BuildinApiError ? err.status : 0
-      const retryable = status === 429 || status === 502 || status === 503 || status === 504
-      if (!retryable || attempt >= 6) throw err
-      const wait = Math.min(60_000, 1000 * 2 ** attempt)
-      console.warn(`  retry ${label} after ${status} (wait ${wait}ms)`)
+      const msg = err instanceof Error ? err.message : String(err)
+      const retryable =
+        status === 429 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504 ||
+        /fetch failed|ECONNRESET|ETIMEDOUT|Connection terminated|Can't reach database|Timed out/i.test(
+          msg
+        )
+      if (!retryable || attempt >= 8) throw err
+      const wait = Math.min(90_000, 1500 * 2 ** Math.min(attempt, 5))
+      console.warn(`  retry ${label} after ${status || "conn"} (wait ${wait}ms)`)
       await sleep(wait)
     }
   }
@@ -306,7 +314,7 @@ async function main() {
                   releaseDate: r.releaseDate,
                   type: r.type,
                   autoStatus: r.status,
-                  opsStatus: "intake",
+                  // Never set Ops Status on backfill — Buildin-owned
                   coverUrl: r.coverUrl,
                   bandlinkUrl: r.bandlinkUrl,
                 }),
@@ -422,35 +430,37 @@ async function main() {
 
   if (entities.includes("playlists")) {
     const c = emptyCounters()
-    const rows = await prisma.playlist.findMany()
+    const rows = await prisma.playlistTrackPlacement.findMany({
+      where: { isActive: true },
+    })
     c.total = rows.length
     for (const p of rows) {
       try {
-        const existing = await getExternalId("playlist", p.id)
+        const existing = await getExternalId("playlist_placement", p.placementKey)
         if (existing && !force) {
           c.skip++
           continue
         }
         await withRetry(
-          `playlist:${p.id}`,
+          `playlist_placement:${p.placementKey}`,
           () =>
             syncPlaylistToBuildin({
-              id: p.id,
+              id: p.placementKey,
+              trackTitle: p.trackTitle,
+              artistName: p.artistName,
               playlistName: p.playlistName,
               playlistUrl: p.playlistUrl,
-              platform: p.platform,
-              artistId: p.artistId,
-              artistName: p.artistName,
               firstSeenDate: p.firstSeenDate,
-              lastSeenDate: p.lastSeenDate,
-              coverUrl: p.coverUrl,
             }),
           delayMs
         )
         c.ok++
       } catch (err) {
         c.fail++
-        console.error(`  fail playlist ${p.id}:`, err instanceof Error ? err.message : err)
+        console.error(
+          `  fail playlist_placement ${p.placementKey}:`,
+          err instanceof Error ? err.message : err
+        )
       }
     }
     results.playlists = c
@@ -607,7 +617,6 @@ async function main() {
               payload: (s.payload as Record<string, unknown>) ?? {},
               pyrusTaskId: s.pyrusTaskId,
               files: [],
-              idempotencyKey: `${s.idempotencyKey}:backfill`,
             }),
           delayMs
         )

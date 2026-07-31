@@ -1,0 +1,19 @@
+# Keep Vercel CLI deploys small — never upload local build artifacts/secrets
+node_modules
+.next
+.git
+.turbo
+.vercel
+coverage
+playwright-report
+test-results
+test-results/**
+*.log
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+openspec
+docs/**/*.env
+.tmp
+.DS_Store

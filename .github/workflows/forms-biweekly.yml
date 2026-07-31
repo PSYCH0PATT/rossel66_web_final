@@ -1,0 +1,124 @@
+name: forms-biweekly
+
+on:
+  schedule:
+    # 1st and 15th of each month, 06:00 UTC
+    - cron: "0 6 1,15 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: forms-biweekly
+  cancel-in-progress: false
+
+jobs:
+  unit-and-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rossel
+          POSTGRES_PASSWORD: rossel
+          POSTGRES_DB: rossel_test
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U rossel -d rossel_test"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+      DATABASE_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+      DIRECT_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+      FORM_DELIVERY_ENCRYPTION_KEY: biweekly-integration-key
+      BUILDIN_API_TOKEN: mock-token
+      BUILDIN_DUAL_WRITE: "true"
+      PYRUS_WRITE_DISABLED: "true"
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      FORM_ALLOWED_ORIGINS: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm exec tsc --noEmit -p tsconfig.json
+      - name: Migrate test DB
+        run: pnpm test:db:migrate
+      - name: Integration tests
+        run: pnpm test:integration
+
+  e2e-staging:
+    needs: unit-and-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      E2E_CRON_SECRET: ${{ secrets.E2E_CRON_SECRET }}
+      E2E_VERIFY_BUILDIN: ${{ secrets.E2E_VERIFY_BUILDIN || '0' }}
+      BUILDIN_API_TOKEN: ${{ secrets.E2E_BUILDIN_API_TOKEN }}
+      BUILDIN_API_BASE_URL: https://api.buildin.ai
+      BUILDIN_DB_SUBMISSIONS: ${{ secrets.E2E_BUILDIN_DB_SUBMISSIONS }}
+      E2E_RUN_ID: biweekly-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Require staging URL
+        run: |
+          if [ -z "$E2E_BASE_URL" ]; then
+            echo "E2E_BASE_URL secret is required for live E2E"
+            exit 1
+          fi
+      - name: Playwright E2E
+        run: pnpm test:e2e
+      - name: Cleanup E2E artifacts
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.E2E_DATABASE_URL }}
+          BUILDIN_API_TOKEN: ${{ secrets.E2E_BUILDIN_API_TOKEN }}
+          BUILDIN_DB_SUBMISSIONS: ${{ secrets.E2E_BUILDIN_DB_SUBMISSIONS }}
+          FORM_DELIVERY_ENCRYPTION_KEY: ${{ secrets.E2E_FORM_DELIVERY_ENCRYPTION_KEY }}
+          E2E_TITLE_PREFIX: E2E
+        run: pnpm cleanup:e2e || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  production-health:
+    needs: unit-and-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe production forms health
+        env:
+          PROD_HEALTH_URL: ${{ secrets.PROD_FORMS_HEALTH_URL }}
+          PROD_CRON_SECRET: ${{ secrets.PROD_CRON_SECRET }}
+        run: |
+          if [ -z "$PROD_HEALTH_URL" ] || [ -z "$PROD_CRON_SECRET" ]; then
+            echo "Skipping production health (secrets not set)"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
+            -H "Authorization: Bearer $PROD_CRON_SECRET" \
+            "$PROD_HEALTH_URL")
+          cat /tmp/health.json
+          test "$code" = "200"

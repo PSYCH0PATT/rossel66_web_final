@@ -44,7 +44,11 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 /**
  * Гарантирует, что бакет существует с заданными параметрами.
  */
-export async function ensureBucketExists(bucketName: string = 'reports', isPublic: boolean = false) {
+export async function ensureBucketExists(
+  bucketName: string = 'reports',
+  isPublic: boolean = false,
+  fileSizeLimitBytes: number = 52428800
+) {
   if (!supabaseServiceKey) {
     console.warn(`[Supabase Storage] Пропуск создания бакета "${bucketName}" — отсутствует ключ сервисной роли.`)
     return
@@ -62,7 +66,7 @@ export async function ensureBucketExists(bucketName: string = 'reports', isPubli
       console.log(`[Supabase Storage] Создаем бакет "${bucketName}" (public: ${isPublic})...`)
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
         public: isPublic,
-        fileSizeLimit: 52428800 // 50MB
+        fileSizeLimit: fileSizeLimitBytes,
       })
       if (createError) {
         console.error(`[Supabase Storage] Ошибка при создании бакета "${bucketName}":`, createError.message)

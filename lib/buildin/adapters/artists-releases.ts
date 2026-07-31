@@ -5,12 +5,18 @@ import {
   dateProp,
   emailProp,
   numberProp,
+  relationProp,
   selectProp,
   textProp,
   titleProp,
   urlProp,
 } from "@/lib/buildin/types"
 import { getExternalId, upsertExternalId } from "@/lib/buildin/outbox"
+import {
+  ARTIST_OPS_STATUS_LABELS,
+  RELEASE_OPS_STATUS_LABELS,
+  labelFor,
+} from "@/lib/buildin/labels"
 
 /** Allowlisted ops fields that may sync Buildin → Postgres later */
 export const ARTIST_OPS_ALLOWLIST = [
@@ -19,6 +25,15 @@ export const ARTIST_OPS_ALLOWLIST = [
   "tags",
   "notes",
   "deadline",
+] as const
+
+/** Buildin property names owned by ops (never overwritten by forward sync updates). */
+export const ARTIST_OPS_PROPERTY_KEYS = [
+  "Ops Status",
+  "Assignee",
+  "Tags",
+  "Notes",
+  "Deadline",
 ] as const
 
 export type ArtistSyncInput = {
@@ -36,27 +51,37 @@ export type ArtistSyncInput = {
   version?: number
 }
 
-export async function syncArtistToBuildin(artist: ArtistSyncInput) {
-  const dbId = requireBuildinDatabaseId("artists")
-  const existing = await getExternalId("artist", artist.id)
-
-  const properties = {
+function artistMirrorProperties(artist: ArtistSyncInput) {
+  return {
     Имя: titleProp(artist.name || artist.username),
     Username: textProp(artist.username),
     "Local ID": textProp(artist.id),
     Email: emailProp(artist.email ?? null),
     Verified: checkboxProp(artist.verified !== false),
-    "Ops Status": selectProp(artist.opsStatus || "active"),
-    Assignee: textProp(artist.assignee || ""),
-    Notes: textProp(artist.notes || ""),
     "VK Music": urlProp(artist.vkMusicUrl || null),
     "Yandex Music": urlProp(artist.yandexMusicUrl || null),
     Spotify: urlProp(artist.spotifyUrl || null),
     "Sync Version": numberProp(artist.version ?? 1),
   }
+}
+
+function artistCreateOpsProperties(artist: ArtistSyncInput) {
+  return {
+    "Ops Status": selectProp(
+      labelFor(ARTIST_OPS_STATUS_LABELS, artist.opsStatus || "active")
+    ),
+    // Initial empty ops fields only on create — never on update
+    Notes: textProp(artist.notes || ""),
+  }
+}
+
+export async function syncArtistToBuildin(artist: ArtistSyncInput) {
+  const dbId = requireBuildinDatabaseId("artists")
+  const existing = await getExternalId("artist", artist.id)
+  const mirror = artistMirrorProperties(artist)
 
   if (existing) {
-    await buildinUpdatePage(existing.buildinPageId, { properties })
+    await buildinUpdatePage(existing.buildinPageId, { properties: mirror })
     await upsertExternalId({
       entityType: "artist",
       localId: artist.id,
@@ -68,7 +93,10 @@ export async function syncArtistToBuildin(artist: ArtistSyncInput) {
   }
 
   const page = await buildinCreatePage(
-    { parent: { database_id: dbId }, properties },
+    {
+      parent: { database_id: dbId },
+      properties: { ...mirror, ...artistCreateOpsProperties(artist) },
+    },
     `artist:${artist.id}`
   )
   await upsertExternalId({
@@ -96,6 +124,7 @@ export type ReleaseSyncInput = {
   assignee?: string | null
   notes?: string | null
   version?: number
+  archived?: boolean
 }
 
 export const RELEASE_OPS_ALLOWLIST = [
@@ -105,16 +134,20 @@ export const RELEASE_OPS_ALLOWLIST = [
   "notes",
 ] as const
 
-export async function syncReleaseToBuildin(release: ReleaseSyncInput) {
-  const dbId = requireBuildinDatabaseId("releases")
-  const existing = await getExternalId("release", release.id)
+export const RELEASE_OPS_PROPERTY_KEYS = [
+  "Ops Status",
+  "Assignee",
+  "Deadline",
+  "Notes",
+] as const
 
+async function releaseMirrorProperties(release: ReleaseSyncInput) {
   const dateOnly =
     release.releaseDate && /^\d{4}-\d{2}-\d{2}/.test(release.releaseDate)
       ? release.releaseDate.slice(0, 10)
       : null
 
-  const properties = {
+  const props: Record<string, unknown> = {
     Название: titleProp(release.title),
     "Local ID": textProp(release.id),
     "Artist ID": textProp(release.artistId || ""),
@@ -123,16 +156,40 @@ export async function syncReleaseToBuildin(release: ReleaseSyncInput) {
     "Release Date": dateProp(dateOnly),
     Type: textProp(release.type || ""),
     "Auto Status": textProp(release.autoStatus || ""),
-    "Ops Status": selectProp(release.opsStatus || "intake"),
-    Assignee: textProp(release.assignee || ""),
-    Notes: textProp(release.notes || ""),
     Cover: urlProp(release.coverUrl || null),
     Bandlink: urlProp(release.bandlinkUrl || null),
     "Sync Version": numberProp(release.version ?? 1),
   }
 
+  if (release.artistId) {
+    const artistPage = await getExternalId("artist", release.artistId)
+    if (artistPage) {
+      props["АртистRel"] = relationProp([artistPage.buildinPageId])
+    }
+  }
+
+  return props
+}
+
+function releaseCreateOpsProperties(release: ReleaseSyncInput) {
+  return {
+    "Ops Status": selectProp(
+      labelFor(RELEASE_OPS_STATUS_LABELS, release.opsStatus || "intake")
+    ),
+    Notes: textProp(release.notes || ""),
+  }
+}
+
+export async function syncReleaseToBuildin(release: ReleaseSyncInput) {
+  const dbId = requireBuildinDatabaseId("releases")
+  const existing = await getExternalId("release", release.id)
+  const mirror = await releaseMirrorProperties(release)
+
   if (existing) {
-    await buildinUpdatePage(existing.buildinPageId, { properties })
+    await buildinUpdatePage(existing.buildinPageId, {
+      properties: mirror,
+      ...(release.archived ? { in_trash: true } : {}),
+    })
     await upsertExternalId({
       entityType: "release",
       localId: release.id,
@@ -143,8 +200,16 @@ export async function syncReleaseToBuildin(release: ReleaseSyncInput) {
     return existing.buildinPageId
   }
 
+  if (release.archived) {
+    // Nothing to create for a tombstone of an unknown page
+    return null
+  }
+
   const page = await buildinCreatePage(
-    { parent: { database_id: dbId }, properties },
+    {
+      parent: { database_id: dbId },
+      properties: { ...mirror, ...releaseCreateOpsProperties(release) },
+    },
     `release:${release.id}`
   )
   await upsertExternalId({
@@ -169,6 +234,7 @@ export type TrackSyncInput = {
   explicit?: boolean | null
   focus?: boolean | null
   duration?: string | null
+  archived?: boolean
 }
 
 /** Build a stable track local id for BuildinExternalId mapping. */
@@ -188,7 +254,7 @@ export async function syncTrackToBuildin(track: TrackSyncInput) {
   const dbId = requireBuildinDatabaseId("tracks")
   const existing = await getExternalId("track", track.id)
 
-  const properties = {
+  const properties: Record<string, unknown> = {
     Название: titleProp(track.title || "Untitled"),
     "Local ID": textProp(track.id),
     "Release Local ID": textProp(track.releaseLocalId),
@@ -201,8 +267,16 @@ export async function syncTrackToBuildin(track: TrackSyncInput) {
     Duration: textProp(track.duration || ""),
   }
 
+  const releasePage = await getExternalId("release", track.releaseLocalId)
+  if (releasePage) {
+    properties["РелизRel"] = relationProp([releasePage.buildinPageId])
+  }
+
   if (existing) {
-    await buildinUpdatePage(existing.buildinPageId, { properties })
+    await buildinUpdatePage(existing.buildinPageId, {
+      properties,
+      ...(track.archived ? { in_trash: true } : {}),
+    })
     await upsertExternalId({
       entityType: "track",
       localId: track.id,
@@ -212,6 +286,8 @@ export async function syncTrackToBuildin(track: TrackSyncInput) {
     })
     return existing.buildinPageId
   }
+
+  if (track.archived) return null
 
   const page = await buildinCreatePage(
     { parent: { database_id: dbId }, properties },
@@ -225,4 +301,17 @@ export async function syncTrackToBuildin(track: TrackSyncInput) {
     version: 1,
   })
   return page.id
+}
+
+/** Ensure each track in a release JSON array has a stable `id` for sync. */
+export function ensureStableTrackIds(
+  releaseId: string,
+  tracks: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return tracks.map((t, index) => {
+    const current = typeof t.id === "string" ? t.id.trim() : ""
+    if (current) return t
+    const isrc = typeof t.isrc === "string" ? t.isrc : null
+    return { ...t, id: trackLocalId(releaseId, { isrc }, index) }
+  })
 }

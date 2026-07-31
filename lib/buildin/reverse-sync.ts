@@ -1,6 +1,9 @@
 /**
- * Controlled reverse sync: Buildin → Postgres for allowlisted ops fields only.
- * Conflicts resolve by version (incoming must be > local), not last-write-wins.
+ * Controlled reverse sync stub: Buildin → Postgres version/audit marker only.
+ *
+ * Ops fields (Ops Status, Assignee, Notes, Deadline, Tags) remain Buildin-owned.
+ * This endpoint does NOT persist them into Postgres domain tables until a dedicated
+ * ops store exists. Prefer export + reconciliation for backup of ops data.
  */
 import { prisma } from "@/lib/prisma"
 import {

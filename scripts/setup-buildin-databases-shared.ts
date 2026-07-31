@@ -13,6 +13,7 @@ import { readFileSync, existsSync, writeFileSync } from "fs"
 import { resolve } from "path"
 import {
   BUILDIN_DATABASE_DEFS,
+  propertiesWithoutRelations,
   type BuildinDatabaseDefKey,
 } from "../lib/buildin/database-defs"
 import { buildinCreateDatabase, buildinGetMe, buildinFetch } from "../lib/buildin/client"
@@ -24,6 +25,8 @@ const HUB_PAGE_ID =
 
 const ENV_NAMES: Record<BuildinDatabaseDefKey, string> = {
   submissions: "BUILDIN_DB_SUBMISSIONS",
+  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
+  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
   artists: "BUILDIN_DB_ARTISTS",
   releases: "BUILDIN_DB_RELEASES",
   tracks: "BUILDIN_DB_TRACKS",
@@ -105,7 +108,9 @@ async function main() {
       parent: { page_id: HUB_PAGE_ID },
       title: def.title,
       icon: def.icon,
-      properties: def.properties,
+      properties: propertiesWithoutRelations(
+        def.properties as Record<string, { type: string }>
+      ),
     })
     console.log(`  → ${envName}=${db.id}`)
     results[envName] = db.id

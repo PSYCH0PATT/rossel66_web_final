@@ -10,6 +10,7 @@ import { SparklesCore } from "@/components/sparkles";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, UploadCloud } from "lucide-react";
+import { submitFormSession } from "@/lib/buildin/form-session-client";
 
 interface TrackRelease {
   id: string;
@@ -143,7 +144,6 @@ export default function DistributionPage() {
   const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(null);
   const [submitMessage, setSubmitMessage] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [eventSource, setEventSource] = useState<EventSource | null>(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -387,117 +387,144 @@ export default function DistributionPage() {
     setIsSubmitting(true);
     setSubmitStatus(null);
     setSubmitMessage('');
+    setUploadProgress(0);
+
+    const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+    const { cover, tracks, ...rest } = formData;
+
+    const releaseTracks = tracks.map((track) => ({
+      trackTitle: track.trackName,
+      artists: track.mainArtists,
+      language: track.language,
+      explicit: track.explicit === "1",
+      focus: track.isFocusTrack,
+      previewStart: track.previewStart,
+      musicAuthor: track.musicAuthor,
+      wordsAuthor: track.wordsAuthor,
+    }));
+
+    const files: Array<{
+      fieldKey: string;
+      file: File;
+      parentKind: "release" | "track";
+      releaseIndex?: number;
+      trackIndex?: number;
+    }> = [];
+
+    if (cover) {
+      files.push({
+        fieldKey: "coverArtFile",
+        file: cover,
+        parentKind: "release",
+        releaseIndex: 0,
+      });
+    }
+    tracks.forEach((track, i) => {
+      if (track.audio) {
+        files.push({
+          fieldKey: `track_${i}_audioFile`,
+          file: track.audio,
+          parentKind: "track",
+          releaseIndex: 0,
+          trackIndex: i,
+        });
+      }
+      if (track.lyrics) {
+        files.push({
+          fieldKey: `track_${i}_lyricsFile`,
+          file: track.lyrics,
+          parentKind: "track",
+          releaseIndex: 0,
+          trackIndex: i,
+        });
+      }
+    });
+
+    const payload = {
+      videoSnippetNeeded: rest.videoSnippetNeeded,
+      submitToPromo: rest.submitToPromo,
+      artistInfo: rest.artistInfo,
+      releaseInfo: rest.releaseInfo,
+      releaseSupport: rest.releaseSupport,
+      artistPhotosLink: rest.artistPhotosLink,
+      specifySocialMedia: rest.specifySocialMedia,
+      vkLink: rest.vkLink,
+      tiktokLink: rest.tiktokLink,
+      youtubeLink: rest.youtubeLink,
+      instagramLink: rest.instagramLink,
+      soundcloudLink: rest.soundcloudLink,
+      specifyStreamingLinks: rest.specifyStreamingLinks,
+      yandexMusicLink: rest.yandexMusicLink,
+      spotifyLink: rest.spotifyLink,
+      appleMusicLink: rest.appleMusicLink,
+      vkMusicLink: rest.vkMusicLink,
+      otherComments: rest.otherComments,
+    };
 
     try {
-      // 1. Remove file objects for JSON payload
-      const { cover, tracks, ...rest } = formData;
-      const cleanedTracks = tracks.map(({ audio, lyrics, ...trackRest }) => trackRest);
-      
-      const payloadData = { 
-        contact: rest.contact,
-        artistNicknames: rest.artists,
-        releaseTitle: rest.title,
-        releaseType: rest.releaseType,
-        releaseDate: rest.releaseDate,
-        genre: rest.genre,
-        otherGenre: rest.otherGenre,
-        tracks: cleanedTracks,
-        videoSnippetNeeded: rest.videoSnippetNeeded,
-        submitToPromo: rest.submitToPromo,
-        artistInfo: rest.artistInfo,
-        releaseInfo: rest.releaseInfo,
-        releaseSupport: rest.releaseSupport,
-        artistPhotosLink: rest.artistPhotosLink,
-        specifySocialMedia: rest.specifySocialMedia,
-        vkLink: rest.vkLink,
-        tiktokLink: rest.tiktokLink,
-        youtubeLink: rest.youtubeLink,
-        instagramLink: rest.instagramLink,
-        soundcloudLink: rest.soundcloudLink,
-        specifyStreamingLinks: rest.specifyStreamingLinks,
-        yandexMusicLink: rest.yandexMusicLink,
-        spotifyLink: rest.spotifyLink,
-        appleMusicLink: rest.appleMusicLink,
-        vkMusicLink: rest.vkMusicLink,
-        otherComments: rest.otherComments
-      };
-
-      const submissionFormData = new FormData();
-      submissionFormData.append('form_data_json', JSON.stringify(payloadData));
-
-      // Append files
-      if (cover) submissionFormData.append('coverArtFile', cover);
-      tracks.forEach((track, index) => {
-        if (track.audio) submissionFormData.append(`track_${index}_audioFile`, track.audio);
-        if (track.lyrics) submissionFormData.append(`track_${index}_lyricsFile`, track.lyrics);
+      await submitFormSession({
+        uploadId,
+        manifest: {
+          formType: "distribution",
+          title: formData.title,
+          contactTelegram: formData.contact,
+          artistNickname: formData.artists,
+          releases: [
+            {
+              releaseTitle: formData.title,
+              artists: formData.artists,
+              releaseType: formData.releaseType,
+              genre: formData.genre,
+              otherGenre: formData.otherGenre,
+              releaseDate: formData.releaseDate,
+              tracks: releaseTracks,
+            },
+          ],
+          payload,
+          files,
+        },
+        onProgress: (p) => setUploadProgress(p.percent),
       });
-
-      const uploadId = self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
-      submissionFormData.append('upload_id', uploadId);
-      
-      const es = new EventSource(`/api/upload-progress/${uploadId}`);
-      es.onmessage = (e) => {
-        const p = parseInt(e.data, 10);
-        if (!isNaN(p)) setUploadProgress(p);
-      };
-      es.onerror = () => es.close();
-      setEventSource(es);
-
-      const response = await fetch('/api/submit-pyrus-distribution', {
-        method: 'POST',
-        body: submissionFormData,
+      setSubmitStatus('success');
+      setSubmitMessage('Спасибо! Данные успешно отправлены.');
+      setFormData({
+        releaseType: "0",
+        title: "",
+        artists: "",
+        cover: null,
+        releaseDate: "",
+        genre: "0",
+        otherGenre: "",
+        contact: "",
+        tracks: [initialTrack()],
+        videoSnippetNeeded: '0',
+        submitToPromo: '0',
+        artistInfo: '',
+        releaseInfo: '',
+        releaseSupport: '',
+        artistPhotosLink: '',
+        specifySocialMedia: '0',
+        vkLink: '',
+        tiktokLink: '',
+        youtubeLink: '',
+        instagramLink: '',
+        soundcloudLink: '',
+        specifyStreamingLinks: '0',
+        yandexMusicLink: '',
+        spotifyLink: '',
+        appleMusicLink: '',
+        vkMusicLink: '',
+        otherComments: '',
       });
-
-      if (response.ok) {
-        setSubmitStatus('success');
-        setSubmitMessage('Спасибо! Данные успешно отправлены.');
-        setFormData({
-          releaseType: "0",
-          title: "",
-          artists: "",
-          cover: null,
-          releaseDate: "",
-          genre: "0",
-          otherGenre: "",
-          contact: "",
-          tracks: [initialTrack()],
-          // Promo fields
-          videoSnippetNeeded: '0',
-          submitToPromo: '0',
-          artistInfo: '',
-          releaseInfo: '',
-          releaseSupport: '',
-          artistPhotosLink: '',
-          specifySocialMedia: '0',
-          vkLink: '',
-          tiktokLink: '',
-          youtubeLink: '',
-          instagramLink: '',
-          soundcloudLink: '',
-          // Streaming links
-          specifyStreamingLinks: '0',
-          yandexMusicLink: '',
-          spotifyLink: '',
-          appleMusicLink: '',
-          vkMusicLink: '',
-          otherComments: '',
-        });
-      } else {
-        const errorData = await response.json();
-        setSubmitStatus('error');
-        setSubmitMessage(`Ошибка: ${errorData.message || 'Неизвестная ошибка'}`);
-      }
     } catch (error) {
       console.error('Ошибка отправки:', error);
       setSubmitStatus('error');
-      setSubmitMessage('Ошибка отправки данных. Попробуйте еще раз.');
+      setSubmitMessage(
+        error instanceof Error ? error.message : 'Ошибка отправки данных. Попробуйте еще раз.'
+      );
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
-      if (eventSource) {
-        eventSource.close();
-        setEventSource(null);
-      }
     }
   };
 
@@ -659,6 +686,7 @@ export default function DistributionPage() {
             <form
               onSubmit={handleSubmit}
               noValidate
+              data-testid="distribution-form"
               className="w-full h-full bg-neutral-990/60 backdrop-blur-sm p-6 sm:p-8 relative z-[1]"
               style={{
                 borderWidth: '1px',
@@ -900,6 +928,8 @@ export default function DistributionPage() {
 
               {submitStatus && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  data-testid="form-submit-status"
+                  data-status={submitStatus}
                   className={`mt-6 p-3 rounded-md text-sm ${
                     submitStatus === "success" ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"
                   }`}
@@ -908,7 +938,7 @@ export default function DistributionPage() {
                 </motion.div>
               )}
               <div className="mt-8 text-center">
-                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]" disabled={isSubmitting}>
+                <Button type="submit" data-testid="form-submit" className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-md text-base font-semibold shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.44)]" disabled={isSubmitting}>
                   {isSubmitting ? "Отправка..." : "Отправить релиз"}
                 </Button>
               </div>

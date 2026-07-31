@@ -42,9 +42,15 @@ Until the token is set, `isBuildinDualWriteEnabled()` is false and forms write *
 
 ## Architecture
 
-- **Next.js / Postgres / Supabase** remain the source of truth for auth, artist cabinet, financial calculations, distribution auto-status, analytics, cron/parsers.
-- **Buildin** is the ops back-office for form submissions, CRM notes, assignees, deadlines, checklist, and operational mirrors.
+- **Postgres / Supabase** — sole SoT for users, catalog, money, parsers, files, analytics.
+- **Buildin** — sole SoT for manual ops fields (`Ops Status`, assignee, notes, deadline, tags).
+- Forward sync sends **mirror-owned fields only** on update; create may set initial Ops Status once.
 - Dual-write: forms write to Pyrus (until cutover) **and** Buildin. Canonical row lives in `FormSubmission`.
+- `data_rf` / `data_not_rf`: shared **Заявки** stores metadata only; PII lives in closed DBs (no Payload JSON dump).
+- Activity + PlaylistHistory mirrors are **archived** (no new enqueue). History remains in Postgres UI.
+- Keep `PYRUS_WRITE_DISABLED=false` until security, retry, ACL and reconciliation are green.
+
+See ownership + workspace IA: [`docs/BUILDIN_OPS_WORKSPACE.md`](BUILDIN_OPS_WORKSPACE.md), OpenSpec change `refactor-buildin-ops-workspace`.
 
 ## Phase 0 — Foundation (done in code)
 
@@ -66,7 +72,7 @@ Copy `BUILDIN_DB_*` ids into `.env.local`. **Restrict ACL on PII DBs** (`BUILDIN
 
 ## Phase 1 — Forms dual-write
 
-Routes (all five):
+Legacy routes (dual-write period):
 
 - `submit-pyrus-release-upload`
 - `submit-pyrus-catalog-upload`
@@ -74,14 +80,30 @@ Routes (all five):
 - `submit-pyrus-data-rf`
 - `submit-pyrus-data-not-rf`
 
+**Form session API** (preferred after cutover; file-heavy flows):
+
+| Step | Endpoint |
+|------|----------|
+| Create session | `POST /api/forms/sessions` |
+| Materialize Buildin pages | `POST /api/forms/sessions/{id}/materialize` |
+| Presign upload | `POST /api/forms/sessions/{id}/files/presign` |
+| Complete upload | `POST /api/forms/sessions/{id}/files/complete` |
+| Finalize | `POST /api/forms/sessions/{id}/finalize` |
+| Status | `GET /api/forms/sessions/{id}` |
+
+PII-only forms (`data_rf`, `data_not_rf`, `contact`) may use `POST /api/forms/simple` without a file session.
+
 Flags:
 
 | Env | Meaning |
 |-----|---------|
 | `BUILDIN_DUAL_WRITE` | default on when token present; set `false` to pause |
-| `PYRUS_WRITE_DISABLED` | Buildin-only cutover |
+| `PYRUS_WRITE_DISABLED` | Buildin-only cutover — legacy multipart `submit-pyrus-*` (catalog/release/distribution) and `pyrus-file-upload` return **410 Gone**; data forms write Buildin via `recordAndDualWriteSubmission` only |
+| `FORM_DELIVERY_ENCRYPTION_KEY` | encrypts session manifests at rest (fallback: `BUILDIN_API_TOKEN`) |
 
-Files: each file uploaded separately to Buildin; per-file 100 MB limit.
+When `PYRUS_WRITE_DISABLED=true`, no calls to `api.pyrus.com`. Roll back by setting `PYRUS_WRITE_DISABLED=false` if E2E fails.
+
+Files: presigned PUT per file via session API; per-file 100 MB limit; up to 30 GB per session. Expired sessions: `npm run cleanup:form-sessions`.
 
 ## Phase 2 — Artists / releases CRM
 
@@ -91,8 +113,11 @@ Files: each file uploaded separately to Buildin; per-file 100 MB limit.
 
 ## Phase 3 — Ops mirrors
 
-- Reports (read-only financial flags), playlists, activity, parser run alerts (no cookie values)
-- Playlist history now persists to Postgres + Buildin mirror
+- Reports (read-only financial flags), playlist **track placements**, parser run alerts (no cookie values)
+- Playlist history persists to Postgres only (Buildin mirror disabled)
+- Playlist Buildin table: one row per track (`Артист`, `Трек`, `Плейлист`, `URL`, `Впервые обнаружен`)
+- `Впервые обнаружен` = earliest system/parser observation (MSK): min(existing, CSV `parsed_date`, parent Playlist, history); not DSP add date; survives disappear/return; never moves forward
+- Backfill: `npm run backfill:playlist-first-seen -- --sync-buildin`
 
 ## Phase 4 — Optional
 
@@ -124,9 +149,55 @@ npm run backfill:buildin -- --dry-run
 npm run backfill:buildin
 npm run process:buildin-outbox
 npm run reconcile:buildin
+npm run reconcile:buildin-mirrors
+npm run migrate:buildin-relations -- --dry-run
 npm run export:buildin-id-map
 npm run test:buildin
 ```
+
+Admin:
+- `GET /api/admin/buildin/reconciliation` — submissions + mirrors + Buildin query probe
+- `POST /api/admin/buildin/requeue` — revive dead outbox jobs
+
+Workspace IA (manual): [`docs/BUILDIN_OPS_WORKSPACE.md`](BUILDIN_OPS_WORKSPACE.md)
+
+## Remote workspace schema (2026-07-28)
+
+Applied via MCP/`mutateDatabase` to the live `ROSSEL 66` databases:
+
+- people: `Assignee` (artists/releases/reports), `Ответственный` (submissions)
+- relations: `АртистRel` / `РелизRel` / `ЗаявкаRel` on the seven directions
+- Russian select option names (same option IDs — values preserved)
+- removed `Payload JSON` from PII РФ / PII не РФ
+- renamed Activity / Playlist History titles to `(архив)`
+- Ops Center page: `0951bf11-7507-463c-9b2d-5f5b484c2eef`
+
+### Playlist placements (2026-07-31)
+
+- Postgres model `PlaylistTrackPlacement` — stable `placementKey`, `firstSeenDate`, `isActive`
+- Buildin entityType `playlist_placement` (legacy `playlist` mappings archived via migrate script)
+- Slim remote properties; migrate:
+
+```bash
+npx prisma migrate deploy
+npm run migrate:buildin-playlist-placements -- --dry-run
+npm run migrate:buildin-playlist-placements
+npm run migrate:buildin-playlist-placements -- --archive-legacy
+npm run migrate:buildin-playlist-placements -- --cleanup-schema
+npm run reconcile:buildin-mirrors
+```
+
+Relation backfill: `npm run migrate:buildin-relations` (exact `BuildinExternalId` only; playlist→artist skipped).
+
+Checkpoint (local, not git): `.tmp/buildin-checkpoint/`.
+
+### Rollback schema (manual / careful)
+
+1. Restore select option **names** to English machine values by option `id` (do not delete options).
+2. Relations: clear relation values, then delete relation properties if needed.
+3. people → rich_text: Buildin does not convert types; delete people property and re-add rich_text (assignments lost).
+4. Re-add `Payload JSON` on PII only if legal requires a dump field (prefer structured fields).
+5. Do **not** set `PYRUS_WRITE_DISABLED=true` during rollback.
 
 ## Backfill (Postgres → Buildin)
 
@@ -135,7 +206,7 @@ One-time / resumable mirror of the ops pool into the shared hub databases:
 ```bash
 npm run smoke:buildin
 npm run backfill:buildin -- --dry-run          # counts only
-npm run backfill:buildin                       # artists, releases, tracks, reports, playlists, history, activity, parser runs, submissions
+npm run backfill:buildin                       # artists, releases, tracks, reports, playlist placements, …
 npm run backfill:buildin -- --only=artists,releases,tracks
 npm run backfill:buildin -- --force            # re-upsert even if BuildinExternalId exists
 ```
