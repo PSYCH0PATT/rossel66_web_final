@@ -17,7 +17,15 @@ async function selectByLabel(
   label: RegExp,
   option: string | RegExp
 ) {
-  await form.getByRole("combobox", { name: label }).click()
+  // Radix Select often exposes a second inert combobox; prefer the real trigger
+  // button next to the label (htmlFor/id a11y names are unreliable here).
+  const group = form.locator("label").filter({ hasText: label }).locator("xpath=..")
+  const trigger = group.locator('button[role="combobox"]').first()
+  if ((await trigger.count()) > 0) {
+    await trigger.click()
+  } else {
+    await group.getByRole("combobox").locator("visible=true").first().click()
+  }
   await page.getByRole("option", { name: option }).click()
 }
 
@@ -268,6 +276,14 @@ test.describe.serial("forms e2e", () => {
     if ((await boxes.count()) >= 2) {
       await boxes.nth(1).click()
       await page.getByRole("option", { name: /^Нет$/i }).click()
+    }
+
+    for (const label of [
+      /видео-сниппет/i,
+      /подавать релиз на промо/i,
+      /стриминговых площадках/i,
+    ]) {
+      await selectByLabel(page, form, label, /^Нет$/i)
     }
 
     await attachCoverAndAudio(form)
