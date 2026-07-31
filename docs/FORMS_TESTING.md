@@ -81,3 +81,4 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
 - Polling вместо sleep
 - Синтетические email `test+…@rossel.invalid`
 - Не логировать accessToken / PII в CI
+- Session file endpoints (presign/complete/materialize/status/finalize) не делят coarse `PUBLIC_FORM_*` bucket — иначе один multipart release съедает 20/min. Staging: `FORM_SESSION_ACTIVE_PER_IP=20`, `PUBLIC_FORM_MAX_PER_MIN=200`

@@ -14,9 +14,12 @@ export async function drainOutbox(baseURL: string) {
   const secret = process.env.E2E_CRON_SECRET || process.env.CRON_SECRET
   if (!secret) return
   const url = new URL("/api/cron/buildin-outbox?limit=50", baseURL)
-  await fetch(url, {
-    headers: { Authorization: `Bearer ${secret}` },
-  }).catch(() => {})
+  for (let i = 0; i < 5; i++) {
+    await fetch(url, {
+      headers: { Authorization: `Bearer ${secret}` },
+    }).catch(() => {})
+    await new Promise((r) => setTimeout(r, 800))
+  }
 }
 
 export async function assertBuildinSubmissionExists(opts: {
@@ -32,30 +35,39 @@ export async function assertBuildinSubmissionExists(opts: {
     "https://api.buildin.ai"
   if (!token || !db) return
 
-  const res = await fetch(`${base}/v2/databases/${db}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      page_size: 20,
-      sorts: [{ timestamp: "created_time", direction: "descending" }],
-    }),
-  })
-  if (!res.ok) throw new Error(`Buildin query failed: ${res.status}`)
-  const json = (await res.json()) as {
-    results?: Array<{
-      properties?: Record<string, { title?: Array<{ plain_text?: string }> }>
-    }>
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const res = await fetch(`${base}/v2/databases/${db}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        page_size: 50,
+        sorts: [{ timestamp: "created_time", direction: "descending" }],
+        filter: {
+          property: "Название",
+          title: { contains: opts.titleNeedle },
+        },
+      }),
+    })
+    if (!res.ok) throw new Error(`Buildin query failed: ${res.status}`)
+    const json = (await res.json()) as {
+      results?: Array<{
+        properties?: Record<string, { title?: Array<{ plain_text?: string }> }>
+      }>
+    }
+    const hit = (json.results || []).some((page) => {
+      const title =
+        page.properties?.["Название"]?.title
+          ?.map((t) => t.plain_text || "")
+          .join("") || ""
+      return title.includes(opts.titleNeedle)
+    })
+    if (hit) return
+    await new Promise((r) => setTimeout(r, 1500))
   }
-  const hit = (json.results || []).some((page) => {
-    const title =
-      page.properties?.["Название"]?.title?.map((t) => t.plain_text || "").join("") ||
-      ""
-    return title.includes(opts.titleNeedle)
-  })
-  if (!hit) {
-    throw new Error(`Buildin submission not found for title containing ${opts.titleNeedle}`)
-  }
+  throw new Error(
+    `Buildin submission not found for title containing ${opts.titleNeedle}`
+  )
 }

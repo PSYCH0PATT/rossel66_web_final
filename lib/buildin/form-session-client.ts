@@ -167,32 +167,48 @@ export async function submitFormSession(opts: {
   })
 
   // Wait until materialize created parent pages for files
+  let materialized = false
   for (let attempt = 0; attempt < 90; attempt++) {
     const matRes = await fetch(`/api/forms/sessions/${sessionId}/materialize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accessToken }),
     })
-    if (matRes.ok) {
-      const mat = await matRes.json()
-      if (mat.remaining === 0) break
+    const matJson = await matRes.json().catch(() => ({}))
+    if (matRes.status === 429) {
+      throw new Error(
+        matJson.message || "Слишком много запросов при подготовке сессии"
+      )
+    }
+    if (!matRes.ok && matRes.status !== 409) {
+      throw new Error(matJson.message || "Не удалось подготовить страницы Buildin")
+    }
+    if (matRes.ok && matJson.remaining === 0) {
+      materialized = true
+      break
     }
     const st = await fetch(
       `/api/forms/sessions/${sessionId}?accessToken=${encodeURIComponent(accessToken)}`
     )
     if (st.ok) {
       const status = await st.json()
+      if (status.status === "failed" || status.status === "abandoned") {
+        throw new Error(
+          status.lastError || "Сессия загрузки завершилась с ошибкой"
+        )
+      }
       if (
         status.status === "uploading" ||
-        (status.itemsCreated > 0 &&
-          status.itemsCreated === status.itemsTotal)
+        (status.itemsTotal > 0 && status.itemsCreated === status.itemsTotal)
       ) {
-        // May still need file parent wiring — try presign readiness via status
-        if (status.status === "uploading" || status.itemsTotal === 0) break
-        if (status.itemsCreated === status.itemsTotal) break
+        materialized = true
+        break
       }
     }
     await sleep(1000 + Math.min(attempt * 200, 3000))
+  }
+  if (!materialized) {
+    throw new Error("Таймаут подготовки страниц Buildin. Попробуйте снова.")
   }
 
   const files = manifest.files

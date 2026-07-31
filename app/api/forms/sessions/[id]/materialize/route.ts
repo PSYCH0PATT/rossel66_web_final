@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { guardPublicFormRateLimit } from "@/lib/pyrus-public-schemas"
 import { assertFormRequestOrigin } from "@/lib/buildin/form-origin"
 import {
   FormSessionError,
@@ -14,8 +13,6 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function POST(request: NextRequest, ctx: Ctx) {
   const originBlock = assertFormRequestOrigin(request)
   if (originBlock) return originBlock
-  const rl = guardPublicFormRateLimit(request)
-  if (rl) return rl
   try {
     const { id } = await ctx.params
     const body = await request.json().catch(() => ({}))

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { guardPublicFormRateLimit } from "@/lib/pyrus-public-schemas"
 import {
   FormSessionError,
   getFormSessionStatus,
@@ -17,8 +16,6 @@ function bearerOrBodyToken(req: NextRequest, body?: { accessToken?: string }) {
 }
 
 export async function GET(request: NextRequest, ctx: Ctx) {
-  const rl = guardPublicFormRateLimit(request)
-  if (rl) return rl
   try {
     const { id } = await ctx.params
     const token =
@@ -43,8 +40,6 @@ export async function GET(request: NextRequest, ctx: Ctx) {
 
 /** Trigger / continue materialize (also done by outbox). */
 export async function POST(request: NextRequest, ctx: Ctx) {
-  const rl = guardPublicFormRateLimit(request)
-  if (rl) return rl
   try {
     const { id } = await ctx.params
     const body = await request.json().catch(() => ({}))

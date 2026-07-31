@@ -43,7 +43,7 @@ export const FORM_SESSION_MATERIALIZE_BATCH = 25
 export const FORM_SESSION_CLIENT_PUT_CONCURRENCY = 3
 export const FORM_SESSION_ACTIVE_PER_IP = Math.max(
   1,
-  Number(process.env.FORM_SESSION_ACTIVE_PER_IP || 2) || 2
+  Number(process.env.FORM_SESSION_ACTIVE_PER_IP || 5) || 5
 )
 export const FORM_SESSION_TTL_COMPLETED_DAYS = 7
 export const FORM_SESSION_TTL_ABANDONED_DAYS = 30

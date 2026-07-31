@@ -19,15 +19,20 @@ export function rateLimitParser(key: string): { ok: boolean; retryAfterSec?: num
 }
 
 const PUBLIC_FORM_WINDOW_MS = 60_000
-const PUBLIC_FORM_MAX_PER_MIN = 20
 const PUBLIC_FORM_HOUR_MS = 3_600_000
-const PUBLIC_FORM_MAX_PER_HOUR = 200
 
-/** Публичные формы (Pyrus): per-IP минутный и часовой лимит */
+function envPositiveInt(name: string, fallback: number): number {
+  const n = Number(process.env[name])
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback
+}
+
+/** Публичные формы: per-IP минутный и часовой лимит (env override for staging/E2E). */
 export function rateLimitPublicForm(ip: string): { ok: boolean; retryAfterSec?: number } {
-  const min = rateLimit(`pubform:min:${ip}`, PUBLIC_FORM_MAX_PER_MIN, PUBLIC_FORM_WINDOW_MS)
+  const maxPerMin = envPositiveInt("PUBLIC_FORM_MAX_PER_MIN", 20)
+  const maxPerHour = envPositiveInt("PUBLIC_FORM_MAX_PER_HOUR", 200)
+  const min = rateLimit(`pubform:min:${ip}`, maxPerMin, PUBLIC_FORM_WINDOW_MS)
   if (!min.ok) return min
-  return rateLimit(`pubform:hr:${ip}`, PUBLIC_FORM_MAX_PER_HOUR, PUBLIC_FORM_HOUR_MS)
+  return rateLimit(`pubform:hr:${ip}`, maxPerHour, PUBLIC_FORM_HOUR_MS)
 }
 
 /** SSE upload progress — защита от злоупотребления по IP */

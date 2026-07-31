@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { guardPublicFormRateLimit } from "@/lib/pyrus-public-schemas"
 import { assertFormRequestOrigin } from "@/lib/buildin/form-origin"
 import {
   rateLimitFormAction,
@@ -24,8 +23,7 @@ function clientIp(req: NextRequest): string {
 export async function POST(request: NextRequest, ctx: Ctx) {
   const originBlock = assertFormRequestOrigin(request)
   if (originBlock) return originBlock
-  const rl = guardPublicFormRateLimit(request)
-  if (rl) return rl
+  // Coarse pubform RL skipped: per-file churn; DB RL + session token below.
   const ipRl = await rateLimitFormAction(
     `presign:${clientIp(request)}`,
     120,

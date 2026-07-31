@@ -233,12 +233,16 @@ export async function createSubmissionInBuildin(
     })
   }
 
-  // PII closed databases
-  if (input.formType === "data_rf" && getBuildinDatabaseId("pii_rf")) {
-    await createPiiRfRecord(input)
-  }
-  if (input.formType === "data_not_rf" && getBuildinDatabaseId("pii_not_rf")) {
-    await createPiiNotRfRecord(input)
+  // PII closed databases — soft-fail so shared inbox still completes
+  try {
+    if (input.formType === "data_rf" && getBuildinDatabaseId("pii_rf")) {
+      await createPiiRfRecord(input)
+    }
+    if (input.formType === "data_not_rf" && getBuildinDatabaseId("pii_not_rf")) {
+      await createPiiNotRfRecord(input)
+    }
+  } catch (err) {
+    console.error("[buildin] PII record create failed:", err)
   }
 
   const uploadedCount = filesMeta.filter((f) => f.buildinOssName).length

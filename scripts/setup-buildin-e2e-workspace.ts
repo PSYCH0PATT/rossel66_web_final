@@ -201,12 +201,19 @@ async function main() {
   const submissionsId = results.E2E_BUILDIN_DB_SUBMISSIONS
   const releasesId = results.E2E_BUILDIN_DB_SUBMISSION_RELEASES
   const tracksId = results.E2E_BUILDIN_DB_SUBMISSION_TRACKS
+  // propertiesWithoutRelations creates placeholder rich_text fields — remove them
+  // before attaching real relations (Buildin cannot coerce rich_text → relation).
   if (releasesId && submissionsId) {
+    await buildinFetch(`/v2/databases/${releasesId}`, {
+      method: "PATCH",
+      body: { properties: { ЗаявкаRel: null } },
+    }).catch((err) => console.warn("clear releases ЗаявкаRel:", err))
     await buildinFetch(`/v2/databases/${releasesId}`, {
       method: "PATCH",
       body: {
         properties: {
           ЗаявкаRel: {
+            type: "relation",
             relation: { database_id: submissionsId, type: "single_property" },
           },
         },
@@ -217,16 +224,47 @@ async function main() {
     await buildinFetch(`/v2/databases/${tracksId}`, {
       method: "PATCH",
       body: {
+        properties: { ЗаявкаRel: null, РелизЗаявкиRel: null },
+      },
+    }).catch((err) => console.warn("clear tracks rel props:", err))
+    await buildinFetch(`/v2/databases/${tracksId}`, {
+      method: "PATCH",
+      body: {
         properties: {
           РелизЗаявкиRel: {
+            type: "relation",
             relation: { database_id: releasesId, type: "single_property" },
           },
           ЗаявкаRel: {
+            type: "relation",
             relation: { database_id: submissionsId, type: "single_property" },
           },
         },
       },
     }).catch((err) => console.warn("relation tracks:", err))
+  }
+  const piiRfId = results.E2E_BUILDIN_DB_PII_RF
+  const piiNotRfId = results.E2E_BUILDIN_DB_PII_NOT_RF
+  for (const [label, piiId] of [
+    ["pii_rf", piiRfId],
+    ["pii_not_rf", piiNotRfId],
+  ] as const) {
+    if (!piiId || !submissionsId) continue
+    await buildinFetch(`/v2/databases/${piiId}`, {
+      method: "PATCH",
+      body: { properties: { ЗаявкаRel: null } },
+    }).catch((err) => console.warn(`clear ${label} ЗаявкаRel:`, err))
+    await buildinFetch(`/v2/databases/${piiId}`, {
+      method: "PATCH",
+      body: {
+        properties: {
+          ЗаявкаRel: {
+            type: "relation",
+            relation: { database_id: submissionsId, type: "single_property" },
+          },
+        },
+      },
+    }).catch((err) => console.warn(`relation ${label}→submissions:`, err))
   }
 
   const header = [

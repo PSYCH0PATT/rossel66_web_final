@@ -79,6 +79,21 @@ export async function createFormDeliverySession(opts: {
   assertManifestSize(manifest)
 
   if (opts.clientIp) {
+    // Drop stale in-flight sessions so a hung materialize cannot permanently
+    // block the IP (common after schema/outage glitches and during E2E).
+    const staleBefore = new Date(Date.now() - 20 * 60 * 1000)
+    await prisma.formDeliverySession.updateMany({
+      where: {
+        clientIp: opts.clientIp,
+        status: { in: ["created", "materializing", "uploading", "finalizing"] },
+        updatedAt: { lt: staleBefore },
+      },
+      data: {
+        status: "abandoned",
+        lastError: "Авто-очистка: сессия без прогресса >20 мин",
+        expiresAt: new Date(),
+      },
+    })
     const active = await prisma.formDeliverySession.count({
       where: {
         clientIp: opts.clientIp,
@@ -263,8 +278,10 @@ export async function materializeFormSession(sessionId: string): Promise<{
     data: { status: "materializing" },
   })
 
+  // Retry failed items too (e.g. after Buildin schema fixes); otherwise remaining
+  // stucks forever because only "pending" was processed.
   const pending = await prisma.formDeliveryItem.findMany({
-    where: { sessionId, status: "pending" },
+    where: { sessionId, status: { in: ["pending", "failed"] } },
     orderBy: [{ kind: "asc" }, { releaseIndex: "asc" }, { trackIndex: "asc" }],
     take: FORM_SESSION_MATERIALIZE_BATCH,
   })
@@ -410,13 +427,32 @@ export async function materializeFormSession(sessionId: string): Promise<{
     })
   }
 
-  const remaining = await prisma.formDeliveryItem.count({
-    where: { sessionId, status: { in: ["pending", "failed"] } },
-  })
+  const [remainingPending, remainingFailed] = await Promise.all([
+    prisma.formDeliveryItem.count({
+      where: { sessionId, status: "pending" },
+    }),
+    prisma.formDeliveryItem.count({
+      where: { sessionId, status: "failed" },
+    }),
+  ])
+  const remaining = remainingPending + remainingFailed
   if (remaining === 0) {
     await prisma.formDeliverySession.update({
       where: { id: sessionId },
-      data: { status: "uploading" },
+      data: { status: "uploading", lastError: null },
+    })
+  } else if (remainingPending === 0 && remainingFailed > 0 && created === 0) {
+    // All items failed again this batch — fail the session so IP slots free up.
+    const sample = await prisma.formDeliveryItem.findFirst({
+      where: { sessionId, status: "failed", lastError: { not: null } },
+      select: { lastError: true },
+    })
+    await prisma.formDeliverySession.update({
+      where: { id: sessionId },
+      data: {
+        status: "failed",
+        lastError: (sample?.lastError || "Materialize failed").slice(0, 2000),
+      },
     })
   } else {
     await enqueueBuildinOutbox({
