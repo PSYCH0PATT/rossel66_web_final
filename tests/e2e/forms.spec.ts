@@ -1,227 +1,284 @@
-import { test, expect } from "@playwright/test"
+import { test, expect, type Locator, type Page } from "@playwright/test"
 import path from "path"
-import { assertBuildinSubmissionExists, drainOutbox, e2eRunId, fixturesDir } from "./helpers"
+import {
+  assertBuildinSubmissionExists,
+  drainOutbox,
+  e2eRunId,
+  fixturesDir,
+} from "./helpers"
 
 const runId = e2eRunId()
+const cover = path.join(fixturesDir, "cover.png")
+const audio = path.join(fixturesDir, "audio.wav")
 
-test.describe.configure({ mode: "serial" })
+async function selectByLabel(
+  page: Page,
+  form: Locator,
+  label: RegExp,
+  option: string | RegExp
+) {
+  await form.getByRole("combobox", { name: label }).click()
+  await page.getByRole("option", { name: option }).click()
+}
 
-test("contact form full submit", async ({ page }) => {
-  const nick = `E2E Contact ${runId}`
-  await page.goto("/")
-  // Contact may live on landing; try dedicated section or homepage form
-  const form = page.getByTestId("contact-form")
-  if ((await form.count()) === 0) {
-    test.skip(true, "contact-form not on /")
-    return
+async function fillName(form: Locator, name: string, value: string) {
+  await form.locator(`[name="${name}"]:visible`).first().fill(value)
+}
+
+/** Radix selects inside track tables often have no accessible name. */
+async function selectTrackLanguage(page: Page, form: Locator) {
+  const row = form.locator("table tbody tr").first()
+  await expect(row).toBeVisible({ timeout: 15_000 })
+  // Prefer the language cell (header "Язык"); fall back to first combobox in row.
+  const langHeader = form.locator("table thead th", { hasText: /язык/i })
+  const headerIndex = await langHeader.first().evaluate((el) => {
+    const ths = Array.from(el.parentElement?.children || [])
+    return ths.indexOf(el)
+  })
+  const cell =
+    headerIndex >= 0
+      ? row.locator("td").nth(headerIndex)
+      : row
+  await cell.getByRole("combobox").first().click()
+  await page.getByRole("option", { name: /^Без слов$/i }).click()
+}
+
+async function attachCoverAndAudio(form: Locator) {
+  // Inputs are `className="hidden"` — do not filter :visible
+  const candidates = form.locator('input[type="file"]')
+  await expect(candidates.first()).toBeAttached({ timeout: 15_000 })
+  const count = await candidates.count()
+  let coverIdx = -1
+  let audioIdx = -1
+  for (let i = 0; i < count; i++) {
+    const accept = (await candidates.nth(i).getAttribute("accept")) || ""
+    if (coverIdx < 0 && /image|jpeg|png/i.test(accept)) coverIdx = i
+    if (audioIdx < 0 && (/wav|audio/i.test(accept) || accept.includes(".wav")))
+      audioIdx = i
   }
-  await form.getByLabel(/ник|nickname|имя/i).first().fill(nick)
-  await form.locator("#telegram, [name=telegram]").first().fill(`@e2e_${runId.slice(-6)}`)
-  await form.locator("#about, [name=about], textarea").first().fill(`about ${runId}`)
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 60_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: nick })
-})
+  if (coverIdx >= 0) await candidates.nth(coverIdx).setInputFiles(cover)
+  else if (count >= 1) await candidates.nth(0).setInputFiles(cover)
+  if (audioIdx >= 0) await candidates.nth(audioIdx).setInputFiles(audio)
+  else if (count >= 2) await candidates.nth(1).setInputFiles(audio)
+}
 
-test("data RF full submit", async ({ page }) => {
-  await page.goto("/forms/dataRF")
-  const form = page.getByTestId("data-rf-form")
-  await expect(form).toBeVisible()
-
-  const fill = async (name: string, value: string) => {
-    await form.locator(`[name="${name}"]`).fill(value)
-  }
-
-  await fill("nickname", `E2E RF ${runId}`)
-  await fill("telegramProfile", `@rf_${runId.slice(-6)}`)
-  await fill("email", `test+rf.${runId}@rossel.invalid`)
-  await fill("passportFullName", "Иванов Иван Иванович")
-  await fill("passportShortName", "Иванов И.И.")
-  await fill("dateOfBirth", "1990-01-15")
-  await fill("passportSeriesNumber", "1234 567890")
-  await fill("passportIssuedBy", "ОВД Тестовый")
-  await fill("passportIssueDate", "2010-05-20")
-  await fill("passportDepartmentCode", "123-456")
-  await fill("placeOfBirth", "г. Москва")
-  await fill("registrationAddress", "г. Москва, ул. Тестовая, д. 1")
-  await fill("snils", "123-456-789 00")
-  await fill("inn", "7707083893")
-  await fill("bankName", "Тест Банк")
-  await fill("bankAccountNumber", "40817810099910004312")
-  await fill("bankCorrespondentAccount", "30101810400000000225")
-  await fill("bankBik", "044525225")
-  await fill("bankInn", "7707083893")
-  await fill("bankKpp", "773601001")
-
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 60_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: `E2E RF ${runId}` })
-})
-
-test("data not RF full submit", async ({ page }) => {
-  await page.goto("/forms/dataNotRF")
-  const form = page.getByTestId("data-not-rf-form")
-  await expect(form).toBeVisible()
-
-  const fill = async (name: string, value: string) => {
-    const el = form.locator(`[name="${name}"]`)
-    if ((await el.count()) === 0) return
-    await el.first().fill(value)
-  }
-
-  await fill("nickname", `E2E NotRF ${runId}`)
-  await fill("telegramProfile", `@nr_${runId.slice(-6)}`)
-  await fill("email", `test+notrf.${runId}@rossel.invalid`)
-  await fill("passportFullName", "John Test Doe")
-  await fill("passportIdNumber", "P1234567")
-  await fill("taxId", "TAX-001")
-  await fill("bankName", "Test Bank Intl")
-  await fill("bankAccountNumber", "GB29NWBK60161331926819")
-
-  // citizenship select if present
-  const cit = form.locator('[name="citizenship"], select').first()
-  if (await cit.count()) {
-    try {
-      await cit.selectOption({ index: 1 })
-    } catch {
-      /* custom select */
+test.describe.serial("forms e2e", () => {
+  test("contact form full submit", async ({ page }) => {
+    const nick = `E2E Contact ${runId}`
+    await page.goto("/")
+    const form = page.getByTestId("contact-form")
+    if ((await form.count()) === 0) {
+      test.skip(true, "contact-form not on /")
+      return
     }
-  }
-
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 90_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: `E2E NotRF ${runId}` })
-})
-
-test("catalog upload with files", async ({ page }) => {
-  await page.goto("/forms/catalogUPLOAD")
-  const form = page.getByTestId("catalog-upload-form")
-  await expect(form).toBeVisible({ timeout: 30_000 })
-
-  // release type single (1) is default often — fill title/artists
-  const title = form.locator('[name="releaseTitle"], input').filter({ hasText: "" }).first()
-  // Prefer labeled fields
-  await form.getByPlaceholder(/назван/i).first().fill(`E2E Cat ${runId}`)
-  const artistInputs = form.locator('input[placeholder*="Artist"], input[name="artists"], input[name="mainArtists"]')
-  if (await artistInputs.count()) {
-    await artistInputs.first().fill("E2E Artist")
-  }
-
-  // Track fields
-  await form.locator('input[name="trackName"]').first().fill("E2E Track")
-  await form.locator('input[name="mainArtists"]').first().fill("E2E Artist")
-  await form.locator('input[name="isrc"]').first().fill("USRC17607839")
-  await form.locator('input[name="previewStart"]').first().fill("00:10")
-  await form.locator('input[name="musicAuthor"]').first().fill("Composer Test")
-  const words = form.locator('input[name="wordsAuthor"]')
-  if (await words.count()) await words.first().fill("Lyricist Test")
-
-  // language select
-  const lang = form.locator('select[name="language"], [name="language"]').first()
-  if (await lang.count()) {
-    try {
-      await lang.selectOption({ index: 1 })
-    } catch {
-      /* custom */
-    }
-  }
-
-  // files
-  const cover = path.join(fixturesDir, "cover.png")
-  const audio = path.join(fixturesDir, "audio.wav")
-  const fileInputs = form.locator('input[type="file"]')
-  const n = await fileInputs.count()
-  if (n >= 1) await fileInputs.nth(0).setInputFiles(cover)
-  if (n >= 2) await fileInputs.nth(1).setInputFiles(audio)
-
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 180_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: `E2E Cat ${runId}` })
-})
-
-test("release upload with files", async ({ page }) => {
-  await page.goto("/forms/releaseUPLOAD")
-  const form = page.getByTestId("release-upload-form")
-  await expect(form).toBeVisible()
-
-  await form.locator('[name="artistNicknames"]').fill(`E2E Rel ${runId}`)
-  await form.locator('[name="releaseTitle"]').fill(`E2E Release ${runId}`)
-
-  // fill common track fields if present
-  const trackName = form.locator('input[name="trackName"]')
-  if (await trackName.count()) await trackName.first().fill("Track One")
-  const mainArtists = form.locator('input[name="mainArtists"]')
-  if (await mainArtists.count()) await mainArtists.first().fill("E2E Artist")
-  const preview = form.locator('input[name="previewStart"]')
-  if (await preview.count()) await preview.first().fill("00:15")
-  const music = form.locator('input[name="musicAuthor"]')
-  if (await music.count()) await music.first().fill("Composer")
-
-  const files = form.locator('input[type="file"]')
-  const count = await files.count()
-  if (count >= 1) await files.nth(0).setInputFiles(path.join(fixturesDir, "cover.png"))
-  if (count >= 2) await files.nth(1).setInputFiles(path.join(fixturesDir, "audio.wav"))
-
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 180_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: `E2E Release ${runId}` })
-})
-
-test("distribution form with files", async ({ page }) => {
-  await page.goto("/distribution")
-  const form = page.getByTestId("distribution-form")
-  await expect(form).toBeVisible()
-
-  // Map common fields — distribution uses contact/artists/title
-  const contact = form.locator('[name="contact"], input').first()
-  await form.getByPlaceholder(/telegram|контакт/i).first().fill(`@dist_${runId.slice(-6)}`).catch(async () => {
-    await contact.fill(`@dist_${runId.slice(-6)}`)
+    await form.getByLabel(/ник|nickname|имя/i).first().fill(nick)
+    await form.locator("#telegram, [name=telegram]").first().fill(`@e2e_${runId.slice(-6)}`)
+    await form.locator("#about, [name=about], textarea").first().fill(`about ${runId}`)
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 60_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: nick })
   })
 
-  for (const [ph, val] of [
-    [/артист|artist/i, `E2E Dist Artist ${runId}`],
-    [/назван|title/i, `E2E Dist ${runId}`],
-  ] as const) {
-    const input = form.getByPlaceholder(ph).first()
-    if (await input.count()) await input.fill(val)
-  }
+  test("data RF full submit", async ({ page }) => {
+    await page.goto("/forms/dataRF")
+    const form = page.getByTestId("data-rf-form")
+    await expect(form).toBeVisible()
 
-  const files = form.locator('input[type="file"]')
-  const count = await files.count()
-  if (count >= 1) await files.nth(0).setInputFiles(path.join(fixturesDir, "cover.png"))
-  if (count >= 2) await files.nth(1).setInputFiles(path.join(fixturesDir, "audio.wav"))
+    await fillName(form, "nickname", `E2E RF ${runId}`)
+    await fillName(form, "telegramProfile", `@rf_${runId.slice(-6)}`)
+    await fillName(form, "email", `test+rf.${runId}@rossel.invalid`)
+    await fillName(form, "passportFullName", "Иванов Иван Иванович")
+    await fillName(form, "passportShortName", "Иванов И.И.")
+    await fillName(form, "dateOfBirth", "1990-01-15")
+    await fillName(form, "passportSeriesNumber", "1234 567890")
+    await fillName(form, "passportIssuedBy", "ОВД Тестовый")
+    await fillName(form, "passportIssueDate", "2010-05-20")
+    await fillName(form, "passportDepartmentCode", "123-456")
+    await fillName(form, "placeOfBirth", "г. Москва")
+    await fillName(form, "registrationAddress", "г. Москва, ул. Тестовая, д. 1")
+    await fillName(form, "snils", "123-456-789 00")
+    await fillName(form, "inn", "7707083893")
+    await fillName(form, "bankName", "Тест Банк")
+    await fillName(form, "bankAccountNumber", "40817810099910004312")
+    await fillName(form, "bankCorrespondentAccount", "30101810400000000225")
+    await fillName(form, "bankBik", "044525225")
+    await fillName(form, "bankInn", "7707083893")
+    await fillName(form, "bankKpp", "773601001")
 
-  await form.getByTestId("form-submit").click()
-  await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
-    "data-status",
-    "success",
-    { timeout: 180_000 }
-  )
-  await drainOutbox(page.url())
-  await assertBuildinSubmissionExists({ titleNeedle: `E2E Dist ${runId}` })
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 60_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: `E2E RF ${runId}` })
+  })
+
+  test("data not RF full submit", async ({ page }) => {
+    await page.goto("/forms/dataNotRF")
+    const form = page.getByTestId("data-not-rf-form")
+    await expect(form).toBeVisible()
+
+    await fillName(form, "nickname", `E2E NotRF ${runId}`)
+    await fillName(form, "telegramProfile", `@nr_${runId.slice(-6)}`)
+    await fillName(form, "email", `test+notrf.${runId}@rossel.invalid`)
+    await fillName(form, "passportFullName", "John Test Doe")
+    await fillName(form, "passportShortName", "Doe J. T.")
+    await fillName(form, "dateOfBirth", "1990-01-15")
+    await fillName(form, "passportIdNumber", "P1234567")
+    await fillName(form, "placeOfBirth", "Test City")
+    await fillName(form, "registrationAddress", "1 Test Street, Test City")
+    await fillName(form, "taxId", "TAX-001")
+    await fillName(form, "bankName", "Test Bank Intl")
+    await fillName(form, "bankAccountNumber", "GB29NWBK60161331926819")
+
+    const cit = form.getByRole("combobox", { name: /гражданство/i })
+    if (await cit.count()) {
+      await cit.click()
+      await page.getByRole("option").nth(1).click()
+    }
+
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 90_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: `E2E NotRF ${runId}` })
+  })
+
+  test("catalog upload with files", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 })
+    await page.goto("/forms/catalogUPLOAD")
+    const form = page.getByTestId("catalog-upload-form")
+    await expect(form).toBeVisible({ timeout: 30_000 })
+
+    // Альбом → видны trackName/mainArtists (на staging до redeploy сингл слал пустой trackTitle)
+    await selectByLabel(page, form, /тип релиза/i, /^Альбом$/i)
+    await form.getByLabel(/название релиза/i).fill(`E2E Cat ${runId}`)
+    await form.getByLabel(/никнеймы артистов релиза/i).fill("E2E Artist")
+    await form.getByLabel(/оригинальная дата релиза/i).fill("2024-06-01")
+    await form.getByLabel(/^жанр/i).fill("Hip-hop")
+
+    await expect(form.locator('table input[name="trackName"]').first()).toBeVisible({
+      timeout: 15_000,
+    })
+    await form.locator('table input[name="trackName"]').first().fill("E2E Track")
+    await form.locator('table input[name="mainArtists"]').first().fill("E2E Artist")
+    await form.locator('table input[name="isrc"]').first().fill("USRC17607839")
+    await form.locator('table input[name="previewStart"]').first().fill("00:10")
+    await form.locator('table input[name="musicAuthor"]').first().fill("Composer Test")
+    await selectTrackLanguage(page, form)
+    await attachCoverAndAudio(form)
+
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 180_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: `E2E Cat ${runId}` })
+  })
+
+  test("release upload with files", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 })
+    await page.goto("/forms/releaseUPLOAD")
+    const form = page.getByTestId("release-upload-form")
+    await expect(form).toBeVisible()
+
+    await fillName(form, "artistNicknames", `E2E Rel ${runId}`)
+    await fillName(form, "releaseTitle", `E2E Release ${runId}`)
+    await selectByLabel(page, form, /тип релиза/i, /Сингл \(1 трек\)/i)
+    await fillName(form, "releaseDate", "2026-08-15")
+    await selectByLabel(page, form, /^жанр/i, /Hip Hop\/Rap/i)
+
+    await form.locator('table input[name="trackName"]').first().fill("Track One")
+    await form.locator('table input[name="mainArtists"]').first().fill("E2E Artist")
+    await form.locator('table input[name="previewStart"]').first().fill("00:15")
+    await form.locator('table input[name="musicAuthor"]').first().fill("Composer")
+    await selectTrackLanguage(page, form)
+
+    const explicit = form.getByRole("combobox", { name: /мат/i })
+    if (await explicit.count()) {
+      await explicit.first().click()
+      await page.getByRole("option", { name: /^Нет$/i }).click()
+    } else {
+      const row = form.locator("table tbody tr").first()
+      const boxes = row.getByRole("combobox")
+      if ((await boxes.count()) >= 2) {
+        await boxes.nth(1).click()
+        await page.getByRole("option", { name: /^Нет$/i }).click()
+      }
+    }
+
+    for (const label of [
+      /видео-сниппет/i,
+      /подавать релиз на промо/i,
+      /соц\. сети/i,
+      /стриминговых площадках/i,
+    ]) {
+      const box = form.getByRole("combobox", { name: label })
+      if (await box.count()) {
+        await box.first().click()
+        await page.getByRole("option", { name: /^Нет$/i }).click()
+      }
+    }
+
+    await attachCoverAndAudio(form)
+
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 180_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: `E2E Release ${runId}` })
+  })
+
+  test("distribution form with files", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 })
+    await page.goto("/distribution")
+    const form = page.getByTestId("distribution-form")
+    await expect(form).toBeVisible()
+
+    await fillName(form, "artists", `E2E Dist Artist ${runId}`)
+    await fillName(form, "title", `E2E Dist ${runId}`)
+    await selectByLabel(page, form, /тип релиза/i, /Сингл \(1 трек\)/i)
+    await fillName(form, "releaseDate", "2026-08-20")
+    await selectByLabel(page, form, /^жанр/i, /Hip Hop\/Rap/i)
+    await fillName(form, "contact", `@dist_${runId.slice(-6)}`)
+
+    await form.locator('table input[name="trackName"]').first().fill("Dist Track")
+    await form.locator('table input[name="mainArtists"]').first().fill("E2E Dist Artist")
+    await form.locator('table input[name="previewStart"]').first().fill("00:12")
+    await form.locator('table input[name="musicAuthor"]').first().fill("Composer Dist")
+    await selectTrackLanguage(page, form)
+
+    const row = form.locator("table tbody tr").first()
+    const boxes = row.getByRole("combobox")
+    if ((await boxes.count()) >= 2) {
+      await boxes.nth(1).click()
+      await page.getByRole("option", { name: /^Нет$/i }).click()
+    }
+
+    await attachCoverAndAudio(form)
+
+    await form.getByTestId("form-submit").click()
+    await expect(page.getByTestId("form-submit-status")).toHaveAttribute(
+      "data-status",
+      "success",
+      { timeout: 180_000 }
+    )
+    await drainOutbox(page.url())
+    await assertBuildinSubmissionExists({ titleNeedle: `E2E Dist ${runId}` })
+  })
 })

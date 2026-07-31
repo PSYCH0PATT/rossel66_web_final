@@ -424,8 +424,13 @@ export default function CatalogUploadPage() {
       genre: release.genre,
       releaseDate: release.originalReleaseDate,
       tracks: release.tracks.map((track) => ({
-        trackTitle: track.trackName,
-        artists: track.mainArtists,
+        // Сингл: UI не показывает название/артистов трека — берём с релиза
+        trackTitle:
+          track.trackName.trim() ||
+          (release.releaseType === "1" ? release.releaseTitle : track.trackName),
+        artists:
+          track.mainArtists.trim() ||
+          (release.releaseType === "1" ? release.artists : track.mainArtists),
         isrc: track.isrc,
         language: track.language,
         explicit: track.explicit,
