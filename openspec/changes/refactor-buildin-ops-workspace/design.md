@@ -4,8 +4,8 @@
 Postgres/Supabase stays domain SoT. Buildin is the ops workspace. Current forward sync patches full property sets and can reset manual CRM fields. PII forms duplicate sensitive payloads into the shared inbox.
 
 ## Decisions
-1. **Partial PATCH only** for updates: send mirror-owned fields; never send `Ops Status`, `Assignee`, `Notes`, `Deadline`, `Tags` on update.
-2. **Create path** may set initial `Ops Status` defaults once; subsequent updates skip ops fields entirely.
+1. **Partial PATCH only** for updates: send mirror-owned fields; never send `Операционный статус`, `Ответственный`, `Заметки`, `Дедлайн`, `Теги` on update.
+2. **Create path** may set initial `Операционный статус` defaults once; subsequent updates skip ops fields entirely.
 3. **PII**: shared submission stores nickname/type/status + link metadata only; closed DBs store structured fields without `Payload JSON`.
 4. **Retry**: idempotency key = `submission:<submissionId>`; binaries staged under Supabase Storage bucket/path; `completed` only after expected files uploaded (or none expected).
 5. **Activity / PlaylistHistory**: stop enqueueing; keep existing Buildin pages as archive.

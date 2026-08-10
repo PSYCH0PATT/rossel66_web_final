@@ -11,7 +11,6 @@ export const formSessionFileMetaSchema = z.object({
   filename: z.string().min(1).max(240),
   contentType: z.string().min(1).max(120),
   sizeBytes: z.number().int().positive().max(FORM_SESSION_MAX_FILE_BYTES),
-  checksumSha256: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
   /** release | track | submission */
   parentKind: z.enum(["release", "track", "submission"]),
   releaseIndex: z.number().int().min(0).optional(),
@@ -23,9 +22,9 @@ export const formSessionTrackSchema = z.object({
   artists: z.string().max(800).optional().default(""),
   isrc: z.string().max(32).optional().default(""),
   language: z.string().max(80).optional().default(""),
+  /** Always boolean in the session pipeline (UI may send "1"/"2" and convert). */
   explicit: z.boolean().optional().default(false),
   focus: z.boolean().optional().default(false),
-  lyrics: z.string().max(8000).optional().default(""),
   previewStart: z.string().max(32).optional().default(""),
   musicAuthor: z.string().max(500).optional().default(""),
   wordsAuthor: z.string().max(500).optional().default(""),
@@ -44,22 +43,28 @@ export const formSessionReleaseSchema = z.object({
 
 export const formSessionManifestSchema = z
   .object({
-    formType: z.enum([
-      "catalog_upload",
-      "release_upload",
-      "distribution",
-      "data_rf",
-      "data_not_rf",
-      "contact",
-    ]),
+    // File-upload queues only — contact/data_* must use /api/forms/simple
+    formType: z.enum(["catalog_upload", "release_upload", "distribution"]),
     title: z.string().min(1).max(500),
+    /** Unused by file queues; kept nullable for forward-compat payloads */
     contactEmail: z.string().email().optional().nullable(),
+    /**
+     * Neutral contact for distribution («Телеграм или ВК для связи»).
+     * Legacy alias `contactTelegram` accepted via preprocess below.
+     */
+    contact: z.string().max(200).optional().nullable(),
+    /** @deprecated use `contact` — kept for in-flight sessions */
     contactTelegram: z.string().max(200).optional().nullable(),
     artistNickname: z.string().max(200).optional().nullable(),
     /** Non-PII / catalog-safe payload fields */
     payload: z.record(z.string(), z.unknown()).default({}),
     releases: z.array(formSessionReleaseSchema).max(200).default([]),
     files: z.array(formSessionFileMetaSchema).max(FORM_SESSION_MAX_FILES),
+  })
+  .transform((val) => {
+    // Prefer explicit `contact`; fall back to legacy contactTelegram
+    const contact = val.contact ?? val.contactTelegram ?? null
+    return { ...val, contact, contactTelegram: contact }
   })
   .superRefine((val, ctx) => {
     if (val.files.length > FORM_SESSION_MAX_FILES) {
@@ -92,12 +97,7 @@ export const formSessionManifestSchema = z
         message: "Суммарный объём файлов превышает 30 ГБ на сессию",
       })
     }
-    if (
-      (val.formType === "catalog_upload" ||
-        val.formType === "release_upload" ||
-        val.formType === "distribution") &&
-      val.releases.length < 1
-    ) {
+    if (val.releases.length < 1) {
       ctx.addIssue({
         code: "custom",
         message: "Добавьте хотя бы один релиз",

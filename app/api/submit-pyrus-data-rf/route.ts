@@ -9,6 +9,7 @@ import {
   isPyrusWriteDisabled,
 } from "@/lib/buildin/env"
 import { recordAndDualWriteSubmission } from "@/lib/buildin/dual-write"
+import { legacyPyrusFormGoneBody } from "@/lib/buildin/legacy-form-cutover"
 
 interface FormDataRF {
   nickname: string
@@ -71,6 +72,10 @@ export async function POST(request: Request) {
         { message: "Приём заявок временно недоступен: нет настроенного бэкенда форм." },
         { status: 503 }
       )
+    }
+
+    if (pyrusDisabled && buildinEnabled) {
+      return NextResponse.json(legacyPyrusFormGoneBody, { status: 410 })
     }
 
     const rawBody: unknown = await request.json().catch(() => null)

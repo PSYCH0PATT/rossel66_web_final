@@ -11,23 +11,9 @@ import {
   type BuildinDatabaseDefKey,
 } from "../lib/buildin/database-defs"
 import { buildinCreateDatabase, buildinGetMe } from "../lib/buildin/client"
-import { getBuildinApiToken, getBuildinDatabaseId } from "../lib/buildin/env"
+import { getBuildinApiToken, getBuildinDatabaseId, BUILDIN_DB_ENV_NAMES } from "../lib/buildin/env"
 
-const ENV_NAMES: Record<BuildinDatabaseDefKey, string> = {
-  submissions: "BUILDIN_DB_SUBMISSIONS",
-  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
-  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
-  artists: "BUILDIN_DB_ARTISTS",
-  releases: "BUILDIN_DB_RELEASES",
-  tracks: "BUILDIN_DB_TRACKS",
-  reports: "BUILDIN_DB_REPORTS",
-  playlists: "BUILDIN_DB_PLAYLISTS",
-  automation_runs: "BUILDIN_DB_AUTOMATION_RUNS",
-  pii_rf: "BUILDIN_DB_PII_RF",
-  pii_not_rf: "BUILDIN_DB_PII_NOT_RF",
-  activity: "BUILDIN_DB_ACTIVITY",
-  playlist_history: "BUILDIN_DB_PLAYLIST_HISTORY",
-}
+const ENV_NAMES = BUILDIN_DB_ENV_NAMES
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run")

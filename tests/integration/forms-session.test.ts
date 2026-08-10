@@ -29,11 +29,16 @@ process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000"
 process.env.FORM_ALLOWED_ORIGINS = "http://localhost:3000"
 
 const SUBMISSIONS_ID = "11111111-1111-4111-8111-111111111111"
-const RELEASES_ID = "22222222-2222-4222-8222-222222222222"
-const TRACKS_ID = "33333333-3333-4333-8333-333333333333"
+const FORM_BACK_CATALOG_ID = "22222222-2222-4222-8222-222222222222"
+const FORM_RELEASE_UPLOAD_ID = "33333333-3333-4333-8333-333333333333"
+const FORM_DISTRIBUTION_ID = "44444444-4444-4444-8444-444444444444"
 process.env.BUILDIN_DB_SUBMISSIONS = SUBMISSIONS_ID
-process.env.BUILDIN_DB_SUBMISSION_RELEASES = RELEASES_ID
-process.env.BUILDIN_DB_SUBMISSION_TRACKS = TRACKS_ID
+process.env.BUILDIN_DB_FORM_BACK_CATALOG = FORM_BACK_CATALOG_ID
+process.env.BUILDIN_DB_FORM_RELEASE_UPLOAD = FORM_RELEASE_UPLOAD_ID
+process.env.BUILDIN_DB_FORM_DISTRIBUTION = FORM_DISTRIBUTION_ID
+// Legacy keys unused by new materialize path
+delete process.env.BUILDIN_DB_SUBMISSION_RELEASES
+delete process.env.BUILDIN_DB_SUBMISSION_TRACKS
 
 const mock = new MockBuildinServer()
 let skipSuite = false
@@ -54,9 +59,13 @@ before(async () => {
     const base = await mock.start(0)
     process.env.BUILDIN_API_BASE_URL = base
     mock.seedDatabase(SUBMISSIONS_ID, "E2E Submissions")
-    mock.seedDatabase(RELEASES_ID, "E2E Releases")
-    mock.seedDatabase(TRACKS_ID, "E2E Tracks")
+    mock.seedDatabase(FORM_BACK_CATALOG_ID, "E2E Back Catalog")
+    mock.seedDatabase(FORM_RELEASE_UPLOAD_ID, "E2E Release Upload")
+    mock.seedDatabase(FORM_DISTRIBUTION_ID, "E2E Distribution")
   } catch (err) {
+    if (process.env.CI === "true" || process.env.CI === "1") {
+      throw err
+    }
     skipSuite = true
     console.warn("Skipping integration suite:", err)
   }
@@ -91,10 +100,8 @@ function tinyManifest(runId: string, fileCount = 1) {
   return {
     formType: "catalog_upload" as const,
     title: `IT catalog ${runId}`,
-    contactEmail: `test+catalog.${runId}@rossel.invalid`,
-    contactTelegram: `@it_${runId.slice(-6)}`,
     artistNickname: `IT Artist ${runId}`,
-    payload: { runId },
+    payload: {},
     releases: [
       {
         releaseTitle: `Release ${runId}`,
@@ -228,18 +235,27 @@ describe("forms session integration", { concurrency: false }, () => {
 
     const submissionPage = mock.pages.get(created.buildinPageId!)
     assert.ok(submissionPage)
-    const releasePages = [...mock.pages.values()].filter(
-      (p) => p.parent_database_id === RELEASES_ID
+    assert.equal(submissionPage.parent_database_id, FORM_BACK_CATALOG_ID)
+    // Catalog must not invent Email/Telegram on the queue row
+    assert.equal("Email" in (submissionPage.properties || {}), false)
+    assert.equal("Telegram" in (submissionPage.properties || {}), false)
+    assert.equal("UPC" in (submissionPage.properties || {}), false)
+    assert.ok("Артист" in (submissionPage.properties || {}))
+    assert.ok("Название релиза" in (submissionPage.properties || {}))
+    assert.ok("Дата заявки" in (submissionPage.properties || {}))
+    assert.ok("Обработана" in (submissionPage.properties || {}))
+    assert.equal("Статус" in (submissionPage.properties || {}), false)
+    assert.equal("Артисты" in (submissionPage.properties || {}), false)
+    // One-page model: structure is blocks on the application page, not child DB rows
+    assert.ok(submissionPage.children.length >= 1)
+    assert.ok(mock.blocks.size >= 2)
+    const orphanChildPages = [...mock.pages.values()].filter(
+      (p) =>
+        p.id !== created.buildinPageId &&
+        (p.parent_database_id === FORM_BACK_CATALOG_ID ||
+          p.parent_database_id === SUBMISSIONS_ID)
     )
-    const trackPages = [...mock.pages.values()].filter(
-      (p) => p.parent_database_id === TRACKS_ID
-    )
-    assert.ok(releasePages.length >= 1)
-    assert.ok(trackPages.length >= 1)
-    assert.ok(
-      releasePages.some((p) => p.children.length > 0) ||
-        trackPages.some((p) => p.children.length > 0)
-    )
+    assert.equal(orphanChildPages.length, 0)
   })
 
   it("rejects duplicate uploadId with 409", async (t) => {
@@ -359,10 +375,11 @@ describe("forms session integration", { concurrency: false }, () => {
       remaining = mat.remaining
     }
     assert.equal(remaining, 0)
-    const releasePages = [...mock.pages.values()].filter(
-      (p) => p.parent_database_id === RELEASES_ID
-    )
-    assert.ok(releasePages.length >= 15)
+    const page = mock.pages.get(created.buildinPageId!)
+    assert.ok(page)
+    assert.equal(page.parent_database_id, FORM_BACK_CATALOG_ID)
+    // 15 release toggles (+ nested track file toggles)
+    assert.ok(page.children.length >= 15)
   })
 
   it("blocks bad Origin on session create route", async (t) => {
@@ -395,6 +412,91 @@ describe("forms session integration", { concurrency: false }, () => {
     assert.ok(created.buildinPageId)
     assert.equal(mock.mode.failNextCreatePage ?? 0, 0)
     mock.resetMode()
+  })
+
+  it("routes release_upload and distribution to dedicated queues", async (t) => {
+    if (skipSuite) return t.skip()
+    const { createFormDeliverySession } = await import(
+      "@/lib/buildin/form-session"
+    )
+    const runRel = makeRunId("route-rel")
+    const runDist = makeRunId("route-dist")
+
+    const releaseManifest = {
+      formType: "release_upload" as const,
+      title: `IT release ${runRel}`,
+      artistNickname: "Artist",
+      payload: { submitToPromo: "2", videoSnippetNeeded: "2" },
+      releases: [
+        {
+          releaseTitle: `IT release ${runRel}`,
+          artists: "Artist",
+          releaseType: "1",
+          genre: "1",
+          releaseDate: "2026-09-01",
+          tracks: [{ trackTitle: "T1", artists: "Artist", language: "1" }],
+        },
+      ],
+      files: [
+        {
+          fieldKey: "coverArt",
+          filename: "c.png",
+          contentType: "image/png",
+          sizeBytes: 32,
+          parentKind: "release" as const,
+          releaseIndex: 0,
+        },
+      ],
+    }
+    const distManifest = {
+      formType: "distribution" as const,
+      title: `IT dist ${runDist}`,
+      contact: "@it_vk",
+      artistNickname: "Artist",
+      payload: { submitToPromo: "1", artistInfo: "bio" },
+      releases: [
+        {
+          releaseTitle: `IT dist ${runDist}`,
+          artists: "Artist",
+          releaseType: "1",
+          genre: "1",
+          releaseDate: "2026-09-01",
+          tracks: [{ trackTitle: "T1", artists: "Artist", language: "1" }],
+        },
+      ],
+      files: [
+        {
+          fieldKey: "coverArt",
+          filename: "c.png",
+          contentType: "image/png",
+          sizeBytes: 32,
+          parentKind: "release" as const,
+          releaseIndex: 0,
+        },
+      ],
+    }
+
+    const rel = await createFormDeliverySession({
+      idempotencySeed: `upload-${runRel}`,
+      manifest: releaseManifest,
+      clientIp: "10.0.0.10",
+    })
+    const dist = await createFormDeliverySession({
+      idempotencySeed: `upload-${runDist}`,
+      manifest: distManifest,
+      clientIp: "10.0.0.11",
+    })
+    assert.equal(
+      mock.pages.get(rel.buildinPageId!)?.parent_database_id,
+      FORM_RELEASE_UPLOAD_ID
+    )
+    assert.equal(
+      mock.pages.get(dist.buildinPageId!)?.parent_database_id,
+      FORM_DISTRIBUTION_ID
+    )
+    assert.equal("Email" in (mock.pages.get(rel.buildinPageId!)?.properties || {}), false)
+    assert.equal("Контакт" in (mock.pages.get(dist.buildinPageId!)?.properties || {}), true)
+    assert.equal("Telegram" in (mock.pages.get(dist.buildinPageId!)?.properties || {}), false)
   })
 
   it("cleanupExpiredFormSessions deletes expired rows", async (t) => {

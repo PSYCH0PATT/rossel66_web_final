@@ -1,11 +1,46 @@
 # Надёжное тестирование форм ROSSEL → Buildin
 
-## Слои
+## Buildin queues (после redesign)
 
-1. **PR CI** (`.github/workflows/forms-ci.yml`) — `pnpm test`, `tsc --noEmit`, `pnpm build`
-2. **Integration** — Postgres (`docker-compose.test.yml`) + mock Buildin (`tests/support/mock-buildin.ts`)
-3. **Playwright E2E** — против Vercel staging (`tests/e2e/forms.spec.ts`)
-4. **Production health** — `GET /api/cron/forms-health` (Bearer `CRON_SECRET`), без создания заявок
+Формы с файлами пишут в **три отдельные БД** (одна строка = одна заявка).
+Список колонок — только 4 поля из [`lib/buildin/form-contracts.ts`](../lib/buildin/form-contracts.ts); детали релиза на странице заявки.
+
+| formType | Env | DB title | Колонки (порядок) |
+|----------|-----|----------|-------------------|
+| `catalog_upload` | `BUILDIN_DB_FORM_BACK_CATALOG` | ROSSEL — Бэк-каталог | Артист, Название релиза, Дата заявки, Обработана |
+| `release_upload` | `BUILDIN_DB_FORM_RELEASE_UPLOAD` | ROSSEL — Загрузка релиза | Артист, Название релиза, Дата заявки, Обработана |
+| `distribution` | `BUILDIN_DB_FORM_DISTRIBUTION` | ROSSEL — Дистрибуция | Артист, Название релиза, Дата заявки, Обработана |
+
+Анкеты / контакт → `BUILDIN_DB_SUBMISSIONS` («Анкеты и обращения»).
+
+Релизы/треки/файлы живут **блоками на странице заявки**, не в `SUBMISSION_RELEASES` / `SUBMISSION_TRACKS` (архив).
+
+CRM `BUILDIN_DB_RELEASES` / `TRACKS` — только зеркало Supabase, формы туда не пишут.
+
+```bash
+# Создать/досоздать E2E sandbox (три очереди + анкеты + PII)
+BUILDIN_API_TOKEN=… npx tsx scripts/setup-buildin-e2e-workspace.ts
+
+# Только очереди форм (prod или --e2e)
+npx tsx scripts/setup-buildin-form-queues.ts
+npx tsx scripts/setup-buildin-form-queues.ts --e2e
+npx tsx scripts/setup-buildin-form-queues.ts --archive-children
+
+# Выровнять живые схемы с контрактом (dry-run по умолчанию; --apply пишет)
+npx tsx scripts/migrate-buildin-form-queue-schemas.ts --e2e
+npx tsx scripts/migrate-buildin-form-queue-schemas.ts --e2e --clear-forbidden-values --apply
+npx tsx scripts/migrate-buildin-form-queue-schemas.ts
+npx tsx scripts/migrate-buildin-form-queue-schemas.ts --apply
+
+# Исторические root-заявки из inbox → очереди (dry-run по умолчанию)
+npx tsx scripts/migrate-buildin-form-submissions.ts --e2e
+npx tsx scripts/migrate-buildin-form-submissions.ts --e2e --apply
+```
+
+`scripts/setup-buildin-form-databases.ts` **заблокирован** (старая child-DB архитектура).
+
+Map `E2E_BUILDIN_DB_*` → `BUILDIN_DB_*` on Vercel staging.
+
 
 ## Локальный запуск
 
@@ -21,6 +56,9 @@ pnpm test:integration
 # E2E (нужен поднятый staging или local next с Buildin sandbox)
 pnpm exec playwright install chromium
 E2E_BASE_URL=http://127.0.0.1:3000 pnpm test:e2e
+
+# Prefer: local server auto-started by Playwright (same commit, sandbox BUILDIN_DB_* from .env.e2e.local)
+pnpm test:e2e:local
 ```
 
 ## Staging (Vercel)
@@ -93,7 +131,8 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
 ## Критерии доверия
 
 - 3 подряд полных biweekly без ручных правок
-- UI success + Buildin verify (`E2E_VERIFY_BUILDIN=1`) или integration assertions
+- UI success + session `completed` + Buildin verify (`E2E_VERIFY_BUILDIN` defaults **on**; set `0` only to disable) or integration assertions
+- Biweekly CI hard-requires `E2E_VERIFY_BUILDIN=1` and all form-queue + submissions secrets
 - Cleanup не оставляет E2E pages старше 24ч (`pnpm cleanup:e2e`)
 
 ## Замечания по стабильности

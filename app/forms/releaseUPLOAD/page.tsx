@@ -12,6 +12,14 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, UploadCloud } from "lucide-react";
 import { submitFormSession } from "@/lib/buildin/form-session-client";
+import { pickPromoPayload } from "@/lib/buildin/form-contracts";
+import { FORM_SESSION_MAX_FILE_BYTES } from "@/lib/buildin/types";
+
+const MAX_FILE_BYTES = FORM_SESSION_MAX_FILE_BYTES;
+
+function formatFileSizeMb(bytes: number): string {
+  return `${Math.round(bytes / (1024 * 1024))} МБ`;
+}
 
 // --- Interfaces for State Management (based on Pyrus Form ID 1534238) ---
 interface TrackRelease {
@@ -140,6 +148,7 @@ export default function ReleaseUploadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(null);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -161,17 +170,46 @@ export default function ReleaseUploadPage() {
   };
 
   const handleSelectChange = (name: keyof ReleaseUploadFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Reset conditional fields if a "No" or "Не выбрано" type option is chosen
-    if (name === 'submitToPromo' && value !== '1') {
-        setFormData(prev => ({ ...prev, artistInfo: '', releaseInfo: '', releaseSupport: '', artistPhotosLink: '', specifySocialMedia: '0' }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value } as ReleaseUploadFormData
+      if (name === "submitToPromo" && value !== "1") {
+        next.artistInfo = ""
+        next.releaseInfo = ""
+        next.releaseSupport = ""
+        next.artistPhotosLink = ""
+        next.specifySocialMedia = "0"
+        next.vkLink = ""
+        next.tiktokLink = ""
+        next.youtubeLink = ""
+        next.instagramLink = ""
+        next.soundcloudLink = ""
+      }
+      if (name === "specifySocialMedia" && value !== "1") {
+        next.vkLink = ""
+        next.tiktokLink = ""
+        next.youtubeLink = ""
+        next.instagramLink = ""
+        next.soundcloudLink = ""
+      }
+      if (name === "specifyStreamingLinks" && value !== "1") {
+        next.yandexMusicLink = ""
+        next.spotifyLink = ""
+        next.appleMusicLink = ""
+        next.vkMusicLink = ""
+      }
+      return next
+    })
+  };
+
+  const assertFileSize = (file: File, label: string): boolean => {
+    if (file.size > MAX_FILE_BYTES) {
+      setSubmitStatus("error");
+      setSubmitMessage(
+        `Ошибка: файл «${file.name}» (${label}) слишком большой. Максимум ${formatFileSizeMb(MAX_FILE_BYTES)}.`
+      );
+      return false;
     }
-    if (name === 'specifySocialMedia' && value !== '1') {
-        setFormData(prev => ({ ...prev, vkLink: '', tiktokLink: '', youtubeLink: '', instagramLink: '', soundcloudLink: '' }));
-    }
-    if (name === 'specifyStreamingLinks' && value !== '1') {
-        setFormData(prev => ({ ...prev, yandexMusicLink: '', spotifyLink: '', appleMusicLink: '', vkMusicLink: '' }));
-    }
+    return true;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,6 +217,10 @@ export default function ReleaseUploadPage() {
     if (!files || !files[0]) return;
     const file = files[0];
     if (name === "coverArtFile") {
+      if (!assertFileSize(file, "обложка")) {
+        e.target.value = "";
+        return;
+      }
       setSubmitStatus(null);
       setSubmitMessage("");
       setFormData((prev) => ({ ...prev, coverArtFile: file }));
@@ -226,6 +268,8 @@ export default function ReleaseUploadPage() {
   const handleTrackFileChange = (trackId: string, name: "audioFile" | "lyricsFile", files: FileList | null) => {
     if (!files || !files[0]) return;
     const file = files[0];
+    const label = name === "audioFile" ? "аудио" : "текст трека";
+    if (!assertFileSize(file, label)) return;
     setSubmitStatus(null);
     setSubmitMessage("");
     setFormData((prev) => ({
@@ -253,7 +297,7 @@ export default function ReleaseUploadPage() {
       setSubmitMessage('Ошибка: Необходимо указать никнеймы артистов.');
       return;
     }
-    
+
     if (!formData.releaseTitle.trim()) {
       setSubmitStatus('error');
       setSubmitMessage('Ошибка: Необходимо указать название релиза.');
@@ -461,9 +505,10 @@ export default function ReleaseUploadPage() {
               tracks: releaseTracks,
             },
           ],
-          payload: rest,
+          payload: pickPromoPayload(rest as Record<string, unknown>),
           files,
         },
+        onProgress: (p) => setUploadProgress(p.percent),
       });
       setSubmitStatus("success");
       setSubmitMessage("Спасибо! Данные успешно отправлены.");
@@ -931,12 +976,22 @@ export default function ReleaseUploadPage() {
 
               {/* Submit Button and Status */}
               {isSubmitting && (
-                <div className="w-full flex items-center justify-center mt-4 mb-6 space-x-3 text-gray-400 text-sm">
-                  <svg className="animate-spin h-5 w-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                  <span>Отправка…</span>
+                <div className="w-full flex flex-col items-center justify-center mt-4 mb-6 space-y-2 text-gray-400 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <svg className="animate-spin h-5 w-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span>Загрузка файлов, это может занять несколько минут… {uploadProgress > 0 ? `${uploadProgress}%` : ""}</span>
+                  </div>
+                  {uploadProgress > 0 && (
+                    <div className="w-full max-w-md h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-400 transition-all"
+                        style={{ width: `${Math.min(100, uploadProgress)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

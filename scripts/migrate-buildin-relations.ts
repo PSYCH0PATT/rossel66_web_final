@@ -1,7 +1,7 @@
 /**
  * Backfill Buildin relation properties from exact BuildinExternalId mappings.
  *
- * Never overwrites Ops Status / Assignee / Notes / Deadline.
+ * Never overwrites Операционный статус / Ответственный / Заметки / Дедлайн.
  * Never uses fuzzy matching — only exact local IDs.
  *
  * Usage:
@@ -191,8 +191,8 @@ async function main() {
         }
         try {
           await updateRelation(m.buildinPageId, {
-            "Artist ID": textProp(release.artistId),
-            "Local ID": textProp(release.id),
+            "ID артиста": textProp(release.artistId),
+            "Локальный ID": textProp(release.id),
             АртистRel: relationProp([artistPageId]),
           })
           st.updated++
@@ -255,8 +255,8 @@ async function main() {
         }
         try {
           await updateRelation(m.buildinPageId, {
-            "Release Local ID": textProp(releaseLocalId),
-            "Local ID": textProp(m.localId),
+            "Локальный ID релиза": textProp(releaseLocalId),
+            "Локальный ID": textProp(m.localId),
             РелизRel: relationProp([releasePageId]),
           })
           st.updated++
@@ -297,8 +297,8 @@ async function main() {
       }
       try {
         await updateRelation(m.buildinPageId, {
-          "Artist ID": textProp(report.artistId),
-          "Local ID": textProp(report.id),
+          "ID артиста": textProp(report.artistId),
+          "Локальный ID": textProp(report.id),
           АртистRel: relationProp([artistPageId]),
         })
         st.updated++

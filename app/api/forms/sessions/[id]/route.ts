@@ -5,6 +5,7 @@ import {
   getFormSessionStatus,
   materializeFormSession,
 } from "@/lib/buildin/form-session"
+import { assertFormRequestOrigin } from "@/lib/buildin/form-origin"
 import { enqueueBuildinOutbox } from "@/lib/buildin/outbox"
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest, ctx: Ctx) {
 
 /** Trigger / continue materialize (also done by outbox). */
 export async function POST(request: NextRequest, ctx: Ctx) {
+  const originBlock = assertFormRequestOrigin(request)
+  if (originBlock) return originBlock
   try {
     const { id } = await ctx.params
     const body = await request.json().catch(() => ({}))

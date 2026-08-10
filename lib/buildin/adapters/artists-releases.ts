@@ -29,11 +29,11 @@ export const ARTIST_OPS_ALLOWLIST = [
 
 /** Buildin property names owned by ops (never overwritten by forward sync updates). */
 export const ARTIST_OPS_PROPERTY_KEYS = [
-  "Ops Status",
-  "Assignee",
-  "Tags",
-  "Notes",
-  "Deadline",
+  "Операционный статус",
+  "Ответственный",
+  "Теги",
+  "Заметки",
+  "Дедлайн",
 ] as const
 
 export type ArtistSyncInput = {
@@ -54,24 +54,24 @@ export type ArtistSyncInput = {
 function artistMirrorProperties(artist: ArtistSyncInput) {
   return {
     Имя: titleProp(artist.name || artist.username),
-    Username: textProp(artist.username),
-    "Local ID": textProp(artist.id),
+    Юзернейм: textProp(artist.username),
+    "Локальный ID": textProp(artist.id),
     Email: emailProp(artist.email ?? null),
-    Verified: checkboxProp(artist.verified !== false),
+    Верифицирован: checkboxProp(artist.verified !== false),
     "VK Music": urlProp(artist.vkMusicUrl || null),
     "Yandex Music": urlProp(artist.yandexMusicUrl || null),
     Spotify: urlProp(artist.spotifyUrl || null),
-    "Sync Version": numberProp(artist.version ?? 1),
+    "Версия синхр.": numberProp(artist.version ?? 1),
   }
 }
 
 function artistCreateOpsProperties(artist: ArtistSyncInput) {
   return {
-    "Ops Status": selectProp(
+    "Операционный статус": selectProp(
       labelFor(ARTIST_OPS_STATUS_LABELS, artist.opsStatus || "active")
     ),
     // Initial empty ops fields only on create — never on update
-    Notes: textProp(artist.notes || ""),
+    Заметки: textProp(artist.notes || ""),
   }
 }
 
@@ -135,10 +135,10 @@ export const RELEASE_OPS_ALLOWLIST = [
 ] as const
 
 export const RELEASE_OPS_PROPERTY_KEYS = [
-  "Ops Status",
-  "Assignee",
-  "Deadline",
-  "Notes",
+  "Операционный статус",
+  "Ответственный",
+  "Дедлайн",
+  "Заметки",
 ] as const
 
 async function releaseMirrorProperties(release: ReleaseSyncInput) {
@@ -149,16 +149,16 @@ async function releaseMirrorProperties(release: ReleaseSyncInput) {
 
   const props: Record<string, unknown> = {
     Название: titleProp(release.title),
-    "Local ID": textProp(release.id),
-    "Artist ID": textProp(release.artistId || ""),
-    "Artist Name": textProp(release.artistName || ""),
+    "Локальный ID": textProp(release.id),
+    "ID артиста": textProp(release.artistId || ""),
+    "Имя артиста": textProp(release.artistName || ""),
     UPC: textProp(release.upc || ""),
-    "Release Date": dateProp(dateOnly),
-    Type: textProp(release.type || ""),
-    "Auto Status": textProp(release.autoStatus || ""),
+    "Дата релиза": dateProp(dateOnly),
+    Тип: textProp(release.type || ""),
+    "Авто-статус": textProp(release.autoStatus || ""),
     Cover: urlProp(release.coverUrl || null),
     Bandlink: urlProp(release.bandlinkUrl || null),
-    "Sync Version": numberProp(release.version ?? 1),
+    "Версия синхр.": numberProp(release.version ?? 1),
   }
 
   if (release.artistId) {
@@ -173,10 +173,10 @@ async function releaseMirrorProperties(release: ReleaseSyncInput) {
 
 function releaseCreateOpsProperties(release: ReleaseSyncInput) {
   return {
-    "Ops Status": selectProp(
+    "Операционный статус": selectProp(
       labelFor(RELEASE_OPS_STATUS_LABELS, release.opsStatus || "intake")
     ),
-    Notes: textProp(release.notes || ""),
+    Заметки: textProp(release.notes || ""),
   }
 }
 
@@ -256,15 +256,15 @@ export async function syncTrackToBuildin(track: TrackSyncInput) {
 
   const properties: Record<string, unknown> = {
     Название: titleProp(track.title || "Untitled"),
-    "Local ID": textProp(track.id),
-    "Release Local ID": textProp(track.releaseLocalId),
-    "Submission ID": textProp(track.submissionId || ""),
+    "Локальный ID": textProp(track.id),
+    "Локальный ID релиза": textProp(track.releaseLocalId),
+    "ID заявки": textProp(track.submissionId || ""),
     ISRC: textProp(track.isrc || ""),
-    Artists: textProp(track.artists || ""),
-    Language: textProp(track.language || ""),
-    Explicit: checkboxProp(track.explicit === true),
-    Focus: checkboxProp(track.focus === true),
-    Duration: textProp(track.duration || ""),
+    Артисты: textProp(track.artists || ""),
+    Язык: textProp(track.language || ""),
+    Мат: checkboxProp(track.explicit === true),
+    Фокус: checkboxProp(track.focus === true),
+    Длительность: textProp(track.duration || ""),
   }
 
   const releasePage = await getExternalId("release", track.releaseLocalId)

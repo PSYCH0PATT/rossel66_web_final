@@ -38,6 +38,7 @@ jobs:
       PYRUS_WRITE_DISABLED: "true"
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       FORM_ALLOWED_ORIGINS: http://localhost:3000
+      CI: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -61,10 +62,14 @@ jobs:
       E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       E2E_CRON_SECRET: ${{ secrets.E2E_CRON_SECRET }}
-      E2E_VERIFY_BUILDIN: ${{ secrets.E2E_VERIFY_BUILDIN || '0' }}
+      # Hard-require Buildin verification — never optional in biweekly CI
+      E2E_VERIFY_BUILDIN: "1"
       BUILDIN_API_TOKEN: ${{ secrets.E2E_BUILDIN_API_TOKEN }}
       BUILDIN_API_BASE_URL: https://api.buildin.ai
       BUILDIN_DB_SUBMISSIONS: ${{ secrets.E2E_BUILDIN_DB_SUBMISSIONS }}
+      BUILDIN_DB_FORM_BACK_CATALOG: ${{ secrets.E2E_BUILDIN_DB_FORM_BACK_CATALOG }}
+      BUILDIN_DB_FORM_RELEASE_UPLOAD: ${{ secrets.E2E_BUILDIN_DB_FORM_RELEASE_UPLOAD }}
+      BUILDIN_DB_FORM_DISTRIBUTION: ${{ secrets.E2E_BUILDIN_DB_FORM_DISTRIBUTION }}
       E2E_RUN_ID: biweekly-${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
@@ -76,12 +81,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
-      - name: Require staging URL
+      - name: Require staging URL and Buildin secrets
         run: |
           if [ -z "$E2E_BASE_URL" ]; then
             echo "E2E_BASE_URL secret is required for live E2E"
             exit 1
           fi
+          for v in BUILDIN_API_TOKEN BUILDIN_DB_SUBMISSIONS BUILDIN_DB_FORM_BACK_CATALOG BUILDIN_DB_FORM_RELEASE_UPLOAD BUILDIN_DB_FORM_DISTRIBUTION E2E_CRON_SECRET; do
+            if [ -z "${!v}" ]; then
+              echo "$v is required when E2E_VERIFY_BUILDIN=1"
+              exit 1
+            fi
+          done
       - name: Playwright E2E
         run: pnpm test:e2e
       - name: Cleanup E2E artifacts
@@ -91,9 +102,12 @@ jobs:
           DIRECT_URL: ${{ secrets.E2E_DATABASE_URL }}
           BUILDIN_API_TOKEN: ${{ secrets.E2E_BUILDIN_API_TOKEN }}
           BUILDIN_DB_SUBMISSIONS: ${{ secrets.E2E_BUILDIN_DB_SUBMISSIONS }}
+          BUILDIN_DB_FORM_BACK_CATALOG: ${{ secrets.E2E_BUILDIN_DB_FORM_BACK_CATALOG }}
+          BUILDIN_DB_FORM_RELEASE_UPLOAD: ${{ secrets.E2E_BUILDIN_DB_FORM_RELEASE_UPLOAD }}
+          BUILDIN_DB_FORM_DISTRIBUTION: ${{ secrets.E2E_BUILDIN_DB_FORM_DISTRIBUTION }}
           FORM_DELIVERY_ENCRYPTION_KEY: ${{ secrets.E2E_FORM_DELIVERY_ENCRYPTION_KEY }}
           E2E_TITLE_PREFIX: E2E
-        run: pnpm cleanup:e2e || true
+        run: pnpm cleanup:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -114,8 +128,8 @@ jobs:
           PROD_CRON_SECRET: ${{ secrets.PROD_CRON_SECRET }}
         run: |
           if [ -z "$PROD_HEALTH_URL" ] || [ -z "$PROD_CRON_SECRET" ]; then
-            echo "Skipping production health (secrets not set)"
-            exit 0
+            echo "::error::PROD_FORMS_HEALTH_URL and PROD_CRON_SECRET are required — refusing silent skip"
+            exit 1
           fi
           code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
             -H "Authorization: Bearer $PROD_CRON_SECRET" \

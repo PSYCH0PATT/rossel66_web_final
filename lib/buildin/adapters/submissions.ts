@@ -21,8 +21,10 @@ import {
 } from "@/lib/buildin/types"
 import { getExternalId, upsertExternalId } from "@/lib/buildin/outbox"
 import {
+  FORM_TYPE_LABELS,
   SUBMISSION_STATUS_LABELS,
   labelFor,
+  sourceLabel,
 } from "@/lib/buildin/labels"
 
 function truncateJson(value: unknown, max = 1800): string {
@@ -107,15 +109,19 @@ export async function createSubmissionInBuildin(
   } else {
     const properties: Record<string, unknown> = {
       Название: titleProp(input.title),
-      Тип: selectProp(input.formType),
+      Тип: selectProp(
+        labelFor(FORM_TYPE_LABELS, input.formType, input.formType)
+      ),
       Статус: selectProp(labelFor(SUBMISSION_STATUS_LABELS, "new")),
-      "ID заявки": textProp(input.submissionId),
+      "Технический ID": textProp(input.submissionId),
       Email: emailProp(input.contactEmail ?? null),
       Telegram: textProp(input.contactTelegram ?? ""),
       Артист: textProp(input.artistNickname ?? ""),
       "Pyrus Task ID": textProp(input.pyrusTaskId ?? ""),
       "Кол-во файлов": numberProp(expectedFiles),
-      Источник: selectProp(input.pyrusTaskId ? "dual_write" : "site"),
+      Источник: selectProp(
+        sourceLabel(input.pyrusTaskId ? "dual_write" : "site")
+      ),
     }
 
     if (!isPiiForm) {
@@ -130,7 +136,7 @@ export async function createSubmissionInBuildin(
     }
 
     if (input.adminLink) {
-      properties["Admin Link"] = urlProp(input.adminLink)
+      properties["Ссылка админа"] = urlProp(input.adminLink)
     }
 
     if (input.artistLocalId) {

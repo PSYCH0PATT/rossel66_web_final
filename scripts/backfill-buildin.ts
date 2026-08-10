@@ -29,6 +29,7 @@ import {
 import { createSubmissionInBuildin } from "../lib/buildin/adapters/submissions"
 import type { FormType } from "../lib/buildin/types"
 import { getBuildinApiToken, getBuildinDatabaseId } from "../lib/buildin/env"
+import { isFileFormType } from "../lib/buildin/form-contracts"
 
 function loadEnvFile(filePath: string) {
   if (!existsSync(filePath)) return
@@ -601,6 +602,13 @@ async function main() {
               data: { buildinPageId: existing.buildinPageId },
             })
           }
+          c.skip++
+          continue
+        }
+        if (isFileFormType(s.formType)) {
+          console.warn(
+            `skip file-form submission ${s.id} (${s.formType}) — must not backfill into submissions inbox`
+          )
           c.skip++
           continue
         }

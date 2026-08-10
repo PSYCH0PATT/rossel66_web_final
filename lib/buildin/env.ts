@@ -43,6 +43,9 @@ export function assertBuildinConfigured(): void {
 /** Database IDs from env (created by scripts/setup-buildin-databases.ts) */
 export type BuildinDbKey =
   | "submissions"
+  | "form_back_catalog"
+  | "form_release_upload"
+  | "form_distribution"
   | "submission_releases"
   | "submission_tracks"
   | "artists"
@@ -58,6 +61,9 @@ export type BuildinDbKey =
 
 const ENV_BY_KEY: Record<BuildinDbKey, string> = {
   submissions: "BUILDIN_DB_SUBMISSIONS",
+  form_back_catalog: "BUILDIN_DB_FORM_BACK_CATALOG",
+  form_release_upload: "BUILDIN_DB_FORM_RELEASE_UPLOAD",
+  form_distribution: "BUILDIN_DB_FORM_DISTRIBUTION",
   submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
   submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
   artists: "BUILDIN_DB_ARTISTS",
@@ -70,6 +76,35 @@ const ENV_BY_KEY: Record<BuildinDbKey, string> = {
   pii_not_rf: "BUILDIN_DB_PII_NOT_RF",
   activity: "BUILDIN_DB_ACTIVITY",
   playlist_history: "BUILDIN_DB_PLAYLIST_HISTORY",
+}
+
+export function buildinDbEnvName(key: BuildinDbKey): string {
+  return ENV_BY_KEY[key]
+}
+
+/** All known Buildin DB env keys (for setup scripts). */
+export const BUILDIN_DB_ENV_NAMES = ENV_BY_KEY
+
+/** Route session formType → top-level Buildin queue database */
+export function formTypeToDatabaseKey(
+  formType: string
+): Extract<
+  BuildinDbKey,
+  | "form_back_catalog"
+  | "form_release_upload"
+  | "form_distribution"
+  | "submissions"
+> {
+  switch (formType) {
+    case "catalog_upload":
+      return "form_back_catalog"
+    case "release_upload":
+      return "form_release_upload"
+    case "distribution":
+      return "form_distribution"
+    default:
+      return "submissions"
+  }
 }
 
 export function getBuildinDatabaseId(key: BuildinDbKey): string | null {

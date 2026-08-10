@@ -31,3 +31,9 @@
 - [x] 6.3 Slim Buildin playlists schema + sync fan-out with composite IDs
 - [x] 6.4 Migrate/backfill script (dry-run + live) + archive legacy playlist pages
 - [x] 6.5 Reconciliation, tests, docs
+
+## 7. Ops/PII UX cleanup (phase 2 after forms redesign)
+- [x] 7.1 Move Local ID / Artist ID / Submission ID / Sync Version to end of CRM + PII defs
+- [x] 7.2 Rename shared inbox to «Анкеты и обращения»; Russian Тип/Источник options on live DBs
+- [x] 7.3 Full RU rename of remaining English ops property keys on live CRM mirrors (adapter cutover + `migrate-buildin-crm-ru-labels --apply`, verified 2026-07-31)
+- [x] 7.4 Hide diagnostic columns in default Buildin views — **OpenAPI has no views field** (confirmed via getDatabase); engineering deliverable is `docs/BUILDIN_CRM_VIEW_CHECKLIST.md` + diagnostics already last in schema (7.1). Owner still runs checklist boxes in UI when convenient.

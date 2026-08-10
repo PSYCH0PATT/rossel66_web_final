@@ -52,7 +52,7 @@ describe("formSessionManifestSchema", () => {
     if (!result.success) {
       assert.ok(
         result.error.issues.some((i) =>
-          String(i.message).includes("100 МБ")
+          /100\s*МБ|too_big|Too big/i.test(String(i.message) + String(i.code || ""))
         )
       )
     }
@@ -101,6 +101,36 @@ describe("formSessionManifestSchema", () => {
           String(i.message).includes("релиз")
         )
       )
+    }
+  })
+
+  it("maps contactTelegram alias to contact", () => {
+    const result = formSessionManifestSchema.safeParse({
+      formType: "distribution",
+      title: "Dist",
+      contactTelegram: "@legacy",
+      releases: [minimalRelease(0)],
+      files: [],
+    })
+    assert.equal(result.success, true)
+    if (result.success) {
+      assert.equal(result.data.contact, "@legacy")
+      assert.equal(result.data.contactTelegram, "@legacy")
+    }
+  })
+
+  it("prefers explicit contact over contactTelegram", () => {
+    const result = formSessionManifestSchema.safeParse({
+      formType: "distribution",
+      title: "Dist",
+      contact: "@new",
+      contactTelegram: "@legacy",
+      releases: [minimalRelease(0)],
+      files: [],
+    })
+    assert.equal(result.success, true)
+    if (result.success) {
+      assert.equal(result.data.contact, "@new")
     }
   })
 })

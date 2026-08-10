@@ -1,7 +1,50 @@
 import { defineConfig, devices } from "@playwright/test"
+import { existsSync, readFileSync } from "fs"
+import { resolve } from "path"
 
+/** Load .env.e2e.local into process.env without overwriting existing keys. */
+function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) return
+  for (const line of readFileSync(filePath, "utf8").split("\n")) {
+    const t = line.trim()
+    if (!t || t.startsWith("#")) continue
+    const eq = t.indexOf("=")
+    if (eq <= 0) continue
+    const key = t.slice(0, eq).trim()
+    let value = t.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (process.env[key] === undefined) process.env[key] = value
+  }
+}
+
+loadEnvFile(resolve(process.cwd(), ".env.e2e.local"))
+loadEnvFile(resolve(process.cwd(), ".env.local"))
+
+const remoteBaseURL = process.env.E2E_BASE_URL?.trim()
+const useLocalServer = !remoteBaseURL
+
+// Local runs must hit sandbox queues — prefer E2E_* IDs over prod BUILDIN_DB_* from .env.local
+if (useLocalServer) {
+  for (const [from, to] of [
+    ["E2E_BUILDIN_DB_SUBMISSIONS", "BUILDIN_DB_SUBMISSIONS"],
+    ["E2E_BUILDIN_DB_FORM_BACK_CATALOG", "BUILDIN_DB_FORM_BACK_CATALOG"],
+    ["E2E_BUILDIN_DB_FORM_RELEASE_UPLOAD", "BUILDIN_DB_FORM_RELEASE_UPLOAD"],
+    ["E2E_BUILDIN_DB_FORM_DISTRIBUTION", "BUILDIN_DB_FORM_DISTRIBUTION"],
+    ["E2E_BUILDIN_DB_PII_RF", "BUILDIN_DB_PII_RF"],
+    ["E2E_BUILDIN_DB_PII_NOT_RF", "BUILDIN_DB_PII_NOT_RF"],
+  ] as const) {
+    if (process.env[from]) {
+      process.env[to] = process.env[from]
+    }
+  }
+}
 const baseURL =
-  process.env.E2E_BASE_URL?.trim() ||
+  remoteBaseURL ||
   process.env.PLAYWRIGHT_BASE_URL?.trim() ||
   "http://127.0.0.1:3000"
 
@@ -33,5 +76,20 @@ export default defineConfig({
       : undefined,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  // failOnFlakyTests is Playwright 1.51+; keep retries diagnostic only via CI policy
+  // Local: exercise the commit under test against sandbox BUILDIN_DB_* from .env.e2e.local.
+  // CI: set E2E_BASE_URL to staging — no webServer, same algorithm on the deployed app.
+  ...(useLocalServer
+    ? {
+        webServer: {
+          command: "pnpm exec next start -p 3000",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+          env: {
+            ...process.env,
+            PORT: "3000",
+          },
+        },
+      }
+    : {}),
 })

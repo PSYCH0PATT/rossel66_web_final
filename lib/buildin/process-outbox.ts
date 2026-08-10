@@ -76,6 +76,18 @@ async function handleOutboxEvent(eventType: string, payload: Record<string, unkn
       })
       if (!submission) throw new Error(`submission ${submissionId} not found`)
 
+      // File-upload forms must never land in the shared submissions inbox.
+      // They use /api/forms/sessions → form_* queue DBs.
+      if (
+        submission.formType === "catalog_upload" ||
+        submission.formType === "release_upload" ||
+        submission.formType === "distribution"
+      ) {
+        throw new Error(
+          `create_submission outbox refused for file formType «${submission.formType}» — use form session queues, not submissions inbox`
+        )
+      }
+
       const existingMeta = (submission.filesMeta as FileMeta[]) || []
       const expectedFileCount =
         typeof payload.expectedFileCount === "number"

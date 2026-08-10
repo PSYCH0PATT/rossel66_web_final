@@ -16,15 +16,12 @@ export type FormSessionFileInput = {
 }
 
 export type FormSessionManifestInput = {
-  formType:
-    | "catalog_upload"
-    | "release_upload"
-    | "distribution"
-    | "data_rf"
-    | "data_not_rf"
-    | "contact"
+  formType: "catalog_upload" | "release_upload" | "distribution"
   title: string
   contactEmail?: string | null
+  /** Neutral contact (distribution: «Телеграм или ВК для связи») */
+  contact?: string | null
+  /** @deprecated use `contact` */
   contactTelegram?: string | null
   artistNickname?: string | null
   payload?: Record<string, unknown>
@@ -43,7 +40,6 @@ export type FormSessionManifestInput = {
       language?: string
       explicit?: boolean
       focus?: boolean
-      lyrics?: string
       previewStart?: string
       musicAuthor?: string
       wordsAuthor?: string
@@ -123,7 +119,7 @@ export async function submitFormSession(opts: {
       formType: manifest.formType,
       title: manifest.title,
       contactEmail: manifest.contactEmail ?? null,
-      contactTelegram: manifest.contactTelegram ?? null,
+      contact: manifest.contact ?? manifest.contactTelegram ?? null,
       artistNickname: manifest.artistNickname ?? null,
       payload: manifest.payload ?? {},
       releases: manifest.releases,

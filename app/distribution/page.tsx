@@ -11,6 +11,14 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, UploadCloud } from "lucide-react";
 import { submitFormSession } from "@/lib/buildin/form-session-client";
+import { pickPromoPayload } from "@/lib/buildin/form-contracts";
+import { FORM_SESSION_MAX_FILE_BYTES } from "@/lib/buildin/types";
+
+const MAX_FILE_BYTES = FORM_SESSION_MAX_FILE_BYTES;
+
+function formatFileSizeMb(bytes: number): string {
+  return `${Math.round(bytes / (1024 * 1024))} МБ`;
+}
 
 interface TrackRelease {
   id: string;
@@ -165,13 +173,60 @@ export default function DistributionPage() {
   };
 
   const handleSelectChange = (name: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value }
+      // Clear hidden promo / social / streaming values when switching to «Нет»
+      if (name === "submitToPromo" && value !== "1") {
+        next.artistInfo = ""
+        next.releaseInfo = ""
+        next.releaseSupport = ""
+        next.artistPhotosLink = ""
+        next.specifySocialMedia = "0"
+        next.vkLink = ""
+        next.tiktokLink = ""
+        next.youtubeLink = ""
+        next.instagramLink = ""
+        next.soundcloudLink = ""
+      }
+      if (name === "specifySocialMedia" && value !== "1") {
+        next.vkLink = ""
+        next.tiktokLink = ""
+        next.youtubeLink = ""
+        next.instagramLink = ""
+        next.soundcloudLink = ""
+      }
+      if (name === "specifyStreamingLinks" && value !== "1") {
+        next.yandexMusicLink = ""
+        next.spotifyLink = ""
+        next.appleMusicLink = ""
+        next.vkMusicLink = ""
+      }
+      return next
+    })
+  };
+
+  const assertFileSize = (file: File, label: string): boolean => {
+    if (file.size > MAX_FILE_BYTES) {
+      setSubmitStatus("error");
+      setSubmitMessage(
+        `Ошибка: файл «${file.name}» (${label}) слишком большой. Максимум ${formatFileSizeMb(MAX_FILE_BYTES)}.`
+      );
+      return false;
+    }
+    return true;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
-      setFormData(prev => ({ ...prev, [name]: files[0] }));
+      const label = name === "cover" ? "обложка" : name;
+      if (!assertFileSize(files[0], label)) {
+        e.target.value = "";
+        return;
+      }
+      setSubmitStatus(null);
+      setSubmitMessage("");
+      setFormData((prev) => ({ ...prev, [name]: files[0] }));
     }
   };
 
@@ -203,9 +258,13 @@ export default function DistributionPage() {
 
   const handleTrackFileChange = (trackId: string, name: keyof Pick<TrackRelease, 'audio' | 'lyrics'>, files: FileList | null) => {
     if (files && files[0]) {
-      setFormData(prev => ({
+      const label = name === "audio" ? "аудио" : "текст трека";
+      if (!assertFileSize(files[0], label)) return;
+      setSubmitStatus(null);
+      setSubmitMessage("");
+      setFormData((prev) => ({
         ...prev,
-        tracks: prev.tracks.map(track =>
+        tracks: prev.tracks.map((track) =>
           track.id === trackId ? { ...track, [name]: files[0] } : track
         ),
       }));
@@ -440,26 +499,7 @@ export default function DistributionPage() {
       }
     });
 
-    const payload = {
-      videoSnippetNeeded: rest.videoSnippetNeeded,
-      submitToPromo: rest.submitToPromo,
-      artistInfo: rest.artistInfo,
-      releaseInfo: rest.releaseInfo,
-      releaseSupport: rest.releaseSupport,
-      artistPhotosLink: rest.artistPhotosLink,
-      specifySocialMedia: rest.specifySocialMedia,
-      vkLink: rest.vkLink,
-      tiktokLink: rest.tiktokLink,
-      youtubeLink: rest.youtubeLink,
-      instagramLink: rest.instagramLink,
-      soundcloudLink: rest.soundcloudLink,
-      specifyStreamingLinks: rest.specifyStreamingLinks,
-      yandexMusicLink: rest.yandexMusicLink,
-      spotifyLink: rest.spotifyLink,
-      appleMusicLink: rest.appleMusicLink,
-      vkMusicLink: rest.vkMusicLink,
-      otherComments: rest.otherComments,
-    };
+    const payload = pickPromoPayload(rest as Record<string, unknown>);
 
     try {
       await submitFormSession({
@@ -467,7 +507,7 @@ export default function DistributionPage() {
         manifest: {
           formType: "distribution",
           title: formData.title,
-          contactTelegram: formData.contact,
+          contact: formData.contact,
           artistNickname: formData.artists,
           releases: [
             {
@@ -920,12 +960,22 @@ export default function DistributionPage() {
               </div>
 
               {isSubmitting && (
-                <div className="w-full flex items-center justify-center mt-4 mb-6 space-x-3 text-gray-400 text-sm">
-                  <svg className="animate-spin h-5 w-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                  <span>Загрузка файлов, это может занять несколько минут…</span>
+                <div className="w-full flex flex-col items-center justify-center mt-4 mb-6 space-y-2 text-gray-400 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <svg className="animate-spin h-5 w-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span>Загрузка файлов, это может занять несколько минут… {uploadProgress > 0 ? `${uploadProgress}%` : ""}</span>
+                  </div>
+                  {uploadProgress > 0 && (
+                    <div className="w-full max-w-md h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-400 transition-all"
+                        style={{ width: `${Math.min(100, uploadProgress)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -2,8 +2,8 @@
  * Cleanup E2E leftovers older than TTL.
  *
  * - Deletes FormDeliverySession rows past expiresAt (via cleanupExpiredFormSessions)
- * - Optionally trashes Buildin pages whose title contains E2E_RUN_ID / e2e- prefix
- *   when BUILDIN_API_TOKEN + BUILDIN_DB_SUBMISSIONS point at the sandbox.
+ * - Trashes Buildin pages whose title contains E2E prefix in:
+ *     submissions + form_back_catalog + form_release_upload + form_distribution
  *
  * Usage:
  *   npx tsx scripts/cleanup-e2e-artifacts.ts
@@ -31,52 +31,15 @@ function loadEnvFile(filePath: string) {
   }
 }
 
-async function main() {
-  loadEnvFile(resolve(process.cwd(), ".env.e2e.local"))
-  loadEnvFile(resolve(process.cwd(), ".env.local"))
-  loadEnvFile(resolve(process.cwd(), ".env"))
-
-  // Prefer E2E DB mapping if present
-  for (const [from, to] of [
-    ["E2E_BUILDIN_DB_SUBMISSIONS", "BUILDIN_DB_SUBMISSIONS"],
-    ["E2E_BUILDIN_DB_SUBMISSION_RELEASES", "BUILDIN_DB_SUBMISSION_RELEASES"],
-    ["E2E_BUILDIN_DB_SUBMISSION_TRACKS", "BUILDIN_DB_SUBMISSION_TRACKS"],
-  ] as const) {
-    if (process.env[from] && !process.env[to]) {
-      process.env[to] = process.env[from]
-    }
-  }
-
-  const { cleanupExpiredFormSessions } = await import(
-    "../lib/buildin/form-session"
-  )
-  const { prisma } = await import("../lib/prisma")
-  const n = await cleanupExpiredFormSessions()
-  console.log(`Expired delivery sessions deleted: ${n}`)
-
-  // Rate buckets older than 1 day
-  const buckets = await prisma.formRateBucket.deleteMany({
-    where: { resetAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-  })
-  console.log(`Stale rate buckets deleted: ${buckets.count}`)
-
-  const prefix = process.env.E2E_TITLE_PREFIX?.trim() || "E2E "
-  const maxAgeHours = Number(process.env.E2E_CLEANUP_MAX_AGE_HOURS || 24)
-  const cutoff = Date.now() - maxAgeHours * 3600_000
-
-  const { getBuildinApiToken, getBuildinDatabaseId } = await import(
-    "../lib/buildin/env"
-  )
+async function trashE2ePagesInDb(
+  dbId: string,
+  label: string,
+  prefix: string,
+  cutoff: number
+): Promise<number> {
   const { buildinFetch, buildinUpdatePage } = await import(
     "../lib/buildin/client"
   )
-
-  if (!getBuildinApiToken() || !getBuildinDatabaseId("submissions")) {
-    console.log("Skip Buildin page trash (token/DB missing)")
-    return
-  }
-
-  const dbId = getBuildinDatabaseId("submissions")!
   let cursor: string | undefined
   let trashed = 0
   for (let page = 0; page < 20; page++) {
@@ -114,7 +77,72 @@ async function main() {
     if (!res.has_more || !res.next_cursor) break
     cursor = res.next_cursor
   }
-  console.log(`Buildin E2E pages trashed: ${trashed}`)
+  console.log(`Buildin E2E pages trashed in ${label}: ${trashed}`)
+  return trashed
+}
+
+async function main() {
+  loadEnvFile(resolve(process.cwd(), ".env.e2e.local"))
+  loadEnvFile(resolve(process.cwd(), ".env.local"))
+  loadEnvFile(resolve(process.cwd(), ".env"))
+
+  // Prefer E2E DB mapping if present
+  for (const [from, to] of [
+    ["E2E_BUILDIN_DB_SUBMISSIONS", "BUILDIN_DB_SUBMISSIONS"],
+    ["E2E_BUILDIN_DB_FORM_BACK_CATALOG", "BUILDIN_DB_FORM_BACK_CATALOG"],
+    ["E2E_BUILDIN_DB_FORM_RELEASE_UPLOAD", "BUILDIN_DB_FORM_RELEASE_UPLOAD"],
+    ["E2E_BUILDIN_DB_FORM_DISTRIBUTION", "BUILDIN_DB_FORM_DISTRIBUTION"],
+    ["E2E_BUILDIN_DB_PII_RF", "BUILDIN_DB_PII_RF"],
+    ["E2E_BUILDIN_DB_PII_NOT_RF", "BUILDIN_DB_PII_NOT_RF"],
+  ] as const) {
+    if (process.env[from] && !process.env[to]) {
+      process.env[to] = process.env[from]
+    }
+  }
+
+  const { cleanupExpiredFormSessions } = await import(
+    "../lib/buildin/form-session"
+  )
+  const { prisma } = await import("../lib/prisma")
+  const n = await cleanupExpiredFormSessions()
+  console.log(`Expired delivery sessions deleted: ${n}`)
+
+  // Rate buckets older than 1 day
+  const buckets = await prisma.formRateBucket.deleteMany({
+    where: { resetAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+  })
+  console.log(`Stale rate buckets deleted: ${buckets.count}`)
+
+  const prefix = process.env.E2E_TITLE_PREFIX?.trim() || "E2E "
+  const maxAgeHours = Number(process.env.E2E_CLEANUP_MAX_AGE_HOURS || 24)
+  const cutoff = Date.now() - maxAgeHours * 3600_000
+
+  const { getBuildinApiToken, getBuildinDatabaseId } = await import(
+    "../lib/buildin/env"
+  )
+
+  if (!getBuildinApiToken()) {
+    console.log("Skip Buildin page trash (token missing)")
+    return
+  }
+
+  const targets: Array<{ key: Parameters<typeof getBuildinDatabaseId>[0]; label: string }> = [
+    { key: "submissions", label: "submissions" },
+    { key: "form_back_catalog", label: "form_back_catalog" },
+    { key: "form_release_upload", label: "form_release_upload" },
+    { key: "form_distribution", label: "form_distribution" },
+  ]
+
+  let total = 0
+  for (const t of targets) {
+    const dbId = getBuildinDatabaseId(t.key)
+    if (!dbId) {
+      console.log(`Skip ${t.label} (DB id missing)`)
+      continue
+    }
+    total += await trashE2ePagesInDb(dbId, t.label, prefix, cutoff)
+  }
+  console.log(`Buildin E2E pages trashed total: ${total}`)
 }
 
 main().catch((err) => {

@@ -17,27 +17,13 @@ import {
   type BuildinDatabaseDefKey,
 } from "../lib/buildin/database-defs"
 import { buildinCreateDatabase, buildinGetMe, buildinFetch } from "../lib/buildin/client"
-import { getBuildinApiToken } from "../lib/buildin/env"
+import { getBuildinApiToken, BUILDIN_DB_ENV_NAMES } from "../lib/buildin/env"
 
 const HUB_PAGE_ID =
   process.env.BUILDIN_PARENT_PAGE_ID?.trim() ||
   "1a844652-0f7a-437f-b630-7ebb67eb2fd4"
 
-const ENV_NAMES: Record<BuildinDatabaseDefKey, string> = {
-  submissions: "BUILDIN_DB_SUBMISSIONS",
-  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
-  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
-  artists: "BUILDIN_DB_ARTISTS",
-  releases: "BUILDIN_DB_RELEASES",
-  tracks: "BUILDIN_DB_TRACKS",
-  reports: "BUILDIN_DB_REPORTS",
-  playlists: "BUILDIN_DB_PLAYLISTS",
-  automation_runs: "BUILDIN_DB_AUTOMATION_RUNS",
-  pii_rf: "BUILDIN_DB_PII_RF",
-  pii_not_rf: "BUILDIN_DB_PII_NOT_RF",
-  activity: "BUILDIN_DB_ACTIVITY",
-  playlist_history: "BUILDIN_DB_PLAYLIST_HISTORY",
-}
+const ENV_NAMES = BUILDIN_DB_ENV_NAMES
 
 function loadEnvFile(filePath: string) {
   if (!existsSync(filePath)) return

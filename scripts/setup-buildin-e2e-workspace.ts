@@ -24,31 +24,18 @@ import {
   buildinFetch,
   buildinGetMe,
 } from "../lib/buildin/client"
-import { getBuildinApiToken } from "../lib/buildin/env"
+import { getBuildinApiToken, BUILDIN_DB_ENV_NAMES } from "../lib/buildin/env"
 
 const E2E_DB_KEYS: BuildinDatabaseDefKey[] = [
   "submissions",
-  "submission_releases",
-  "submission_tracks",
+  "form_back_catalog",
+  "form_release_upload",
+  "form_distribution",
   "pii_rf",
   "pii_not_rf",
 ]
 
-const ENV_NAMES: Record<BuildinDatabaseDefKey, string> = {
-  submissions: "BUILDIN_DB_SUBMISSIONS",
-  submission_releases: "BUILDIN_DB_SUBMISSION_RELEASES",
-  submission_tracks: "BUILDIN_DB_SUBMISSION_TRACKS",
-  artists: "BUILDIN_DB_ARTISTS",
-  releases: "BUILDIN_DB_RELEASES",
-  tracks: "BUILDIN_DB_TRACKS",
-  reports: "BUILDIN_DB_REPORTS",
-  playlists: "BUILDIN_DB_PLAYLISTS",
-  automation_runs: "BUILDIN_DB_AUTOMATION_RUNS",
-  pii_rf: "BUILDIN_DB_PII_RF",
-  pii_not_rf: "BUILDIN_DB_PII_NOT_RF",
-  activity: "BUILDIN_DB_ACTIVITY",
-  playlist_history: "BUILDIN_DB_PLAYLIST_HISTORY",
-}
+const ENV_NAMES = BUILDIN_DB_ENV_NAMES
 
 function loadEnvFile(filePath: string) {
   if (!existsSync(filePath)) return
@@ -197,52 +184,8 @@ async function main() {
     results[`E2E_${envName}`] = db.id
   }
 
-  // Wire relations after IDs exist
+  // Wire PII → questionnaires inbox relations
   const submissionsId = results.E2E_BUILDIN_DB_SUBMISSIONS
-  const releasesId = results.E2E_BUILDIN_DB_SUBMISSION_RELEASES
-  const tracksId = results.E2E_BUILDIN_DB_SUBMISSION_TRACKS
-  // propertiesWithoutRelations creates placeholder rich_text fields — remove them
-  // before attaching real relations (Buildin cannot coerce rich_text → relation).
-  if (releasesId && submissionsId) {
-    await buildinFetch(`/v2/databases/${releasesId}`, {
-      method: "PATCH",
-      body: { properties: { ЗаявкаRel: null } },
-    }).catch((err) => console.warn("clear releases ЗаявкаRel:", err))
-    await buildinFetch(`/v2/databases/${releasesId}`, {
-      method: "PATCH",
-      body: {
-        properties: {
-          ЗаявкаRel: {
-            type: "relation",
-            relation: { database_id: submissionsId, type: "single_property" },
-          },
-        },
-      },
-    }).catch((err) => console.warn("relation releases→submissions:", err))
-  }
-  if (tracksId && releasesId && submissionsId) {
-    await buildinFetch(`/v2/databases/${tracksId}`, {
-      method: "PATCH",
-      body: {
-        properties: { ЗаявкаRel: null, РелизЗаявкиRel: null },
-      },
-    }).catch((err) => console.warn("clear tracks rel props:", err))
-    await buildinFetch(`/v2/databases/${tracksId}`, {
-      method: "PATCH",
-      body: {
-        properties: {
-          РелизЗаявкиRel: {
-            type: "relation",
-            relation: { database_id: releasesId, type: "single_property" },
-          },
-          ЗаявкаRel: {
-            type: "relation",
-            relation: { database_id: submissionsId, type: "single_property" },
-          },
-        },
-      },
-    }).catch((err) => console.warn("relation tracks:", err))
-  }
   const piiRfId = results.E2E_BUILDIN_DB_PII_RF
   const piiNotRfId = results.E2E_BUILDIN_DB_PII_NOT_RF
   for (const [label, piiId] of [

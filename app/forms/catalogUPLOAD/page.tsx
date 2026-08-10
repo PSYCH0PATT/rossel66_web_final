@@ -12,6 +12,10 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PlusCircle, Trash2, ChevronDown, ChevronUp, UploadCloud } from "lucide-react";
 import { submitFormSession } from "@/lib/buildin/form-session-client";
+import {
+  catalogApplicationTitle,
+  catalogArtistSummary,
+} from "@/lib/buildin/form-contracts";
 import { FORM_SESSION_MAX_FILE_BYTES } from "@/lib/buildin/types";
 
 // --- Interfaces for State Management ---
@@ -485,7 +489,8 @@ export default function CatalogUploadPage() {
         uploadId,
         manifest: {
           formType: "catalog_upload",
-          title: formData.releases[0]?.releaseTitle?.trim() || "Каталог",
+          title: catalogApplicationTitle(releases),
+          artistNickname: catalogArtistSummary(releases) || null,
           releases,
           files,
         },

@@ -50,6 +50,9 @@ before(async () => {
     mock.seedDatabase(PII_RF_ID, "E2E PII RF")
     mock.seedDatabase(PII_NOT_RF_ID, "E2E PII Not RF")
   } catch (err) {
+    if (process.env.CI === "true" || process.env.CI === "1") {
+      throw err
+    }
     skipSuite = true
     console.warn("Skipping simple forms integration:", err)
   }
@@ -84,6 +87,21 @@ describe("forms simple integration", { concurrency: false }, () => {
     assert.ok(row)
     assert.equal(row?.formType, "contact")
     assert.equal(row?.pyrusTaskId, null)
+
+    // Must have created a page in the submissions mock DB
+    const pages = [...mock.pages.values()].filter(
+      (p) => p.parent_database_id === SUBMISSIONS_ID
+    )
+    assert.ok(pages.length >= 1, "expected Buildin submission page")
+    const hit = pages.find((p) => {
+      const title = p.properties?.["Название"] as
+        | { title?: Array<{ plain_text?: string }> }
+        | undefined
+      const text = title?.title?.map((t) => t.plain_text || "").join("") || ""
+      return text.includes(`Contact ${runId}`)
+    })
+    assert.ok(hit, "Buildin page with contact title not found")
+    assert.ok(row?.buildinPageId || hit.id)
   })
 })
 

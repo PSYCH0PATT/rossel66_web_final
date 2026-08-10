@@ -20,8 +20,9 @@ export async function GET(request: NextRequest) {
     buildinTokenPresent: Boolean(getBuildinApiToken()),
     databases: {
       submissions: Boolean(getBuildinDatabaseId("submissions")),
-      submission_releases: Boolean(getBuildinDatabaseId("submission_releases")),
-      submission_tracks: Boolean(getBuildinDatabaseId("submission_tracks")),
+      form_back_catalog: Boolean(getBuildinDatabaseId("form_back_catalog")),
+      form_release_upload: Boolean(getBuildinDatabaseId("form_release_upload")),
+      form_distribution: Boolean(getBuildinDatabaseId("form_distribution")),
       pii_rf: Boolean(getBuildinDatabaseId("pii_rf")),
       pii_not_rf: Boolean(getBuildinDatabaseId("pii_not_rf")),
     },
@@ -59,9 +60,16 @@ export async function GET(request: NextRequest) {
   checks.outbox = { pending: outboxPending, failed: outboxFailed, dead: outboxDead }
   checks.activeDeliverySessions = sessionsActive
 
+  const dbs = checks.databases as Record<string, boolean>
+  const formQueuesOk =
+    dbs.form_back_catalog &&
+    dbs.form_release_upload &&
+    dbs.form_distribution
+
   const ok =
     Boolean(getBuildinApiToken()) &&
     Boolean(getBuildinDatabaseId("submissions")) &&
+    formQueuesOk &&
     buildinReachable === true &&
     isPyrusWriteDisabled()
 
@@ -79,6 +87,15 @@ export async function GET(request: NextRequest) {
             !getBuildinApiToken() ? "Missing BUILDIN_API_TOKEN" : null,
             !getBuildinDatabaseId("submissions")
               ? "Missing BUILDIN_DB_SUBMISSIONS"
+              : null,
+            !dbs.form_back_catalog
+              ? "Missing BUILDIN_DB_FORM_BACK_CATALOG"
+              : null,
+            !dbs.form_release_upload
+              ? "Missing BUILDIN_DB_FORM_RELEASE_UPLOAD"
+              : null,
+            !dbs.form_distribution
+              ? "Missing BUILDIN_DB_FORM_DISTRIBUTION"
               : null,
             buildinReachable === false ? "Buildin API unreachable" : null,
           ].filter(Boolean),

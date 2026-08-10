@@ -4,11 +4,13 @@ import {
   buildinAppendBlockChildren,
   buildinCreatePage,
   buildinGetUploadUrl,
-  buildinUpdatePage,
   normalizeBuildinUploadContentType,
 } from "@/lib/buildin/client"
-import { requireBuildinDatabaseId } from "@/lib/buildin/env"
-import { upsertExternalId, getExternalId, enqueueBuildinOutbox } from "@/lib/buildin/outbox"
+import {
+  formTypeToDatabaseKey,
+  requireBuildinDatabaseId,
+} from "@/lib/buildin/env"
+import { enqueueBuildinOutbox } from "@/lib/buildin/outbox"
 import {
   encryptManifestJson,
   decryptManifestJson,
@@ -23,21 +25,25 @@ import {
   type FormSessionManifest,
 } from "@/lib/buildin/form-session-schema"
 import {
+  appendReleaseSection,
+  buildFinalizeBlocks,
+} from "@/lib/buildin/form-application-page"
+import {
+  catalogApplicationTitle,
+  catalogArtistSummary,
+} from "@/lib/buildin/form-contracts"
+import {
   FORM_SESSION_ACTIVE_PER_IP,
   FORM_SESSION_MATERIALIZE_BATCH,
   FORM_SESSION_TTL_ABANDONED_DAYS,
   FORM_SESSION_TTL_COMPLETED_DAYS,
   richText,
-  selectProp,
   textProp,
   titleProp,
-  numberProp,
-  emailProp,
   dateProp,
   checkboxProp,
-  relationProp,
 } from "@/lib/buildin/types"
-import { labelFor, SUBMISSION_STATUS_LABELS } from "@/lib/buildin/labels"
+import { FORM_TYPE_LABELS, labelFor } from "@/lib/buildin/labels"
 
 function makeIdempotencyKey(seed: string): string {
   return createHash("sha256").update(seed).digest("hex").slice(0, 48)
@@ -47,6 +53,15 @@ function daysFromNow(days: number): Date {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000)
 }
 
+/** Human label for file block captions (ops-facing, not technical fieldKey). */
+export function humanFileFieldLabel(fieldKey: string): string {
+  if (/coverArt/i.test(fieldKey) || fieldKey === "cover") return "Обложка"
+  if (/audioFile|_audio$|\/audio$/i.test(fieldKey) || /_audioFile$/i.test(fieldKey))
+    return "Аудио"
+  if (/lyricsFile|_lyrics$/i.test(fieldKey)) return "Текст трека"
+  return fieldKey
+}
+
 export class FormSessionError extends Error {
   constructor(
     message: string,
@@ -54,6 +69,38 @@ export class FormSessionError extends Error {
     public code = "form_session_error"
   ) {
     super(message)
+  }
+}
+
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Row properties for the three file-form queues (catalog / release / distribution). */
+function applicationProperties(
+  manifest: FormSessionManifest
+): Record<string, unknown> {
+  const release = manifest.releases[0]
+  let artist = ""
+  let releaseTitle = ""
+
+  if (manifest.formType === "catalog_upload") {
+    artist =
+      catalogArtistSummary(manifest.releases) ||
+      manifest.artistNickname ||
+      ""
+    releaseTitle =
+      catalogApplicationTitle(manifest.releases) || manifest.title || ""
+  } else {
+    artist = manifest.artistNickname || release?.artists || ""
+    releaseTitle = manifest.title || release?.releaseTitle || ""
+  }
+
+  return {
+    Артист: titleProp(artist || releaseTitle || "Заявка"),
+    "Название релиза": textProp(releaseTitle),
+    "Дата заявки": dateProp(todayIsoDate()),
+    Обработана: checkboxProp(false),
   }
 }
 
@@ -79,8 +126,6 @@ export async function createFormDeliverySession(opts: {
   assertManifestSize(manifest)
 
   if (opts.clientIp) {
-    // Drop stale in-flight sessions so a hung materialize cannot permanently
-    // block the IP (common after schema/outage glitches and during E2E).
     const staleBefore = new Date(Date.now() - 20 * 60 * 1000)
     await prisma.formDeliverySession.updateMany({
       where: {
@@ -114,7 +159,6 @@ export async function createFormDeliverySession(opts: {
     where: { idempotencyKey },
   })
   if (existing) {
-    // Cannot return original access token; require status with stored hash ownership check separately.
     throw new FormSessionError(
       "Сессия с этим upload_id уже существует. Используйте сохранённый accessToken.",
       409,
@@ -127,23 +171,12 @@ export async function createFormDeliverySession(opts: {
   const totalTracks = countTracks(manifest)
   const totalBytes = sumFileBytes(manifest)
 
-  const dbId = requireBuildinDatabaseId("submissions")
+  const dbKey = formTypeToDatabaseKey(manifest.formType)
+  const dbId = requireBuildinDatabaseId(dbKey)
   const page = await buildinCreatePage(
     {
       parent: { database_id: dbId },
-      properties: {
-        Название: titleProp(manifest.title),
-        Тип: selectProp(manifest.formType),
-        Статус: selectProp(labelFor(SUBMISSION_STATUS_LABELS, "uploading")),
-        "ID заявки": textProp(idempotencyKey.slice(0, 16)),
-        Email: emailProp(manifest.contactEmail ?? null),
-        Telegram: textProp(manifest.contactTelegram || ""),
-        Артист: textProp(manifest.artistNickname || ""),
-        "Кол-во релизов": numberProp(manifest.releases.length),
-        "Кол-во треков": numberProp(totalTracks),
-        "Кол-во файлов": numberProp(manifest.files.length),
-        Источник: selectProp("site"),
-      },
+      properties: applicationProperties(manifest),
     },
     `form-session:${idempotencyKey}`
   )
@@ -156,7 +189,8 @@ export async function createFormDeliverySession(opts: {
       status: "created",
       title: manifest.title,
       contactEmail: manifest.contactEmail ?? null,
-      contactTelegram: manifest.contactTelegram ?? null,
+      contactTelegram:
+        manifest.contact ?? manifest.contactTelegram ?? null,
       artistNickname: manifest.artistNickname ?? null,
       clientIp: opts.clientIp ?? null,
       buildinPageId: page.id,
@@ -170,14 +204,6 @@ export async function createFormDeliverySession(opts: {
     },
   })
 
-  await buildinUpdatePage(page.id, {
-    properties: {
-      "Session ID": textProp(session.id),
-      "ID заявки": textProp(session.id),
-    },
-  }).catch(() => {})
-
-  // Pre-create item rows
   const itemCreates: Array<{
     sessionId: string
     kind: string
@@ -217,7 +243,6 @@ export async function createFormDeliverySession(opts: {
     filename: f.filename,
     contentType: f.contentType,
     sizeBytes: BigInt(f.sizeBytes),
-    checksumSha256: f.checksumSha256 ?? null,
   }))
   if (fileCreates.length) {
     await prisma.formDeliveryFile.createMany({ data: fileCreates })
@@ -262,6 +287,19 @@ function loadManifest(session: {
   )
 }
 
+async function appendChildren(
+  blockId: string,
+  children: unknown[]
+): Promise<{ results?: Array<{ id: string; type?: string }> }> {
+  return buildinAppendBlockChildren(blockId, children) as Promise<{
+    results?: Array<{ id: string; type?: string }>
+  }>
+}
+
+/**
+ * Materialize release/track structure as blocks on the single application page.
+ * FormDeliveryItem.buildinPageId stores the target section block id (not a DB row).
+ */
 export async function materializeFormSession(sessionId: string): Promise<{
   created: number
   remaining: number
@@ -278,117 +316,159 @@ export async function materializeFormSession(sessionId: string): Promise<{
     data: { status: "materializing" },
   })
 
-  // Retry failed items too (e.g. after Buildin schema fixes); otherwise remaining
-  // stucks forever because only "pending" was processed.
-  const pending = await prisma.formDeliveryItem.findMany({
-    where: { sessionId, status: { in: ["pending", "failed"] } },
-    orderBy: [{ kind: "asc" }, { releaseIndex: "asc" }, { trackIndex: "asc" }],
+  // Optional contact/promo header (no duplicate «Сводка заявки»)
+  const existingSummary = await prisma.formDeliveryItem.findUnique({
+    where: {
+      sessionId_localKey: { sessionId, localKey: "summary:root" },
+    },
+  })
+  if (!existingSummary) {
+    const headerBlocks = buildFinalizeBlocks(manifest)
+    await prisma.formDeliveryItem.create({
+      data: {
+        sessionId,
+        kind: "summary",
+        releaseIndex: -1,
+        trackIndex: null,
+        localKey: "summary:root",
+        title: "Шапка",
+        status: headerBlocks.length ? "pending" : "created",
+        buildinPageId: session.buildinPageId,
+      },
+    })
+    if (headerBlocks.length) {
+      try {
+        await buildinAppendBlockChildren(session.buildinPageId, headerBlocks)
+        await prisma.formDeliveryItem.update({
+          where: {
+            sessionId_localKey: { sessionId, localKey: "summary:root" },
+          },
+          data: { status: "created", lastError: null },
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        await prisma.formDeliveryItem.update({
+          where: {
+            sessionId_localKey: { sessionId, localKey: "summary:root" },
+          },
+          data: { status: "failed", lastError: message.slice(0, 2000) },
+        })
+        throw err
+      }
+    }
+  } else if (existingSummary.status === "pending" || existingSummary.status === "failed") {
+    const headerBlocks = buildFinalizeBlocks(manifest)
+    if (headerBlocks.length) {
+      try {
+        await buildinAppendBlockChildren(session.buildinPageId, headerBlocks)
+        await prisma.formDeliveryItem.update({
+          where: {
+            sessionId_localKey: { sessionId, localKey: "summary:root" },
+          },
+          data: { status: "created", lastError: null },
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        await prisma.formDeliveryItem.update({
+          where: {
+            sessionId_localKey: { sessionId, localKey: "summary:root" },
+          },
+          data: { status: "failed", lastError: message.slice(0, 2000) },
+        })
+        throw err
+      }
+    } else {
+      await prisma.formDeliveryItem.update({
+        where: {
+          sessionId_localKey: { sessionId, localKey: "summary:root" },
+        },
+        data: { status: "created", lastError: null },
+      })
+    }
+  }
+
+  const pendingReleases = await prisma.formDeliveryItem.findMany({
+    where: {
+      sessionId,
+      kind: "release",
+      status: { in: ["pending", "failed"] },
+    },
+    orderBy: [{ releaseIndex: "asc" }],
     take: FORM_SESSION_MATERIALIZE_BATCH,
   })
 
   let created = 0
-  const releaseDb = requireBuildinDatabaseId("submission_releases")
-  const trackDb = requireBuildinDatabaseId("submission_tracks")
 
-  for (const item of pending) {
+  for (const item of pendingReleases) {
     try {
-      if (item.kind === "release") {
-        const release = manifest.releases[item.releaseIndex]
-        if (!release) throw new Error("release missing in manifest")
-        const localId = `${sessionId}:release:${item.releaseIndex}`
-        const existing = await getExternalId("submission_release", localId)
-        let pageId = existing?.buildinPageId
-        if (!pageId) {
-          const page = await buildinCreatePage(
-            {
-              parent: { database_id: releaseDb },
-              properties: {
-                Название: titleProp(release.releaseTitle),
-                "Session ID": textProp(sessionId),
-                "Release Index": numberProp(item.releaseIndex),
-                "Тип релиза": selectProp(release.releaseType || "1"),
-                Артисты: textProp(release.artists || ""),
-                UPC: textProp(release.upc || ""),
-                Жанр: textProp(release.genre || ""),
-                "Дата релиза": dateProp(
-                  release.releaseDate && /^\d{4}-\d{2}-\d{2}/.test(release.releaseDate)
-                    ? release.releaseDate.slice(0, 10)
-                    : null
-                ),
-                "Кол-во треков": numberProp(release.tracks.length),
-                ЗаявкаRel: relationProp([session.buildinPageId]),
-              },
-            },
-            `submission:release:${sessionId}:${item.releaseIndex}`
-          )
-          pageId = page.id
-          await upsertExternalId({
-            entityType: "submission_release",
-            localId,
-            buildinPageId: page.id,
-            buildinDbKey: "submission_releases",
-          })
-        }
+      const release = manifest.releases[item.releaseIndex]
+      if (!release) throw new Error("release missing in manifest")
+
+      // Resume: structure already exists — do not append a second toggle
+      if (item.buildinPageId) {
         await prisma.formDeliveryItem.update({
           where: { id: item.id },
-          data: { status: "created", buildinPageId: pageId },
+          data: { status: "created", lastError: null },
         })
         created++
-      } else if (item.kind === "track") {
-        const release = manifest.releases[item.releaseIndex]
-        const track = release?.tracks[item.trackIndex ?? -1]
-        if (!track) throw new Error("track missing in manifest")
-        const releaseItem = await prisma.formDeliveryItem.findUnique({
+        const trackItems = await prisma.formDeliveryItem.findMany({
+          where: {
+            sessionId,
+            kind: "track",
+            releaseIndex: item.releaseIndex,
+            status: { in: ["pending", "failed"] },
+          },
+        })
+        for (const ti of trackItems) {
+          if (ti.buildinPageId) {
+            await prisma.formDeliveryItem.update({
+              where: { id: ti.id },
+              data: { status: "created", lastError: null },
+            })
+            created++
+          }
+        }
+        continue
+      }
+
+      const section = await appendReleaseSection({
+        pageId: session.buildinPageId,
+        formType: manifest.formType,
+        releaseIndex: item.releaseIndex,
+        release,
+        append: appendChildren,
+      })
+
+      await prisma.formDeliveryItem.update({
+        where: { id: item.id },
+        data: {
+          status: "created",
+          buildinPageId: section.releaseBlockId,
+          lastError: null,
+        },
+      })
+      created++
+
+      for (let ti = 0; ti < section.trackBlockIds.length; ti++) {
+        const trackItem = await prisma.formDeliveryItem.findUnique({
           where: {
             sessionId_localKey: {
               sessionId,
-              localKey: `release:${item.releaseIndex}`,
+              localKey: `track:${item.releaseIndex}:${ti}`,
             },
           },
         })
-        if (!releaseItem?.buildinPageId) {
-          // Wait for parent release page
-          continue
-        }
-        const localId = `${sessionId}:track:${item.releaseIndex}:${item.trackIndex}`
-        const existing = await getExternalId("submission_track", localId)
-        let pageId = existing?.buildinPageId
-        if (!pageId) {
-          const page = await buildinCreatePage(
-            {
-              parent: { database_id: trackDb },
-              properties: {
-                Название: titleProp(track.trackTitle),
-                "Session ID": textProp(sessionId),
-                "Release Index": numberProp(item.releaseIndex),
-                "Track Index": numberProp(item.trackIndex ?? 0),
-                Артисты: textProp(track.artists || ""),
-                ISRC: textProp(track.isrc || ""),
-                Язык: textProp(track.language || ""),
-                Explicit: checkboxProp(track.explicit === true),
-                Focus: checkboxProp(track.focus === true),
-                "Preview Start": textProp(track.previewStart || ""),
-                "Music Author": textProp(track.musicAuthor || ""),
-                "Words Author": textProp(track.wordsAuthor || ""),
-                РелизЗаявкиRel: relationProp([releaseItem.buildinPageId]),
-                ЗаявкаRel: relationProp([session.buildinPageId]),
-              },
+        if (trackItem) {
+          await prisma.formDeliveryItem.update({
+            where: { id: trackItem.id },
+            data: {
+              status: "created",
+              buildinPageId: section.trackBlockIds[ti],
+              lastError: null,
             },
-            `submission:track:${sessionId}:${item.releaseIndex}:${item.trackIndex}`
-          )
-          pageId = page.id
-          await upsertExternalId({
-            entityType: "submission_track",
-            localId,
-            buildinPageId: page.id,
-            buildinDbKey: "submission_tracks",
           })
+          created++
         }
-        await prisma.formDeliveryItem.update({
-          where: { id: item.id },
-          data: { status: "created", buildinPageId: pageId },
-        })
-        created++
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -396,21 +476,41 @@ export async function materializeFormSession(sessionId: string): Promise<{
         where: { id: item.id },
         data: { status: "failed", lastError: message.slice(0, 2000) },
       })
+      // Don't leave child tracks pending forever (would re-enqueue infinitely)
+      await prisma.formDeliveryItem.updateMany({
+        where: {
+          sessionId,
+          kind: "track",
+          releaseIndex: item.releaseIndex,
+          status: { in: ["pending", "failed"] },
+        },
+        data: {
+          status: "failed",
+          lastError: message.slice(0, 2000),
+        },
+      })
     }
   }
 
-  // Wire parentPageId for files once items exist
+  // Wire parentPageId = section block id for append; upload URL uses page id.
   for (const f of manifest.files) {
-    let parentPageId = session.buildinPageId
+    let targetBlockId = session.buildinPageId
     if (f.parentKind === "release" && f.releaseIndex != null) {
       const it = await prisma.formDeliveryItem.findUnique({
         where: {
-          sessionId_localKey: { sessionId, localKey: `release:${f.releaseIndex}` },
+          sessionId_localKey: {
+            sessionId,
+            localKey: `release:${f.releaseIndex}`,
+          },
         },
       })
-      if (it?.buildinPageId) parentPageId = it.buildinPageId
+      if (it?.buildinPageId) targetBlockId = it.buildinPageId
     }
-    if (f.parentKind === "track" && f.releaseIndex != null && f.trackIndex != null) {
+    if (
+      f.parentKind === "track" &&
+      f.releaseIndex != null &&
+      f.trackIndex != null
+    ) {
       const it = await prisma.formDeliveryItem.findUnique({
         where: {
           sessionId_localKey: {
@@ -419,20 +519,28 @@ export async function materializeFormSession(sessionId: string): Promise<{
           },
         },
       })
-      if (it?.buildinPageId) parentPageId = it.buildinPageId
+      if (it?.buildinPageId) targetBlockId = it.buildinPageId
     }
     await prisma.formDeliveryFile.updateMany({
       where: { sessionId, fieldKey: f.fieldKey, parentPageId: null },
-      data: { parentPageId },
+      data: { parentPageId: targetBlockId },
     })
   }
 
   const [remainingPending, remainingFailed] = await Promise.all([
     prisma.formDeliveryItem.count({
-      where: { sessionId, status: "pending" },
+      where: {
+        sessionId,
+        kind: { in: ["release", "track"] },
+        status: "pending",
+      },
     }),
     prisma.formDeliveryItem.count({
-      where: { sessionId, status: "failed" },
+      where: {
+        sessionId,
+        kind: { in: ["release", "track"] },
+        status: "failed",
+      },
     }),
   ])
   const remaining = remainingPending + remainingFailed
@@ -441,10 +549,14 @@ export async function materializeFormSession(sessionId: string): Promise<{
       where: { id: sessionId },
       data: { status: "uploading", lastError: null },
     })
-  } else if (remainingPending === 0 && remainingFailed > 0 && created === 0) {
-    // All items failed again this batch — fail the session so IP slots free up.
+  } else if (remainingPending === 0 && remainingFailed > 0) {
     const sample = await prisma.formDeliveryItem.findFirst({
-      where: { sessionId, status: "failed", lastError: { not: null } },
+      where: {
+        sessionId,
+        kind: "release",
+        status: "failed",
+        lastError: { not: null },
+      },
       select: { lastError: true },
     })
     await prisma.formDeliverySession.update({
@@ -471,6 +583,9 @@ export async function presignFormSessionFile(opts: {
   fieldKey: string
 }) {
   const session = await requireOwnedSession(opts.sessionId, opts.accessToken)
+  if (!session.buildinPageId) {
+    throw new FormSessionError("Страница заявки ещё не создана", 409)
+  }
   const file = await prisma.formDeliveryFile.findUnique({
     where: {
       sessionId_fieldKey: { sessionId: opts.sessionId, fieldKey: opts.fieldKey },
@@ -479,7 +594,7 @@ export async function presignFormSessionFile(opts: {
   if (!file) throw new FormSessionError("Файл не найден в сессии", 404)
   if (!file.parentPageId) {
     throw new FormSessionError(
-      "Страница для файла ещё не создана. Подождите materialize.",
+      "Секция для файла ещё не создана. Подождите materialize.",
       409,
       "not_materialized"
     )
@@ -492,11 +607,12 @@ export async function presignFormSessionFile(opts: {
     file.contentType,
     file.filename
   )
+  // Upload URL must target the page; file block is appended to section block later.
   const upload = await buildinGetUploadUrl({
     filename: file.filename,
     content_type: contentType,
     content_length: Number(file.sizeBytes),
-    parent: { page_id: file.parentPageId },
+    parent: { page_id: session.buildinPageId },
   })
 
   await prisma.formDeliveryFile.update({
@@ -540,6 +656,7 @@ export async function completeFormSessionFile(opts: {
     return { ok: true, already: true }
   }
 
+  // parentPageId holds the section/toggle block id for the correct release/track.
   await buildinAppendBlockChildren(file.parentPageId, [
     {
       type: "file",
@@ -553,7 +670,9 @@ export async function completeFormSessionFile(opts: {
           ),
           size: Number(file.sizeBytes),
         },
-        caption: richText(`${file.fieldKey}: ${file.filename}`),
+        caption: richText(
+          `${humanFileFieldLabel(file.fieldKey)}: ${file.filename}`
+        ),
       },
     },
   ])
@@ -585,7 +704,7 @@ export async function finalizeFormSession(opts: {
   })
   if (pendingItems > 0) {
     throw new FormSessionError(
-      "Сначала дождитесь создания страниц релизов/треков",
+      "Сначала дождитесь создания структуры заявки",
       409,
       "materialize_incomplete"
     )
@@ -606,7 +725,6 @@ export async function finalizeFormSession(opts: {
     data: { status: "finalizing" },
   })
 
-  // Prefer inline finalize so the browser is not racing a slow outbox cron.
   try {
     await runFormSessionFinalize(session.id)
     return { accepted: true, status: "completed" as const }
@@ -641,12 +759,6 @@ export async function runFormSessionFinalize(sessionId: string) {
   if (missingFiles > 0) {
     throw new FormSessionError(`Files incomplete: ${missingFiles}`, 409)
   }
-
-  await buildinUpdatePage(session.buildinPageId, {
-    properties: {
-      Статус: selectProp(labelFor(SUBMISSION_STATUS_LABELS, "new")),
-    },
-  })
 
   await prisma.formDeliverySession.update({
     where: { id: sessionId },
@@ -723,7 +835,6 @@ export async function createSimpleBuildinSubmission(opts: {
   idempotencySeed: string
 }) {
   const { recordAndDualWriteSubmission } = await import("@/lib/buildin/dual-write")
-  // Force no Pyrus by caller setting PYRUS_WRITE_DISABLED; dual-write still creates Buildin page
   return recordAndDualWriteSubmission({
     formType: opts.formType,
     title: opts.title,
@@ -735,4 +846,9 @@ export async function createSimpleBuildinSubmission(opts: {
     files: [],
     idempotencySeed: opts.idempotencySeed || randomUUID(),
   })
+}
+
+/** Exported for tests */
+export function resolveFormQueueLabel(formType: string): string {
+  return labelFor(FORM_TYPE_LABELS, formType, formType)
 }

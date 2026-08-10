@@ -82,6 +82,9 @@ async function main() {
 
   const required: Array<Parameters<typeof getBuildinDatabaseId>[0]> = [
     "submissions",
+    "form_back_catalog",
+    "form_release_upload",
+    "form_distribution",
     "artists",
     "releases",
     "tracks",

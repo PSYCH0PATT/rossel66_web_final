@@ -1,6 +1,12 @@
 /**
  * In-memory Buildin V2 mock for integration tests.
  * Point BUILDIN_API_BASE_URL at this server.
+ *
+ * Fidelity notes vs real API:
+ * - GET /v2/databases/:id returns seeded properties (not empty)
+ * - POST /v2/pages ignores inline `children` (must PATCH …/children)
+ * - Property writes validate known column names when schema was seeded
+ * - Implements /query and /mutate
  */
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "http"
 import { randomUUID } from "crypto"
@@ -19,6 +25,37 @@ type PageRec = {
   properties: Record<string, unknown>
   children: unknown[]
   in_trash?: boolean
+  created_time: string
+}
+
+type BlockRec = {
+  id: string
+  parent_id: string
+  type: string
+  raw: Record<string, unknown>
+  children: unknown[]
+  has_children: boolean
+}
+
+type DbRec = {
+  id: string
+  title: string
+  properties: Record<string, { id: string; name: string; type: string }>
+}
+
+const PROP_SHAPES: Record<string, string[]> = {
+  title: ["title"],
+  rich_text: ["rich_text"],
+  number: ["number"],
+  select: ["select"],
+  multi_select: ["multi_select"],
+  date: ["date"],
+  email: ["email"],
+  url: ["url"],
+  checkbox: ["checkbox"],
+  files: ["files"],
+  people: ["people"],
+  relation: ["relation"],
 }
 
 export class MockBuildinServer {
@@ -26,7 +63,8 @@ export class MockBuildinServer {
   private port = 0
   mode: MockMode = {}
   pages = new Map<string, PageRec>()
-  databases = new Map<string, { id: string; title: string }>()
+  blocks = new Map<string, BlockRec>()
+  databases = new Map<string, DbRec>()
   uploads = new Map<string, { oss_name: string; size: number; expired?: boolean }>()
   requestLog: Array<{ method: string; path: string; status: number }> = []
 
@@ -34,8 +72,20 @@ export class MockBuildinServer {
     return `http://127.0.0.1:${this.port}`
   }
 
-  seedDatabase(id: string, title: string) {
-    this.databases.set(id, { id, title })
+  seedDatabase(
+    id: string,
+    title: string,
+    properties?: Record<string, { name?: string; type: string }>
+  ) {
+    const props: DbRec["properties"] = {}
+    for (const [key, schema] of Object.entries(properties || {})) {
+      props[key] = {
+        id: randomUUID(),
+        name: schema.name || key,
+        type: schema.type,
+      }
+    }
+    this.databases.set(id, { id, title, properties: props })
   }
 
   resetMode() {
@@ -88,6 +138,48 @@ export class MockBuildinServer {
     res.end(payload)
   }
 
+  private validateProperties(
+    dbId: string | undefined,
+    properties: Record<string, unknown> | undefined
+  ): string | null {
+    if (!properties || !dbId) return null
+    const db = this.databases.get(dbId)
+    if (!db || Object.keys(db.properties).length === 0) return null
+    const byName = new Map(
+      Object.values(db.properties).map((p) => [p.name, p] as const)
+    )
+    for (const [key, value] of Object.entries(properties)) {
+      const meta = db.properties[key] || byName.get(key)
+      if (!meta) {
+        return `unknown property «${key}» on database ${dbId}`
+      }
+      if (value == null || typeof value !== "object") {
+        return `property «${key}» must be an object`
+      }
+      const allowed = PROP_SHAPES[meta.type]
+      if (!allowed) continue
+      const keys = Object.keys(value as object)
+      if (!keys.some((k) => allowed.includes(k))) {
+        return `property «${key}» type ${meta.type} expects one of ${allowed.join(",")}`
+      }
+    }
+    return null
+  }
+
+  private matchTitleFilter(
+    page: PageRec,
+    filter: { property?: string; title?: { contains?: string } } | undefined
+  ): boolean {
+    if (!filter?.title?.contains) return true
+    const propName = filter.property || "Название"
+    const prop = page.properties[propName] as
+      | { title?: Array<{ plain_text?: string }> }
+      | undefined
+    const title =
+      prop?.title?.map((t) => t.plain_text || "").join("") || ""
+    return title.includes(filter.title.contains)
+  }
+
   private async handle(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url || "/", this.baseUrl)
     const method = (req.method || "GET").toUpperCase()
@@ -129,7 +221,7 @@ export class MockBuildinServer {
         return
       }
 
-      if (path.startsWith("/v2/databases/") && method === "GET") {
+      if (path.match(/^\/v2\/databases\/[^/]+$/) && method === "GET") {
         const id = path.split("/")[3]
         const db = this.databases.get(id)
         this.requestLog.push({ method, path, status: db ? 200 : 404 })
@@ -137,12 +229,92 @@ export class MockBuildinServer {
           this.json(res, 404, { message: "not found" })
           return
         }
+        const properties: Record<string, unknown> = {}
+        for (const [key, p] of Object.entries(db.properties)) {
+          properties[key] = {
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            [p.type]: {},
+          }
+        }
         this.json(res, 200, {
           object: "database",
           id: db.id,
-          title: [{ plain_text: db.title, type: "text", text: { content: db.title } }],
-          properties: {},
+          title: [
+            {
+              plain_text: db.title,
+              type: "text",
+              text: { content: db.title },
+            },
+          ],
+          properties,
         })
+        return
+      }
+
+      if (path.match(/^\/v2\/databases\/[^/]+\/query$/) && method === "POST") {
+        const id = path.split("/")[3]
+        const db = this.databases.get(id)
+        if (!db) {
+          this.requestLog.push({ method, path, status: 404 })
+          this.json(res, 404, { message: "not found" })
+          return
+        }
+        const body = (await this.readBody(req)) as {
+          filter?: { property?: string; title?: { contains?: string } }
+          page_size?: number
+        }
+        const results = [...this.pages.values()]
+          .filter(
+            (p) =>
+              p.parent_database_id === id &&
+              !p.in_trash &&
+              this.matchTitleFilter(p, body.filter)
+          )
+          .sort((a, b) => b.created_time.localeCompare(a.created_time))
+          .slice(0, body.page_size || 50)
+          .map((p) => ({
+            object: "page",
+            id: p.id,
+            created_time: p.created_time,
+            parent: { database_id: p.parent_database_id },
+            properties: p.properties,
+          }))
+        this.requestLog.push({ method, path, status: 200 })
+        this.json(res, 200, {
+          object: "list",
+          results,
+          has_more: false,
+          next_cursor: null,
+        })
+        return
+      }
+
+      if (path.match(/^\/v2\/databases\/[^/]+\/mutate$/) && method === "POST") {
+        const id = path.split("/")[3]
+        const db = this.databases.get(id)
+        if (!db) {
+          this.requestLog.push({ method, path, status: 404 })
+          this.json(res, 404, { message: "not found" })
+          return
+        }
+        const body = (await this.readBody(req)) as {
+          properties?: Record<string, { name?: string; type?: string; id?: string } | null>
+        }
+        for (const [key, val] of Object.entries(body.properties || {})) {
+          if (val == null) {
+            delete db.properties[key]
+            continue
+          }
+          db.properties[key] = {
+            id: val.id || db.properties[key]?.id || randomUUID(),
+            name: val.name || key,
+            type: val.type || "rich_text",
+          }
+        }
+        this.requestLog.push({ method, path, status: 200 })
+        this.json(res, 200, { object: "database", id: db.id })
         return
       }
 
@@ -157,21 +329,56 @@ export class MockBuildinServer {
         const body = (await this.readBody(req)) as {
           parent?: { database_id?: string }
           properties?: Record<string, unknown>
+          children?: unknown[]
+        }
+        const err = this.validateProperties(
+          body.parent?.database_id,
+          body.properties
+        )
+        if (err) {
+          this.requestLog.push({ method, path, status: 400 })
+          this.json(res, 400, { message: err })
+          return
         }
         const id = randomUUID()
+        // Real Buildin ignores inline children on page create (esp. toggles) —
+        // clients must PATCH /v2/blocks/:id/children afterwards.
         const page: PageRec = {
           id,
           parent_database_id: body.parent?.database_id,
           properties: body.properties || {},
           children: [],
+          created_time: new Date().toISOString(),
         }
         this.pages.set(id, page)
         this.requestLog.push({ method, path, status: 200 })
-        this.json(res, 200, { object: "page", id, url: `https://buildin.ai/${id}` })
+        this.json(res, 200, {
+          object: "page",
+          id,
+          url: `https://buildin.ai/${id}`,
+        })
         return
       }
 
-      if (path.startsWith("/v2/pages/") && method === "PATCH") {
+      if (path.match(/^\/v2\/pages\/[^/]+$/) && method === "GET") {
+        const id = path.split("/")[3]
+        const page = this.pages.get(id)
+        if (!page) {
+          this.requestLog.push({ method, path, status: 404 })
+          this.json(res, 404, { message: "not found" })
+          return
+        }
+        this.requestLog.push({ method, path, status: 200 })
+        this.json(res, 200, {
+          object: "page",
+          id: page.id,
+          properties: page.properties,
+          parent: { database_id: page.parent_database_id },
+        })
+        return
+      }
+
+      if (path.match(/^\/v2\/pages\/[^/]+$/) && method === "PATCH") {
         const id = path.split("/")[3]
         const page = this.pages.get(id)
         if (!page) {
@@ -184,6 +391,15 @@ export class MockBuildinServer {
           in_trash?: boolean
         }
         if (body.properties) {
+          const err = this.validateProperties(
+            page.parent_database_id,
+            body.properties
+          )
+          if (err) {
+            this.requestLog.push({ method, path, status: 400 })
+            this.json(res, 400, { message: err })
+            return
+          }
           page.properties = { ...page.properties, ...body.properties }
         }
         if (body.in_trash != null) page.in_trash = body.in_trash
@@ -195,19 +411,68 @@ export class MockBuildinServer {
       if (
         (path.match(/^\/v2\/pages\/[^/]+\/children$/) ||
           path.match(/^\/v2\/blocks\/[^/]+\/children$/)) &&
+        method === "GET"
+      ) {
+        const id = path.split("/")[3]
+        const kids = [...this.blocks.values()].filter((b) => b.parent_id === id)
+        this.requestLog.push({ method, path, status: 200 })
+        this.json(res, 200, {
+          object: "list",
+          results: kids.map((b) => ({
+            object: "block",
+            id: b.id,
+            type: b.type,
+            has_children: b.has_children,
+            ...b.raw,
+          })),
+          has_more: false,
+        })
+        return
+      }
+
+      if (
+        (path.match(/^\/v2\/pages\/[^/]+\/children$/) ||
+          path.match(/^\/v2\/blocks\/[^/]+\/children$/)) &&
         method === "PATCH"
       ) {
         const id = path.split("/")[3]
         const page = this.pages.get(id)
-        if (!page) {
+        const parentBlock = this.blocks.get(id)
+        if (!page && !parentBlock) {
           this.requestLog.push({ method, path, status: 404 })
           this.json(res, 404, { message: "not found" })
           return
         }
         const body = (await this.readBody(req)) as { children?: unknown[] }
-        page.children.push(...(body.children || []))
+        const created = (body.children || []).map((raw) => {
+          const child = raw as {
+            type?: string
+            children?: unknown[]
+            [k: string]: unknown
+          }
+          const blockId = randomUUID()
+          // Nested children on toggle create are ignored by real Buildin —
+          // store type only; nested must be appended in a follow-up PATCH.
+          const ignoredNested = Array.isArray(child.children)
+          const rec: BlockRec = {
+            id: blockId,
+            parent_id: id,
+            type: child.type || "paragraph",
+            raw: { ...child, children: undefined },
+            children: [],
+            has_children: false,
+          }
+          void ignoredNested
+          this.blocks.set(blockId, rec)
+          return { object: "block", id: blockId, type: rec.type }
+        })
+        if (page) page.children.push(...(body.children || []))
+        if (parentBlock) {
+          parentBlock.children.push(...(body.children || []))
+          parentBlock.has_children = true
+        }
         this.requestLog.push({ method, path, status: 200 })
-        this.json(res, 200, { object: "list", results: body.children || [] })
+        this.json(res, 200, { object: "list", results: created })
         return
       }
 

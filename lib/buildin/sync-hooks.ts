@@ -71,7 +71,7 @@ export async function enqueueReleaseSync(release: {
       upc: release.upc ?? null,
       releaseDate: release.releaseDate ?? null,
       type: release.type ?? null,
-      // Auto status from Koala/Zvonko — mirror only; never set Ops Status
+      // Auto status from Koala/Zvonko — mirror only; never set Операционный статус
       autoStatus: release.autoStatus ?? null,
       coverUrl: release.coverUrl ?? null,
       bandlinkUrl: release.bandlinkUrl ?? null,

@@ -37,29 +37,29 @@ export const REPORT_OPS_ALLOWLIST = ["opsStatus", "assignee", "deadline", "notes
 
 /** Buildin property names owned by ops (never overwritten by forward sync updates). */
 export const REPORT_OPS_PROPERTY_KEYS = [
-  "Ops Status",
-  "Assignee",
-  "Deadline",
-  "Notes",
+  "Операционный статус",
+  "Ответственный",
+  "Дедлайн",
+  "Заметки",
 ] as const
 
 async function reportMirrorProperties(report: ReportSyncInput) {
   const title = `${report.artistName} — ${report.quarter} ${report.year ?? ""}`.trim()
   const props: Record<string, unknown> = {
     Название: titleProp(title),
-    "Local ID": textProp(report.id),
-    "Artist ID": textProp(report.artistId || ""),
+    "Локальный ID": textProp(report.id),
+    "ID артиста": textProp(report.artistId || ""),
     Артист: textProp(report.artistName),
-    Quarter: textProp(report.quarter),
-    Year: numberProp(report.year ?? null),
-    Amount: numberProp(report.totalAmount ?? null),
-    Plays: numberProp(report.totalPlays ?? null),
-    Paid: checkboxProp(report.isPaid === true),
-    Signed: checkboxProp(report.isSigned === true),
-    Acknowledged: checkboxProp(report.isAcknowledged === true),
-    Registered: checkboxProp(report.isRegistered !== false),
-    "File URL": urlProp(report.fileUrl || null),
-    "Sync Version": numberProp(report.version ?? 1),
+    Квартал: textProp(report.quarter),
+    Год: numberProp(report.year ?? null),
+    Сумма: numberProp(report.totalAmount ?? null),
+    Прослушивания: numberProp(report.totalPlays ?? null),
+    Оплачен: checkboxProp(report.isPaid === true),
+    Подписан: checkboxProp(report.isSigned === true),
+    Подтверждён: checkboxProp(report.isAcknowledged === true),
+    Зарегистрирован: checkboxProp(report.isRegistered !== false),
+    "URL файла": urlProp(report.fileUrl || null),
+    "Версия синхр.": numberProp(report.version ?? 1),
   }
 
   if (report.artistId) {
@@ -75,8 +75,8 @@ async function reportMirrorProperties(report: ReportSyncInput) {
 function reportCreateOpsProperties(report: ReportSyncInput) {
   const machine = report.opsStatus || (report.isPaid ? "paid" : "queue")
   return {
-    "Ops Status": selectProp(labelFor(REPORT_OPS_STATUS_LABELS, machine)),
-    Notes: textProp(report.notes || ""),
+    "Операционный статус": selectProp(labelFor(REPORT_OPS_STATUS_LABELS, machine)),
+    Заметки: textProp(report.notes || ""),
   }
 }
 
