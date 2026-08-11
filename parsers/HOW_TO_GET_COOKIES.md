@@ -116,7 +116,7 @@
 После добавления куков запустите парсер:
 
 ```bash
-python3 parsers/bandlink_parser_linux.py config.json
+python3 parsers/bandlink_parser_production_linux.py config.json
 ```
 
 Вы должны увидеть:
