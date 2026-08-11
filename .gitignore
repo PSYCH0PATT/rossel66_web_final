@@ -81,3 +81,46 @@ data_backup_*/
 .vercel-bypass.secret
 .env.vercel.staging.*
 .env.e2e.run.local
+
+# Python venv-каталоги парсеров (не было правил вообще: 41 + 56 + 34 МБ)
+venv_selenium/
+test_env/
+parsers/mac_test_env/
+
+# Рантайм-каталоги в корне. Анкерим ведущим слэшем: неанкеренный reports/
+# проглотил бы 18 каталогов app/api/reports/*, uploads/ — app/api/uploads/*.
+# Та же ошибка, что уже описана выше про backups/.
+/tmp/
+/logs/
+/reports/
+/uploads/
+
+# Логи. Раньше покрывались только npm/yarn/pnpm-debug, из-за чего в git попали 6 логов.
+*.log
+
+# Дампы парсеров: пишутся и никогда не читаются
+parsers/zvonko_release_*.html
+parsers/zvonko_release_*_data.json
+parsers/zvonko_release_data.json
+parsers/zvonko_releases_page.html
+parsers/zvonko_releases_analysis.html
+parsers/zvonko_pagination_analysis.html
+parsers/zvonko_login_page.html
+parsers/zvonko_login_analysis.html
+parsers/zvonko_first_release.html
+parsers/sour_diesel_response_*.html
+parsers/zvonko_dom_analysis.json
+parsers/zvonko_all_releases_data.json
+parsers/comparison_results.json
+parsers/koala_output.json
+parsers/koala_add_report.json
+parsers/add_releases_report.json
+parsers/koala_cover_test.txt
+parsers/koala_cover_short.txt
+parsers/small_test_cover.txt
+parsers/test_cover_data_url.txt
+
+# Разовые выводы и офисный экспорт в корне
+*.doc
+debug_*.html
+sftp_analysis_report.json
