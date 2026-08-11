@@ -11,7 +11,7 @@ pnpm dev
 
 Открыть [http://localhost:3000](http://localhost:3000).
 
-Переменные окружения — см. `.env.example` и `ENV_SETUP.md`. Локально используйте `.env.local`.
+Переменные окружения — см. `.env.example`, интеграции разобраны в `ARCHITECTURE.md`. Локально используйте `.env.local`.
 
 ## Деплой
 

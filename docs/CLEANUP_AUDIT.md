@@ -993,7 +993,7 @@ npm-скрипты. Даты — `git log -1 --format=%ci`.
 | `docs/landing-screens.md` | 355 | 2026-04-16 | то же; упомянутый `components/sparkles.tsx` жив (10 импортёров) | **LIKELY** |
 | `docs/monitoring-pg-stat.md` | 57 | 2026-04-16 | точен, SQL не зависит от провайдера | **LIKELY** (низкая ценность, низкий риск) |
 | `docs/BUILDIN_CRM_VIEW_CHECKLIST.md` | 40 | **не в git** | актуален, но это разовый ручной чек-лист | **LIKELY** после выполнения |
-| `docs/CLEANUP_PROMPTS.md` | 191 | **не в git** | мета-документ: план этой самой чистки | **LIKELY** (удалить по завершении) |
+| ~~`docs/CLEANUP_PROMPTS.md`~~ | 191 | — | мета-документ: план этой самой чистки | **удалён 11.08.2026 по завершении чистки** |
 | `docs/*.env`, `docs/FORMS_STAGING.env.example` | — | — | все на месте, на них ссылаются `BUILDIN_TOKEN_SETUP.md` и `FORMS_TESTING.md` | оставить |
 
 ### 6.3 `parsers/*.md`
