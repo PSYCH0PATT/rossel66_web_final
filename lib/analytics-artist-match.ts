@@ -190,11 +190,6 @@ export async function loadAnalyticsArtistLookup(): Promise<AnalyticsArtistLookup
   return buildAnalyticsArtistLookup(users, aliases)
 }
 
-export async function resolveArtistIdFromDb(trackArtist: string): Promise<string | null> {
-  const lookup = await loadAnalyticsArtistLookup()
-  return resolveArtistId(trackArtist, lookup)
-}
-
 /** Создаёт алиасы и backfill StreamAnalytics для имён артиста. */
 export async function assignAnalyticsToArtist(
   artistId: string,

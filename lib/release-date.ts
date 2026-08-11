@@ -52,14 +52,3 @@ export function normalizeReleaseDate(input: string | null | undefined): string {
   const day = String(d.getUTCDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
 }
-
-/** Сортировка по убыванию даты релиза (новые сверху), при равенстве — по createdAt. */
-export function compareReleasesByDateDesc(
-  a: { releaseDate: string; createdAt: Date },
-  b: { releaseDate: string; createdAt: Date }
-): number {
-  const timeA = parseReleaseDateToTimestamp(a.releaseDate)
-  const timeB = parseReleaseDateToTimestamp(b.releaseDate)
-  if (timeA !== timeB) return timeB - timeA
-  return b.createdAt.getTime() - a.createdAt.getTime()
-}

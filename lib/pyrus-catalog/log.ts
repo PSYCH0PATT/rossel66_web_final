@@ -19,15 +19,3 @@ export function catalogLog(event: string, context: CatalogLogContext = {}): void
     })
   )
 }
-
-export function catalogInfo(event: string, context: CatalogLogContext = {}): void {
-  console.log(
-    JSON.stringify({
-      scope: "pyrus-catalog",
-      level: "info",
-      event,
-      at: new Date().toISOString(),
-      ...context,
-    })
-  )
-}

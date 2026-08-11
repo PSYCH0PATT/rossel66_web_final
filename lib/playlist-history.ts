@@ -19,13 +19,6 @@ export interface PlaylistHistoryRecord {
 }
 
 /**
- * Ensures playlist history storage is ready (Prisma migration).
- */
-export async function ensurePlaylistHistoryDatabase(): Promise<void> {
-  // Table created via prisma/migrations/20260720120000_buildin_sync_foundation
-}
-
-/**
  * Persist a playlist change event and optionally mirror to Buildin.
  */
 export async function recordPlaylistChange(record: PlaylistHistoryRecord): Promise<void> {

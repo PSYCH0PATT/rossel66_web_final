@@ -12,9 +12,6 @@ export const SUBMISSION_STATUS_LABELS = {
   rejected: "Отклонена",
   done: "Готово",
 } as const
-
-export type SubmissionOpsStatus = keyof typeof SUBMISSION_STATUS_LABELS
-
 /** Machine formType → ops-facing Russian label */
 export const FORM_TYPE_LABELS = {
   catalog_upload: "Бэк-каталог",

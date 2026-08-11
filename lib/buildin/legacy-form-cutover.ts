@@ -12,8 +12,3 @@ export const legacyPyrusFormGoneBody = {
   message: LEGACY_PYRUS_FORM_GONE_MESSAGE,
   sessionApi: "/api/forms/sessions",
 } as const
-
-export const legacyPyrusFileUploadGoneBody = {
-  message: LEGACY_PYRUS_FILE_UPLOAD_GONE_MESSAGE,
-  sessionApi: "/api/forms/sessions",
-} as const

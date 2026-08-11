@@ -34,12 +34,6 @@ export function isPyrusWriteDisabled(): boolean {
   return v === "1" || v === "true" || v === "on"
 }
 
-export function assertBuildinConfigured(): void {
-  if (!getBuildinApiToken()) {
-    throw new Error("BUILDIN_API_TOKEN is not configured")
-  }
-}
-
 /** Database IDs from env (created by scripts/setup-buildin-databases.ts) */
 export type BuildinDbKey =
   | "submissions"
@@ -76,10 +70,6 @@ const ENV_BY_KEY: Record<BuildinDbKey, string> = {
   pii_not_rf: "BUILDIN_DB_PII_NOT_RF",
   activity: "BUILDIN_DB_ACTIVITY",
   playlist_history: "BUILDIN_DB_PLAYLIST_HISTORY",
-}
-
-export function buildinDbEnvName(key: BuildinDbKey): string {
-  return ENV_BY_KEY[key]
 }
 
 /** All known Buildin DB env keys (for setup scripts). */

@@ -34,18 +34,6 @@ export function getArtistReportMissingFields(artist: {
   return missing
 }
 
-export function isArtistReadyForReport(artist: {
-  fio?: string | null
-  contract?: string | null
-  percentage?: number | null
-}): boolean {
-  return getArtistReportMissingFields(artist).length === 0
-}
-
-export function formatMissingFieldsList(fields: ArtistReportRequiredField[]): string {
-  return fields.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")
-}
-
 export type IncompleteReportArtist = {
   id: string
   name: string

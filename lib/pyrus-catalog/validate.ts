@@ -81,5 +81,3 @@ export const catalogReleasesSchema = z
   .min(1, "добавьте хотя бы один релиз")
   // Product cap removed for Buildin; keep a high safety ceiling only.
   .max(200, "слишком много релизов за одну отправку")
-
-export type CatalogReleaseInput = z.infer<typeof catalogReleaseSchema>

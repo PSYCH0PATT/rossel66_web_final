@@ -35,11 +35,6 @@ export function rateLimitPublicForm(ip: string): { ok: boolean; retryAfterSec?: 
   return rateLimit(`pubform:hr:${ip}`, maxPerHour, PUBLIC_FORM_HOUR_MS)
 }
 
-/** SSE upload progress — защита от злоупотребления по IP */
-export function rateLimitUploadProgress(ip: string): { ok: boolean; retryAfterSec?: number } {
-  return rateLimit(`uprog:${ip}`, 60, 60_000)
-}
-
 function rateLimit(
   key: string,
   max: number,

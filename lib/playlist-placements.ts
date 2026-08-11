@@ -2,16 +2,6 @@ import { prisma } from "@/lib/prisma"
 import { mskDateString } from "@/lib/msk-date"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
 
-export type PlacementTrackInput = {
-  playlistUrl: string
-  playlistName: string
-  platform: string
-  artistName: string
-  artistId?: string | null
-  playlistRowId?: string | null
-  track: Pick<ParsedTrack, "trackTitle" | "titleArtist" | "isrc" | "artistName">
-}
-
 function normalizePart(value: string): string {
   return value
     .normalize("NFKC")

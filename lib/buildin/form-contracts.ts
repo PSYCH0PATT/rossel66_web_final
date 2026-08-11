@@ -61,8 +61,6 @@ export const PROMO_PAYLOAD_KEYS = [
   "otherComments",
 ] as const
 
-export type PromoPayloadKey = (typeof PROMO_PAYLOAD_KEYS)[number]
-
 export const FORM_QUEUE_CONTRACTS = {
   catalog_upload: {
     formType: "catalog_upload" as const,

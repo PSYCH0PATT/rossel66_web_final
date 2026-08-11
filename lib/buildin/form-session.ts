@@ -847,8 +847,3 @@ export async function createSimpleBuildinSubmission(opts: {
     idempotencySeed: opts.idempotencySeed || randomUUID(),
   })
 }
-
-/** Exported for tests */
-export function resolveFormQueueLabel(formType: string): string {
-  return labelFor(FORM_TYPE_LABELS, formType, formType)
-}
