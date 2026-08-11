@@ -42,7 +42,6 @@ async function fetchCronGet(pathAndQuery: string): Promise<Response> {
  * 
  * Koala Parser: 12:00 и 20:00 по Москве
  * Обложки плейлистов (VK/Яндекс): суббота и воскресенье 06:00 МСК → GET /api/cron/playlist-covers (по 20 за запуск)
- * Playlist Parsers (legacy): см. runPlaylistParsers() для ручного запуска
  */
 export function initScheduler() {
   // Предотвращаем повторную инициализацию
@@ -183,13 +182,6 @@ export function initScheduler() {
     timezone: 'Europe/Moscow'
   });
 
-  // ============================================================
-  // LEGACY PLAYLIST PARSERS - оставлено для ручного запуска
-  // ============================================================
-  
-  // Старые задачи парсинга удалены, но функция runPlaylistParsers() сохранена
-  // для возможности ручного запуска через UI
-  
   console.log('✅ Scheduler started successfully');
 }
 
@@ -339,10 +331,6 @@ async function processKoalaResults(releases: any[]) {
 }
 
 /**
- * Запуск парсеров плейлистов (Bandlink + VK)
- * Парсит только артистов с релизами за последние 7 дней
- */
-/**
  * Запускает SFTP синхронизацию плейлистов
  */
 async function runSftpPlaylistSync() {
@@ -368,119 +356,6 @@ async function runSftpPlaylistSync() {
 /**
  * Запускает парсинг плейлистов (legacy, для ручного запуска)
  */
-async function runPlaylistParsers() {
-  const startTime = Date.now();
-  
-  try {
-    console.log('');
-    console.log('═══════════════════════════════════════════════════');
-    console.log('🎵 PLAYLIST PARSERS');
-    console.log('═══════════════════════════════════════════════════');
-    
-    const { addActivity } = await import('@/lib/storage');
-
-    const artistsToScan = await getArtistsWithRecentReleases();
-    
-    if (artistsToScan.length === 0) {
-      console.log('📭 Нет артистов с недавними релизами для сканирования');
-      return;
-    }
-    
-    console.log(`👥 Артистов для сканирования: ${artistsToScan.length}`);
-    artistsToScan.forEach(a => {
-      console.log(`   • ${a.name} (@${a.username}) — ${a.recentRelease}`);
-    });
-    
-    // Определяем базовый URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    
-    const results = {
-      bandlink: { success: false, count: 0, error: null as string | null },
-      vk: { success: false, count: 0, error: null as string | null }
-    };
-    
-    // Запускаем Bandlink парсер
-    console.log('');
-    console.log('🔗 Запуск Bandlink парсера...');
-    try {
-      const bandlinkResponse = await fetch(`${baseUrl}/api/parsers/bandlink`, {
-        method: 'POST',
-        headers: internalCronFetchJsonHeaders(),
-        body: JSON.stringify({ 
-          artists: artistsToScan.map(a => a.username) 
-        })
-      });
-      
-      const bandlinkResult = await bandlinkResponse.json();
-      results.bandlink.success = bandlinkResult.success;
-      results.bandlink.count = bandlinkResult.results?.length || 0;
-      
-      if (!bandlinkResult.success) {
-        results.bandlink.error = bandlinkResult.error;
-        console.log(`❌ Bandlink: ${bandlinkResult.error}`);
-      } else {
-        console.log(`✅ Bandlink: найдено ${results.bandlink.count} плейлистов`);
-      }
-    } catch (error) {
-      results.bandlink.error = String(error);
-      console.log(`❌ Bandlink ошибка: ${error}`);
-    }
-    
-    // Запускаем VK парсер
-    console.log('');
-    console.log('🎵 Запуск VK парсера...');
-    try {
-      const vkResponse = await fetch(`${baseUrl}/api/parsers/vk`, {
-        method: 'POST',
-        headers: internalCronFetchJsonHeaders(),
-        body: JSON.stringify({ 
-          artists: artistsToScan.map(a => a.username) 
-        })
-      });
-      
-      const vkResult = await vkResponse.json();
-      results.vk.success = vkResult.success;
-      results.vk.count = vkResult.results?.length || 0;
-      
-      if (!vkResult.success) {
-        results.vk.error = vkResult.error;
-        console.log(`❌ VK: ${vkResult.error}`);
-      } else {
-        console.log(`✅ VK: найдено ${results.vk.count} плейлистов`);
-      }
-    } catch (error) {
-      results.vk.error = String(error);
-      console.log(`❌ VK ошибка: ${error}`);
-    }
-    
-    const duration = Date.now() - startTime;
-    
-    // Логируем активность
-    await addActivity({
-      type: 'playlist_found',
-      userId: 'system',
-      userRole: 'admin',
-      title: 'Автоматический парсинг плейлистов',
-      description: `Сканирование ${artistsToScan.length} артистов. Bandlink: ${results.bandlink.count}, VK: ${results.vk.count}`,
-      metadata: {
-        artists: artistsToScan.map(a => a.username),
-        results,
-        duration: `${duration}ms`
-      }
-    });
-    
-    console.log('');
-    console.log('═══════════════════════════════════════════════════');
-    console.log(`✅ Парсинг завершен за ${duration}ms`);
-    console.log(`   Bandlink: ${results.bandlink.count}, VK: ${results.vk.count}`);
-    console.log('═══════════════════════════════════════════════════');
-    console.log('');
-    
-  } catch (error) {
-    console.error('❌ Playlist parsers error:', error);
-  }
-}
-
 /**
  * Запускает импорт аналитики из rossel_flash по SFTP
  */

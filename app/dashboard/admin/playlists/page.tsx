@@ -36,7 +36,6 @@ import {
  * «Artist feat Guest» → «Artist», чтобы фит не был отдельной записью в фильтре.
  */
 /** G4: как часто перепроверять системное предупреждение о cookies */
-const COOKIES_POLL_MS = 60_000
 
 /** Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.) */
 function getPlatformBadgeStyle(platform: string) {
@@ -268,11 +267,8 @@ interface BandlinkPlaylist {
 export default function PlaylistsPage() {
   const [artists, setArtists] = useState<Artist[]>([])
   const [recentArtists, setRecentArtists] = useState<Artist[]>([])
-  const [selectedArtists, setSelectedArtists] = useState<string[]>([])
   const [vkResults, setVkResults] = useState<VKPlaylist[]>([])
   const [bandlinkResults, setBandlinkResults] = useState<BandlinkPlaylist[]>([])
-  const [isParsingVK, setIsParsingVK] = useState(false)
-  const [isParsingBandlink, setIsParsingBandlink] = useState(false)
   const [isSftpSyncing, setIsSftpSyncing] = useState(false)
   const [parsingOutput, setParsingOutput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
@@ -285,20 +281,9 @@ export default function PlaylistsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // Состояния для управления cookies
-  const [cookiesInput, setCookiesInput] = useState('')
-  const [isUpdatingCookies, setIsUpdatingCookies] = useState(false)
-  const [cookiesStatus, setCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
   /** G4: системное предупреждение о cookies — отдельно от результата ручного обновления */
-  const [cookiesAlert, setCookiesAlert] = useState<string | null>(null)
-  const [lastCookiesUpdate, setLastCookiesUpdate] = useState<string | null>(null)
-  const [vkCookiesInput, setVkCookiesInput] = useState('')
-  const [isUpdatingVkCookies, setIsUpdatingVkCookies] = useState(false)
-  const [vkCookiesStatus, setVkCookiesStatus] = useState<{type: 'default'|'destructive', message: string} | null>(null)
-  const [lastVkCookiesUpdate, setLastVkCookiesUpdate] = useState<string | null>(null)
   
   // Состояния для истории парсинга
-  const [parsingHistory, setParsingHistory] = useState<any[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   
   // Состояния для привязки плейлиста к артисту
   const [assignModalOpen, setAssignModalOpen] = useState(false)
@@ -326,19 +311,10 @@ export default function PlaylistsPage() {
     loadRecentArtists()
     void loadResults()
     const idle = window.setTimeout(() => {
-      void loadCookiesStatus()
-      void checkCookiesNotification()
-      void loadParsingHistory()
-      void loadVkCookiesStatus()
       void loadSftpLocalCsvList()
     }, 0)
-    // G4: предупреждение о cookies должно исчезать само, когда парсинг ожил
-    const poll = window.setInterval(() => {
-      void checkCookiesNotification()
-    }, COOKIES_POLL_MS)
     return () => {
       window.clearTimeout(idle)
-      window.clearInterval(poll)
       // F-PARS-13: таймер debounce жил после unmount → setState на размонтированном компоненте
       if (playlistDebounceRef.current) clearTimeout(playlistDebounceRef.current)
     }
@@ -684,17 +660,6 @@ export default function PlaylistsPage() {
   }
 
   // Загрузка статуса cookies
-  const loadCookiesStatus = async () => {
-    try {
-      const response = await fetch('/api/bandlink/cookies')
-      const data = await response.json()
-      if (data.success && data.lastUpdated) {
-        setLastCookiesUpdate(new Date(data.lastUpdated).toLocaleString('ru-RU'))
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки статуса cookies:', error)
-    }
-  }
 
   /**
    * G4: системное предупреждение «нужны новые cookies».
@@ -703,119 +668,14 @@ export default function PlaylistsPage() {
    * а само предупреждение выставлялось один раз при загрузке и уже не снималось,
    * даже когда парсинг снова начинал работать. Теперь отдельный state + поллинг.
    */
-  const checkCookiesNotification = async () => {
-    try {
-      const response = await fetch('/api/notifications')
-      const data = await response.json()
-      setCookiesAlert(
-        data.hasNotification
-          ? data.message || '⚠️ Требуются новые cookies! Парсинг не работает.'
-          : null
-      )
-    } catch (error) {
-      console.error('Ошибка проверки уведомлений:', error)
-    }
-  }
 
   // Загрузка истории парсинга
-  const loadParsingHistory = async () => {
-    setIsLoadingHistory(true)
-    try {
-      const response = await fetch('/api/parsers/history?type=all&limit=10')
-      const data = await response.json()
-      if (data.success) {
-        setParsingHistory(data.history || [])
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки истории парсинга:', error)
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }
 
   // Загрузка статуса VK cookies
-  const loadVkCookiesStatus = async () => {
-    try {
-      const response = await fetch('/api/vk/cookies')
-      const data = await response.json()
-      if (data.success && data.lastUpdated) {
-        setLastVkCookiesUpdate(new Date(data.lastUpdated).toLocaleString('ru-RU'))
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки статуса VK cookies:', error)
-    }
-  }
 
   // Обновление cookies Bandlink
-  const updateCookies = async () => {
-    if (!cookiesInput.trim()) {
-      setCookiesStatus({ type: 'destructive', message: 'Введите cookies для Bandlink' })
-      return
-    }
-
-    setIsUpdatingCookies(true)
-    setCookiesStatus(null)
-
-    try {
-      const response = await fetch('/api/bandlink/cookies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cookieString: cookiesInput })
-      })
-      const data = await response.json()
-      
-      if (data.success) {
-        setCookiesStatus({ type: 'default', message: `✅ ${data.message}` })
-        setLastCookiesUpdate(new Date().toLocaleString('ru-RU'))
-        setCookiesInput('')
-        
-        // Перезагружаем статус cookies и системное предупреждение (G4)
-        await loadCookiesStatus()
-        await checkCookiesNotification()
-      } else {
-        setCookiesStatus({ type: 'destructive', message: `❌ ${data.error || 'Ошибка обновления'}` })
-      }
-    } catch (error) {
-      setCookiesStatus({ type: 'destructive', message: '❌ Ошибка соединения' })
-    } finally {
-      setIsUpdatingCookies(false)
-    }
-  }
 
   // Обновление cookies VK
-  const updateVkCookies = async () => {
-    if (!vkCookiesInput.trim()) {
-      setVkCookiesStatus({ type: 'destructive', message: 'Введите cookies для VK' })
-      return
-    }
-
-    setIsUpdatingVkCookies(true)
-    setVkCookiesStatus(null)
-
-    try {
-      const response = await fetch('/api/vk/cookies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cookieString: vkCookiesInput })
-      })
-      const data = await response.json()
-      
-      if (data.success) {
-        setVkCookiesStatus({ type: 'default', message: `✅ ${data.message}` })
-        setLastVkCookiesUpdate(new Date().toLocaleString('ru-RU'))
-        setVkCookiesInput('')
-        
-        // Перезагружаем статус cookies
-        await loadVkCookiesStatus()
-      } else {
-        setVkCookiesStatus({ type: 'destructive', message: `❌ ${data.error || 'Ошибка обновления'}` })
-      }
-    } catch (error) {
-      setVkCookiesStatus({ type: 'destructive', message: '❌ Ошибка соединения' })
-    } finally {
-      setIsUpdatingVkCookies(false)
-    }
-  }
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('ru-RU', {
@@ -827,114 +687,10 @@ export default function PlaylistsPage() {
     })
   }
 
-  const handleArtistSelect = (artistId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedArtists(prev => [...prev, artistId])
-    } else {
-      setSelectedArtists(prev => prev.filter(id => id !== artistId))
-    }
-  }
 
-  const selectAllRecentArtists = () => {
-    const recentArtistUsernames = recentArtists.map(artist => artist.username)
-    setSelectedArtists(recentArtistUsernames)
-  }
 
-  const clearSelection = () => {
-    setSelectedArtists([])
-  }
 
-  const runVKParser = async () => {
-    if (selectedArtists.length === 0) {
-      setActionBanner({ type: "err", text: "Выберите артистов для парсинга" })
-      return
-    }
 
-    setIsParsingVK(true)
-    setParsingOutput('Запуск VK парсера...\n')
-
-    try {
-      const response = await fetch('/api/parsers/vk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          artists: selectedArtists
-        }),
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        setParsingOutput(prev => prev + '\n✅ VK парсинг завершен успешно!\n')
-        setParsingOutput(prev => prev + data.output + '\n')
-        setVkResults(data.results || [])
-        loadParsingHistory() // Обновляем историю
-        loadResults() // Обновляем результаты
-      } else {
-        setParsingOutput(prev => prev + '\n❌ Ошибка VK парсинга: ' + data.error + '\n')
-        if (data.stderr) {
-          setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n')
-        }
-        loadParsingHistory() // Обновляем историю даже при ошибке
-      }
-    } catch (error) {
-      setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n')
-      loadParsingHistory()
-    } finally {
-      setIsParsingVK(false)
-    }
-  }
-
-  const runBandlinkParser = async () => {
-    if (selectedArtists.length === 0) {
-      setActionBanner({ type: "err", text: "Выберите артистов для парсинга" })
-      return
-    }
-
-    setIsParsingBandlink(true)
-    setParsingOutput('Запуск Bandlink парсера...\n')
-
-    try {
-      // Преобразуем selectedArtists (которые могут быть username/id) в имена артистов
-      const artistNames = selectedArtists.map(selectedId => {
-        const artist = artists.find(a => a.username === selectedId || a.id === selectedId)
-        return artist ? artist.name : selectedId
-      })
-
-      const response = await fetch('/api/parsers/bandlink', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          artists: artistNames
-        }),
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        setParsingOutput(prev => prev + '\n✅ Bandlink парсинг завершен успешно!\n')
-        setParsingOutput(prev => prev + data.output + '\n')
-        loadParsingHistory() // Обновляем историю
-        loadResults() // Обновляем результаты
-        setBandlinkResults(data.results || [])
-      } else {
-        setParsingOutput(prev => prev + '\n❌ Ошибка Bandlink парсинга: ' + data.error + '\n')
-        if (data.stderr) {
-          setParsingOutput(prev => prev + 'Stderr: ' + data.stderr + '\n')
-        }
-        loadParsingHistory() // Обновляем историю даже при ошибке
-      }
-    } catch (error) {
-      setParsingOutput(prev => prev + '\n❌ Ошибка запроса: ' + error + '\n')
-      loadParsingHistory()
-    } finally {
-      setIsParsingBandlink(false)
-    }
-  }
 
   // Фильтрация артистов
   const filteredArtists = artists.filter(artist => 
@@ -1158,14 +914,6 @@ export default function PlaylistsPage() {
             >
               <span className="material-symbols-outlined text-lg">groups</span>
               По артистам
-            </TabsTrigger>
-            <TabsTrigger
-              value="parsing"
-              className="rounded-lg border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:bg-primary/10 inline-flex items-center gap-2"
-            >
-              {/* DS14: «резерв» — внутреннее понятие (был дубль-страницы parsers, удалён) */}
-              <span className="material-symbols-outlined text-lg">settings</span>
-              Парсеры
             </TabsTrigger>
           </TabsList>
 
@@ -1504,490 +1252,6 @@ export default function PlaylistsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="parsing" className="space-y-8">
-            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-4">
-                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
-                <span className="material-symbols-outlined text-accent-azure text-2xl">sync</span>
-                Синхронизация SFTP
-              </h2>
-              <div className="space-y-4">
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-400">
-                  <span className="material-symbols-outlined text-primary align-middle mr-2 text-lg">info</span>
-                  По умолчанию плейлисты синхронизируются с SFTP сервером автоматически в 16:00 и 00:30 ежедневно. Система
-                  подключается к SFTP серверу, скачивает CSV файлы и парсит их автоматически.
-                  {sftpHints && (
-                    <span className="block mt-2 font-mono text-[11px] text-gray-500">
-                      Ожидаемый хост: {sftpHints.host} · каталог: {sftpHints.remotePath}
-                    </span>
-                  )}
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
-                  <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Импорт по шагам</p>
-                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <label className="text-xs text-gray-500 font-mono uppercase tracking-wider">Локальный CSV</label>
-                      {sftpLocalFiles.length === 0 ? (
-                        <div
-                          className={`${inputCls} flex items-center text-gray-500 text-sm cursor-not-allowed opacity-80`}
-                        >
-                          Нет файлов в sftp_downloads — скачайте с SFTP или загрузите CSV
-                        </div>
-                      ) : (
-                        <Select value={selectedSftpCsv} onValueChange={setSelectedSftpCsv} disabled={sftpToolsBusy}>
-                          <SelectTrigger className={inputCls}>
-                            <SelectValue placeholder="Выберите файл" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-64 border border-white/10 bg-[#141414] text-white">
-                            {sftpLocalFiles.map((f) => (
-                              <SelectItem key={f.name} value={f.name} className="font-mono text-xs">
-                                {f.name} · {f.dataRows} строк · {new Date(f.mtimeISO).toLocaleString("ru-RU")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={sftpToolsBusy}
-                      onClick={() => void loadSftpLocalCsvList()}
-                      className="border-white/10 text-gray-400 hover:text-primary font-mono text-xs uppercase tracking-widest shrink-0"
-                    >
-                      Обновить список
-                    </Button>
-                  </div>
-
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <Checkbox
-                      id="sftp-cleanup"
-                      checked={sftpCleanupRemoved}
-                      onCheckedChange={(c) => setSftpCleanupRemoved(c === true)}
-                      disabled={sftpToolsBusy}
-                      className="mt-0.5"
-                    />
-                    <span className="text-sm text-gray-400 leading-snug">
-                      <span className="text-white font-medium group-hover:text-primary transition-colors">
-                        Удалять из БД плейлисты, которых нет в выбранном CSV
-                      </span>
-                      <span className="block text-xs text-gray-500 mt-1">
-                        По умолчанию выключено: пустой или чужой файл не сотрёт каталог. Включайте только если CSV — полный снимок дистрибуции.
-                      </span>
-                    </span>
-                  </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={sftpToolsBusy || isSftpSyncing}
-                      onClick={() => void runSftpDownloadNew()}
-                      className="border-white/10 text-gray-300 hover:text-primary font-mono text-xs uppercase tracking-wider"
-                    >
-                      <span className="material-symbols-outlined text-base mr-1 align-middle">download</span>
-                      Скачать новые с SFTP
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={sftpToolsBusy || isSftpSyncing}
-                      onClick={() => void runSftpDownloadLatest()}
-                      className="border-white/10 text-gray-300 hover:text-primary font-mono text-xs uppercase tracking-wider"
-                    >
-                      <span className="material-symbols-outlined text-base mr-1 align-middle">cloud_download</span>
-                      Скачать последний CSV
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={sftpToolsBusy || isSftpSyncing || !selectedSftpCsv}
-                      onClick={() => void runSftpApplySelected()}
-                      className="border-primary/30 text-primary hover:bg-primary/10 font-mono text-xs uppercase tracking-wider sm:col-span-2"
-                    >
-                      <span className="material-symbols-outlined text-base mr-1 align-middle">database_upload</span>
-                      Применить выбранный CSV к базе
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="hidden"
-                      id="sftp-csv-upload"
-                      onChange={(e) => void onSftpCsvUpload(e)}
-                      disabled={sftpToolsBusy || isSftpSyncing}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={sftpToolsBusy || isSftpSyncing}
-                      className="border-white/10 text-gray-400 hover:text-white font-mono text-xs uppercase tracking-widest"
-                      onClick={() => document.getElementById("sftp-csv-upload")?.click()}
-                    >
-                      <span className="material-symbols-outlined text-base mr-1 align-middle">upload_file</span>
-                      Загрузить CSV с компьютера
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => setSftpConfirmOpen(true)}
-                  disabled={isSftpSyncing}
-                  className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold inline-flex items-center justify-center gap-2"
-                >
-                  {isSftpSyncing ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                      Синхронизация...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined">play_arrow</span>
-                      Запустить синхронизацию SFTP
-                    </>
-                  )}
-                </Button>
-                {parsingOutput && (
-                  <div className="mt-4 p-4 rounded-xl border border-white/10 bg-black/20">
-                    <div className="text-sm font-mono whitespace-pre-wrap max-h-64 overflow-y-auto text-gray-300">
-                      {parsingOutput}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-              <div className="space-y-6">
-                  {/* Первая строка: Выбор артистов и Парсинг */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Поиск и выбор артистов */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">groups</span>
-                <h3 className="text-lg font-bold text-white tracking-wide">Выбор артистов</h3>
-              </div>
-              
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
-                  search
-                </span>
-                <Input
-                  placeholder="Поиск артистов..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`pl-10 ${inputCls}`}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={selectAllRecentArtists}
-                  disabled={recentArtists.length === 0}
-                  className="flex items-center gap-1 border border-white/10 text-gray-400 hover:text-primary"
-                >
-                  <span className="material-symbols-outlined text-base">schedule</span>
-                  Недавние ({recentArtists.length})
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearSelection}
-                  disabled={selectedArtists.length === 0}
-                  className="border border-white/10 text-gray-400 hover:text-primary"
-                >
-                  Очистить
-                </Button>
-              </div>
-
-              <div className="space-y-2 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                {filteredArtists.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    {searchTerm ? 'Артисты не найдены' : 'Загрузка артистов...'}
-                  </p>
-                ) : (
-                  filteredArtists.map((artist) => (
-                    <div key={artist.id} className="flex items-center space-x-2 p-1 rounded hover:bg-muted/50">
-                      <Checkbox
-                        id={artist.id}
-                        checked={selectedArtists.includes(artist.username)}
-                        onCheckedChange={(checked) => 
-                          handleArtistSelect(artist.username, checked as boolean)
-                        }
-                      />
-                      <label 
-                        htmlFor={artist.id} 
-                        className="text-sm font-medium leading-none cursor-pointer flex-1"
-                      >
-                        {artist.name}
-                        {recentArtists.some(ra => ra.id === artist.id) && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            Новый релиз
-                          </Badge>
-                        )}
-                      </label>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
-                Выбрано: <span className="font-semibold text-white">{selectedArtists.length}</span> артистов
-              </div>
-            </div>
-
-            {/* Запуск парсинга */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">sync</span>
-                <h3 className="text-lg font-bold text-white tracking-wide">Парсинг</h3>
-              </div>
-
-              <div className="space-y-3">
-                <Button 
-                  onClick={runVKParser}
-                  disabled={isParsingVK || selectedArtists.length === 0}
-                  className="w-full h-12 text-sm font-semibold rounded-lg bg-primary text-black hover:bg-emerald-400"
-                  size="lg"
-                >
-                  {isParsingVK ? (
-                    <>
-                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
-                      Парсинг VK...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined mr-2">queue_music</span>
-                      Парсить VK
-                    </>
-                  )}
-                </Button>
-                
-                <Button 
-                  onClick={runBandlinkParser}
-                  disabled={isParsingBandlink || selectedArtists.length === 0}
-                  variant="secondary"
-                  className="w-full h-12 text-sm font-medium border border-white/10 bg-white/5 text-white hover:bg-white/10"
-                  size="lg"
-                >
-                  {isParsingBandlink ? (
-                    <>
-                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
-                      Парсинг Bandlink...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined mr-2">travel_explore</span>
-                      Парсить Bandlink
-                    </>
-                  )}
-                </Button>
-
-                <Button 
-                  onClick={() => setClearResultsOpen(true)}
-                  variant="destructive"
-                  size="sm"
-                  className="w-full border-destructive/50"
-                >
-                  <span className="material-symbols-outlined mr-2 text-lg">delete</span>
-                  Очистить результаты
-                </Button>
-              </div>
-            </div>
-
-                  </div>
-
-                  {/* Вторая строка: История парсинга */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-xl">history</span>
-                        <h3 className="text-lg font-bold text-white tracking-wide">История парсинга</h3>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={loadParsingHistory}
-                        disabled={isLoadingHistory}
-                        className="text-gray-400 hover:text-primary"
-                      >
-                        <span className={`material-symbols-outlined text-lg ${isLoadingHistory ? "animate-spin" : ""}`}>sync</span>
-                      </Button>
-                    </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 min-h-[200px] max-h-[400px] overflow-y-auto">
-                {isLoadingHistory ? (
-                  <div className="flex items-center justify-center h-full py-12">
-                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
-                  </div>
-                ) : parsingHistory.length > 0 ? (
-                  <div className="space-y-3">
-                    {parsingHistory.map((item, index) => (
-                      <div key={index} className="border border-white/10 rounded-xl p-3 space-y-2 bg-white/[0.02]">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={item.parser_type === 'bandlink' ? 'default' : 'secondary'} className="text-xs">
-                            {item.parser_type === 'bandlink' ? 'Bandlink' : 'VK'}
-                          </Badge>
-                          {item.status === 'completed' ? (
-                            <span className="material-symbols-outlined text-lg text-primary">check_circle</span>
-                          ) : item.status === 'failed' ? (
-                            <span className="material-symbols-outlined text-lg text-destructive">cancel</span>
-                          ) : (
-                            <span className="material-symbols-outlined text-lg text-accent-azure animate-spin">progress_activity</span>
-                          )}
-                          <span className="text-xs font-medium">
-                            {item.status === 'completed' ? 'Успешно' : item.status === 'failed' ? 'Ошибка' : 'Выполняется'}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {formatDateTime(item.started_at)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          <strong>Артисты:</strong> {item.artists}
-                        </p>
-                        <div className="flex gap-4 text-xs">
-                          <span className="text-muted-foreground">
-                            Найдено: <span className="font-medium text-foreground">{item.playlists_found || 0}</span>
-                          </span>
-                          <span className="text-muted-foreground">
-                            Добавлено: <span className="font-medium text-green-500">{item.playlists_added || 0}</span>
-                          </span>
-                        </div>
-                        {item.errors && (
-                          <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs">
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="material-symbols-outlined text-sm text-destructive">error</span>
-                              <span className="font-medium text-destructive">Ошибки:</span>
-                            </div>
-                            <pre className="text-red-400 whitespace-pre-wrap text-xs">{item.errors}</pre>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500 py-12">
-                    <div className="text-center">
-                      <span className="material-symbols-outlined text-4xl mx-auto mb-2 opacity-40 block">schedule</span>
-                      <p className="text-sm font-mono">История парсинга пуста</p>
-                      <p className="text-xs mt-1 text-gray-600">Запустите парсинг, чтобы увидеть историю</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-                  {/* Третья строка: Cookies */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Управление Cookies Bandlink */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">cookie</span>
-                <h3 className="text-lg font-bold text-white tracking-wide">Cookies Bandlink</h3>
-              </div>
-              
-              <Textarea
-                placeholder={`Вставьте cookies для Bandlink в формате строки (каждая строка: name=value):\n_yascZbPBpGejBI8wyUctjcuMZQX8ThOZfHYB5DN8GWR3zkzmGIuIN9V4/Lu9t62ssa13vA==\n_ym_d1768914125\n...`}
-                value={cookiesInput}
-                onChange={(e) => setCookiesInput(e.target.value)}
-                className="min-h-[120px] font-mono text-xs rounded-xl border border-white/10 bg-white/5 text-gray-200 placeholder:text-gray-600"
-              />
-              
-              <Button
-                onClick={updateCookies}
-                disabled={isUpdatingCookies || !cookiesInput.trim()}
-                size="sm"
-                className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold"
-              >
-                {isUpdatingCookies ? (
-                  <>
-                    <span className="material-symbols-outlined mr-2 animate-spin text-lg">progress_activity</span>
-                    Обновление...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined mr-2 text-lg">save</span>
-                    Обновить Cookies
-                  </>
-                )}
-              </Button>
-              
-              {/* G4: системное предупреждение живёт отдельно от результата ручного обновления */}
-              {cookiesAlert && (
-                <Alert variant="destructive">
-                  <AlertDescription>{cookiesAlert}</AlertDescription>
-                </Alert>
-              )}
-
-              {cookiesStatus && (
-                <Alert variant={cookiesStatus.type}>
-                  <AlertDescription>{cookiesStatus.message}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
-                <p>Последнее обновление:</p>
-                <p className="text-gray-300">{lastCookiesUpdate || "Не обновлялись"}</p>
-              </div>
-            </div>
-
-            {/* Управление Cookies VK */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-xl">cookie</span>
-                <h3 className="text-lg font-bold text-white tracking-wide">Cookies VK</h3>
-              </div>
-              
-              <Textarea
-                placeholder={`Вставьте cookies для VK в формате строки (каждая строка: name=value):\nadblock1\ndomain_sidw3y9a5vc6Kz6rEXNpmFZX%3A1768866028820\nhttokenjzx5WH7NpAcA8fnDeklUB6xDpwlgX4bAGyi5jYNGT3JsF-q-K7ACAWN3IXZXjmJgIBzPumtgTSgGud6x72Oy5EhMpk9kajtz_W3WaSDbQwXUjzV9HLoIEj5KZG8v5hbFK1k\n...`}
-                value={vkCookiesInput}
-                onChange={(e) => setVkCookiesInput(e.target.value)}
-                className="min-h-[120px] font-mono text-xs rounded-xl border border-white/10 bg-white/5 text-gray-200 placeholder:text-gray-600"
-              />
-              
-              <Button
-                onClick={updateVkCookies}
-                disabled={isUpdatingVkCookies || !vkCookiesInput.trim()}
-                size="sm"
-                className="w-full rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold"
-              >
-                {isUpdatingVkCookies ? (
-                  <>
-                    <span className="material-symbols-outlined mr-2 animate-spin text-lg">progress_activity</span>
-                    Обновление...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined mr-2 text-lg">save</span>
-                    Обновить Cookies
-                  </>
-                )}
-              </Button>
-              
-              {vkCookiesStatus && (
-                <Alert variant={vkCookiesStatus.type}>
-                  <AlertDescription>{vkCookiesStatus.message}</AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="text-xs text-gray-500 font-mono rounded-lg border border-white/10 bg-white/[0.02] p-2">
-                <p>Последнее обновление:</p>
-                <p className="text-gray-300">{lastVkCookiesUpdate || "Не обновлялись"}</p>
-              </div>
-            </div>
-                  </div>
-                </div>
-            </div>
-    </TabsContent>
 
     </Tabs>
 

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react"
-import { VkParserForm } from "@/components/vk-parser-form"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -168,10 +167,6 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          <div>
-            <VkParserForm artistId={params.id} artistName={artist?.name || ""} />
           </div>
         </div>
       </div>

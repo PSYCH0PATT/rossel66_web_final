@@ -1,7 +1,0 @@
-{
-  "target_artists": ["Sour Diesel"],
-  "bright_data_proxy_username": "brd-customer-…-zone-residential_proxy1",
-  "bright_data_proxy_password": "YOUR_RESIDENTIAL_ZONE_PASSWORD",
-  "proxy_host": "brd.superproxy.io",
-  "proxy_port": 33335
-}

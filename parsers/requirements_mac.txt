@@ -1,3 +1,0 @@
-# Зависимости для Mac-тестирования Bandlink Parser
-selenium>=4.15.0
-2captcha-python>=1.1.3

@@ -32,7 +32,7 @@ Next.js 14 App Router + Postgres через Prisma + Python-парсеры. Ле
 | `components/` | React-компоненты. `components/ui/` — shadcn, управляется CLI |
 | `hooks/` | два живых хука: `use-mobile-detector.ts`, `useScaling.ts` |
 | `prisma/` | схема на 19 моделей и миграции |
-| `parsers/` | Python: парсеры площадок, 60 файлов |
+| `parsers/` | Python: koala и zvonko, 4 скрипта. Bandlink и VK удалены в августе 2026 |
 | `scripts/` | 45 рабочих скриптов, все заявлены в `package.json` или CI |
 | `scripts/archive/` | 31 одноразовый скрипт без ссылок. Не трогать, не «оживлять» — см. README внутри |
 | `docs/` | runbook-документы. `CLEANUP_AUDIT.md` — инвентаризация от 31.07.2026 |
@@ -47,8 +47,7 @@ Next.js 14 App Router + Postgres через Prisma + Python-парсеры. Ле
 ревалидация ISR-кэша дашбордов и постановка в очередь зеркала Buildin. Прямая запись их теряет
 молча, без ошибки.
 
-Не трогайте вообще: SQLite-файлы парсеров (`*.db` в корне) и пять живых JSON в `data/` —
-это рантайм-состояние, пишется Python и планировщиком.
+Не трогайте вообще: живые JSON в `data/` — это рантайм-состояние, пишется Python и планировщиком.
 
 ## Как запускать
 
@@ -67,8 +66,9 @@ npx playwright test      # e2e, нужен поднятый сервер и за
 `scripts/migrate-buildin-form-submissions.ts:195`. Они были до вас. Судите по появлению **новых**,
 а не по нулю.
 
-Парсеры запускаются не напрямую, а через API: `POST /api/koala-parser`,
-`POST /api/zvonko-parser`, `POST /api/parsers/{bandlink,vk}`.
+Парсеры запускаются не напрямую, а через API: `POST /api/koala-parser` и
+`POST /api/zvonko-parser`. Плейлисты приходят по SFTP (`/api/cron/playlists-sftp`), обложки к ним
+подтягивает `/api/cron/playlist-covers`.
 
 ## Конвенции, которые видны в коде
 

@@ -8,7 +8,7 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 
 | | |
 |---|---|
-| `app/` | 141 файл, 29 603 строки. 80 `route.ts`, 47 `page.tsx` |
+| `app/` | 72 `route.ts`, 47 `page.tsx` |
 | `lib/` | 123 файла, 18 792 строки |
 | `components/` | 66 файлов, 9 756 строк |
 | `scripts/` | 45 рабочих + 31 в `scripts/archive/` |
@@ -51,10 +51,6 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 
 **Отдельные механизмы хранения, которых три.** Помимо Postgres:
 
-- **SQLite-файлы парсеров** — `bandlink_playlists.db`, `vk_playlists.db`, `bandlink_playlists_mac.db`.
-  Пишет Python, читает TypeScript: `lib/parser-status-sqlite-bridge.ts`,
-  `app/api/parsers/vk/route.ts:282`. Файл выбирается по платформе строкой в рантайме
-  (`app/api/parsers/bandlink/route.ts:342-343`)
 - **Живые JSON в `data/`** — `zvonko_parser_status.json`, `koala_parser_status.json`,
   `releases.json`, `backups.json`, `sftp_sync_index.json`. Все читаются через `existsSync` с
   фолбэком, поэтому пустой `data/` на свежем клоне не ломает приложение. `releases.json`
@@ -64,9 +60,9 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 Остальное в `data/` — легаси эпохи до Prisma, читается только архивным
 `scripts/archive/`-скриптом миграции.
 
-**Статус парсеров лежит во всех трёх местах одновременно**: JSON-файлы для koala и zvonko,
-модель Prisma `ParserRunStatus` для bandlink и vk, SQLite с мостом
-`lib/parser-status-sqlite-bridge.ts`. Так исторически сложилось; единого источника правды нет.
+**Статус парсеров** хранится в JSON-файлах `data/*_parser_status.json` — по одному на koala и
+zvonko. Раньше было три параллельных механизма; SQLite и модель `ParserRunStatus` ушли вместе с
+парсерами bandlink и vk.
 
 ## Модели Prisma (19)
 
@@ -82,7 +78,7 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 > руками, а три миграции её уже используют. Следствие: `prisma migrate deploy` на пустой базе падает,
 > а `entrypoint.sh:30` выполняет `pnpm db:migrate` при каждом старте контейнера.
 
-## API-маршруты (80)
+## API-маршруты (72)
 
 Сгруппированы по доменам, по строке на группу:
 
@@ -92,12 +88,12 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 | `cron/` | 9 | плановые задачи: outbox Buildin, SFTP-плейлисты, аналитика, обложки, health форм |
 | `analytics/` | 8 | стримы и аналитика по артистам |
 | `forms/` | 7 | приём заявок с сайта: сессии, файлы, финализация |
-| `playlists/` | 6 | плейлисты и попадания |
-| `parsers/` | 6 | запуск и статус bandlink / vk |
+| `playlists/` | 5 | плейлисты и попадания |
+| `parsers/` | 3 | работа с плейлистами из SFTP: очистка, удаление, недавние артисты |
 | `admin/` | 5 | ops-ручки Buildin: сверка, реквей, обратная синхронизация, снимок KPI |
 | `submit-pyrus-*` | 5 | легаси-эндпоинты форм; **имена сохраняются намеренно** ради стабильности URL (`docs/PYRUS_ARCHIVE.md:5`). При `PYRUS_WRITE_DISABLED` пишут в Buildin |
-| `releases/`, `backups/`, `uploads/`, `auth/` | 9 | релизы, бэкапы, загрузка файлов, вход |
-| одиночные | 11 | `koala-parser`, `zvonko-parser`, `vk-parser`, `bandlink`, `artists`, `users`, `payments`, `notifications`, `activities`, `vk` |
+| `releases/`, `backups/`, `uploads/`, `auth/` | 8 | релизы, бэкапы, загрузка файлов, вход |
+| одиночные | 6 | `koala-parser`, `zvonko-parser`, `artists`, `users`, `payments`, `activities` |
 
 ## Python-парсеры
 
@@ -107,8 +103,6 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 | откуда | что запускает |
 |---|---|
 | `app/api/koala-parser/route.ts:94,111` | `parsers/koala_releases_parser.py`, конфиг и вывод — JSON-файлы |
-| `app/api/parsers/bandlink/route.ts:90-97` | `bandlink_parser_production_linux.py` или `..._mac.py` — выбор по платформе |
-| `app/api/parsers/vk/route.ts:80-83` | `parsers/vk_parser_linux.py` |
 | `app/api/zvonko-parser/route.ts:370-378` | `zvonko_linux_parser.py`, `compare_releases.py`, `add_new_releases.py` |
 | `app/api/reports/process-python/route.ts:173,201` | `lib/python-report-processor.py` — обработка XLSX-отчётов |
 
@@ -122,8 +116,7 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 | **Pyrus** | легаси-приём заявок, выключается флагом | `PYRUS_LOGIN`, `PYRUS_API_KEY`, `PYRUS_SECRET_KEY`, `PYRUS_WRITE_DISABLED` |
 | **Supabase** | Postgres и Storage | `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
 | **SFTP** | выгрузки аналитики и плейлистов от дистрибьютора | `SFTP_HOST`, `SFTP_USERNAME`, `SFTP_PASSWORD`, `SFTP_REMOTE_PATH`, `SFTP_REMOTE_FLASH_PATH` |
-| **VK / Яндекс.Музыка** | обложки плейлистов | `VK_PLAYLIST_COVER_ACCESS_TOKEN`, `YANDEX_MUSIC_OAUTH_TOKEN` |
-| **Bright Data, 2captcha** | прокси и капча для парсеров; читаются **Python**, не TS | `BRIGHT_DATA_*`, `TWOCAPTCHA_API_KEY`, `PROXY_HOST`, `PROXY_PORT` |
+| **VK / Яндекс.Музыка** | обложки плейлистов — единственное, что осталось от интеграции с этими площадками | `VK_PLAYLIST_COVER_ACCESS_TOKEN`, `YANDEX_MUSIC_OAUTH_TOKEN` |
 | **Sentry** | ошибки, подключается только при заданном DSN (`instrumentation.ts:15`) | `SENTRY_DSN` |
 
 ## Плановые задачи
@@ -131,7 +124,8 @@ Next.js 14 App Router, Postgres через Prisma, Python-парсеры ряд�
 Их **две независимые системы, и обе могут работать одновременно**:
 
 - **Системный `crontab`** — 5 записей: koala дважды в день, zvonko раз в день,
-  `scripts/cron-sftp.sh` дважды в день, outbox Buildin каждые 5 минут
+  `scripts/cron-sftp.sh` дважды в день, outbox Buildin каждые 5 минут.
+  Плейлисты приходят только по SFTP: парсеры bandlink и vk удалены в августе 2026
 - **Внутрипроцессный планировщик** `lib/scheduler.ts` — подключается из `instrumentation.ts:27`
   только при `ENABLE_IN_PROCESS_SCHEDULER === 'true'`
 
