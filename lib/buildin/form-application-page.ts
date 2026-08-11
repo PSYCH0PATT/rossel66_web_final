@@ -297,15 +297,6 @@ export function buildFinalizeBlocks(manifest: FormSessionManifest): unknown[] {
   return blocks
 }
 
-/** Single-release queues only — never use for catalog list row. */
-export function releaseDateForSingle(
-  manifest: FormSessionManifest
-): string | null {
-  const d = manifest.releases[0]?.releaseDate
-  if (d && /^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10)
-  return null
-}
-
 export function genreForSingleRelease(manifest: FormSessionManifest): string {
   const r = manifest.releases[0]
   if (!r) return ""
@@ -316,11 +307,4 @@ export function releaseTypeForSingle(manifest: FormSessionManifest): string {
   const r = manifest.releases[0]
   if (!r) return ""
   return releaseTypeLabel(manifest.formType, r.releaseType)
-}
-
-export function yesNoFromPayload(
-  payload: Record<string, unknown>,
-  key: string
-): string {
-  return yesNoLabel(String(payload?.[key] ?? "0")) || "Нет"
 }

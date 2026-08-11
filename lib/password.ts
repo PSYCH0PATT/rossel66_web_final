@@ -26,12 +26,3 @@ export async function verifyPassword(
   }
   return input === stored
 }
-
-/**
- * Значение пароля для показа админу. Для legacy-хеша вернёт null —
- * показывать нечего, нужен сброс.
- */
-export function readablePassword(stored: string | null | undefined): string | null {
-  if (!stored || isHashedPassword(stored)) return null
-  return stored
-}

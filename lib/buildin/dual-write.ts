@@ -225,16 +225,4 @@ export async function recordAndDualWriteSubmission(opts: {
   }
 }
 
-export function fileFromFormDataFile(
-  fieldKey: string,
-  file: File
-): Promise<PendingFileUpload> {
-  return file.arrayBuffer().then((ab) => ({
-    fieldKey,
-    filename: file.name || fieldKey,
-    contentType: file.type || "application/octet-stream",
-    bytes: new Uint8Array(ab),
-  }))
-}
-
 export { downloadStagedSubmissionFiles }

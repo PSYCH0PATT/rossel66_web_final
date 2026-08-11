@@ -262,10 +262,6 @@ export const CATALOG_RELEASE_FIELD_IDS: ReleaseSlotIds[] = [
     },
   },
 ]
-
-export const CATALOG_MAX_RELEASES = CATALOG_RELEASE_FIELD_IDS.length
-
-/** Имена полей для сообщений об ошибках (id → label) */
 export const catalogFieldIdToName: Record<number, string> = {
   45: "Тип 1-го релиза",
   88: "Тип 2-го релиза",

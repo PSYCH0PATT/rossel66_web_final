@@ -173,13 +173,6 @@ export async function enqueuePlaylistSync(pl: {
   )
 }
 
-/** @deprecated alias — same as enqueuePlaylistSync for placements */
-export async function enqueuePlaylistPlacementSync(
-  pl: Parameters<typeof enqueuePlaylistSync>[0]
-) {
-  return enqueuePlaylistSync(pl)
-}
-
 /** Activity mirroring disabled — archive DB only; history stays in Postgres. */
 export async function enqueueActivitySync(_a: {
   id: string

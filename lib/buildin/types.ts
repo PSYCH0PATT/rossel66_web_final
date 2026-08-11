@@ -8,14 +8,6 @@ export type FormType =
   | "data_rf"
   | "data_not_rf"
   | "contact"
-
-export type SubmissionStatus =
-  | "pending"
-  | "dual_writing"
-  | "completed"
-  | "partial"
-  | "failed"
-
 export type OutboxEventType =
   | "create_submission"
   | "form_session_materialize"
@@ -47,7 +39,6 @@ export const FORM_SESSION_ACTIVE_PER_IP = Math.max(
 )
 export const FORM_SESSION_TTL_COMPLETED_DAYS = 7
 export const FORM_SESSION_TTL_ABANDONED_DAYS = 30
-
 
 export type FileMeta = {
   fieldKey: string
@@ -130,32 +121,12 @@ export function selectProp(name: string | null) {
   }
 }
 
-export function multiSelectProp(names: string[]) {
-  return {
-    type: "multi_select" as const,
-    multi_select: names.map((name) => ({ name })),
-  }
-}
-
 export function dateProp(start: string | null) {
   return {
     type: "date" as const,
     date: start
       ? { start, end: null, time_zone: null }
       : null,
-  }
-}
-
-export function filesExternalProp(
-  files: Array<{ name: string; url: string }>
-) {
-  return {
-    type: "files" as const,
-    files: files.map((f) => ({
-      name: f.name,
-      type: "external" as const,
-      external: { url: f.url },
-    })),
   }
 }
 

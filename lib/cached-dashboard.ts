@@ -175,18 +175,6 @@ export const getCachedArtistDashboard = unstable_cache(
   }
 )
 
-export type PublicUser = {
-  id: string
-  username: string
-  name: string
-  email?: string
-  role: string
-  avatarUrl?: string
-  vkMusicUrl?: string
-  yandexMusicUrl?: string
-  spotifyUrl?: string
-}
-
 export type AdminDashboardPayload = {
   artistCount: number
   releaseCount: number
@@ -413,12 +401,6 @@ async function loadArtistReleasesUncached(artistId: string): Promise<ArtistRelea
   return rows.map(releaseFromPrisma)
 }
 
-export const getCachedArtistReleases = unstable_cache(
-  async (artistId: string) => loadArtistReleasesUncached(artistId),
-  ["artist-releases-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
-)
-
 function mapPrismaPlaylistToArtistItem(p: PlaylistListRow): ArtistPlaylistItem {
   return {
     id: p.id,
@@ -535,12 +517,6 @@ async function loadAdminPaymentsUncached(): Promise<AdminPaymentItem[]> {
   }))
 }
 
-export const getCachedAdminPayments = unstable_cache(
-  async () => loadAdminPaymentsUncached(),
-  ["admin-payments-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
-)
-
 export type AdminArtistItem = {
   id: string
   username: string
@@ -580,21 +556,9 @@ async function loadAdminArtistsUncached(): Promise<AdminArtistItem[]> {
   return rows.map((a) => ({ ...a, verified: a.verified ?? true }))
 }
 
-export const getCachedAdminArtists = unstable_cache(
-  async () => loadAdminArtistsUncached(),
-  ["admin-artists-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
-)
-
 export type AdminReleaseItem = Release
 
 async function loadAdminReleasesUncached(): Promise<AdminReleaseItem[]> {
   const rows = await prisma.release.findMany({ orderBy: { createdAt: "desc" } })
   return rows.map(releaseFromPrisma)
 }
-
-export const getCachedAdminReleases = unstable_cache(
-  async () => loadAdminReleasesUncached(),
-  ["admin-releases-v1"],
-  { revalidate: DASHBOARD_REVALIDATE_SEC }
-)

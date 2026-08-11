@@ -15,14 +15,6 @@ import {
 } from '@/lib/playlist-placements';
 
 /**
- * Инициализирует базу данных (заглушка для обратной совместимости)
- */
-export async function ensureSftpPlaylistDatabase(): Promise<void> {
-  // Prisma автоматически создает таблицы через миграции
-  console.log('✅ Используется Supabase PostgreSQL (Prisma)');
-}
-
-/**
  * Сохраняет список плейлистов в базу данных
  */
 export type AddedPlaylistInfo = {
@@ -345,68 +337,6 @@ export async function getPlaylistsByArtistId(artistId: string): Promise<any[]> {
     updated_at: p.updatedAt.toISOString(),
     cover_url: p.coverUrl ?? null,
   }))
-}
-
-/**
- * Получает все URL плейлистов
- */
-export async function getAllPlaylistUrls(): Promise<Set<string>> {
-  try {
-    const playlists = await prisma.playlist.findMany({
-      select: { playlistUrl: true },
-      distinct: ['playlistUrl']
-    });
-    
-    return new Set(playlists.map(p => p.playlistUrl));
-  } catch (error) {
-    console.error('❌ Ошибка получения URL плейлистов:', error);
-    return new Set();
-  }
-}
-
-/**
- * Удаляет плейлист
- */
-export async function deletePlaylist(
-  playlistUrl: string,
-  playlistName: string
-): Promise<boolean> {
-  try {
-    const rows = await prisma.playlist.findMany({
-      where: { playlistUrl, playlistName },
-      select: { id: true, playlistName: true },
-    })
-    await prisma.playlist.deleteMany({
-      where: {
-        playlistUrl,
-        playlistName
-      }
-    });
-    try {
-      const deactivated = await deactivatePlacementsForPlaylistRows(
-        rows.map((r) => r.id)
-      )
-      const { enqueuePlaylistSync } = await import("@/lib/buildin/sync-hooks")
-      for (const p of deactivated) {
-        await enqueuePlaylistSync({
-          id: p.placementKey,
-          trackTitle: p.trackTitle,
-          artistName: p.artistName,
-          playlistName: p.playlistName,
-          playlistUrl: p.playlistUrl,
-          firstSeenDate: p.firstSeenDate,
-          archived: true,
-        })
-      }
-    } catch (err) {
-      console.error("Buildin playlist archive enqueue failed:", err)
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Ошибка удаления плейлиста:', error);
-    return false;
-  }
 }
 
 /**

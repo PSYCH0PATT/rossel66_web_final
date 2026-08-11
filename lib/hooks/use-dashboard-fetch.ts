@@ -33,11 +33,6 @@ export function revalidateReleasesLists(): void {
   )
 }
 
-/** SWR for analytics streams payload. */
-export function useStreamAnalytics(url: string | null) {
-  return useSWR(url, fetcher, swrFreshOpts)
-}
-
 export function revalidateStreamAnalytics(): void {
   void globalMutate(
     (key) => typeof key === "string" && key.includes("/api/analytics/streams"),
