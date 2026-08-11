@@ -19,8 +19,8 @@ loadEnv(path.join(process.cwd(), '.env'))
 loadEnv(path.join(process.cwd(), '.env.local'))
 
 async function main() {
-  const { supabase } = await import('../lib/supabase')
-  const { prisma } = await import('../lib/prisma')
+  const { supabase } = await import('../../lib/supabase')
+  const { prisma } = await import('../../lib/prisma')
 
   // List buckets
   const { data: buckets, error: bucketsErr } = await supabase.storage.listBuckets()

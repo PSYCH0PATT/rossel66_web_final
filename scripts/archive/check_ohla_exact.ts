@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma'
+import { prisma } from '../../lib/prisma'
 
 async function main() {
   const ohla = await prisma.release.findUnique({ where: { id: '1779095009702' } })

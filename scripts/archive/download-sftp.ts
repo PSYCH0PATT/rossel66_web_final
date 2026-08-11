@@ -1,4 +1,4 @@
-import { downloadSftpFiles } from '../lib/sftp-downloader';
+import { downloadSftpFiles } from '../../lib/sftp-downloader';
 
 async function main() {
   const host = process.env.SFTP_HOST || 'sftp1.sp-digital.ru';

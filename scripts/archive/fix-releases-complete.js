@@ -6,7 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadUsers, findArtistByName, loadReleases, saveReleases } = require('../lib/storage');
+const { loadUsers, findArtistByName, loadReleases, saveReleases } = require('../../lib/storage');
 
 // Нормализует статус
 function normalizeStatus(status) {

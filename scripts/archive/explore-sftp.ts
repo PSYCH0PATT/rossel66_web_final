@@ -1,4 +1,4 @@
-import { exploreSftpServer } from '../lib/sftp-explorer';
+import { exploreSftpServer } from '../../lib/sftp-explorer';
 
 async function main() {
   const host = process.env.SFTP_HOST || 'sftp1.sp-digital.ru';

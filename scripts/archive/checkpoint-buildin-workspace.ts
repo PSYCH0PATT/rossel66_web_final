@@ -28,7 +28,7 @@ loadEnv(resolve(process.cwd(), ".env.local"))
 loadEnv(resolve(process.cwd(), ".env"))
 
 async function main() {
-  const { prisma } = await import("../lib/prisma")
+  const { prisma } = await import("../../lib/prisma")
   const outDir = resolve(process.cwd(), ".tmp/buildin-checkpoint")
   mkdirSync(outDir, { recursive: true })
 

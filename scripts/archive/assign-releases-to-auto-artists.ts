@@ -3,9 +3,9 @@
  * Проходит по всем артистам и привязывает релизы без artistId по имени артиста
  */
 
-import { assignReleasesToNewArtist } from '../lib/storage';
-import { prisma } from '../lib/prisma';
-import { userFromPrisma } from '../lib/storage-adapters';
+import { assignReleasesToNewArtist } from '../../lib/storage';
+import { prisma } from '../../lib/prisma';
+import { userFromPrisma } from '../../lib/storage-adapters';
 
 async function main() {
   try {

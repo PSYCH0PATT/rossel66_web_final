@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Импортируем функции из storage
-const { loadReleases, saveReleases, loadUsers, findArtistByName, getReleaseByKoalaId } = require('../lib/storage');
+const { loadReleases, saveReleases, loadUsers, findArtistByName, getReleaseByKoalaId } = require('../../lib/storage');
 
 // Нормализация статуса (копируем из API)
 function normalizeStatus(status) {

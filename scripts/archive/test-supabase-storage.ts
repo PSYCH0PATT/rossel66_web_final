@@ -25,7 +25,7 @@ loadEnvFile(path.join(process.cwd(), '.env'))
 loadEnvFile(path.join(process.cwd(), '.env.local'))
 
 async function main() {
-  const { ensureBucketExists, supabase } = await import('../lib/supabase')
+  const { ensureBucketExists, supabase } = await import('../../lib/supabase')
   
   console.log('📊 Проверка подключения к Supabase Storage...\n')
   
