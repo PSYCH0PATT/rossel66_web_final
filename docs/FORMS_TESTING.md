@@ -63,24 +63,27 @@ pnpm test:e2e:local
 
 ## Staging (Vercel)
 
-**Live E2E URL:** `https://rossel-music.vercel.app`
+**Live E2E URL:** `https://rossel-music-git-staging-psych0patts-projects.vercel.app`
 
 ```bash
 # Health (must be 200 / ok:true before Playwright)
 curl -sS -H "Authorization: Bearer $E2E_CRON_SECRET" \
-  https://rossel-music.vercel.app/api/cron/forms-health
+  https://rossel-music-git-staging-psych0patts-projects.vercel.app/api/cron/forms-health
 
 # Playwright against staging
 set -a; source .env.e2e.run.local; set +a
-E2E_BASE_URL=https://rossel-music.vercel.app \
+E2E_BASE_URL=https://rossel-music-git-staging-psych0patts-projects.vercel.app \
 E2E_VERIFY_BUILDIN=1 \
 pnpm test:e2e
 ```
 
 1. Проект `rossel-music` (staging-only), Node **20** (или 24 после deprecation).
-   Git подключён к `PSYCH0PATT/rossel66_web_final`; **Production Branch = `staging`**.
-   `main` (прод на Timeweb) и `dev` не собираются — отключены в `vercel.json`
-   через `git.deploymentEnabled`. Поток: `dev` → `staging` (Vercel) → `main` (Timeweb).
+   Git подключён к `PSYCH0PATT/rossel66_web_final`. `main` (прод на Timeweb) и `dev`
+   не собираются — отключены в `vercel.json` через `git.deploymentEnabled`, поэтому
+   единственная собираемая ветка — `staging`, и окружение **Preview** здесь и есть
+   стейджинг. Production Branch менять не нужно; переменные заводятся в Preview.
+   Адрес: https://rossel-music-git-staging-psych0patts-projects.vercel.app
+   Поток: `dev` → `staging` (Vercel) → `main` (Timeweb).
 2. Отдельный Neon Postgres (не production Supabase). Claim/renew: see `.env.vercel.staging.local` → `PUBLIC_POSTGRES_CLAIM_URL` (ephemeral DBs expire).
 3. `pnpm setup:buildin-e2e` → `docs/FORMS_E2E_DATABASE_IDS.env` (sandbox: parent `536088a1-…`, submissions `b7fa63ed-…`).
 4. Vercel env: `docs/FORMS_STAGING.env.example`. Map `E2E_BUILDIN_DB_*` → `BUILDIN_DB_*`.
