@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ReportsList from "@/components/reports-list"
 import UnregisteredReportsList from "@/components/unregistered-reports-list"
 import SimpleReportUploader from "@/components/simple-report-uploader"
+import { MissingContractBanner } from "@/components/missing-contract-banner"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
@@ -23,6 +24,10 @@ export default function ReportsPage() {
             </p>
           </div>
         </div>
+
+        {/* Предупреждение о незаполненных ФИО/договоре/проценте у артистов.
+            Само себя скрывает, пока таких артистов нет. */}
+        <MissingContractBanner />
 
         <Tabs defaultValue="reports" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
