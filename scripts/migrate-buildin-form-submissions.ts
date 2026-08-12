@@ -168,6 +168,7 @@ async function main() {
         select?: { name?: string }
         number?: number | null
         email?: string | null
+        date?: { start?: string | null }
       }
     >
     const title = plain(props["Название"])

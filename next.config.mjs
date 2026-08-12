@@ -50,7 +50,6 @@ const nextConfig = {
       'ssh2',
       'ssh2-sftp-client',
       'cpu-features',
-      'sqlite3',
     ],
   },
   // Transpile recharts и victory-vendor для корректной работы графиков в production
@@ -75,7 +74,6 @@ const nextConfig = {
         'ssh2',
         'ssh2-sftp-client',
         'cpu-features',
-        'sqlite3',
       ]);
       const ext = ({ request }, callback) => {
         if (request && request.startsWith('node:')) {
