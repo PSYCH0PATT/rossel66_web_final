@@ -111,22 +111,29 @@ function resolveSingleToken(token: string, lookup: AnalyticsArtistLookup): strin
   return null
 }
 
-/** Определяет artistId для строки trackArtist из CSV. */
-export function resolveArtistId(
+/**
+ * Все артисты ростера, участвующие в строке trackArtist.
+ *
+ * Для «Artist» это ноль или один id, для «A & B» — по одному на каждого узнанного участника.
+ * Нужна там, где фит принадлежит сразу нескольким: колонка StreamAnalytics.artistId скалярная
+ * и вместить двоих не может, поэтому такие строки остаются с artistId = null, а разбирать их
+ * приходится на чтении.
+ */
+export function resolveAllArtistIds(
   trackArtist: string,
   lookup: AnalyticsArtistLookup
-): string | null {
+): string[] {
   const raw = trackArtist.trim()
-  if (!raw) return null
+  if (!raw) return []
 
   const direct = resolveSingleToken(raw, lookup)
-  if (direct) return direct
+  if (direct) return [direct]
 
   const tokens = tokenizeCollaborationArtistField(raw)
   if (tokens.length <= 1) {
     const norm = normalizeAnalyticsArtistKey(raw)
-    if (norm && lookup.userNormalized.has(norm)) return lookup.userNormalized.get(norm)!
-    return null
+    const id = norm ? lookup.userNormalized.get(norm) : undefined
+    return id ? [id] : []
   }
 
   const matched = new Set<string>()
@@ -134,8 +141,22 @@ export function resolveArtistId(
     const id = resolveSingleToken(token, lookup)
     if (id) matched.add(id)
   }
-  if (matched.size === 1) return [...matched][0]
-  return null
+  return [...matched]
+}
+
+/**
+ * Определяет artistId для строки trackArtist из CSV.
+ *
+ * Отдаёт id только при единственном совпадении: у коллаба двух артистов лейбла выбрать одного
+ * нельзя, поэтому такая строка сохраняется без привязки. Читающая сторона разбирает её через
+ * resolveAllArtistIds.
+ */
+export function resolveArtistId(
+  trackArtist: string,
+  lookup: AnalyticsArtistLookup
+): string | null {
+  const ids = resolveAllArtistIds(trackArtist, lookup)
+  return ids.length === 1 ? ids[0] : null
 }
 
 export function isCollaborationTrackArtist(trackArtist: string): boolean {

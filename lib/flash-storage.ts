@@ -7,6 +7,8 @@ import { prisma } from '@/lib/prisma'
 import {
   loadAnalyticsArtistLookup,
   resolveArtistId,
+  resolveAllArtistIds,
+  isCollabFullyResolvedInRoster,
   buildCabinetStreamAnalyticsWhere,
 } from '@/lib/analytics-artist-match'
 import type { FlashRecord } from './flash-parser'
@@ -324,19 +326,30 @@ export type AnalyticsArtistOption = {
 
 /**
  * Список артистов для админского фильтра.
+ *
  * Смапленные trackArtist консолидируются по artistId (ростер) — «Artist» и
  * «Artist feat Guest», ведущие на один профиль, схлопываются в одну запись.
- * Немапленные имена остаются отдельными (их привязывают вручную).
+ *
+ * Коллаб двух артистов лейбла («A & B») лежит в базе без artistId: колонка скалярная и вместить
+ * двоих не может. Отдельной опцией он быть не должен — фит это не артист, — поэтому его стримы
+ * расходятся по обоим участникам. Фильтрация это уже учитывает: выбор артиста строит where через
+ * buildCabinetStreamAnalyticsWhere и подхватывает его коллаб-строки.
+ *
+ * Отдельными записями остаются только имена, чьих участников нет в ростере, — их привязывают
+ * вручную через «Сопоставить».
  */
 export async function getAvailableArtists(opts?: { take?: number; skip?: number }) {
   const take = Math.min(opts?.take ?? 500, 2000)
   const skip = Math.max(0, opts?.skip ?? 0)
 
-  const grouped = await prisma.streamAnalytics.groupBy({
-    by: ['trackArtist', 'artistId'],
-    _sum: { streams: true },
-    orderBy: { trackArtist: 'asc' },
-  })
+  const [grouped, lookup] = await Promise.all([
+    prisma.streamAnalytics.groupBy({
+      by: ['trackArtist', 'artistId'],
+      _sum: { streams: true },
+      orderBy: { trackArtist: 'asc' },
+    }),
+    loadAnalyticsArtistLookup(),
+  ])
 
   // Консолидация смапленных по artistId; немапленные — по trackArtist
   const byArtistId = new Map<string, number>()
@@ -345,6 +358,20 @@ export async function getAvailableArtists(opts?: { take?: number; skip?: number 
     const streams = g._sum.streams ?? 0
     if (g.artistId) {
       byArtistId.set(g.artistId, (byArtistId.get(g.artistId) ?? 0) + streams)
+      continue
+    }
+
+    // Коллаб, где узнаны все участники, раскладывается по ним и отдельной опцией не становится.
+    // Стримы засчитываются каждому целиком: вопрос «сколько у треков с его участием», а не
+    // «сколько ему причитается», поэтому делить пополам нельзя.
+    const participants = isCollabFullyResolvedInRoster(g.trackArtist, lookup)
+      ? resolveAllArtistIds(g.trackArtist, lookup)
+      : []
+
+    if (participants.length > 0) {
+      for (const artistId of participants) {
+        byArtistId.set(artistId, (byArtistId.get(artistId) ?? 0) + streams)
+      }
     } else {
       unmappedByTrackArtist.set(
         g.trackArtist,
