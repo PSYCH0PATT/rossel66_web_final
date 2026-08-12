@@ -12,3 +12,14 @@
 
 # Buildin outbox retries: каждые 5 минут
 */5 * * * * curl -s -H "Authorization: Bearer $(cat /tmp/.cron_secret 2>/dev/null)" "http://127.0.0.1:3000/api/cron/buildin-outbox?limit=20" >> /app/logs/cron.log 2>&1
+
+# Аналитика из rossel_flash по SFTP: 20:00 МСК -> 17:00 UTC
+# Перенесено из lib/scheduler.ts: до этого задача жила только там, и при
+# ENABLE_IN_PROCESS_SCHEDULER=false импорт бы просто перестал идти.
+0 17 * * * curl -s -H "Authorization: Bearer $(cat /tmp/.cron_secret 2>/dev/null)" "http://127.0.0.1:3000/api/cron/analytics-flash" >> /app/logs/cron.log 2>&1
+
+# Обложки плейлистов (VK/Яндекс): суббота и воскресенье 06:00 МСК -> 03:00 UTC
+# До 20 плейлистов за вызов (BATCH_LIMIT в app/api/cron/playlist-covers/route.ts).
+# Тоже перенесено из lib/scheduler.ts.
+0 3 * * 6 curl -s -H "Authorization: Bearer $(cat /tmp/.cron_secret 2>/dev/null)" "http://127.0.0.1:3000/api/cron/playlist-covers" >> /app/logs/cron.log 2>&1
+0 3 * * 0 curl -s -H "Authorization: Bearer $(cat /tmp/.cron_secret 2>/dev/null)" "http://127.0.0.1:3000/api/cron/playlist-covers" >> /app/logs/cron.log 2>&1
