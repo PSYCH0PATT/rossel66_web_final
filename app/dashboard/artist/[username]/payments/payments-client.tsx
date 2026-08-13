@@ -19,6 +19,9 @@ interface Balance {
   artistId: string
   totalBalance: number
   availableForPayout: number
+  advanceTotal: number
+  advanceRecouped: number
+  advanceRemaining: number
   lastUpdated: string
 }
 
@@ -41,6 +44,12 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
   const paidAmount = reports.filter((r) => r.isPaid).reduce((sum, r) => sum + (r.totalAmount ?? 0), 0)
   const totalBal = balance?.totalBalance ?? 0
   const avail = balance?.availableForPayout ?? 0
+
+  const advanceTotal = balance?.advanceTotal ?? 0
+  const advanceRecouped = balance?.advanceRecouped ?? 0
+  const advanceRemaining = balance?.advanceRemaining ?? 0
+  const advanceProgress =
+    advanceTotal > 0 ? Math.min(100, Math.round((advanceRecouped / advanceTotal) * 100)) : 0
 
   const fmt = (n: number) =>
     n.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -134,7 +143,55 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
         </div>
       </div>
 
-      {balance && balance.totalBalance > 0 && balance.availableForPayout === 0 && (
+      {advanceTotal > 0 && (
+        <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6 mb-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 flex-shrink-0">
+                <span className="material-symbols-outlined text-xl">payments</span>
+              </span>
+              <div>
+                <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Аванс</h3>
+                <p className="text-sm text-gray-400 font-light max-w-md">
+                  {advanceRemaining > 0
+                    ? "Роялти идут в погашение аванса. Как только он будет закрыт, начисления снова станут доступны к выплате."
+                    : "Аванс полностью погашен — начисления снова доступны к выплате."}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Выдано</p>
+                <p className="text-xl font-bold text-white font-display tabular-nums">{fmt(advanceTotal)} ₽</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Погашено</p>
+                <p className="text-xl font-bold text-emerald-400 font-display tabular-nums">
+                  {fmt(advanceRecouped)} ₽
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Осталось</p>
+                <p className="text-xl font-bold text-orange-400 font-display tabular-nums">
+                  {fmt(advanceRemaining)} ₽
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/5">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 transition-all"
+              style={{ width: `${advanceProgress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-gray-500 tabular-nums">Погашено {advanceProgress}% аванса</p>
+        </div>
+      )}
+
+      {/* Про минимальную сумму говорим только когда дело действительно в ней:
+          при непогашенном авансе к выплате ноль по другой причине, её объясняет
+          карточка выше. */}
+      {balance && balance.totalBalance > 0 && balance.availableForPayout === 0 && advanceRemaining === 0 && (
         <div className="card-glass rounded-2xl border border-yellow-500/20 p-4 md:p-5 mb-10 flex gap-3 items-start">
           <span className="material-symbols-outlined text-yellow-400 text-2xl flex-shrink-0" aria-hidden>
             info

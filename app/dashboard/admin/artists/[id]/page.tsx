@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { ArtistAdvances } from "@/components/artist-advances"
 
 export default function EditArtistPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -819,30 +820,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
           {/* Вкладка Выплаты */}
           <TabsContent value="payments" className="space-y-4">
-            <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                История выплат
-              </h2>
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <p className="text-gray-400 text-sm">Управление выплатами и финансами</p>
-                    <Button className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg">add</span>
-                      Добавить выплату
-                    </Button>
-                  </div>
-                  
-                  <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
-                    <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">payments</span>
-                    <h3 className="text-lg font-medium text-white mb-2">Нет выплат</h3>
-                    <p className="text-gray-400 mb-4 text-sm">История выплат артисту будет отображаться здесь</p>
-                    <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg">
-                      Создать выплату
-                    </Button>
-                  </div>
-                </div>
-            </div>
+            <ArtistAdvances artistId={artistId} />
           </TabsContent>
         </Tabs>
 

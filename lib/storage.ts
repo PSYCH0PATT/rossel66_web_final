@@ -2,6 +2,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { reportEffectiveYear } from './report-year'
+import { applyAdvanceToPayout, computeAdvanceSummary } from './advance'
 import { 
   userFromPrisma, 
   releaseFromPrisma, 
@@ -154,6 +155,8 @@ export type ActivityType =
   | 'parser_playlist_found'
   | 'artist_auto_created'
   | 'report_status_changed'
+  | 'advance_issued'
+  | 'advance_removed'
 
 export interface Activity {
   id: string
@@ -932,8 +935,17 @@ export interface ArtistBalance {
   artistId: string
   totalBalance: number
   availableForPayout: number
+  /** Сколько всего выдано авансом. 0 — авансов не было. */
+  advanceTotal: number
+  /** Сколько из аванса уже погашено роялти. */
+  advanceRecouped: number
+  /** Сколько аванса осталось добить. */
+  advanceRemaining: number
   lastUpdated: string
 }
+
+/** Минимальная сумма выплаты, ₽. */
+export const MIN_PAYOUT_AMOUNT = 3000
 
 // Расширенный интерфейс отчета с дополнительными полями
 export interface ReportData extends Omit<Report, 'status'> {
@@ -962,6 +974,7 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   const seen = new Set<string>()
   let totalBalance = 0
   let paidAmount = 0
+  const deduped: { amount: number; uploadedAt: Date }[] = []
   for (const r of reports) {
     // D2: год из даты загрузки, если в отчёте не заполнен — тот же ключ,
     // что использует список отчётов в кабинете.
@@ -971,17 +984,32 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
     const amt = r.totalAmount ?? 0
     totalBalance += amt
     if (r.isPaid) paidAmount += amt
+    deduped.push({ amount: amt, uploadedAt: r.uploadedAt })
   }
 
-  // Доступно к выплате = общий баланс минус выплаченное
-  // Минимальная сумма для выплаты 3000 рублей
+  // Аванс гасится роялти из отчётов, пришедших после его выдачи. Правило целиком
+  // в lib/advance.ts — здесь только подача данных.
+  const advances = await prisma.advance.findMany({
+    where: { artistId },
+    select: { amount: true, issuedAt: true },
+  })
+  const advance = computeAdvanceSummary(advances, deduped)
+
+  // Доступно к выплате = начислено минус выплаченное минус ушедшее в погашение аванса.
   const unpaidBalance = totalBalance - paidAmount
-  const availableForPayout = unpaidBalance >= 3000 ? unpaidBalance : 0
+  const availableForPayout = applyAdvanceToPayout(
+    unpaidBalance,
+    advance.advanceRecouped,
+    MIN_PAYOUT_AMOUNT
+  )
 
   return {
     artistId,
     totalBalance,
     availableForPayout,
+    advanceTotal: advance.advanceTotal,
+    advanceRecouped: advance.advanceRecouped,
+    advanceRemaining: advance.advanceRemaining,
     lastUpdated: new Date().toISOString()
   }
 }

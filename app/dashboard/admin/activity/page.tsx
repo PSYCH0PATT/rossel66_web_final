@@ -41,6 +41,8 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   analytics_cleanup: "Очистка аналитики",
   artist_auto_created: "Артист создан автоматически",
   report_status_changed: "Статус отчёта изменён",
+  advance_issued: "Аванс выдан",
+  advance_removed: "Аванс удалён",
 }
 
 function activityIcon(type: ActivityType): { name: string; className: string } {

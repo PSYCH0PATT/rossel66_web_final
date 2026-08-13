@@ -60,3 +60,12 @@ export const analyticsSyncBodySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 })
+
+/** POST /api/advances */
+export const advancePostSchema = z.object({
+  artistId: z.string().min(1),
+  amount: z.number().positive().max(100_000_000),
+  /** ISO-дата или YYYY-MM-DD */
+  issuedAt: z.string().min(1).max(64),
+  comment: z.string().max(1000).optional(),
+})

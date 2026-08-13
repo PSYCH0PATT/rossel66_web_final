@@ -462,3 +462,20 @@ model PlaylistHistory {
   @@index([changeType])
   @@index([createdAt])
 }
+
+/// Аванс, выданный артисту. Гасится роялти из отчётов, пришедших после выдачи —
+/// правило целиком в lib/advance.ts.
+model Advance {
+  id        String   @id @default(cuid())
+  artistId  String
+  amount    Float
+  issuedAt  DateTime
+  comment   String?
+  /// username админа, который завёл запись — для истории
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([artistId])
+  @@index([artistId, issuedAt])
+}
