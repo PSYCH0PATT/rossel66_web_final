@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const finalAmount = totalAmount ? parseFloat(totalAmount) : calculatedAmount
     const finalPlays = totalPlays ? parseInt(totalPlays) : calculatedPlays
 
-    const registeredArtist = await prisma.user.findFirst({
+    const matchedArtist = await prisma.user.findFirst({
       where: {
         role: "artist",
         OR: [
@@ -106,15 +106,31 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Проверка дубликата
+    // Имя могло совпасть с привязанным профилем (AKA) — отчёт всё равно
+    // принадлежит главному, у группы один отчёт на квартал.
+    const registeredArtist = matchedArtist?.mainArtistId
+      ? ((await prisma.user.findUnique({ where: { id: matchedArtist.mainArtistId } })) ??
+        matchedArtist)
+      : matchedArtist
+
+    // Проверка дубликата — по всей группе профилей, а не только по одному
     if (registeredArtist) {
+      const group = await prisma.user.findMany({
+        where: { OR: [{ id: registeredArtist.id }, { mainArtistId: registeredArtist.id }] },
+        select: { id: true },
+      })
       const duplicateReport = await prisma.report.findFirst({
-        where: { artistId: registeredArtist.id, quarter, year: parseInt(year) }
+        where: {
+          artistId: { in: group.map((u) => u.id) },
+          quarter,
+          year: parseInt(year),
+          NOT: { isRegistered: false },
+        },
       })
       if (duplicateReport) {
         return NextResponse.json({
           success: false,
-          message: `Отчёт для ${artistName} за ${quarter} ${parseInt(year)} уже существует`
+          message: `Отчёт для ${registeredArtist.name} за ${quarter} ${parseInt(year)} уже существует`
         }, { status: 409 })
       }
     }

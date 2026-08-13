@@ -42,6 +42,7 @@ export type ArtistDashboardPayload = {
     contract: string | null
     percentage: number | null
     verified: boolean
+    mainArtistId: string | null
   }
   releaseCount: number
   releasedCount: number
@@ -85,6 +86,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
       contract: true,
       percentage: true,
       verified: true,
+      mainArtistId: true,
     },
   })
 
@@ -168,7 +170,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
 
 export const getCachedArtistDashboard = unstable_cache(
   async (username: string) => loadArtistDashboardUncached(username),
-  ["artist-dashboard-v5"],
+  ["artist-dashboard-v6"],
   {
     revalidate: DASHBOARD_REVALIDATE_SEC,
     tags: [CACHE_TAG_ARTIST_DASHBOARD],

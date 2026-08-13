@@ -33,6 +33,7 @@ export function userFromPrisma(prismaUser: PrismaUser): User {
     contract: prismaUser.contract ?? undefined,
     percentage: prismaUser.percentage ?? undefined,
     verified: prismaUser.verified ?? true,
+    mainArtistId: prismaUser.mainArtistId ?? undefined,
   }
 }
 

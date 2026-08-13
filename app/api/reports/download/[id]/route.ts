@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { reportFromPrisma } from "@/lib/storage-adapters"
-import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { getSessionUser, requireAuth, requireSelfLinkedOrAdmin } from "@/lib/server-auth"
 import { supabase } from "@/lib/supabase"
 import { attachmentContentDisposition } from "@/lib/content-disposition"
 
@@ -30,12 +30,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Отчет не найден" }, { status: 404 })
     }
 
-    if (
-      session.role !== "admin" &&
-      report.artistId &&
-      report.artistId !== session.id
-    ) {
-      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+    // Главный профиль качает отчёты своих привязанных профилей (AKA).
+    if (report.artistId) {
+      const denied = await requireSelfLinkedOrAdmin(request, report.artistId)
+      if (denied) return denied
     }
 
     if (!report.filePath) {

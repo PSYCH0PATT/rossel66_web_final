@@ -100,7 +100,9 @@ export default function ArtistAnalyticsPage() {
   useEffect(() => {
     if (!profile) return
     if (profile.role === "artist") {
-      setViewedArtistId(profile.id)
+      // Не profile.id: при переключении на привязанный профиль (AKA) в URL стоит
+      // его username, и смотреть надо именно его аналитику, а не агрегат главного.
+      setViewedArtistId(profile.viewedArtistId ?? profile.id)
       return
     }
     if (profile.role !== "admin") {

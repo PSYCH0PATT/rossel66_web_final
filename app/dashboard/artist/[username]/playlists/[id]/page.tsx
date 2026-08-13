@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 import { prisma } from "@/lib/prisma"
 import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
@@ -34,10 +35,10 @@ export default async function ArtistPlaylistDetailPage({
 
   const user = await prisma.user.findFirst({
     where: { username: params.username, role: "artist" },
-    select: { id: true, name: true, username: true },
+    select: { id: true, name: true, username: true, mainArtistId: true },
   })
   if (!user) notFound()
-  if (session.role === "artist" && session.id !== user.id) notFound()
+  if (!canViewArtistCabinet(session, user)) notFound()
 
   const playlist = await prisma.playlist.findUnique({
     where: { id: params.id },

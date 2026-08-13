@@ -10,6 +10,8 @@ import {
   resolveAllArtistIds,
   isCollabFullyResolvedInRoster,
   buildCabinetStreamAnalyticsWhere,
+  loadMainArtistByLinkedId,
+  remapToMainArtistIds,
 } from '@/lib/analytics-artist-match'
 import type { FlashRecord } from './flash-parser'
 import { isPaidStreamLength } from '@/lib/stream-length'
@@ -342,13 +344,14 @@ export async function getAvailableArtists(opts?: { take?: number; skip?: number 
   const take = Math.min(opts?.take ?? 500, 2000)
   const skip = Math.max(0, opts?.skip ?? 0)
 
-  const [grouped, lookup] = await Promise.all([
+  const [grouped, lookup, mainByLinkedId] = await Promise.all([
     prisma.streamAnalytics.groupBy({
       by: ['trackArtist', 'artistId'],
       _sum: { streams: true },
       orderBy: { trackArtist: 'asc' },
     }),
     loadAnalyticsArtistLookup(),
+    loadMainArtistByLinkedId(),
   ])
 
   // Консолидация смапленных по artistId; немапленные — по trackArtist
@@ -357,15 +360,20 @@ export async function getAvailableArtists(opts?: { take?: number; skip?: number 
   for (const g of grouped) {
     const streams = g._sum.streams ?? 0
     if (g.artistId) {
-      byArtistId.set(g.artistId, (byArtistId.get(g.artistId) ?? 0) + streams)
+      // Привязанный профиль (AKA) отдельной опцией не показывается — его стримы
+      // уходят главному.
+      const [ownerId] = remapToMainArtistIds([g.artistId], mainByLinkedId)
+      byArtistId.set(ownerId, (byArtistId.get(ownerId) ?? 0) + streams)
       continue
     }
 
     // Коллаб, где узнаны все участники, раскладывается по ним и отдельной опцией не становится.
     // Стримы засчитываются каждому целиком: вопрос «сколько у треков с его участием», а не
     // «сколько ему причитается», поэтому делить пополам нельзя.
+    // remap с дедупом: коллаб «Главный & Привязанный» — один человек под двумя
+    // именами, без дедупа его стримы засчитались бы главному дважды.
     const participants = isCollabFullyResolvedInRoster(g.trackArtist, lookup)
-      ? resolveAllArtistIds(g.trackArtist, lookup)
+      ? remapToMainArtistIds(resolveAllArtistIds(g.trackArtist, lookup), mainByLinkedId)
       : []
 
     if (participants.length > 0) {

@@ -115,6 +115,32 @@ export async function requireSelfOrAdmin(
 }
 
 /**
+ * Как requireSelfOrAdmin, но пропускает и главный профиль к своим привязанным
+ * (AKA): в кабинете главного видны данные всех его профилей, значит и API,
+ * которые эти данные отдают, должны его пускать. Связь односторонняя — снизу
+ * вверх доступа нет.
+ */
+export async function requireSelfLinkedOrAdmin(
+  _request: Request | undefined,
+  artistId: string
+): Promise<NextResponse | null> {
+  const user = getSessionUser()
+  if (!user) {
+    return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
+  }
+  if (user.role === "admin" || user.id === artistId) return null
+
+  const { prisma } = await import("@/lib/prisma")
+  const linked = await prisma.user.findFirst({
+    where: { id: artistId, mainArtistId: user.id },
+    select: { id: true },
+  })
+  if (linked) return null
+
+  return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
+}
+
+/**
  * Signed session value for Set-Cookie.
  * Without AUTH_SECRET: legacy base64 JSON (dev / migration).
  */

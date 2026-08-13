@@ -24,8 +24,22 @@ export async function buildAnalyticsFiltersFromRequest(
   }
 
   if (session.role === 'artist') {
+    // Переключатель профилей (AKA): артист может смотреть аналитику своего
+    // привязанного профиля отдельно. Чужой id сюда не пройдёт — берём только то,
+    // что принадлежит его группе.
+    const requestedId = searchParams.get('artistId') || undefined
+    const viewedId =
+      requestedId && requestedId !== session.id
+        ? (
+            await prisma.user.findFirst({
+              where: { id: requestedId, mainArtistId: session.id },
+              select: { id: true },
+            })
+          )?.id
+        : session.id
+
     const user = await prisma.user.findUnique({
-      where: { id: session.id },
+      where: { id: viewedId ?? session.id },
       select: { id: true, name: true, username: true },
     })
     if (user) {

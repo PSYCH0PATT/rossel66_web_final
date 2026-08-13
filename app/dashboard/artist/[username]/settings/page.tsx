@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { userFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 import ArtistSettingsClient from "./artist-settings-client"
 
 export default async function SettingsPage({ params }: { params: { username: string } }) {
@@ -14,7 +15,7 @@ export default async function SettingsPage({ params }: { params: { username: str
   if (!row) notFound()
 
   const u = userFromPrisma(row)
-  if (session.role === "artist" && session.id !== u.id) {
+  if (!canViewArtistCabinet(session, u)) {
     notFound()
   }
 

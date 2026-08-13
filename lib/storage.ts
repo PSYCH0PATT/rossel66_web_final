@@ -67,6 +67,8 @@ export interface User {
   percentage?: number
   updatedAt?: string
   verified?: boolean
+  /** Привязка к главному профилю того же артиста (AKA). Пишется только админским роутом. */
+  mainArtistId?: string
 }
 
 // Статусы релизов из Koala Music
@@ -261,6 +263,12 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
 export async function deleteUser(id: string): Promise<boolean> {
   try {
+    // Внешних ключей в схеме нет, поэтому привязки к удаляемому артисту надо
+    // снять руками — иначе у его профилей останется ссылка в никуда.
+    await prisma.user.updateMany({
+      where: { mainArtistId: id },
+      data: { mainArtistId: null },
+    })
     await prisma.user.delete({ where: { id } })
     return true
   } catch (error) {
@@ -966,7 +974,10 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   // C4: один отчёт на (quarter, year) — при наличии дублей берём ПОСЛЕДНИЙ
   // загруженный, чтобы баланс не задваивался (согласовано с админ-дашбордом).
   const reports = await prisma.report.findMany({
-    where: { artistId },
+    // NOT isRegistered:false, а не isRegistered:true — legacy-строки с null должны
+    // остаться. Условие отсекает отчёты, погашенные merged-прогоном связанных
+    // профилей: их суммы уже учтены в отчёте главного.
+    where: { artistId, NOT: { isRegistered: false } },
     select: { quarter: true, year: true, totalAmount: true, isPaid: true, uploadedAt: true },
     orderBy: { uploadedAt: "desc" },
   })
@@ -1025,9 +1036,12 @@ export async function moveReportToArtist(reportId: string, artistId: string): Pr
     const artist = await getUserById(artistId)
     await prisma.report.update({
       where: { id: reportId },
-      data: { 
+      data: {
         artistId,
-        artistName: artist?.name || ''
+        artistName: artist?.name || '',
+        // Без этого назначенный вручную отчёт оставался невидимым в кабинете:
+        // все списки фильтруют по isRegistered.
+        isRegistered: true,
       }
     })
     return true
@@ -1199,4 +1213,69 @@ export async function findArtistsByPartialName(partialName: string): Promise<Use
     },
   })
   return rows.map(userFromPrisma)
+}
+/**
+ * Гасит отчёты привязанных профилей (AKA) за тот же квартал.
+ *
+ * После merged-прогона деньги всей группы лежат в одном отчёте главного. Старые
+ * пер-профильные отчёты за этот же квартал нельзя оставлять действующими — они
+ * задвоили бы суммы в балансе и на админском дашборде. Не удаляем: файлы и
+ * история остаются, строка просто перестаёт быть действующей (isRegistered=false).
+ *
+ * Возвращает количество погашенных отчётов.
+ */
+export async function supersedeLinkedProfileReports(
+  mainArtistId: string,
+  quarter: string,
+  year: number | null
+): Promise<number> {
+  const linked = await prisma.user.findMany({
+    where: { mainArtistId },
+    select: { id: true },
+  })
+  if (linked.length === 0) return 0
+
+  const stale = await prisma.report.findMany({
+    where: {
+      artistId: { in: linked.map((u) => u.id) },
+      quarter,
+      year,
+      NOT: { isRegistered: false },
+    },
+    select: { id: true },
+  })
+
+  let superseded = 0
+  for (const { id } of stale) {
+    // По одной строке: падение на одной не должно уносить остальные.
+    try {
+      const report = await prisma.report.update({
+        where: { id },
+        data: { isRegistered: false },
+      })
+      superseded++
+      try {
+        const { enqueueReportSync } = await import("@/lib/buildin/sync-hooks")
+        await enqueueReportSync({
+          id: report.id,
+          artistId: report.artistId,
+          artistName: report.artistName,
+          quarter: report.quarter,
+          year: report.year,
+          totalAmount: report.totalAmount,
+          totalPlays: report.totalPlays,
+          isPaid: report.isPaid,
+          isSigned: report.isSigned,
+          isAcknowledged: report.isAcknowledged,
+          isRegistered: report.isRegistered,
+          fileUrl: report.fileUrl,
+        })
+      } catch (err) {
+        console.error("Buildin report supersede sync enqueue failed:", err)
+      }
+    } catch (error) {
+      console.error(`Не удалось погасить отчёт ${id}:`, error)
+    }
+  }
+  return superseded
 }

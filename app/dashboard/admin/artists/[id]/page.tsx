@@ -13,6 +13,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { ArtistAdvances } from "@/components/artist-advances"
+import { ArtistLinkedProfiles } from "@/components/artist-linked-profiles"
 
 export default function EditArtistPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -687,6 +688,8 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
               </div>
             </form>
             </div>
+
+            <ArtistLinkedProfiles artistId={artistId} artistName={name || username} />
           </TabsContent>
 
           {/* Вкладка Релизы */}

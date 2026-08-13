@@ -3,7 +3,7 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { addActivity } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
-import { getSessionUser } from "@/lib/server-auth"
+import { getSessionUser, requireSelfLinkedOrAdmin } from "@/lib/server-auth"
 import { CACHE_TAG_ARTIST_DASHBOARD } from "@/lib/dashboard-cache-tags"
 
 export async function POST(request: Request) {
@@ -26,9 +26,13 @@ export async function POST(request: Request) {
     if (!report) {
       return NextResponse.json({ error: "Отчёт не найден" }, { status: 404 })
     }
-    if (report.artistId !== session.id) {
+    // Главный профиль подтверждает ознакомление и за свои привязанные (AKA).
+    if (!report.artistId) {
       return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
     }
+    const denied = await requireSelfLinkedOrAdmin(request, report.artistId)
+    if (denied) return denied
+    const ownerId = report.artistId
 
     if (report.isAcknowledged === true) {
       return NextResponse.json({
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     const artistReports = await prisma.report.findMany({
-      where: { artistId: session.id, isRegistered: true },
+      where: { artistId: ownerId, isRegistered: true },
       select: { totalAmount: true, isPaid: true },
     })
 
@@ -69,14 +73,18 @@ export async function POST(request: Request) {
       description: `Артист ознакомился с отчётом за ${report.quarter} ${report.year ?? ""}`.trim(),
       metadata: {
         reportId,
-        artistId: session.id,
+        artistId: ownerId,
         field: "isAcknowledged",
         newValue: true,
       },
     })
 
     revalidateTag(CACHE_TAG_ARTIST_DASHBOARD)
-    revalidatePath(`/dashboard/artist/${session.username}/reports`)
+    const owner = await prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { username: true },
+    })
+    if (owner) revalidatePath(`/dashboard/artist/${owner.username}/reports`)
 
     return NextResponse.json({
       success: true,

@@ -6,6 +6,7 @@ import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 import { DashboardFooter } from "@/components/dashboard-footer"
 function firstTrackLabel(trackDataJson: string): string {
   try {
@@ -46,7 +47,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
   })
   if (!row) notFound()
 
-  if (session.role === "artist" && session.id !== row.id) {
+  if (!canViewArtistCabinet(session, row)) {
     notFound()
   }
 

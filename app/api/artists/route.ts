@@ -262,6 +262,7 @@ export async function GET(request: Request) {
       contract: true,
       percentage: true,
       verified: true,
+      mainArtistId: true,
     } as const
 
     const idParam = searchParams.get("id")?.trim()
@@ -304,7 +305,7 @@ export async function GET(request: Request) {
       const artists = await prisma.user.findMany({
         where: { role: "artist" },
         orderBy: { name: "asc" },
-        select: { id: true, name: true, username: true },
+        select: { id: true, name: true, username: true, mainArtistId: true },
         take: 500,
       })
       return NextResponse.json({

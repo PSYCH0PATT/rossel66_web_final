@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 import { prisma } from "@/lib/prisma"
 import ReleasesClient from "./releases-client"
 
@@ -9,11 +10,11 @@ export default async function ArtistReleasesPage({ params }: { params: { usernam
 
   const artist = await prisma.user.findFirst({
     where: { username: params.username, role: "artist" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, mainArtistId: true },
   })
   if (!artist) notFound()
 
-  if (session.role === "artist" && session.id !== artist.id) notFound()
+  if (!canViewArtistCabinet(session, artist)) notFound()
 
   return (
     <ReleasesClient

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getCachedActivitiesForFeed } from "@/lib/cached-dashboard"
 import { ActivityFeed } from "@/components/activity-feed"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 
 /**
  * G9: у артиста не было страницы активности — ссылка «View All» под блоком
@@ -22,11 +23,11 @@ export default async function ArtistActivityPage({
 
   const row = await prisma.user.findFirst({
     where: { username: params.username, role: "artist" },
-    select: { id: true },
+    select: { id: true, mainArtistId: true },
   })
   if (!row) notFound()
 
-  if (session.role === "artist" && session.id !== row.id) {
+  if (!canViewArtistCabinet(session, row)) {
     notFound()
   }
 

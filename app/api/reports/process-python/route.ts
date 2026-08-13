@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/server-auth'
 import { supabase, ensureBucketExists } from '@/lib/supabase'
 import { exportPrismaDataForPython, cleanupExportedData } from '@/lib/export-data-for-python'
+import { supersedeLinkedProfileReports } from '@/lib/storage'
 
 function transliterate(text: string): string {
   const ru: Record<string, string> = {
@@ -57,6 +58,37 @@ function parseIncompleteReportArtists(output: string): IncompleteArtistFromPytho
     }))
   } catch {
     return []
+  }
+}
+
+type UnmatchedArtistFromPython = {
+  trackArtist: string
+  rows: number
+  totalAmount: number
+}
+
+/**
+ * Исполнители из выписки, которых парсер не узнал. Их строки в отчёты не попадают
+ * — раньше они просто отбрасывались молча, и деньги по ним исчезали без следа.
+ * Это список кандидатов на заведение профиля или привязку к существующему.
+ */
+function parseUnmatchedArtists(output: string): {
+  unmatchedArtists: UnmatchedArtistFromPython[]
+  unmatchedTruncated: boolean
+} {
+  const match = output.match(/UNMATCHED_JSON:(.+)/)
+  if (!match) return { unmatchedArtists: [], unmatchedTruncated: false }
+  try {
+    const parsed = JSON.parse(match[1]) as {
+      unmatchedArtists?: UnmatchedArtistFromPython[]
+      unmatchedTruncated?: boolean
+    }
+    return {
+      unmatchedArtists: parsed.unmatchedArtists ?? [],
+      unmatchedTruncated: Boolean(parsed.unmatchedTruncated),
+    }
+  } catch {
+    return { unmatchedArtists: [], unmatchedTruncated: false }
   }
 }
 
@@ -265,7 +297,12 @@ export async function POST(request: NextRequest) {
               // Ensure bucket exists
               await ensureBucketExists('reports')
 
+              // Каждый отчёт в собственном try: раньше один try накрывал весь цикл,
+              // и падение на одной строке (например P2002) обрывало запись всех
+              // оставшихся отчётов прогона.
+              const supersedeTargets: { artistId: string; quarter: string; year: number | null }[] = []
               for (const report of currentReports) {
+                try {
                 const localFilePath = report.filePath
                 let finalFilePath = report.filePath
                 let uploadedToStorage = false
@@ -366,6 +403,37 @@ export async function POST(request: NextRequest) {
                   })
                   console.log(`Обновлен отчёт в БД: ${existing.id}`)
                 }
+
+                if (report.artistId) {
+                  supersedeTargets.push({
+                    artistId: report.artistId,
+                    quarter: report.quarter,
+                    year: report.year ?? null,
+                  })
+                }
+                } catch (reportErr) {
+                  console.error(`Ошибка сохранения отчёта ${report.fileName}:`, reportErr)
+                }
+              }
+
+              // Деньги группы связанных профилей теперь лежат в отчёте главного —
+              // старые пер-профильные отчёты за этот же квартал гасим, иначе баланс
+              // и дашборд посчитают суммы дважды.
+              for (const target of supersedeTargets) {
+                try {
+                  const count = await supersedeLinkedProfileReports(
+                    target.artistId,
+                    target.quarter,
+                    target.year
+                  )
+                  if (count > 0) {
+                    console.log(
+                      `Погашено отчётов привязанных профилей за ${target.quarter} ${target.year}: ${count}`
+                    )
+                  }
+                } catch (supersedeErr) {
+                  console.error('Ошибка гашения отчётов привязанных профилей:', supersedeErr)
+                }
               }
             }
           } catch (dbErr) {
@@ -384,12 +452,15 @@ export async function POST(request: NextRequest) {
           }
 
           const incompleteArtists = parseIncompleteReportArtists(output)
+          const { unmatchedArtists, unmatchedTruncated } = parseUnmatchedArtists(output)
 
           resolve(NextResponse.json({
             success: true,
             message: incompleteArtists.length
               ? `Отчёты созданы. Пропущено артистов без полных данных: ${incompleteArtists.length}`
               : 'Отчеты успешно созданы',
+            unmatchedArtists,
+            unmatchedTruncated,
             output: output,
             quarter,
             year,

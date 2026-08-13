@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet, getArtistGroup } from "@/lib/artist-links"
 import { prisma } from "@/lib/prisma"
 import DashboardShell from "@/components/dashboard-shell"
 import type { DashboardProfile } from "@/components/dashboard-user-context"
@@ -16,11 +17,11 @@ export default async function ArtistDashboardRouteLayout({
 
   const artist = await prisma.user.findFirst({
     where: { username: params.username, role: "artist" },
-    select: { id: true, username: true, name: true, avatarUrl: true },
+    select: { id: true, username: true, name: true, avatarUrl: true, mainArtistId: true },
   })
   if (!artist) notFound()
 
-  if (session.role === "artist" && session.id !== artist.id) {
+  if (!canViewArtistCabinet(session, artist)) {
     notFound()
   }
 
@@ -45,6 +46,18 @@ export default async function ArtistDashboardRouteLayout({
       profile.avatarUrl = adminRow.avatarUrl
     }
   }
+
+  // Переключатель профилей: главный видит свои привязанные профили (AKA) и может
+  // открыть кабинет любого из них. У привязанного профиля группа состоит из него
+  // одного — связь односторонняя.
+  const group = session.role === "artist" ? await getArtistGroup(session.id) : []
+  profile.viewedArtistId = artist.id
+  profile.profiles = group.map((member) => ({
+    id: member.id,
+    username: member.username,
+    name: member.name,
+    isMain: member.mainArtistId == null,
+  }))
 
   return (
     <DashboardShell

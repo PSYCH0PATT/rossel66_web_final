@@ -375,6 +375,39 @@ export async function rematchUnmappedAnalytics(): Promise<{
 }
 
 /**
+ * Схлопывает привязанные профили (AKA) в главный.
+ *
+ * Только для чтения: атрибуция при импорте остаётся пер-профильной, иначе
+ * отвязка профиля не смогла бы вернуть его стримы обратно.
+ *
+ * Результат обязательно дедуплицируется: коллаб «Главный & Привязанный» — это
+ * один человек под двумя именами, и без Set его стримы засчитались бы дважды.
+ */
+export function remapToMainArtistIds(
+  artistIds: string[],
+  mainByLinkedId: Map<string, string>
+): string[] {
+  const out = new Set<string>()
+  for (const id of artistIds) {
+    out.add(mainByLinkedId.get(id) ?? id)
+  }
+  return [...out]
+}
+
+/** Карта «привязанный профиль → главный» для схлопывания на чтении. */
+export async function loadMainArtistByLinkedId(): Promise<Map<string, string>> {
+  const linked = await prisma.user.findMany({
+    where: { mainArtistId: { not: null } },
+    select: { id: true, mainArtistId: true },
+  })
+  return new Map(
+    linked
+      .filter((u): u is { id: string; mainArtistId: string } => Boolean(u.mainArtistId))
+      .map((u) => [u.id, u.mainArtistId])
+  )
+}
+
+/**
  * Видимость строки аналитики в кабинете артиста (коллабы без artistId).
  */
 export function analyticsRowVisibleToCabinetUser(
@@ -400,16 +433,33 @@ export function analyticsRowVisibleToCabinetUser(
   return norms.has(normalizeAnalyticsArtistKey(row.trackArtist))
 }
 
-/** Prisma where для кабинета артиста. */
+/**
+ * Prisma where для кабинета артиста.
+ *
+ * Разворачивает группу связанных профилей (AKA): главный видит стримы всех
+ * привязанных к нему профилей, привязанный — только свои. Поэтому админский
+ * фильтр по artistId работает без правок: для главного он даёт агрегат, для
+ * привязанного — его собственные цифры.
+ *
+ * Атрибуция при импорте не меняется — группировка только на чтении.
+ */
 export async function buildCabinetStreamAnalyticsWhere(
   userId: string,
   displayName: string,
   username: string
 ): Promise<Record<string, unknown>> {
+  const members = await prisma.user.findMany({
+    where: { OR: [{ id: userId }, { mainArtistId: userId }] },
+    select: { id: true, name: true, username: true },
+  })
+  const group =
+    members.length > 0 ? members : [{ id: userId, name: displayName, username }]
+  const groupIds = group.map((m) => m.id)
+
   let aliasSet = new Set<string>()
   try {
     const aliases = await prisma.analyticsArtistAlias.findMany({
-      where: { artistId: userId },
+      where: { artistId: { in: groupIds } },
       select: { trackArtist: true },
     })
     aliasSet = new Set(aliases.map((a) => a.trackArtist))
@@ -423,19 +473,23 @@ export async function buildCabinetStreamAnalyticsWhere(
     distinct: ['trackArtist'],
   })
 
+  // Строка без artistId попадает в кабинет, если её имя узнаёт хотя бы один
+  // профиль группы.
   const matchingUnmapped = unmappedDistinct
     .filter((r) =>
-      analyticsRowVisibleToCabinetUser(
-        { trackArtist: r.trackArtist, artistId: null },
-        userId,
-        displayName,
-        username,
-        aliasSet
+      group.some((member) =>
+        analyticsRowVisibleToCabinetUser(
+          { trackArtist: r.trackArtist, artistId: null },
+          member.id,
+          member.name,
+          member.username,
+          aliasSet
+        )
       )
     )
     .map((r) => r.trackArtist)
 
-  const orClauses: Record<string, unknown>[] = [{ artistId: userId }]
+  const orClauses: Record<string, unknown>[] = [{ artistId: { in: groupIds } }]
   if (matchingUnmapped.length > 0) {
     orClauses.push({ artistId: null, trackArtist: { in: matchingUnmapped } })
   }

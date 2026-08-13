@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
+import { canViewArtistCabinet } from "@/lib/artist-links"
 import {
   getCachedArtistDashboard,
   getCachedStreamAnalytics,
@@ -21,7 +22,7 @@ export default async function ArtistDashboardPage({
   if (!result.ok) notFound()
 
   const { data } = result
-  if (session.role === "artist" && session.id !== data.artist.id) {
+  if (!canViewArtistCabinet(session, data.artist)) {
     notFound()
   }
 

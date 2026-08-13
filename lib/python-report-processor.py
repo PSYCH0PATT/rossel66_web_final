@@ -331,6 +331,27 @@ def _emit_incomplete_report_json(skipped_incomplete):
         payload = json.dumps({"incompleteArtists": skipped_incomplete}, ensure_ascii=False)
         print("REPORT_INCOMPLETE_JSON:" + payload)
 
+UNMATCHED_LIMIT = 200
+
+def _emit_unmatched_json(unmatched):
+    """Исполнители из выписки, которых не удалось сопоставить ни с одним артистом."""
+    if not unmatched:
+        return
+    items = sorted(
+        (
+            {"trackArtist": name, "rows": data['rows'], "totalAmount": round(data['totalAmount'], 2)}
+            for name, data in unmatched.items()
+        ),
+        key=lambda item: item['totalAmount'],
+        reverse=True,
+    )
+    truncated = len(items) > UNMATCHED_LIMIT
+    payload = json.dumps(
+        {"unmatchedArtists": items[:UNMATCHED_LIMIT], "unmatchedTruncated": truncated},
+        ensure_ascii=False,
+    )
+    print("UNMATCHED_JSON:" + payload)
+
 def _collect_statement_artists(statement_df, match_list):
     """Artists from Supabase that appear in the uploaded statement file."""
     artists = set()
@@ -343,30 +364,65 @@ def _filter_incomplete_for_statement(skipped_incomplete, statement_artists):
     return [item for item in skipped_incomplete if item['name'] in statement_artists]
 
 def get_artists_list_from_users(users_file):
-    """Читает данные артистов из Prisma export snapshot (/tmp/users_export_*.json)."""
+    """Читает данные артистов из Prisma export snapshot (/tmp/users_export_*.json).
+
+    Связанные профили (AKA, поле mainArtistId) не становятся отдельными артистами:
+    их имена превращаются в псевдонимы главного, поэтому строки отчёта, подписанные
+    любым из профилей, собираются в один отчёт с реквизитами главного.
+
+    Возвращает (artists_dict, match_list, skipped_incomplete, alias_to_canonical).
+    """
     skipped_incomplete = []
     try:
         if not os.path.exists(users_file):
             print(f"Файл {users_file} не найден")
-            return {}, [], skipped_incomplete
+            return {}, [], skipped_incomplete, {}
         
         with open(users_file, 'r', encoding='utf-8') as f:
             users_data = json.load(f)
         
+        artists = [u for u in users_data if u.get('role') == 'artist' and (u.get('name') or u.get('username'))]
+        by_id = {u.get('id'): u for u in artists if u.get('id')}
+
+        # Привязка учитывается только если главный есть в этом же выгруженном списке.
+        # Иначе (профиль удалён, ссылка повисла) артист работает сам по себе.
+        children = defaultdict(list)
+        linked_ids = set()
+        for user in artists:
+            main_id = user.get('mainArtistId')
+            if main_id and main_id in by_id and main_id != user.get('id'):
+                children[main_id].append(user)
+                linked_ids.add(user.get('id'))
+
         artists_dict = {}
         match_list = []  # (canonical_key, [name, username, ...]) для сопоставления по строке исполнителя
-        for user in users_data:
-            if user.get('role') != 'artist':
-                continue
+        alias_to_canonical = {}  # имя любого профиля группы → canonical главного
+
+        for user in artists:
+            if user.get('id') in linked_ids:
+                continue  # войдёт псевдонимом в группу своего главного
             canonical = user.get('name') or user.get('username')
-            if not canonical:
-                continue
-            aliases = [a for a in (user.get('name'), user.get('username')) if a]
+
+            group = [user] + children.get(user.get('id'), [])
+            aliases = []
+            for member in group:
+                for alias in (member.get('name'), member.get('username')):
+                    if alias and alias not in aliases:
+                        aliases.append(alias)
+            for alias in aliases:
+                alias_to_canonical[alias] = canonical
+
+            if len(group) > 1:
+                extra = ', '.join(m.get('name') or m.get('username') for m in group[1:])
+                print(f"🔗 {canonical}: в отчёт войдут привязанные профили — {extra}")
+
             missing = _missing_report_fields(user)
             if missing:
                 labels = [REPORT_FIELD_LABELS.get(f, f) for f in missing]
                 print(f"⚠️  Пропущен артист {canonical}: не хватает данных для отчёта ({', '.join(labels)})")
                 skipped_incomplete.append({"name": canonical, "missingFields": missing})
+                # Псевдонимы группы остаются в match_list: без них строки привязанных
+                # профилей молча утекли бы мимо и статистика пропусков соврала бы.
                 match_list.append((canonical, aliases))
                 continue
             
@@ -381,10 +437,29 @@ def get_artists_list_from_users(users_file):
             match_list.append((canonical, aliases))
         
         print(f"✅ Загружено {len(artists_dict)} артистов из {users_file}")
-        return artists_dict, match_list, skipped_incomplete
+        return artists_dict, match_list, skipped_incomplete, alias_to_canonical
     except Exception as e:
         print(f"Ошибка при чтении {users_file}: {e}")
-        return {}, [], skipped_incomplete
+        return {}, [], skipped_incomplete, {}
+
+
+def _normalize_share_keys(track_shares, alias_to_canonical):
+    """Доли роялти записаны именами профилей.
+
+    После группировки AKA доля, записанная под именем привязанного профиля, больше
+    не найдётся по canonical главного — и расчёт тихо свалился бы на равное деление.
+    Поэтому ключи переводим в canonical; доли одной группы складываются.
+    """
+    if not alias_to_canonical:
+        return track_shares
+    normalized = {}
+    for track_code, shares in track_shares.items():
+        merged = {}
+        for artist_name, value in shares.items():
+            key = alias_to_canonical.get(artist_name, artist_name)
+            merged[key] = merged.get(key, 0) + value
+        normalized[track_code] = merged
+    return normalized
 
 def get_royalty_shares():
     # Возвращаем пустой словарь (как в оригинале)
@@ -531,7 +606,7 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
         )
 
     # Загружаем данные артистов
-    artists_data, match_list, skipped_incomplete = get_artists_list_from_users(users_file)
+    artists_data, match_list, skipped_incomplete, alias_to_canonical = get_artists_list_from_users(users_file)
     statement_artists = _collect_statement_artists(statement_df, match_list)
     incomplete_in_statement = _filter_incomplete_for_statement(skipped_incomplete, statement_artists)
     
@@ -544,20 +619,33 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
     approval_date = _parse_approval_date()
         
     # Загружаем доли роялти из треков (высший приоритет)
-    track_royalty_shares = get_royalty_shares_from_tracks(releases_file)
+    track_royalty_shares = _normalize_share_keys(
+        get_royalty_shares_from_tracks(releases_file), alias_to_canonical
+    )
     
     # Загружаем доли роялти из файла (если передан) - используется как fallback
     if royalty_file_path and os.path.exists(royalty_file_path):
         royalty_shares = get_royalty_shares_from_file(royalty_file_path)
     else:
         royalty_shares = get_royalty_shares()
+    royalty_shares = _normalize_share_keys(royalty_shares, alias_to_canonical)
     
     artists_tracks = defaultdict(lambda: defaultdict(lambda: {'Количество': 0, 'Сумма, руб.': 0, 'Доля': 0}))
+    # Строки, чьего исполнителя не удалось узнать: раньше они просто пропускались,
+    # и деньги по ним исчезали без следа. Теперь собираем и отдаём наверх — это
+    # список кандидатов на заведение профиля или привязку к существующему.
+    unmatched = defaultdict(lambda: {'rows': 0, 'totalAmount': 0.0})
     for _, row in statement_df.iterrows():
         track_code = row['Код']
         artist_str = row['Исполнитель']
         track_artists = extract_artists_from_track(artist_str, match_list)
         if not track_artists:
+            key = str(artist_str).strip() or '(пусто)'
+            unmatched[key]['rows'] += 1
+            try:
+                unmatched[key]['totalAmount'] += float(row['Сумма, руб.'])
+            except (TypeError, ValueError):
+                pass
             continue
         for artist in track_artists:
             share = calculate_artist_share(track_code, artist, track_artists, artists_data, royalty_shares, track_royalty_shares)
@@ -663,6 +751,7 @@ def process_file(statement_path, quarter, year, users_file, releases_file, repor
     print(f"Незарегистрированных артистов: {sum(1 for artist in artists_tracks.keys() if artist not in registered_users)}")
     if incomplete_in_statement:
         _emit_incomplete_report_json(incomplete_in_statement)
+    _emit_unmatched_json(unmatched)
     return created_files
 
 

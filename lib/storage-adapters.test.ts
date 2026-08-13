@@ -1,6 +1,6 @@
-import { test } from 'node:test'
+import { describe, it, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeTracks } from './storage-adapters'
+import { normalizeTracks, userFromPrisma } from './storage-adapters'
 
 test('E3: не-массив в tracks не роняет код', () => {
   assert.deepEqual(normalizeTracks(null), [])
@@ -44,4 +44,54 @@ test('E3: прочие поля трека сохраняются', () => {
   ])
   assert.equal(tracks[0].isrc, 'RU123')
   assert.deepEqual(tracks[0].royaltyShares, { artist: 60 })
+})
+
+describe("userFromPrisma и связанные профили", () => {
+  it("переносит mainArtistId — без него привязка не доедет до экспорта в Python", () => {
+    const row = {
+      id: "2",
+      username: "aka",
+      name: "Второе Имя",
+      email: "",
+      role: "artist",
+      password: "x",
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+      avatarUrl: null,
+      vkMusicUrl: null,
+      yandexMusicUrl: null,
+      spotifyUrl: null,
+      fio: null,
+      fioShort: null,
+      contract: null,
+      percentage: null,
+      verified: true,
+      mainArtistId: "1",
+    }
+    assert.equal(userFromPrisma(row as never).mainArtistId, "1")
+  })
+
+  it("не выдумывает привязку там, где её нет", () => {
+    const row = {
+      id: "1",
+      username: "main",
+      name: "Главный",
+      email: "",
+      role: "artist",
+      password: "x",
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+      avatarUrl: null,
+      vkMusicUrl: null,
+      yandexMusicUrl: null,
+      spotifyUrl: null,
+      fio: null,
+      fioShort: null,
+      contract: null,
+      percentage: null,
+      verified: true,
+      mainArtistId: null,
+    }
+    assert.equal(userFromPrisma(row as never).mainArtistId, undefined)
+  })
 })
