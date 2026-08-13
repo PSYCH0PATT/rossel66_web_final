@@ -31,7 +31,7 @@ Next.js 14 App Router + Postgres через Prisma + Python-парсеры. Ле
 | `lib/` | вся бизнес-логика. `lib/buildin/` — интеграция с Buildin, `lib/pyrus*` — легаси-приём заявок |
 | `components/` | React-компоненты. `components/ui/` — shadcn, управляется CLI |
 | `hooks/` | два живых хука: `use-mobile-detector.ts`, `useScaling.ts` |
-| `prisma/` | схема на 19 моделей и миграции |
+| `prisma/` | схема на 20 моделей и миграции |
 | `parsers/` | Python: koala и zvonko, 4 скрипта. Bandlink и VK удалены в августе 2026 |
 | `scripts/` | 45 рабочих скриптов, все заявлены в `package.json` или CI |
 | `scripts/archive/` | 31 одноразовый скрипт без ссылок. Не трогать, не «оживлять» — см. README внутри |
@@ -74,7 +74,9 @@ npx playwright test      # e2e, нужен поднятый сервер и за
 - Псевдоним `@/` указывает в корень проекта (`next.config.mjs:59`)
 - API-маршруты проверяют доступ сами: `requireAdmin()` из `lib/server-auth.ts`,
   для крон-эндпоинтов — `lib/cron-auth.ts`. `middleware.ts` в проекте нет
-- Кабинет защищён на уровне layout: `getSessionUser()` + `redirect`, а не на уровне страниц
+- Кабинет защищён на уровне layout: `getSessionUser()` + `redirect`. Проверка «чей это кабинет»
+  — `canViewArtistCabinet()` из `lib/artist-links.ts`, она же пускает главный профиль в кабинеты
+  его привязанных (AKA). Не пишите этот предикат руками: он был скопирован в девяти страницах
 - Запись в Buildin идёт через outbox с ретраями (`lib/buildin/outbox.ts`), а не синхронно
 - Тесты лежат рядом с кодом как `*.test.ts` и запускаются нодовским тест-раннером
 
@@ -96,9 +98,21 @@ npx playwright test      # e2e, нужен поднятый сервер и за
 дважды. Новые периодические задачи добавляйте в `crontab`, а не в `lib/scheduler.ts` — иначе
 на проде они просто не запустятся.
 
-**`prisma migrate deploy` падает на пустой базе.** Ни в одной миграции нет
-`CREATE TABLE "StreamAnalytics"`, хотя три миграции эту таблицу используют — её создавали в
-Supabase руками. `entrypoint.sh:30` выполняет `pnpm db:migrate` при каждом старте контейнера.
+**`prisma migrate deploy` локально не запускается.** `DATABASE_URL` смотрит в пулер Supabase
+(порт 6543), Prisma Migrate через пулер не работает, а `DIRECT_URL`, который ждёт
+`prisma.config.ts`, не задан — команда просто виснет. Миграции применяются напрямую в базу, а
+строка в `_prisma_migrations` дописывается вручную с настоящей sha256 файла миграции. Меняете
+файл после применения — обновите и checksum, иначе `migrate deploy` однажды упадёт на
+несовпадении.
+
+**`mainArtistId` нельзя добавлять в `artistPutSchema` или `toUserUpdateInput`.** PUT
+`/api/artists` доступен самому артисту (self-or-admin), и через это поле он привязал бы себя к
+чужому профилю, получив доступ в его кабинет. Пишет только админский `POST /api/artists/link`.
+
+**Схлопывание связанных профилей — только на чтении.** `resolveArtistId` / `resolveAllArtistIds`
+вызываются на записи (`saveFlashRecords`, `rematchUnmappedAnalytics`), и remap внутри них сделал
+бы отвязку профиля необратимой. Для чтения есть отдельный `remapToMainArtistIds` — и его результат
+обязательно дедуплицируется: коллаб «Главный & Привязанный» это один человек под двумя именами.
 
 **`types/ssh2-sftp-client.d.ts` не мёртвый**, хотя входящих импортов у него ноль. Это ambient-типы,
 подключаются через `tsconfig.json` `include`. Без него `tsc` падает в трёх живых модулях.
@@ -118,6 +132,9 @@ Supabase руками. `entrypoint.sh:30` выполняет `pnpm db:migrate` �
 
 ## Чего в репозитории нет
 
-`middleware.ts` и seed для Prisma. Тесты покрывают только формы, Buildin и форматирование —
-дашборд, релизы, отчёты, плейлисты и парсеры не покрыты, зелёный билд там означает лишь
-«типы сошлись».
+`middleware.ts` и seed для Prisma. Юнит-тестов у Python-парсера нет вообще — правки в
+`lib/python-report-processor.py` проверяются только прогоном на фикстуре.
+
+Тесты покрывают формы, Buildin, форматирование и чистую логику денег и связей (`advance`,
+`artist-links`, `report-sort`). Дашборд, релизы, плейлисты и парсеры не покрыты — зелёный билд
+там означает лишь «типы сошлись».
