@@ -19,10 +19,12 @@ import {
   Filter,
   FolderMinus,
   ChevronLeft,
+  PenLine,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
 
 interface Report {
   id: string
@@ -43,6 +45,20 @@ interface Report {
 
 type QuarterYear = { quarter: string; year: number }
 
+type StatusFilter = "all" | "unsigned" | "unpaid" | "acknowledged_unsigned"
+
+const DEFAULT_SORT: SortState = { sort: "uploadedAt", dir: "desc" }
+
+const SORT_FIELDS = [
+  "uploadedAt",
+  "artistName",
+  "totalAmount",
+  "totalPlays",
+  "isAcknowledged",
+  "isSigned",
+  "isPaid",
+] as const
+
 type QuarterCache = {
   reports: Report[]
   total: number
@@ -59,7 +75,8 @@ export default function ReportsList() {
   const [pairs, setPairs] = useState<QuarterYear[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [collapsedQuarters, setCollapsedQuarters] = useState<Set<string>>(new Set())
-  const [filter, setFilter] = useState<"all" | "unsigned" | "unpaid">("all")
+  const [filter, setFilter] = useState<StatusFilter>("all")
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT)
   const [cache, setCache] = useState<Record<string, QuarterCache>>({})
 
   const fetchPairs = async () => {
@@ -102,6 +119,8 @@ export default function ReportsList() {
           page: String(page),
           pageSize: String(pageSize),
           year: String(pair.year),
+          sort: sortState.sort,
+          dir: sortState.dir,
         })
         // D3: фильтр применяется на сервере, чтобы total/пагинация совпадали с видимыми строками
         if (filter !== "all") params.set("filter", filter)
@@ -126,17 +145,18 @@ export default function ReportsList() {
         }))
       }
     },
-    [filter]
+    [filter, sortState]
   )
 
-  // D3: при смене фильтра перезагружаем уже открытые кварталы с 1-й страницы
+  // D3: при смене фильтра перезагружаем уже открытые кварталы с 1-й страницы.
+  // Сортировка тоже серверная, поэтому её смена требует такой же перезагрузки.
   useEffect(() => {
     for (const key of Object.keys(cache)) {
       const pair = pairs.find((p) => pairLabel(p) === key)
       if (pair) void loadQuarterPage(pair, 1, cache[key].pageSize)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter])
+  }, [filter, sortState])
 
   const toggleQuarter = (pair: QuarterYear) => {
     const key = pairLabel(pair)
@@ -261,6 +281,8 @@ export default function ReportsList() {
           return !report.isSigned
         case "unpaid":
           return !report.isPaid
+        case "acknowledged_unsigned":
+          return Boolean(report.isAcknowledged) && !report.isSigned
         default:
           return true
       }
@@ -341,6 +363,27 @@ export default function ReportsList() {
           <DollarSign className="h-4 w-4 mr-1 flex-shrink-0" />
           <span>Невыплаченные</span>
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFilter("acknowledged_unsigned")}
+          className="text-xs sm:text-sm whitespace-nowrap"
+          style={{
+            backgroundColor: filter === "acknowledged_unsigned" ? "#f59e0b" : "transparent",
+            borderColor: filter === "acknowledged_unsigned" ? "#f59e0b" : "#64748b",
+            color: filter === "acknowledged_unsigned" ? "white" : "#cbd5e1",
+          }}
+        >
+          <PenLine className="h-4 w-4 mr-1 flex-shrink-0" />
+          <span>Ознакомлен, не подписан</span>
+        </Button>
+        <div className="ml-auto">
+          <ReportSortControls
+            value={sortState}
+            onChange={setSortState}
+            fields={[...SORT_FIELDS]}
+          />
+        </div>
       </div>
 
       {pairs.map((pair) => {

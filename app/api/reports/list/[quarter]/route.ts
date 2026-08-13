@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import { reportFromPrisma } from "@/lib/storage-adapters"
+import { buildReportOrderBySql } from "@/lib/report-sort"
 import { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
@@ -45,7 +46,19 @@ export async function GET(request: Request, { params }: { params: { quarter: str
         ? Prisma.sql`AND "isSigned" IS NOT TRUE`
         : statusFilter === "unpaid"
           ? Prisma.sql`AND "isPaid" IS NOT TRUE`
-          : Prisma.empty
+          : statusFilter === "acknowledged_unsigned"
+            ? Prisma.sql`AND "isAcknowledged" = true AND "isSigned" IS NOT TRUE`
+            : Prisma.empty
+
+    // Порядок задаётся белым списком в lib/report-sort — в SQL уходит выражение,
+    // а не значение параметра.
+    const orderBy = Prisma.raw(
+      buildReportOrderBySql(
+        searchParams.get("sort"),
+        searchParams.get("dir"),
+        `year DESC, "uploadedAt" DESC`
+      )
+    )
 
     const countRows = await prisma.$queryRaw<[{ c: bigint }]>(
       Prisma.sql`
@@ -66,7 +79,9 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     const idRows = await prisma.$queryRaw<{ id: string }[]>(
       Prisma.sql`
         SELECT id FROM (
-          SELECT DISTINCT ON (year, lower(trim(COALESCE("artistName", '')))) id, year, "uploadedAt"
+          SELECT DISTINCT ON (year, lower(trim(COALESCE("artistName", ''))))
+            id, quarter, year, "artistName", "uploadedAt", "acknowledgedAt",
+            "totalPlays", "totalAmount", "isAcknowledged", "isSigned", "isPaid"
           FROM "Report"
           WHERE quarter = ${quarter}
             AND "isRegistered" = true
@@ -75,7 +90,7 @@ export async function GET(request: Request, { params }: { params: { quarter: str
             ${filterSql}
           ORDER BY year DESC, lower(trim(COALESCE("artistName", ''))), "uploadedAt" DESC
         ) deduped
-        ORDER BY year DESC, "uploadedAt" DESC
+        ORDER BY ${orderBy}
         LIMIT ${pageSize} OFFSET ${skip}
       `
     )

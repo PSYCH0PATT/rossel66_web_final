@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ReportsList from "@/components/reports-list"
+import PendingSignatureList from "@/components/pending-signature-list"
 import UnregisteredReportsList from "@/components/unregistered-reports-list"
 import SimpleReportUploader from "@/components/simple-report-uploader"
 import { MissingContractBanner } from "@/components/missing-contract-banner"
@@ -30,7 +31,7 @@ export default function ReportsPage() {
         <MissingContractBanner />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
             <TabsTrigger
               value="reports"
               className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
@@ -38,6 +39,13 @@ export default function ReportsPage() {
               <span className="material-symbols-outlined text-lg sm:text-base">description</span>
               <span className="font-mono uppercase leading-tight sm:hidden">С кабинетом</span>
               <span className="hidden font-mono uppercase sm:inline">Зарегистрированные</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="pending-signature"
+              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-base">draw</span>
+              <span className="font-mono uppercase leading-tight">Ждут подписи</span>
             </TabsTrigger>
             <TabsTrigger
               value="unregistered"
@@ -57,6 +65,10 @@ export default function ReportsPage() {
 
           <TabsContent value="reports" className="space-y-4">
             <ReportsList />
+          </TabsContent>
+
+          <TabsContent value="pending-signature" className="space-y-4">
+            <PendingSignatureList />
           </TabsContent>
 
           <TabsContent value="unregistered" className="space-y-4">
