@@ -49,7 +49,9 @@
     "test:e2e": "playwright test",
     "test:e2e:local": "env -u E2E_BASE_URL E2E_VERIFY_BUILDIN=1 playwright test",
     "test:forms": "pnpm test && pnpm test:integration",
-    "check:drift": "npx tsx scripts/check-schema-drift.ts"
+    "check:drift": "npx tsx scripts/check-schema-drift.ts",
+    "seed:e2e": "npx tsx scripts/seed-e2e.ts",
+    "test:python": "sh -c '${npm_config_python:-$([ -x .venv/bin/python3 ] && echo .venv/bin/python3 || echo python3)} -m unittest discover -s tests/python'"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

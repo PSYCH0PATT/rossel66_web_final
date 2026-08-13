@@ -1,0 +1,214 @@
+/**
+ * Сид одноразовой тестовой базы (docker-compose.test.yml).
+ *
+ * Числа здесь — контракт: тесты сверяются именно с ними, поэтому менять данные
+ * без правки тестов нельзя. Что и зачем заводится, описано у каждого блока.
+ *
+ * Usage: pnpm seed:e2e
+ */
+import { PrismaClient } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
+import { loadTestEnvFiles, requireTestDatabaseUrl } from "../tests/support/env"
+
+loadTestEnvFiles()
+const url = requireTestDatabaseUrl()
+
+// requireTestDatabaseUrl уже отбивает облачные хосты, но сид пишет данные, а не
+// только читает — поэтому ещё одна, более узкая проверка: только локалхост.
+const host = new URL(url).hostname
+if (!["127.0.0.1", "localhost", "::1", "postgres"].includes(host)) {
+  console.error(`Сид отказывается работать с ${host}: разрешён только локальный Postgres.`)
+  process.exit(1)
+}
+
+// Prisma 7 берёт соединение через адаптер, а не через `datasources` в конструкторе.
+const pool = new Pool({ connectionString: url })
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
+
+/** Пароль у всех тестовых пользователей один — база одноразовая, секрета нет. */
+const PASSWORD = "e2e-password"
+
+/** Маркер: e2e-тесты падают, если его нет — значит база не сидирована. */
+export const SEED_GUARD_USERNAME = "e2e-guard"
+
+const artist = (id: string, username: string, name: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  username,
+  name,
+  email: `${username}@example.test`,
+  role: "artist",
+  password: PASSWORD,
+  verified: true,
+  // Реквизиты нужны, чтобы питон-парсер не отбраковал артиста как неполного.
+  fio: `Тестовый ${name}`,
+  fioShort: name,
+  contract: `Д-${username}`,
+  percentage: 100,
+  ...extra,
+})
+
+const report = (
+  id: string,
+  artistId: string | null,
+  artistName: string,
+  quarter: string,
+  year: number,
+  totalAmount: number,
+  uploadedAt: string,
+  extra: Record<string, unknown> = {}
+) => ({
+  id,
+  artistId,
+  artistName,
+  quarter,
+  year,
+  totalAmount,
+  totalPlays: Math.round(totalAmount * 10),
+  fileName: `${id}.xlsx`,
+  filePath: `${quarter}/${id}.xlsx`,
+  uploadedAt: new Date(uploadedAt),
+  uploadDate: uploadedAt,
+  processed: true,
+  status: "processed",
+  isRegistered: true,
+  isSigned: false,
+  isPaid: false,
+  isAcknowledged: false,
+  ...extra,
+})
+
+const analytics = (
+  id: string,
+  trackArtist: string,
+  artistId: string | null,
+  streams: number,
+  isrc: string
+) => ({
+  id,
+  date: new Date("2026-06-15"),
+  dsp: "Spotify",
+  length: "full",
+  source: "e2e",
+  isrc,
+  trackArtist,
+  trackName: `Трек ${isrc}`,
+  albumTitle: "E2E Album",
+  streams,
+  artistId,
+})
+
+async function main() {
+  console.log(`Сидирую ${url.replace(/:[^:@/]+@/, ":***@")}`)
+
+  // Идемпотентность: чистим всё, что сид создаёт, и заводим заново.
+  await prisma.advance.deleteMany({})
+  await prisma.streamAnalytics.deleteMany({})
+  await prisma.report.deleteMany({})
+  await prisma.activity.deleteMany({})
+  await prisma.user.deleteMany({})
+
+  await prisma.user.createMany({
+    data: [
+      {
+        id: "e2e-admin-id",
+        username: "e2e-admin",
+        name: "E2E Admin",
+        email: "admin@example.test",
+        role: "admin",
+        password: PASSWORD,
+        verified: true,
+      },
+      artist("e2e-main-id", "e2e-main", "E2E Main"),
+      artist("e2e-linked-id", "e2e-linked", "E2E Linked"),
+      artist("e2e-solo-id", "e2e-solo", "E2E Solo"),
+      artist("e2e-stranger-id", "e2e-stranger", "E2E Stranger"),
+      // Артист без реквизитов: питон должен отправить его в skipped_incomplete.
+      {
+        id: "e2e-incomplete-id",
+        username: "e2e-incomplete",
+        name: "E2E Incomplete",
+        email: "incomplete@example.test",
+        role: "artist",
+        password: PASSWORD,
+        verified: true,
+      },
+      {
+        id: "e2e-guard-id",
+        username: SEED_GUARD_USERNAME,
+        name: "E2E Guard",
+        email: "guard@example.test",
+        role: "artist",
+        password: PASSWORD,
+        verified: false,
+      },
+    ],
+  })
+
+  // Отчёты главного за два квартала: аванс, выданный между ними, должен гаситься
+  // только вторым. Начислено 7000, не выплачено 7000.
+  await prisma.report.createMany({
+    data: [
+      report("e2e-report-main-q1", "e2e-main-id", "E2E Main", "Q1", 2026, 2000, "2026-04-10T10:00:00.000Z"),
+      report("e2e-report-main-q2", "e2e-main-id", "E2E Main", "Q2", 2026, 5000, "2026-07-10T10:00:00.000Z"),
+      // Старый пер-профильный отчёт привязанного — мишень supersede.
+      report("e2e-report-linked-q3", "e2e-linked-id", "E2E Linked", "Q3", 2026, 800, "2026-10-05T10:00:00.000Z"),
+      // Отчёт солиста: не должен попадать ни в чей чужой кабинет.
+      report("e2e-report-solo-q1", "e2e-solo-id", "E2E Solo", "Q1", 2026, 1500, "2026-04-11T10:00:00.000Z"),
+    ],
+  })
+
+  // Очередь на подпись: 25 строк (> страницы в 20) с разными суммами и датами
+  // ознакомления — проверяют пагинацию, сортировку и стабильность страниц.
+  const queue = Array.from({ length: 25 }, (_, i) => {
+    const n = String(i + 1).padStart(2, "0")
+    return report(
+      `e2e-report-queue-${n}`,
+      null,
+      `E2E Queue ${n}`,
+      "Q4",
+      2026,
+      (i + 1) * 100,
+      `2026-12-0${(i % 9) + 1}T09:00:00.000Z`,
+      {
+        isAcknowledged: true,
+        acknowledgedAt: new Date(`2026-12-${String((i % 28) + 1).padStart(2, "0")}T12:00:00.000Z`),
+        isSigned: null,
+      }
+    )
+  })
+  await prisma.report.createMany({ data: queue })
+
+  // Аналитика. Ожидаемые суммы:
+  //   свои строки главного        1500
+  //   строки привязанного          300
+  //   коллаб «Главный & Привязанный» 700 — ОДИН раз, это один человек под двумя
+  //                                        именами; двойной счёт здесь и ловим
+  //   ---------------------------------
+  //   кабинет главного после привязки 2500
+  await prisma.streamAnalytics.createMany({
+    data: [
+      analytics("e2e-sa-main-1", "E2E Main", "e2e-main-id", 1000, "E2EMAIN0001"),
+      analytics("e2e-sa-main-2", "E2E Main", "e2e-main-id", 500, "E2EMAIN0002"),
+      analytics("e2e-sa-linked-1", "E2E Linked", "e2e-linked-id", 300, "E2ELINK0001"),
+      analytics("e2e-sa-collab", "E2E Main & E2E Linked", null, 700, "E2ECOLL0001"),
+      analytics("e2e-sa-outsider", "Совсем Чужой Артист", null, 42, "E2EOUTS0001"),
+    ],
+  })
+
+  const counts = {
+    пользователей: await prisma.user.count(),
+    отчётов: await prisma.report.count(),
+    "строк аналитики": await prisma.streamAnalytics.count(),
+  }
+  console.log("Готово:", counts)
+  await prisma.$disconnect()
+  await pool.end()
+}
+
+main().catch(async (err) => {
+  console.error(err)
+  await prisma.$disconnect().catch(() => {})
+  await pool.end().catch(() => {})
+  process.exit(1)
+})
