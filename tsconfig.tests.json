@@ -4,6 +4,7 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["tests/**/*.ts", "lib/**/*.ts", "scripts/**/*.ts"],
+  "//": "types/**/*.d.ts обязателен: ssh2-sftp-client типизирован ambient-файлом, без него проверка падает на четырёх живых модулях",
+  "include": ["types/**/*.d.ts", "tests/**/*.ts", "lib/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules"]
 }

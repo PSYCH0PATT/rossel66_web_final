@@ -1,0 +1,131 @@
+name: CI
+
+# Гоняется на каждый пуш в рабочие ветки. Секретов не требует: база поднимается
+# сервисом, Supabase Storage и Buildin заменены локальными стабами.
+on:
+  push:
+    branches: [dev, staging]
+  pull_request:
+    branches: [dev, staging, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Значения стенда — те же, что в .env.e2e. Ничего секретного.
+  DATABASE_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+  DIRECT_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+  TEST_DATABASE_URL: postgresql://rossel:rossel@127.0.0.1:54329/rossel_test
+  AUTH_SECRET: ci-auth-secret
+  CRON_SECRET: ci-cron-secret
+  FORM_DELIVERY_ENCRYPTION_KEY: ci-form-encryption-key
+  BUILDIN_DUAL_WRITE: "false"
+  PYRUS_WRITE_DISABLED: "true"
+  E2E_VERIFY_BUILDIN: "0"
+  ENABLE_IN_PROCESS_SCHEDULER: "false"
+  E2E_STORAGE_PORT: "54330"
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54330
+  SUPABASE_SERVICE_ROLE_KEY: ci-stub-key
+  NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+  NEXT_PUBLIC_BASE_URL: http://127.0.0.1:3000
+
+jobs:
+  # Быстрые проверки — падают за пару минут, если сломано очевидное.
+  gates:
+    name: Типы, линт, юниты, парсер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+
+      - name: Проверка типов
+        run: pnpm exec tsc --noEmit
+
+      - name: Линт
+        run: pnpm lint
+
+      - name: Юнит-тесты
+        run: pnpm test
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Зависимости парсера
+        run: pip install -r requirements-report-processor.txt
+
+      - name: Тесты питон-парсера
+        run: pnpm test:python
+
+  # Полный стенд: миграции с нуля, база, сборка, e2e.
+  stand:
+    name: Миграции, интеграционные, e2e
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rossel
+          POSTGRES_PASSWORD: rossel
+          POSTGRES_DB: rossel_test
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U rossel -d rossel_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+
+      # Главная проверка целостности: вся цепочка миграций на пустую базу.
+      # Именно так нашлись ParserRun, уникальный индекс отчётов и User.verified.
+      - name: Миграции с нуля
+        run: pnpm test:db:migrate
+
+      - name: Схема против миграций
+        run: pnpm check:drift
+
+      - name: Сид
+        run: pnpm seed:e2e
+
+      - name: Интеграционные тесты
+        run: pnpm test:integration
+
+      - name: Сборка
+        run: pnpm build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Зависимости парсера
+        run: pip install -r requirements-report-processor.txt
+
+      - name: Браузер для e2e
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E
+        run: pnpm exec playwright test
+
+      - name: Отчёт при падении
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
