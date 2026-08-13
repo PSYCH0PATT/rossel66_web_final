@@ -1,8 +1,15 @@
 /**
- * Sync Prisma schema to TEST_DATABASE_URL / docker-compose.test.yml.
+ * Поднимает схему на TEST_DATABASE_URL / docker-compose.test.yml с нуля.
  *
- * Fresh test DBs cannot rely on `migrate deploy` (repo history has gaps).
- * We wipe the local public schema via SQL, then `db push` (no --force-reset).
+ * Раньше здесь был `db push`, потому что в истории миграций были дыры. Дыры
+ * закрыты (baseline для StreamAnalytics, роли PostgREST), поэтому теперь идёт
+ * честный `migrate deploy`: каждый прогон тестов заодно проверяет, что цепочка
+ * миграций применяется на пустую базу. Именно этот класс расхождений между
+ * schema.prisma и реальной БД ловился раньше вручную.
+ *
+ * Если deploy упал — чинить недостающей миграцией, а не возвратом к db push:
+ * db push молча приводит базу к схеме и скрывает ровно ту дыру, которую надо
+ * увидеть до того, как она доедет до прода.
  *
  * Usage: pnpm test:db:migrate
  */
@@ -17,7 +24,7 @@ async function main() {
   loadTestEnvFiles()
   const url = requireTestDatabaseUrl()
   console.log(
-    `Resetting + pushing schema to ${url.replace(/:[^:@/]+@/, ":***@")}`
+    `Применяю миграции с нуля на ${url.replace(/:[^:@/]+@/, ":***@")}`
   )
 
   const client = new Client({ connectionString: url })
@@ -30,7 +37,7 @@ async function main() {
   `)
   await client.end()
 
-  execSync("npx prisma db push --accept-data-loss", {
+  execSync("npx prisma migrate deploy", {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: url, DIRECT_URL: url },
   })
