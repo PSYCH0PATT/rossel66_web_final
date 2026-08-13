@@ -77,7 +77,7 @@ export default function CatalogUploadPage() {
     trackName: "",
     mainArtists: "",
     isrc: "",
-    previewStart: "00:30",
+    previewStart: "00:00",
     musicAuthor: "",
     wordsAuthor: "",
     language: "0",
@@ -847,7 +847,7 @@ export default function CatalogUploadPage() {
                                             <Input name="isrc" value={track.isrc} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="XX-XXX-YY-NNNNN" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                                         </td>
                                         <td className="px-3 py-2 align-top">
-                                            <Input name="previewStart" value={track.previewStart} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-24 min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
+                                            <Input name="previewStart" value={track.previewStart} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="00:00" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-24 min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
                                         </td>
                                         <td className="px-3 py-2 align-top">
                                             <Input name="musicAuthor" value={track.musicAuthor} onChange={(e) => handleTrackChange(release.id, track.id, e)} placeholder="Полное ФИО" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
@@ -932,7 +932,7 @@ export default function CatalogUploadPage() {
                                   `${!(track.language === '1' || track.language === '2') ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`
                                 )}
                                 {renderSelectField(`${track.id}_mob_language`, "language", "Язык вокала", track.language, (value) => handleTrackSelectChange(release.id, track.id, 'language', value), languageOptions, "Язык")}
-                                {renderInputField(`${track.id}_mob_previewStart`, "previewStart", "Начало предпрослушивания", track.previewStart, (e) => handleTrackChange(release.id, track.id, e), "00:30")}
+                                {renderInputField(`${track.id}_mob_previewStart`, "previewStart", "Начало предпрослушивания", track.previewStart, (e) => handleTrackChange(release.id, track.id, e), "00:00")}
                                 {renderFileField(`${track.id}_mob_lyricsFile`, "lyricsFile", "Текст трека (.txt, .doc)", (e) => handleTrackFileChange(release.id, track.id, 'lyricsFile', e.target.files), ".txt,.doc,.docx", track.lyricsFile, false)}
                                 <div className="flex flex-col space-y-3 mt-4">
                                     <div className="relative group">

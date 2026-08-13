@@ -107,7 +107,7 @@ export default function DistributionPage() {
     audio: null,
     trackName: "",
     mainArtists: "",
-    previewStart: "00:30",
+    previewStart: "00:00",
     musicAuthor: "",
     wordsAuthor: "",
     language: "0",
@@ -814,7 +814,7 @@ export default function DistributionPage() {
                             <Input name='mainArtists' value={track.mainArtists} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Artist1, Artist2" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
-                            <Input name='previewStart' value={track.previewStart} onChange={(e) => handleTrackChange(track.id, e)} placeholder="00:30" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
+                            <Input name='previewStart' value={track.previewStart} onChange={(e) => handleTrackChange(track.id, e)} placeholder="00:00" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[100px] hover:border-emerald-500 hover:border-opacity-40" />
                           </td>
                           <td className="py-2 px-3">
                             <Input name='musicAuthor' value={track.musicAuthor} onChange={(e) => handleTrackChange(track.id, e)} placeholder="Полное ФИО" required className="bg-white/5 border-white/20 text-white focus:ring-emerald-500 focus:border-emerald-500 w-full min-w-[150px] hover:border-emerald-500 hover:border-opacity-40" />
