@@ -97,7 +97,7 @@ export default function AdminDashboardClient({
       <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-12">
         <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
           <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-white">groups</span>
+            <span className="material-symbols-outlined stat-dash-bg-icon stat-dash-bg-icon--short text-white">groups</span>
           </div>
           <div className="flex flex-col h-full justify-between relative z-10">
             <div className="mb-4">
@@ -125,9 +125,6 @@ export default function AdminDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.releaseCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure" title="В работе (не доставлено)">
-                <span className="material-symbols-outlined">schedule</span> {metrics.pendingReleases}
-              </span>
             </div>
           </div>
         </div>
@@ -174,9 +171,6 @@ export default function AdminDashboardClient({
                   {formatRubExact(metrics.totalPayments)}
                 </TooltipContent>
               </Tooltip>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--purple shrink-0" title="Неоплачено">
-                <span className="material-symbols-outlined">schedule</span> {metrics.pendingPayments}
-              </span>
             </div>
           </div>
         </div>

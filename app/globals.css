@@ -1635,11 +1635,18 @@ body:has([data-page="home"]) {
    В эталоне: theme.extend.borderRadius.DEFAULT = 0.5rem → класс `rounded` у бейджей.
    У нас в tailwind.config DEFAULT = 0.375rem, поэтому бейджи здесь фиксируем явно.
    Фон: absolute top-0 right-0 p-4, opacity 10%/20%, иконка как text-6xl = 3.75rem. */
+/* Фоновая иконка карточки: во всю высоту с отступами сверху и снизу, прижата к правому
+   краю и уведена за него на 30% своей ширины. Обрезает overflow-hidden самой карточки. */
 .stat-dash-bg-wrap {
   position: absolute;
-  top: 0;
-  right: 0;
-  padding: 1rem; /* p-4 */
+  inset: 0;
+  padding: 1rem 0; /* отступы только по вертикали — по горизонтали иконка уходит за край */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Контейнер для размера иконки. Высота враппера задана через inset, а не содержимым,
+     поэтому container-type: size здесь безопасен и не схлопывает карточку. */
+  container-type: size;
   opacity: 0.1;
   transition: opacity 0.15s ease;
   pointer-events: none;
@@ -1647,13 +1654,26 @@ body:has([data-page="home"]) {
 .group:hover .stat-dash-bg-wrap {
   opacity: 0.2;
 }
+/* 100cqh — это высота content-box враппера, то есть высота карточки минус его отступы.
+   Так иконка занимает всю высоту с ровными полями при любой высоте карточки: она разная
+   на мобильном и десктопе, и фиксированный размер давал бы то 16px полей, то 8px. */
 .stat-dash-bg-icon.material-symbols-outlined {
-  font-size: 3.75rem !important; /* text-6xl */
+  font-size: 100cqh !important;
   line-height: 1 !important;
   width: 1em;
   height: 1em;
   display: block;
+  /* 30% ширины глифа остаётся за правым краем карточки */
+  transform: translateX(30%);
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 48;
+}
+
+/* Приземистые глифы (groups) рисуются ниже своего квадрата и рядом с album, bar_chart и
+   currency_ruble смотрятся мельче. Увеличиваем бокс, чтобы сравнять видимую высоту, и глубже
+   уводим вправо — иначе иконка стала бы шире и наехала на текст. */
+.stat-dash-bg-icon--short.material-symbols-outlined {
+  font-size: 140cqh !important;
+  transform: translateX(38%);
 }
 
 .stat-dash-metric-badge {
