@@ -94,7 +94,10 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Общий баланс</h3>
             </div>
             <div>
-              <p className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
+              <p
+                data-testid="total-balance"
+                className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl"
+              >
                 {fmt(totalBal)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
               </p>
               <p className="text-xs text-gray-500 mt-2">Накопленные средства</p>
@@ -114,7 +117,10 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
               <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Доступно к выплате</h3>
             </div>
             <div>
-              <p className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
+              <p
+                data-testid="available-for-payout"
+                className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl"
+              >
                 {fmt(avail)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
               </p>
               <p className="text-xs text-gray-500 mt-2">Минимум: 3&nbsp;000 ₽</p>
@@ -162,17 +168,25 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Выдано</p>
-                <p className="text-xl font-bold text-white font-display tabular-nums">{fmt(advanceTotal)} ₽</p>
+                <p data-testid="advance-total" className="text-xl font-bold text-white font-display tabular-nums">
+                  {fmt(advanceTotal)} ₽
+                </p>
               </div>
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Погашено</p>
-                <p className="text-xl font-bold text-emerald-400 font-display tabular-nums">
+                <p
+                  data-testid="advance-recouped"
+                  className="text-xl font-bold text-emerald-400 font-display tabular-nums"
+                >
                   {fmt(advanceRecouped)} ₽
                 </p>
               </div>
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-1">Осталось</p>
-                <p className="text-xl font-bold text-orange-400 font-display tabular-nums">
+                <p
+                  data-testid="advance-remaining"
+                  className="text-xl font-bold text-orange-400 font-display tabular-nums"
+                >
                   {fmt(advanceRemaining)} ₽
                 </p>
               </div>
@@ -184,7 +198,9 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
               style={{ width: `${advanceProgress}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-gray-500 tabular-nums">Погашено {advanceProgress}% аванса</p>
+          <p data-testid="advance-progress" className="mt-2 text-xs text-gray-500 tabular-nums">
+            Погашено {advanceProgress}% аванса
+          </p>
         </div>
       )}
 

@@ -51,7 +51,8 @@
     "test:forms": "pnpm test && pnpm test:integration",
     "check:drift": "npx tsx scripts/check-schema-drift.ts",
     "seed:e2e": "npx tsx scripts/seed-e2e.ts",
-    "test:python": "sh -c '${npm_config_python:-$([ -x .venv/bin/python3 ] && echo .venv/bin/python3 || echo python3)} -m unittest discover -s tests/python'"
+    "test:python": "sh -c '${npm_config_python:-$([ -x .venv/bin/python3 ] && echo .venv/bin/python3 || echo python3)} -m unittest discover -s tests/python'",
+    "verify": "bash scripts/verify.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

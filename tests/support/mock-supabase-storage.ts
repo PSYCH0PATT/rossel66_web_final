@@ -43,7 +43,8 @@ function json(res: ServerResponse, status: number, payload: unknown) {
   res.end(body)
 }
 
-export async function startMockSupabaseStorage(): Promise<MockStorage> {
+/** `port = 0` — свободный порт; иначе фиксированный (нужен статичному .env.e2e). */
+export async function startMockSupabaseStorage(port = 0): Promise<MockStorage> {
   const files = new Map<string, Buffer>()
   const buckets = new Set<string>()
 
@@ -126,13 +127,19 @@ export async function startMockSupabaseStorage(): Promise<MockStorage> {
     }
   })
 
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, "127.0.0.1", () => {
+      server.removeListener("error", reject)
+      resolve()
+    })
+  })
   const address = server.address()
-  const port = typeof address === "object" && address ? address.port : 0
+  const actualPort = typeof address === "object" && address ? address.port : port
 
   return {
     server,
-    url: `http://127.0.0.1:${port}`,
+    url: `http://127.0.0.1:${actualPort}`,
     files,
     buckets,
     close: () =>

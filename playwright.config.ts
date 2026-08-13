@@ -22,6 +22,9 @@ function loadEnvFile(filePath: string) {
   }
 }
 
+// .env.e2e первым: значения стенда должны перебивать прод-креды из .env.local,
+// иначе голый `playwright test` уйдёт в боевой Supabase.
+loadEnvFile(resolve(process.cwd(), ".env.e2e"))
 loadEnvFile(resolve(process.cwd(), ".env.e2e.local"))
 loadEnvFile(resolve(process.cwd(), ".env.local"))
 
@@ -50,8 +53,20 @@ const baseURL =
 
 const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim()
 
+// forms.spec.ts сверяет доставку заявок через живой Buildin (assertBuildinSubmissionExists),
+// поэтому в полностью локальном стенде он работать не может. Он покрыт отдельным
+// workflow forms-biweekly.yml, где есть доступы к песочнице Buildin.
+const hasBuildinAccess = Boolean(process.env.BUILDIN_API_TOKEN?.trim()) &&
+  !["0", "false", "off"].includes((process.env.E2E_VERIFY_BUILDIN ?? "").toLowerCase())
+if (!hasBuildinAccess) {
+  console.log("[e2e] forms.spec.ts пропущен: нужен доступ к Buildin (BUILDIN_API_TOKEN)")
+}
+
 export default defineConfig({
   testDir: "tests/e2e",
+  ...(hasBuildinAccess ? {} : { testIgnore: ["**/forms.spec.ts"] }),
+  // Локально: сид базы и стаб Storage. На удалённом стенде не нужно.
+  ...(useLocalServer ? { globalSetup: resolve(__dirname, "tests/e2e/global-setup.ts") } : {}),
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

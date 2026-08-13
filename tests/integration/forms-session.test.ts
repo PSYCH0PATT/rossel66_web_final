@@ -494,9 +494,20 @@ describe("forms session integration", { concurrency: false }, () => {
       mock.pages.get(dist.buildinPageId!)?.parent_database_id,
       FORM_DISTRIBUTION_ID
     )
-    assert.equal("Email" in (mock.pages.get(rel.buildinPageId!)?.properties || {}), false)
-    assert.equal("Контакт" in (mock.pages.get(dist.buildinPageId!)?.properties || {}), true)
-    assert.equal("Telegram" in (mock.pages.get(dist.buildinPageId!)?.properties || {}), false)
+    // На строке очереди живут только четыре поля (артист, релиз, дата, обработана) —
+    // см. applicationProperties и комментарий в buildFinalizeBlocks. Контакт, email
+    // и телеграм строкой не передаются.
+    const relProps = mock.pages.get(rel.buildinPageId!)?.properties || {}
+    const distProps = mock.pages.get(dist.buildinPageId!)?.properties || {}
+    assert.equal("Email" in relProps, false)
+    assert.equal("Контакт" in distProps, false)
+    assert.equal("Telegram" in distProps, false)
+
+    // Но контакт не теряется: для дистрибуции он уходит блоками при финализации.
+    const { buildFinalizeBlocks } = await import("@/lib/buildin/form-application-page")
+    const blocks = JSON.stringify(buildFinalizeBlocks(distManifest as never))
+    assert.ok(blocks.includes("Контакт"), "заголовок «Контакт» должен быть в блоках")
+    assert.ok(blocks.includes("@it_vk"), "сам контакт должен доехать до Buildin")
   })
 
   it("cleanupExpiredFormSessions deletes expired rows", async (t) => {
