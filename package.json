@@ -52,7 +52,9 @@
     "check:drift": "npx tsx scripts/check-schema-drift.ts",
     "seed:e2e": "npx tsx scripts/seed-e2e.ts",
     "test:python": "sh -c '${npm_config_python:-$([ -x .venv/bin/python3 ] && echo .venv/bin/python3 || echo python3)} -m unittest discover -s tests/python'",
-    "verify": "bash scripts/verify.sh"
+    "verify": "bash scripts/verify.sh",
+    "db:clone-to-staging": "bash scripts/clone-prod-db-to-staging.sh",
+    "storage:clone-to-staging": "npx tsx scripts/clone-prod-storage-to-staging.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
