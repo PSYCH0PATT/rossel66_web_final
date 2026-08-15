@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { getSessionUser } from "@/lib/server-auth"
-import { canViewArtistCabinet, getArtistGroup } from "@/lib/artist-links"
+import { canViewArtistCabinet, getArtistGroup, resolveMainArtist } from "@/lib/artist-links"
 import { prisma } from "@/lib/prisma"
 import DashboardShell from "@/components/dashboard-shell"
 import type { DashboardProfile } from "@/components/dashboard-user-context"
@@ -20,6 +20,14 @@ export default async function ArtistDashboardRouteLayout({
     select: { id: true, username: true, name: true, avatarUrl: true, mainArtistId: true },
   })
   if (!artist) notFound()
+
+  // У группы связанных профилей (AKA) кабинет один — кабинет главного. Отдельной
+  // страницы у привязанного профиля больше нет: любой её адрес уводит на главного,
+  // где те же данные лежат с фильтром по профилю.
+  if (artist.mainArtistId) {
+    const main = await resolveMainArtist(artist)
+    if (main) redirect(`/dashboard/artist/${main.username}/dashboard`)
+  }
 
   if (!canViewArtistCabinet(session, artist)) {
     notFound()

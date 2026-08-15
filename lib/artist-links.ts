@@ -86,6 +86,23 @@ export async function getArtistGroup(userId: string): Promise<ArtistGroupMember[
   })
 }
 
+/**
+ * Главный профиль для пользователя: для привязанного — тот, к кому он привязан,
+ * для остальных — он сам.
+ *
+ * Кабинет у группы один, поэтому и вход в него один: логин привязанного профиля
+ * открывает кабинет главного, а не отдельную страницу.
+ */
+export async function resolveMainArtist<T extends { id: string; mainArtistId?: string | null }>(
+  user: T
+): Promise<{ id: string; username: string; name: string } | null> {
+  if (!user.mainArtistId) return null
+  return prisma.user.findUnique({
+    where: { id: user.mainArtistId },
+    select: { id: true, username: true, name: true },
+  })
+}
+
 /** Только идентификаторы группы — для where-условий аналитики и отчётов. */
 export async function getArtistGroupIds(userId: string): Promise<string[]> {
   const members = await prisma.user.findMany({

@@ -196,10 +196,74 @@ async function main() {
     ],
   })
 
+  // Релизы: у главного 2, у привязанного 3. Кабинет группы должен показывать 5,
+  // фильтр по профилю — 2 или 3. Контрактные числа для e2e.
+  const release = (
+    id: string,
+    artistId: string,
+    title: string,
+    releaseDate: string
+  ) => ({
+    id,
+    artistId,
+    title,
+    releaseDate,
+    releaseDateSort: new Date(releaseDate),
+    status: "Доставлен",
+    type: "single",
+    tracks: [],
+  })
+
+  await prisma.release.deleteMany({})
+  await prisma.release.createMany({
+    data: [
+      release("e2e-rel-main-1", "e2e-main-id", "E2E Main Track One", "2026-01-10"),
+      release("e2e-rel-main-2", "e2e-main-id", "E2E Main Track Two", "2026-02-10"),
+      release("e2e-rel-linked-1", "e2e-linked-id", "E2E Linked Track One", "2026-03-10"),
+      release("e2e-rel-linked-2", "e2e-linked-id", "E2E Linked Track Two", "2026-04-10"),
+      release("e2e-rel-linked-3", "e2e-linked-id", "E2E Linked Track Three", "2026-05-10"),
+      release("e2e-rel-solo-1", "e2e-solo-id", "E2E Solo Track", "2026-01-20"),
+    ],
+  })
+
+  // Плейлисты: 2 у главного, 1 у привязанного — кабинет группы должен показать 3,
+  // фильтр по профилю сузить до 2 или 1.
+  await prisma.playlist.deleteMany({})
+  await prisma.playlist.createMany({
+    data: [
+      {
+        id: "e2e-pl-main-1",
+        playlistUrl: "https://example.test/pl/main-1",
+        playlistName: "E2E Main Playlist One",
+        platform: "Spotify",
+        artistName: "E2E Main",
+        artistId: "e2e-main-id",
+      },
+      {
+        id: "e2e-pl-main-2",
+        playlistUrl: "https://example.test/pl/main-2",
+        playlistName: "E2E Main Playlist Two",
+        platform: "Spotify",
+        artistName: "E2E Main",
+        artistId: "e2e-main-id",
+      },
+      {
+        id: "e2e-pl-linked-1",
+        playlistUrl: "https://example.test/pl/linked-1",
+        playlistName: "E2E Linked Playlist",
+        platform: "Spotify",
+        artistName: "E2E Linked",
+        artistId: "e2e-linked-id",
+      },
+    ],
+  })
+
   const counts = {
     пользователей: await prisma.user.count(),
     отчётов: await prisma.report.count(),
     "строк аналитики": await prisma.streamAnalytics.count(),
+    релизов: await prisma.release.count(),
+    плейлистов: await prisma.playlist.count(),
   }
   console.log("Готово:", counts)
   await prisma.$disconnect()

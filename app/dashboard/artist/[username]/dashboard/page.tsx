@@ -46,7 +46,6 @@ export default async function ArtistDashboardPage({
       username={params.username}
       artist={data.artist}
       releaseCount={data.releaseCount}
-      releasedCount={data.releasedCount}
       playlistCount={data.playlistCount}
       reports={data.reports}
       initialStreamsByDay={analytics.streamsByDay}

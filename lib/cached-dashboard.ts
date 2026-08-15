@@ -16,6 +16,7 @@ import { getActivitiesFiltered, type Activity, type Report, type User, type Rele
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 import { reportEffectiveYear } from "@/lib/report-year"
+import { getArtistGroupIds } from "@/lib/artist-links"
 
 /** Серверный кеш дашбордов — 60s (Timeweb: cold start OK; мутации сбрасывают теги) */
 export const DASHBOARD_REVALIDATE_SEC = 60
@@ -93,9 +94,15 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
   if (!artist) return { ok: false, reason: "not_found" }
 
   const artistId = artist.id
+  // Кабинет у группы связанных профилей (AKA) один: считаем по всем её профилям.
+  // Для одиночного артиста группа состоит из него самого, поведение прежнее.
+  const groupIds = await getArtistGroupIds(artistId)
 
   const releaseScope = {
-    OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
+    OR: [
+      { artistId: { in: groupIds } },
+      { featuredArtistIds: { hasSome: groupIds } },
+    ],
   }
 
   const [releaseCount, releasedCount, reportsRaw, playlistsForCount] = await Promise.all([
@@ -104,7 +111,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
       where: { AND: [releaseScope, { status: { in: DELIVERED_RELEASE_STATUSES } }] },
     }),
     prisma.report.findMany({
-      where: { artistId, isRegistered: true },
+      where: { artistId: { in: groupIds }, isRegistered: true },
       orderBy: { uploadedAt: "desc" },
       select: {
         id: true,
@@ -132,7 +139,9 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
   const reports = reportsRaw
     .filter((r) => {
       // D2: год из uploadDate, если в отчёте не заполнен (см. lib/report-year.ts)
-      const key = `${r.quarter}|${reportEffectiveYear(r)}`
+      // Ключ включает artistId: за один квартал у разных профилей группы могут
+      // быть свои отчёты, и они должны сложиться, а не вытеснить друг друга.
+      const key = `${r.artistId}|${r.quarter}|${reportEffectiveYear(r)}`
       if (seenReportKeys.has(key)) return false
       seenReportKeys.add(key)
       return true
@@ -170,7 +179,7 @@ async function loadArtistDashboardUncached(username: string): Promise<ArtistDash
 
 export const getCachedArtistDashboard = unstable_cache(
   async (username: string) => loadArtistDashboardUncached(username),
-  ["artist-dashboard-v6"],
+  ["artist-dashboard-v7"],
   {
     revalidate: DASHBOARD_REVALIDATE_SEC,
     tags: [CACHE_TAG_ARTIST_DASHBOARD],
@@ -357,11 +366,17 @@ export type ArtistPlaylistItem = {
   created_at: string
   updated_at: string
   cover_url: string | null
+  /** Профиль группы (AKA), которому принадлежит строка — для фильтра в кабинете. */
+  profile_id: string
+  profile_name: string
 }
 
 async function loadArtistReportsUncached(artistId: string): Promise<ArtistReportItem[]> {
+  // Кабинет группы показывает отчёты всех её профилей: старые пер-профильные
+  // отчёты привязанного никуда не делись и должны остаться видимыми.
+  const groupIds = await getArtistGroupIds(artistId)
   const rows = await prisma.report.findMany({
-    where: { artistId, isRegistered: true },
+    where: { artistId: { in: groupIds }, isRegistered: true },
     orderBy: [{ year: "desc" }, { quarter: "desc" }],
     select: {
       id: true,
@@ -391,7 +406,7 @@ async function loadArtistReportsUncached(artistId: string): Promise<ArtistReport
 
 export const getCachedArtistReports = unstable_cache(
   async (artistId: string) => loadArtistReportsUncached(artistId),
-  ["artist-reports-v2"],
+  ["artist-reports-v3"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 
@@ -403,8 +418,13 @@ async function loadArtistReleasesUncached(artistId: string): Promise<ArtistRelea
   return rows.map(releaseFromPrisma)
 }
 
-function mapPrismaPlaylistToArtistItem(p: PlaylistListRow): ArtistPlaylistItem {
+function mapPrismaPlaylistToArtistItem(
+  p: PlaylistListRow,
+  profile?: { id: string; name?: string | null; username?: string | null }
+): ArtistPlaylistItem {
   return {
+    profile_id: profile?.id ?? p.artistId ?? "",
+    profile_name: profile?.name || profile?.username || "",
     id: p.id,
     playlist_url: p.playlistUrl,
     playlist_name: p.playlistName,
@@ -420,57 +440,75 @@ function mapPrismaPlaylistToArtistItem(p: PlaylistListRow): ArtistPlaylistItem {
   }
 }
 
-async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlaylistItem[]> {
-  const user = await prisma.user.findFirst({
-    where: { id: artistId, role: "artist" },
+/** Экспортирован для тестов: unstable_cache не работает вне контекста запроса Next. */
+export async function loadArtistPlaylistsUncached(artistId: string): Promise<ArtistPlaylistItem[]> {
+  // Кабинет у группы связанных профилей (AKA) один, поэтому плейлисты собираются
+  // по всем её профилям. Сопоставление по имени пер-профильное: у каждого профиля
+  // своё имя, под которым его находят в плейлистах.
+  const groupIds = await getArtistGroupIds(artistId)
+  const members = await prisma.user.findMany({
+    where: { id: { in: groupIds }, role: "artist" },
     select: { id: true, name: true, username: true },
   })
-  if (!user) return []
+  if (members.length === 0) return []
 
-  const assigned = await findManyPlaylistRows({
-    where: { artistId: user.id },
-    orderBy: { updatedAt: "desc" },
-  })
+  const collected: Array<PlaylistListRow & { profileId: string }> = []
 
-  const orContains: Array<{ artistName: { contains: string; mode: "insensitive" } }> = []
-  const uTrim = user.username.trim()
-  const nameTrim = (user.name || "").trim()
-  if (uTrim.length >= 2) {
-    orContains.push({ artistName: { contains: uTrim, mode: "insensitive" } })
-  }
-  if (
-    nameTrim.length >= 2 &&
-    normalizeArtistName(nameTrim) !== normalizeArtistName(user.username)
-  ) {
-    orContains.push({ artistName: { contains: nameTrim, mode: "insensitive" } })
-  }
-
-  let loose: PlaylistListRow[] = []
-  if (orContains.length > 0) {
-    loose = await findManyPlaylistRows({
-      where: { artistId: null, OR: orContains },
+  for (const user of members) {
+    const assigned = await findManyPlaylistRows({
+      where: { artistId: user.id },
       orderBy: { updatedAt: "desc" },
     })
+
+    const orContains: Array<{ artistName: { contains: string; mode: "insensitive" } }> = []
+    const uTrim = user.username.trim()
+    const nameTrim = (user.name || "").trim()
+    if (uTrim.length >= 2) {
+      orContains.push({ artistName: { contains: uTrim, mode: "insensitive" } })
+    }
+    if (
+      nameTrim.length >= 2 &&
+      normalizeArtistName(nameTrim) !== normalizeArtistName(user.username)
+    ) {
+      orContains.push({ artistName: { contains: nameTrim, mode: "insensitive" } })
+    }
+
+    let loose: PlaylistListRow[] = []
+    if (orContains.length > 0) {
+      loose = await findManyPlaylistRows({
+        where: { artistId: null, OR: orContains },
+        orderBy: { updatedAt: "desc" },
+      })
+    }
+
+    const extra = loose.filter((r) =>
+      playlistRowVisibleToCabinetUser(
+        { artistName: r.artistName, artistId: r.artistId },
+        user.id,
+        user.name || "",
+        user.username || ""
+      )
+    )
+
+    for (const row of [...assigned, ...extra]) {
+      collected.push({ ...row, profileId: user.id })
+    }
   }
 
-  const extra = loose.filter((r) =>
-    playlistRowVisibleToCabinetUser(
-      { artistName: r.artistName, artistId: r.artistId },
-      user.id,
-      user.name || "",
-      user.username || ""
-    )
-  )
-
-  const merged = dedupePlaylistsByUrlAndName([...assigned, ...extra], user.id)
+  // Дедуп общий: один и тот же плейлист может найтись у двух профилей группы.
+  const merged = dedupePlaylistsByUrlAndName(collected, artistId)
   merged.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
-  return merged.map(mapPrismaPlaylistToArtistItem)
+  const profileById = new Map(members.map((m) => [m.id, m]))
+  return merged.map((row) => {
+    const profileId = (row as PlaylistListRow & { profileId?: string }).profileId ?? artistId
+    return mapPrismaPlaylistToArtistItem(row, profileById.get(profileId) ?? { id: profileId })
+  })
 }
 
 export const getCachedArtistPlaylists = unstable_cache(
   async (artistId: string) => loadArtistPlaylistsUncached(artistId),
-  ["artist-playlists-v3"],
+  ["artist-playlists-v4"],
   // H2: без тега привязку плейлиста нельзя было сбросить — артист не видел
   // новый плейлист до истечения revalidate.
   { revalidate: DASHBOARD_REVALIDATE_SEC, tags: [CACHE_TAG_ARTIST_PLAYLISTS] }

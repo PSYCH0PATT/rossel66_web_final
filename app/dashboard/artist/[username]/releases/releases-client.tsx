@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react"
 import { formatDateRu } from "@/lib/format-date"
 import Image from "next/image"
 import Link from "next/link"
+import { ProfileFilter } from "@/components/profile-filter"
 import { useReleasesList } from "@/lib/hooks/use-dashboard-fetch"
 
 interface Release {
@@ -166,6 +167,8 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [q, setQ] = useState("")
+  // Фильтр «Профиль» (AKA): "all" — релизы всех профилей группы.
+  const [profileId, setProfileId] = useState("all")
   const [debouncedQ, setDebouncedQ] = useState("")
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -176,8 +179,9 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
       pageSize: String(pageSize),
     })
     if (debouncedQ) params.set("q", debouncedQ)
+    if (profileId !== "all") params.set("profileId", profileId)
     return `/api/releases?${params}`
-  }, [artistId, page, pageSize, debouncedQ])
+  }, [artistId, page, pageSize, debouncedQ, profileId])
 
   const { data, isLoading } = useReleasesList(listUrl)
 
@@ -249,7 +253,15 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
             </p>
           </div>
 
-          <div className="w-full md:w-auto md:shrink-0 md:flex md:justify-end">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:shrink-0 md:flex-row md:justify-end">
+            <ProfileFilter
+              value={profileId}
+              onChange={(next) => {
+                setProfileId(next)
+                setPage(1)
+              }}
+              className="w-full md:w-56"
+            />
             <div className="relative group w-full md:w-64">
               <input
                 type="text"

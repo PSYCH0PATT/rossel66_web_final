@@ -7,7 +7,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
-import { ProfileSwitcher } from "@/components/profile-switcher"
 import { dashboardLogout } from "@/lib/dashboard-logout"
 interface SidebarProps {
   role: "artist" | "admin"
@@ -166,11 +165,6 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
             >
               <span className="material-symbols-outlined text-2xl leading-none">close</span>
             </button>
-          </div>
-
-          {/* Переключатель профилей (AKA) — только у артиста с привязанными профилями */}
-          <div className="mt-6 px-2 lg:px-4">
-            <ProfileSwitcher onNavigate={handleNavigation} />
           </div>
 
           {/* Navigation Links */}

@@ -446,10 +446,12 @@ export function analyticsRowVisibleToCabinetUser(
 export async function buildCabinetStreamAnalyticsWhere(
   userId: string,
   displayName: string,
-  username: string
+  username: string,
+  /** solo — не разворачивать группу: фильтр «Профиль» в кабинете. */
+  options?: { solo?: boolean }
 ): Promise<Record<string, unknown>> {
   const members = await prisma.user.findMany({
-    where: { OR: [{ id: userId }, { mainArtistId: userId }] },
+    where: options?.solo ? { id: userId } : { OR: [{ id: userId }, { mainArtistId: userId }] },
     select: { id: true, name: true, username: true },
   })
   const group =

@@ -24,29 +24,33 @@ export async function buildAnalyticsFiltersFromRequest(
   }
 
   if (session.role === 'artist') {
-    // Переключатель профилей (AKA): артист может смотреть аналитику своего
-    // привязанного профиля отдельно. Чужой id сюда не пройдёт — берём только то,
-    // что принадлежит его группе.
-    const requestedId = searchParams.get('artistId') || undefined
-    const viewedId =
-      requestedId && requestedId !== session.id
+    // Фильтр «Профиль» в кабинете (AKA): без него — агрегат всей группы, с ним —
+    // строго один её профиль. Чужой id сюда не пройдёт: принимаем только тот,
+    // что принадлежит группе сессии.
+    const requestedProfile =
+      searchParams.get('profileId')?.trim() || undefined
+    const soloId =
+      requestedProfile && requestedProfile !== session.id
         ? (
             await prisma.user.findFirst({
-              where: { id: requestedId, mainArtistId: session.id },
+              where: { id: requestedProfile, mainArtistId: session.id },
               select: { id: true },
             })
           )?.id
-        : session.id
+        : requestedProfile === session.id
+          ? session.id
+          : undefined
 
     const user = await prisma.user.findUnique({
-      where: { id: viewedId ?? session.id },
+      where: { id: soloId ?? session.id },
       select: { id: true, name: true, username: true },
     })
     if (user) {
       filters.cabinetWhere = await buildCabinetStreamAnalyticsWhere(
         user.id,
         user.name,
-        user.username
+        user.username,
+        { solo: Boolean(soloId) }
       )
     } else {
       filters.artistId = session.id

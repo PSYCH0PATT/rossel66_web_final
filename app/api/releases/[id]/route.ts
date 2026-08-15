@@ -3,6 +3,7 @@ import { updateRelease, deleteRelease, getUserById, type Release } from "@/lib/s
 import { prisma } from "@/lib/prisma"
 import { releaseFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
+import { getArtistGroupIds } from "@/lib/artist-links"
 import { releasePutSchema } from "@/lib/api-schemas"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -18,8 +19,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const release = releaseFromPrisma(raw)
-    if (session.role !== "admin" && release.artistId !== session.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    // Релиз может висеть на любом профиле группы (AKA) — кабинет у них общий.
+    if (session.role !== "admin") {
+      const groupIds = await getArtistGroupIds(session.id)
+      if (!release.artistId || !groupIds.includes(release.artistId)) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+      }
     }
     const artist = release.artistId ? await getUserById(release.artistId) : null
     const releaseWithArtist = {
@@ -45,8 +50,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (!raw) {
       return NextResponse.json({ success: false, error: "Release not found" }, { status: 404 })
     }
-    if (session.role !== "admin" && raw.artistId !== session.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    if (session.role !== "admin") {
+      const groupIds = await getArtistGroupIds(session.id)
+      if (!raw.artistId || !groupIds.includes(raw.artistId)) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+      }
     }
 
     const body = await request.json()

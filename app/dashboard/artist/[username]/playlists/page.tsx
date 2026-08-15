@@ -8,6 +8,7 @@ import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { ProfileFilterUrl } from "@/components/profile-filter"
 function firstTrackLabel(trackDataJson: string): string {
   try {
     const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
@@ -38,7 +39,13 @@ function firstReleaseLabel(trackDataJson: string): string {
   }
 }
 
-export default async function PlaylistsPage({ params }: { params: { username: string } }) {
+export default async function PlaylistsPage({
+  params,
+  searchParams,
+}: {
+  params: { username: string }
+  searchParams?: { profile?: string }
+}) {
   const session = getSessionUser()
   if (!session) redirect("/dashboard/login")
 
@@ -51,7 +58,13 @@ export default async function PlaylistsPage({ params }: { params: { username: st
     notFound()
   }
 
-  const playlists = await getCachedArtistPlaylists(row.id)
+  // Фильтр «Профиль» (AKA) живёт в query: страница серверная, фильтруем до рендера.
+  const selectedProfile = typeof searchParams?.profile === "string" ? searchParams.profile : "all"
+  const allPlaylists = await getCachedArtistPlaylists(row.id)
+  const playlists =
+    selectedProfile === "all"
+      ? allPlaylists
+      : allPlaylists.filter((p) => p.profile_id === selectedProfile)
   const total = playlists.length
 
   return (
@@ -77,6 +90,7 @@ export default async function PlaylistsPage({ params }: { params: { username: st
                 Плейлисты, в которые попали ваши треки на стриминговых платформах.
               </p>
             </div>
+            <ProfileFilterUrl value={selectedProfile} className="w-full md:w-56" />
           </div>
         </div>
 

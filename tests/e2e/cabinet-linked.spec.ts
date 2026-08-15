@@ -1,26 +1,38 @@
 /**
- * Связанные профили артиста (AKA): доступ, переключатель, агрегация, безопасность.
+ * Связанные профили артиста (AKA): один кабинет на группу.
  *
- * Сценарии идут по порядку и делят состояние: первый привязывает профиль,
- * последний отвязывает. Поэтому serial.
+ * Модель: у группы профилей общий кабинет — кабинет главного. Отдельной страницы
+ * у привязанного профиля нет, его логин ведёт туда же, а данные всех профилей
+ * показываются вместе с фильтром «Профиль».
+ *
+ * Сценарии делят состояние: первый привязывает профиль, последний отвязывает.
  */
 import { expect, test } from "@playwright/test"
-import { USERS, getAs, loginAs, sessionHeader } from "./support/session"
+import { USERS, SEED_PASSWORD, getAs, loginAs, sessionHeader } from "./support/session"
 
 const BASE = "http://127.0.0.1:3000"
 
 test.describe.serial("связанные профили", () => {
   test.beforeAll(async ({ request }) => {
-    // На всякий случай снимаем привязку, оставшуюся от прошлого прогона.
     await request.delete(`/api/artists/link?linkedArtistId=${USERS.linked.id}`, {
       headers: sessionHeader(USERS.admin),
     })
   })
 
-  test("до привязки главный в чужой кабинет не попадает", async ({ page, context }) => {
+  test("до привязки у профилей раздельные кабинеты", async ({ page, context }) => {
     await loginAs(context, USERS.main, BASE)
     const response = await page.goto(`/dashboard/artist/${USERS.linked.username}/dashboard`)
     expect(response?.status()).toBe(404)
+  })
+
+  test("до привязки главный видит только свои релизы", async ({ request }) => {
+    const response = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&pageSize=100`
+    )
+    expect(response.status()).toBe(200)
+    expect((await response.json()).total).toBe(2)
   })
 
   test("привязка доступна только админу", async ({ request }) => {
@@ -53,7 +65,6 @@ test.describe.serial("связанные профили", () => {
   })
 
   test("второй уровень вложенности запрещён", async ({ request }) => {
-    // e2e-solo → e2e-linked, а у linked уже есть главный.
     const response = await request.post("/api/artists/link", {
       headers: sessionHeader(USERS.admin),
       data: { mainArtistId: USERS.linked.id, linkedArtistId: USERS.solo.id },
@@ -61,54 +72,86 @@ test.describe.serial("связанные профили", () => {
     expect(response.status()).toBe(400)
   })
 
-  test("главный открывает страницы привязанного профиля", async ({ page, context }) => {
-    await loginAs(context, USERS.main, BASE)
-    for (const section of ["dashboard", "reports", "payments", "releases"]) {
-      const response = await page.goto(`/dashboard/artist/${USERS.linked.username}/${section}`)
-      expect(response?.status(), `раздел ${section}`).toBe(200)
-    }
+  test("логин привязанного профиля открывает кабинет главного", async ({ request }) => {
+    const response = await request.post("/api/auth/login", {
+      data: { username: USERS.linked.username, password: SEED_PASSWORD },
+    })
+    expect(response.status(), "пароль привязанного должен остаться рабочим").toBe(200)
+    const body = await response.json()
+    // Сессия выдаётся от имени главного — кабинет у группы один.
+    expect(body.user.username).toBe(USERS.main.username)
+    expect(body.user.id).toBe(USERS.main.id)
   })
 
-  test("привязанный в кабинет главного не попадает, связь односторонняя", async ({
-    page,
-    context,
-  }) => {
-    await loginAs(context, USERS.linked, BASE)
+  test("страница привязанного профиля уводит в кабинет главного", async ({ page, context }) => {
+    await loginAs(context, USERS.main, BASE)
+    await page.goto(`/dashboard/artist/${USERS.linked.username}/dashboard`)
+    await page.waitForURL(`**/dashboard/artist/${USERS.main.username}/dashboard`)
+    expect(page.url()).toContain(`/dashboard/artist/${USERS.main.username}/`)
+  })
+
+  test("посторонний артист в кабинет группы не попадает", async ({ page, context }) => {
+    await loginAs(context, USERS.stranger, BASE)
     const response = await page.goto(`/dashboard/artist/${USERS.main.username}/dashboard`)
     expect(response?.status()).toBe(404)
   })
 
-  test("посторонний артист не видит ни один из профилей группы", async ({ page, context }) => {
-    await loginAs(context, USERS.stranger, BASE)
-    for (const username of [USERS.main.username, USERS.linked.username]) {
-      const response = await page.goto(`/dashboard/artist/${username}/dashboard`)
-      expect(response?.status(), `кабинет ${username}`).toBe(404)
-    }
+  test("кабинет показывает релизы всех профилей группы", async ({ request }) => {
+    // Сид: 2 релиза у главного + 3 у привязанного.
+    const all = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&pageSize=100`
+    )
+    expect(all.status()).toBe(200)
+    expect((await all.json()).total).toBe(5)
   })
 
-  test("переключатель профилей виден только главному", async ({ page, context }) => {
-    await loginAs(context, USERS.main, BASE)
-    await page.goto(`/dashboard/artist/${USERS.main.username}/dashboard`)
-    const switcher = page.locator("#profile-switcher")
-    await expect(switcher).toBeVisible()
-    await expect(switcher.locator("option")).toHaveCount(2)
+  test("фильтр «Профиль» сужает список до одного профиля", async ({ request }) => {
+    const onlyMain = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.main.id}&pageSize=100`
+    )
+    expect((await onlyMain.json()).total).toBe(2)
 
-    await loginAs(context, USERS.solo, BASE)
-    await page.goto(`/dashboard/artist/${USERS.solo.username}/dashboard`)
-    await expect(page.locator("#profile-switcher")).toHaveCount(0)
+    const onlyLinked = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.linked.id}&pageSize=100`
+    )
+    expect((await onlyLinked.json()).total).toBe(3)
   })
 
-  test("переключатель уводит на тот же раздел другого профиля", async ({ page, context }) => {
-    await loginAs(context, USERS.main, BASE)
-    await page.goto(`/dashboard/artist/${USERS.main.username}/payments`)
-    await page.selectOption("#profile-switcher", USERS.linked.username)
-    await page.waitForURL(`**/dashboard/artist/${USERS.linked.username}/payments`)
-    expect(page.url()).toContain(`/dashboard/artist/${USERS.linked.username}/payments`)
+  test("чужой профиль в фильтр не пролезает", async ({ request }) => {
+    // solo не в группе — подмена profileId не должна открыть его релизы.
+    const response = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.solo.id}&pageSize=100`
+    )
+    const total = (await response.json()).total
+    expect(total, "чужой profileId игнорируется, отдаётся группа").toBe(5)
+  })
+
+  test("релизы привязанного профиля открываются из кабинета группы", async ({ request }) => {
+    const list = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.linked.id}&pageSize=100`
+    )
+    const release = (await list.json()).releases[0]
+    expect(release, "у привязанного должен быть релиз").toBeTruthy()
+
+    const card = await getAs(request, USERS.main, `/api/releases/${release.id}`)
+    expect(card.status(), "карточка релиза привязанного профиля").toBe(200)
+
+    const asStranger = await getAs(request, USERS.stranger, `/api/releases/${release.id}`)
+    expect(asStranger.status()).toBe(403)
   })
 
   test("главный скачивает отчёт привязанного, посторонний — нет", async ({ request }) => {
     const reportId = "e2e-report-linked-q3"
-
     const asMain = await getAs(request, USERS.main, `/api/reports/preview/${reportId}`)
     expect(asMain.status(), "главный должен получить доступ").not.toBe(403)
 
@@ -117,8 +160,6 @@ test.describe.serial("связанные профили", () => {
   })
 
   test("артист не может привязать себя к чужому профилю через PUT", async ({ request }) => {
-    // Регрессия: mainArtistId намеренно не входит в схему artistPutSchema —
-    // иначе артист получил бы доступ в чужой кабинет одним запросом.
     const response = await request.put("/api/artists", {
       headers: sessionHeader(USERS.stranger),
       data: { id: USERS.stranger.id, mainArtistId: USERS.main.id },
@@ -130,30 +171,41 @@ test.describe.serial("связанные профили", () => {
     expect(body.artists?.[0]?.mainArtistId ?? null).toBeNull()
   })
 
-  test("аналитика главного включает стримы привязанного, коллаб считается один раз", async ({
-    request,
-  }) => {
-    const totalFor = async (user: (typeof USERS)[keyof typeof USERS]) => {
+  test("аналитика: агрегат группы и фильтр по профилю", async ({ request }) => {
+    const totalFor = async (query: string) => {
       const response = await getAs(
         request,
-        user,
-        "/api/analytics/streams?startDate=2026-01-01&endDate=2026-12-31"
+        USERS.main,
+        `/api/analytics/streams?startDate=2026-01-01&endDate=2026-12-31${query}`
       )
-      expect(response.status(), `аналитика для ${user.username}`).toBe(200)
-      const body = await response.json()
-      return body.data?.totalStreams ?? 0
+      expect(response.status()).toBe(200)
+      return (await response.json()).data?.totalStreams ?? 0
     }
 
-    // Сид: свои 1500 + привязанного 300 + коллаб 700 = 2500.
-    // Коллаб «E2E Main & E2E Linked» — один человек под двумя именами, поэтому
-    // 3200 здесь означало бы двойной счёт.
-    expect(await totalFor(USERS.main)).toBe(2500)
+    // Сид: свои 1500 + привязанного 300 + коллаб 700 ОДИН раз (это один человек
+    // под двумя именами) = 2500. 3200 означало бы двойной счёт.
+    expect(await totalFor("")).toBe(2500)
 
-    // Кабинет привязанного показывает только его: 300 своих + 700 коллаба.
-    expect(await totalFor(USERS.linked)).toBe(1000)
+    // Только главный: свои 1500 + коллаб 700.
+    expect(await totalFor(`&profileId=${USERS.main.id}`)).toBe(2200)
 
-    // Посторонний чужих стримов не видит.
-    expect(await totalFor(USERS.stranger)).toBe(0)
+    // Только привязанный: свои 300 + коллаб 700.
+    expect(await totalFor(`&profileId=${USERS.linked.id}`)).toBe(1000)
+  })
+
+  test("привязанный профиль исчезает из списка артистов в админке", async ({ request }) => {
+    const response = await getAs(request, USERS.admin, "/api/artists?pageSize=100")
+    expect(response.status()).toBe(200)
+    const body = await response.json()
+    const usernames = body.artists.map((a: { username: string }) => a.username)
+
+    expect(usernames).toContain(USERS.main.username)
+    expect(usernames, "привязанный профиль своей карточки больше не имеет").not.toContain(
+      USERS.linked.username
+    )
+    // Счётчики должны совпадать со списком, иначе пагинация «дырявая».
+    expect(body.total).toBe(usernames.length)
+    expect(body.stats.all).toBe(body.total)
   })
 
   test("отвязка возвращает всё к исходному состоянию", async ({ page, context, request }) => {
@@ -167,7 +219,15 @@ test.describe.serial("связанные профили", () => {
     const afterUnlink = await page.goto(`/dashboard/artist/${USERS.linked.username}/dashboard`)
     expect(afterUnlink?.status()).toBe(404)
 
-    await page.goto(`/dashboard/artist/${USERS.main.username}/dashboard`)
-    await expect(page.locator("#profile-switcher")).toHaveCount(0)
+    const releases = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&pageSize=100`
+    )
+    expect((await releases.json()).total, "снова только свои").toBe(2)
+
+    const admin = await getAs(request, USERS.admin, "/api/artists?pageSize=100")
+    const usernames = (await admin.json()).artists.map((a: { username: string }) => a.username)
+    expect(usernames, "карточка вернулась в список").toContain(USERS.linked.username)
   })
 })

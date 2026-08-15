@@ -3,6 +3,7 @@ import { addReleaseWithActivities, getUserById } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { getSessionUser, requireAuth, requireAdmin } from "@/lib/server-auth"
+import { getArtistGroupIds } from "@/lib/artist-links"
 import { releasePostSchema } from "@/lib/api-schemas"
 import { jsonWithPerfLog } from "@/lib/api-perf-log"
 import { releaseListItemFromPrisma } from "@/lib/release-list-dto"
@@ -46,11 +47,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const { page, pageSize, skip } = parsePagination(searchParams)
 
-    let artistId = searchParams.get("artistId") || undefined
+    const artistId = searchParams.get("artistId") || undefined
+    // Профиль внутри группы связанных профилей (AKA): фильтр «Профиль» в кабинете.
+    const profileId = searchParams.get("profileId")?.trim() || undefined
+
+    // Артист видит релизы своей группы, а не только своего id. Раньше здесь
+    // стояло artistId === session.id, из-за чего кабинет группы отдавал 403 на
+    // релизы привязанного профиля — и страница молча показывала «нет релизов».
+    let scopeIds: string[] | undefined
     if (session?.role === "artist") {
-      if (!artistId || artistId !== session.id) {
+      const groupIds = await getArtistGroupIds(session.id)
+      if (!artistId || !groupIds.includes(artistId)) {
         return NextResponse.json({ success: false, error: "Доступ запрещён" }, { status: 403 })
       }
+      scopeIds = profileId && groupIds.includes(profileId) ? [profileId] : groupIds
+    } else if (artistId) {
+      scopeIds = [artistId]
     }
     const q = searchParams.get("q")?.trim() || undefined
     const status = searchParams.get("status")?.trim() || undefined
@@ -60,10 +72,14 @@ export async function GET(request: Request) {
 
     const andParts: Prisma.ReleaseWhereInput[] = []
 
-    if (artistId) {
-      // B1: показывать релизы, где артист — основной ИЛИ приглашённый (feat)
+    if (scopeIds && scopeIds.length > 0) {
+      // B1: показывать релизы, где артист — основной ИЛИ приглашённый (feat).
+      // scopeIds — вся группа профилей либо один выбранный профиль.
       andParts.push({
-        OR: [{ artistId }, { featuredArtistIds: { has: artistId } }],
+        OR: [
+          { artistId: { in: scopeIds } },
+          { featuredArtistIds: { hasSome: scopeIds } },
+        ],
       })
     }
 

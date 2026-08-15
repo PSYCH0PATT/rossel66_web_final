@@ -16,7 +16,6 @@ type Props = {
   username: string
   artist: ArtistDashboardPayload["artist"]
   releaseCount: number
-  releasedCount: number
   playlistCount: number
   reports: ArtistDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
@@ -27,7 +26,6 @@ export default function ArtistDashboardClient({
   username,
   artist,
   releaseCount,
-  releasedCount,
   playlistCount,
   reports,
   initialStreamsByDay,
@@ -35,15 +33,6 @@ export default function ArtistDashboardClient({
 }: Props) {
   const totalEarnings = useMemo(
     () => reports.reduce((sum, report) => sum + (report.totalAmount || 0), 0),
-    [reports]
-  )
-  // C5: честные под-метрики для KPI-бейджей (вместо фейковых «+X%»)
-  const signedCount = useMemo(
-    () => reports.filter((r) => r.isSigned).length,
-    [reports]
-  )
-  const unpaidEarnings = useMemo(
-    () => reports.reduce((sum, r) => sum + (r.isPaid ? 0 : r.totalAmount || 0), 0),
     [reports]
   )
   return (
@@ -101,9 +90,6 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releaseCount}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary" title="Доставлено">
-                <span className="material-symbols-outlined">check_circle</span> {releasedCount}
-              </span>
             </div>
           </div>
         </div>
@@ -121,9 +107,6 @@ export default function ArtistDashboardClient({
             </div>
             <div className="flex items-end justify-between">
               <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{reports.length}</p>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--azure" title="Подписано">
-                <span className="material-symbols-outlined">task_alt</span> {signedCount}
-              </span>
             </div>
           </div>
         </div>
@@ -153,9 +136,6 @@ export default function ArtistDashboardClient({
                   {formatRubPlain(totalEarnings)}
                 </TooltipContent>
               </Tooltip>
-              <span className="stat-dash-metric-badge stat-dash-metric-badge--primary shrink-0" title="К выплате (неоплачено)">
-                <span className="material-symbols-outlined">schedule</span> {formatRubKpiShort(unpaidEarnings)}
-              </span>
             </div>
           </div>
         </div>

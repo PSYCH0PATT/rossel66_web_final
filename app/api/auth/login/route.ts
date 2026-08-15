@@ -3,6 +3,7 @@ import { getUserByUsername } from "@/lib/storage"
 import { buildSessionCookieValue } from "@/lib/server-auth"
 import { rateLimitLogin } from "@/lib/rate-limit"
 import { verifyPassword } from "@/lib/password"
+import { resolveMainArtist } from "@/lib/artist-links"
 import { z } from "zod"
 
 const loginBodySchema = z.object({
@@ -77,19 +78,27 @@ export async function POST(request: Request) {
       )
     }
 
+    // Связанные профили (AKA): у группы один кабинет — кабинет главного. Пароль
+    // привязанного профиля остаётся рабочим, но открывает тот же общий кабинет,
+    // поэтому сессия выдаётся от имени главного.
+    const mainArtist = await resolveMainArtist(user)
+    const sessionOwner = mainArtist
+      ? { ...user, id: mainArtist.id, username: mainArtist.username, name: mainArtist.name }
+      : user
+
     const tSession = performance.now()
     const sessionValue = buildSessionCookieValue({
-      id: user.id,
-      username: user.username,
-      role: user.role as "admin" | "artist",
+      id: sessionOwner.id,
+      username: sessionOwner.username,
+      role: sessionOwner.role as "admin" | "artist",
     })
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
+        id: sessionOwner.id,
+        username: sessionOwner.username,
+        name: sessionOwner.name,
         email: user.email,
         role: user.role,
         avatarUrl: user.avatarUrl,

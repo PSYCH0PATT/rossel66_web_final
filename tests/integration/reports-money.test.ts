@@ -267,6 +267,41 @@ describe("группа профилей и аналитика", () => {
   })
 })
 
+describe("плейлисты кабинета", () => {
+  it("собирает плейлисты всей группы и помечает профиль каждой строки", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    await resetState()
+    const { prisma } = await import("@/lib/prisma")
+    const { loadArtistPlaylistsUncached } = await import("@/lib/cached-dashboard")
+
+    // До привязки — только свои две.
+    const own = await loadArtistPlaylistsUncached(MAIN)
+    assert.equal(own.length, 2)
+    assert.ok(
+      own.every((p) => p.profile_id === MAIN),
+      "у своих строк должен стоять свой профиль"
+    )
+
+    await prisma.user.update({ where: { id: LINKED }, data: { mainArtistId: MAIN } })
+
+    // После привязки кабинет группы показывает и плейлист привязанного.
+    const grouped = await loadArtistPlaylistsUncached(MAIN)
+    assert.equal(grouped.length, 3)
+
+    // Профиль проставлен верно — на нём держится фильтр «Профиль» в кабинете.
+    const byProfile = new Map<string, number>()
+    for (const p of grouped) {
+      byProfile.set(p.profile_id, (byProfile.get(p.profile_id) ?? 0) + 1)
+    }
+    assert.equal(byProfile.get(MAIN), 2)
+    assert.equal(byProfile.get(LINKED), 1)
+    assert.ok(
+      grouped.every((p) => p.profile_name.length > 0),
+      "имя профиля нужно для подписи в фильтре"
+    )
+  })
+})
+
 describe("ручное назначение отчёта", () => {
   it("делает отчёт видимым артисту", async (t) => {
     if (skipSuite) return t.skip("нет базы")

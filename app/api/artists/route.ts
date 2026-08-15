@@ -272,7 +272,9 @@ export async function GET(request: Request) {
 
     if (incompleteReportData) {
       const rows = await prisma.user.findMany({
-        where: { role: "artist" },
+        // Привязанные профили пропускаем: отчёт формируется на реквизиты главного,
+        // их собственные ФИО и договор в отчёт не попадают.
+        where: { role: "artist", mainArtistId: null },
         orderBy: { name: "asc" },
         select: artistSelect,
       })
@@ -365,14 +367,19 @@ export async function GET(request: Request) {
           }
         : undefined
 
+    // Привязанные профили (AKA) в списке не показываются: своей карточки у них
+    // больше нет, всё управление — в карточке главного. Условие стоит в обоих
+    // where, поэтому синхронно уходит и из списка, и из total, и из счётчиков.
     const where: Prisma.UserWhereInput = {
       role: "artist",
+      mainArtistId: null,
       ...(verifiedParam !== null ? { verified: verifiedParam === "true" } : {}),
       ...(searchWhere ?? {}),
     }
 
     const baseArtistWhere: Prisma.UserWhereInput = {
       role: "artist",
+      mainArtistId: null,
       ...(searchWhere ?? {}),
     }
 

@@ -973,12 +973,24 @@ export interface ReportData extends Omit<Report, 'status'> {
 export async function getArtistBalance(artistId: string): Promise<ArtistBalance> {
   // C4: один отчёт на (quarter, year) — при наличии дублей берём ПОСЛЕДНИЙ
   // загруженный, чтобы баланс не задваивался (согласовано с админ-дашбордом).
+  // Кабинет и деньги у группы связанных профилей (AKA) общие: считаем по всем её
+  // профилям. Для одиночного артиста группа — он сам, поведение прежнее.
+  const { getArtistGroupIds } = await import("./artist-links")
+  const groupIds = await getArtistGroupIds(artistId)
+
   const reports = await prisma.report.findMany({
     // NOT isRegistered:false, а не isRegistered:true — legacy-строки с null должны
     // остаться. Условие отсекает отчёты, погашенные merged-прогоном связанных
     // профилей: их суммы уже учтены в отчёте главного.
-    where: { artistId, NOT: { isRegistered: false } },
-    select: { quarter: true, year: true, totalAmount: true, isPaid: true, uploadedAt: true },
+    where: { artistId: { in: groupIds }, NOT: { isRegistered: false } },
+    select: {
+      artistId: true,
+      quarter: true,
+      year: true,
+      totalAmount: true,
+      isPaid: true,
+      uploadedAt: true,
+    },
     orderBy: { uploadedAt: "desc" },
   })
 
@@ -989,7 +1001,9 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   for (const r of reports) {
     // D2: год из даты загрузки, если в отчёте не заполнен — тот же ключ,
     // что использует список отчётов в кабинете.
-    const key = `${r.quarter}|${reportEffectiveYear(r)}`
+    // Ключ с artistId: у разных профилей группы могут быть свои отчёты за один
+    // квартал, и они складываются. Дубли внутри профиля по-прежнему схлопываются.
+    const key = `${r.artistId}|${r.quarter}|${reportEffectiveYear(r)}`
     if (seen.has(key)) continue
     seen.add(key)
     const amt = r.totalAmount ?? 0
@@ -1001,7 +1015,7 @@ export async function getArtistBalance(artistId: string): Promise<ArtistBalance>
   // Аванс гасится роялти из отчётов, пришедших после его выдачи. Правило целиком
   // в lib/advance.ts — здесь только подача данных.
   const advances = await prisma.advance.findMany({
-    where: { artistId },
+    where: { artistId: { in: groupIds } },
     select: { amount: true, issuedAt: true },
   })
   const advance = computeAdvanceSummary(advances, deduped)

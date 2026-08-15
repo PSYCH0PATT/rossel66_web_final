@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { getReleasesByArtist, getUserById } from "@/lib/storage"
-import { requireSelfOrAdmin } from "@/lib/server-auth"
+import { requireSelfLinkedOrAdmin } from "@/lib/server-auth"
 
 export async function GET(request: Request, { params }: { params: { artistId: string } }) {
   try {
-    const denied = await requireSelfOrAdmin(request, params.artistId)
+    const denied = await requireSelfLinkedOrAdmin(request, params.artistId)
     if (denied) return denied
 
     const { artistId } = params

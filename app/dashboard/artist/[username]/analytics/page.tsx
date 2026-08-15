@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
+import { ProfileFilter } from "@/components/profile-filter"
 import dynamic from "next/dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -96,6 +97,8 @@ export default function ArtistAnalyticsPage() {
    */
   const isAdminViewer = profile?.role === "admin"
   const [viewedArtistId, setViewedArtistId] = useState<string | null>(null)
+  // Фильтр «Профиль» (AKA): "all" — агрегат всей группы.
+  const [profileId, setProfileId] = useState("all")
 
   useEffect(() => {
     if (!profile) return
@@ -135,14 +138,16 @@ export default function ArtistAnalyticsPage() {
     if (!currentUser?.id) return
     // F-PARS-8: отменяем предыдущий запрос, чтобы его ответ не перезаписал новый
     const controller = new AbortController()
-    fetch(`/api/analytics/tracks?artistId=${currentUser.id}`, { signal: controller.signal })
+    const trackParams = new URLSearchParams({ artistId: currentUser.id })
+    if (profileId !== "all") trackParams.set("profileId", profileId)
+    fetch(`/api/analytics/tracks?${trackParams}`, { signal: controller.signal })
       .then(r => r.json())
       .then(d => { if (d.success) setTracks(d.tracks) })
       .catch(err => {
         if (err?.name !== "AbortError") console.error(err)
       })
     return () => controller.abort()
-  }, [currentUser?.id])
+  }, [currentUser?.id, profileId])
 
   // Загрузка данных
   const loadData = useCallback(async (signal?: AbortSignal) => {
@@ -171,6 +176,7 @@ export default function ArtistAnalyticsPage() {
         startDate,
         endDate,
       })
+      if (profileId !== "all") params.set("profileId", profileId)
 
       if (selectedTrack !== "all") {
         const track = tracks.find(t => t.isrc === selectedTrack)
@@ -190,7 +196,7 @@ export default function ArtistAnalyticsPage() {
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
-  }, [currentUser?.id, period, selectedTrack, customStart, customEnd, tracks])
+  }, [currentUser?.id, period, selectedTrack, customStart, customEnd, tracks, profileId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -236,6 +242,11 @@ export default function ArtistAnalyticsPage() {
 
         <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
           <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:contents">
+          <ProfileFilter
+            value={profileId}
+            onChange={setProfileId}
+            className="col-span-2 md:w-52"
+          />
           {/* Track select — pill style */}
           <Select value={selectedTrack} onValueChange={setSelectedTrack}>
             <SelectTrigger className={`h-10 px-3 text-[10px] font-bold uppercase tracking-widest rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-colors data-[placeholder]:text-gray-500 w-full min-w-0 md:h-9 md:w-auto md:min-w-[120px] ${
