@@ -253,6 +253,32 @@ export async function POST(request: NextRequest) {
     })
 
     return new Promise<Response>((resolve) => {
+      // Без этого обработчика отсутствующий интерпретатор не давал ошибки: событие
+      // 'error' оставалось необработанным, промис не резолвился, и запрос висел до
+      // таймаута платформы (5 минут) и отдавал 504 без объяснения. Так себя ведёт
+      // Vercel — в его Node-рантайме python3 нет вообще.
+      pythonProcess.on('error', (err) => {
+        const isMissing = (err as NodeJS.ErrnoException).code === 'ENOENT'
+        console.error('Не удалось запустить Python:', err)
+        try {
+          if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath)
+          if (exportedPaths) cleanupExportedData(exportedPaths)
+        } catch (cleanupErr) {
+          console.error('Ошибка очистки после сбоя запуска Python:', cleanupErr)
+        }
+        resolve(
+          NextResponse.json(
+            {
+              success: false,
+              message: isMissing
+                ? `Python не найден (${pythonCmd}). Генератор отчётов требует python3 с pandas и openpyxl — на этом стенде их нет. Отчёты собираются там, где приложение работает в docker-образе.`
+                : `Не удалось запустить обработчик отчётов: ${err.message}`,
+            },
+            { status: 503 }
+          )
+        )
+      })
+
       pythonProcess.on('close', async (code) => {
         // Cleanup input temp file immediately
         try {
