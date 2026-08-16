@@ -1,0 +1,40 @@
+[
+  {
+    "id": "1",
+    "role": "artist",
+    "name": "Главный",
+    "username": "main",
+    "fio": "Иванов Иван Иванович",
+    "fioShort": "Иванов И.И.",
+    "contract": "Д-001",
+    "percentage": 70
+  },
+  {
+    "id": "2",
+    "role": "artist",
+    "name": "Второе Имя",
+    "username": "aka",
+    "fio": "Иванов Иван Иванович",
+    "fioShort": "Иванов И.И.",
+    "contract": "Д-001",
+    "percentage": 70,
+    "mainArtistId": "1"
+  },
+  {
+    "id": "3",
+    "role": "artist",
+    "name": "Соло",
+    "username": "solo",
+    "fio": "Петров Пётр Петрович",
+    "fioShort": "Петров П.П.",
+    "contract": "Д-002",
+    "percentage": 50
+  },
+  {
+    "id": "4",
+    "role": "artist",
+    "name": "Неполный",
+    "username": "incomplete",
+    "percentage": 50
+  }
+]

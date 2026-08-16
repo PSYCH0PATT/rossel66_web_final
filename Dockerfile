@@ -7,8 +7,6 @@ RUN apk add --no-cache \
     make \
     g++ \
     py3-pip \
-    py3-pandas \
-    py3-openpyxl \
     chromium \
     chromium-chromedriver \
     nss \

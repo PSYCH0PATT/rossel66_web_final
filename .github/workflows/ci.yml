@@ -33,7 +33,7 @@ env:
 jobs:
   # Быстрые проверки — падают за пару минут, если сломано очевидное.
   gates:
-    name: Типы, линт, юниты, парсер
+    name: Типы, линт, юниты
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,14 +54,6 @@ jobs:
       - name: Юнит-тесты
         run: pnpm test
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Зависимости парсера
-        run: pip install -r requirements-report-processor.txt
-
-      - name: Тесты питон-парсера
-        run: pnpm test:python
 
   # Полный стенд: миграции с нуля, база, сборка, e2e.
   stand:
@@ -107,12 +99,6 @@ jobs:
 
       - name: Сборка
         run: pnpm build
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Зависимости парсера
-        run: pip install -r requirements-report-processor.txt
 
       - name: Браузер для e2e
         run: pnpm exec playwright install --with-deps chromium

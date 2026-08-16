@@ -7,7 +7,7 @@
  * отчёт у группы один.
  */
 import { expect, test } from "@playwright/test"
-import { execFileSync } from "child_process"
+import ExcelJS from "exceljs"
 import { existsSync, readFileSync, rmSync } from "fs"
 import { tmpdir } from "os"
 import { join } from "path"
@@ -16,44 +16,23 @@ import { USERS, getAs, sessionHeader } from "./support/session"
 const QUARTER = "Q3"
 const YEAR = 2026
 
-/** Интерпретатор с pandas: тот же выбор, что в app/api/reports/process-python. */
-function pythonBin() {
-  return existsSync(".venv/bin/python3") ? ".venv/bin/python3" : "python3"
-}
-
-function hasPandas() {
-  try {
-    execFileSync(pythonBin(), ["-c", "import pandas, openpyxl"], { stdio: "ignore" })
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** Строит выписку XLSX тем же питоном, что потом её и читает. */
-function buildStatement(path: string) {
-  const script = `
-from openpyxl import Workbook
-wb = Workbook()
-ws = wb.active
-ws.title = "TDSheet"
-ws.append(["Код", "Исполнитель", "Наименование", "Альбом", "Количество", "Сумма, руб."])
-ws.append(["E2E-ISRC-1", "E2E Main", "Трек главного", "Альбом", 100, 1000.0])
-ws.append(["E2E-ISRC-2", "E2E Linked", "Трек привязанного", "Альбом", 40, 400.0])
-ws.append(["E2E-ISRC-3", "E2E Solo", "Трек солиста", "Альбом", 20, 200.0])
-ws.append(["E2E-ISRC-4", "Никому Не Известный", "Ничей трек", "Альбом", 5, 55.0])
-wb.save(${JSON.stringify(path)})
-`
-  execFileSync(pythonBin(), ["-c", script])
+/** Строит выписку XLSX тем же ExcelJS, которым её потом читает генератор. */
+async function buildStatement(path: string) {
+  const workbook = new ExcelJS.Workbook()
+  const sheet = workbook.addWorksheet("TDSheet")
+  sheet.addRow(["Код", "Исполнитель", "Наименование", "Альбом", "Количество", "Сумма, руб."])
+  sheet.addRow(["E2E-ISRC-1", "E2E Main", "Трек главного", "Альбом", 100, 1000.0])
+  sheet.addRow(["E2E-ISRC-2", "E2E Linked", "Трек привязанного", "Альбом", 40, 400.0])
+  sheet.addRow(["E2E-ISRC-3", "E2E Solo", "Трек солиста", "Альбом", 20, 200.0])
+  sheet.addRow(["E2E-ISRC-4", "Никому Не Известный", "Ничей трек", "Альбом", 5, 55.0])
+  await workbook.xlsx.writeFile(path)
 }
 
 test.describe.serial("генератор отчётов", () => {
   const statementPath = join(tmpdir(), `e2e-statement-${Date.now()}.xlsx`)
 
-  test.skip(!hasPandas(), "нужен python с pandas: pip install -r requirements-report-processor.txt")
-
   test.beforeAll(async ({ request }) => {
-    buildStatement(statementPath)
+    await buildStatement(statementPath)
     // Профили должны быть связаны — это и проверяем.
     await request.post("/api/artists/link", {
       headers: sessionHeader(USERS.admin),

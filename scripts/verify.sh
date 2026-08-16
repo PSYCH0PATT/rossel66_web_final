@@ -29,9 +29,6 @@ pnpm lint >/dev/null || fail "линт не прошёл"
 step "Юнит-тесты"
 pnpm test || fail "юнит-тесты упали"
 
-step "Тесты питон-парсера"
-pnpm test:python || fail "тесты парсера упали"
-
 if [ "$FAST" = "1" ]; then
   printf '\n%s✔ Быстрая проверка пройдена за %ss%s\n' "$GREEN" "$(( $(date +%s) - started ))" "$RESET"
   exit 0

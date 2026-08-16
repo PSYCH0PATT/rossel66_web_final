@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
+import { processReports } from '@/lib/report-processing'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/server-auth'
 import { supabase, ensureBucketExists } from '@/lib/supabase'
@@ -35,96 +35,24 @@ type IncompleteArtistFromPython = {
   missingFields: ArtistReportRequiredField[]
 }
 
-function parseIncompleteReportArtists(output: string): IncompleteArtistFromPython[] {
-  const reportMatch = output.match(/REPORT_INCOMPLETE_JSON:(.+)/)
-  if (reportMatch) {
-    try {
-      const parsed = JSON.parse(reportMatch[1]) as {
-        incompleteArtists?: IncompleteArtistFromPython[]
-      }
-      return parsed.incompleteArtists ?? []
-    } catch {
-      return []
-    }
-  }
-
-  const legacyMatch = output.match(/MISSING_CONTRACT_JSON:(.+)/)
-  if (!legacyMatch) return []
-  try {
-    const parsed = JSON.parse(legacyMatch[1]) as { missingContractArtists?: string[] }
-    return (parsed.missingContractArtists ?? []).map((name) => ({
-      name,
-      missingFields: ['percentage' as const],
-    }))
-  } catch {
-    return []
-  }
-}
-
-type UnmatchedArtistFromPython = {
-  trackArtist: string
-  rows: number
-  totalAmount: number
-}
-
-/**
- * Исполнители из выписки, которых парсер не узнал. Их строки в отчёты не попадают
- * — раньше они просто отбрасывались молча, и деньги по ним исчезали без следа.
- * Это список кандидатов на заведение профиля или привязку к существующему.
- */
-function parseUnmatchedArtists(output: string): {
-  unmatchedArtists: UnmatchedArtistFromPython[]
-  unmatchedTruncated: boolean
-} {
-  const match = output.match(/UNMATCHED_JSON:(.+)/)
-  if (!match) return { unmatchedArtists: [], unmatchedTruncated: false }
-  try {
-    const parsed = JSON.parse(match[1]) as {
-      unmatchedArtists?: UnmatchedArtistFromPython[]
-      unmatchedTruncated?: boolean
-    }
-    return {
-      unmatchedArtists: parsed.unmatchedArtists ?? [],
-      unmatchedTruncated: Boolean(parsed.unmatchedTruncated),
-    }
-  } catch {
-    return { unmatchedArtists: [], unmatchedTruncated: false }
-  }
-}
-
 function incompleteReportMessage(incomplete: IncompleteArtistFromPython[]): string {
   if (incomplete.length === 0) return 'Ошибка при обработке файла'
   return `У ${incomplete.length} артистов не хватает обязательных данных для отчёта (ФИО, договор, процент)`
 }
 
-function parsePythonErrorMessage(output: string, errorOutput: string): string | null {
-  const combined = `${output}\n${errorOutput}`
-  const match = combined.match(/Ошибка: (.+)/)
-  return match?.[1]?.trim() ?? null
-}
-
-function resolveProcessFailureMessage(
-  output: string,
-  errorOutput: string,
-  incomplete: IncompleteArtistFromPython[],
-): string {
-  const pythonError = parsePythonErrorMessage(output, errorOutput)
-  if (pythonError) return pythonError
-  return incompleteReportMessage(incomplete)
-}
-
-function resolveApprovalDate(raw: FormDataEntryValue | null): string {
-  const today = new Date().toISOString().slice(0, 10)
-  if (!raw || typeof raw !== 'string') return today
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today
-}
-
+/** Отчёт в ответе API: то, что показывает генератор после прогона. */
 type ReportMetadataFromPython = {
   id: string
   artistName: string
   isRegistered: boolean
   totalPlays: number
   totalAmount: number
+}
+
+function resolveApprovalDate(raw: FormDataEntryValue | null): string {
+  const today = new Date().toISOString().slice(0, 10)
+  if (!raw || typeof raw !== 'string') return today
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today
 }
 
 function findTemplatePath(): string {
@@ -201,26 +129,9 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(tempFilePath, new Uint8Array(ab))
     console.log(`Файл сохранен во временный путь: ${tempFilePath}`)
 
-    // 3. Call Python script
-    const pythonScript = path.join(process.cwd(), 'lib', 'python-report-processor.py')
-    const args = [
-      pythonScript, 
-      tempFilePath, 
-      quarter, 
-      year.toString(),
-      exportedPaths.usersPath,
-      exportedPaths.releasesPath,
-      reportsOutDir,
-      metadataJsonPath
-    ]
-    
-    // Choose Python from .venv (pandas, openpyxl); otherwise system python3
-    const venvPython = path.join(process.cwd(), '.venv', 'bin', 'python3')
-    const pythonCmd =
-      process.platform === 'win32'
-        ? 'py'
-        : (fs.existsSync(venvPython) ? venvPython : 'python3')
-        
+    // 3. Собираем отчёты. Раньше здесь запускался python-процесс, из-за чего
+    // генерация работала только там, где установлен интерпретатор с pandas —
+    // на Vercel её не было вовсе. Теперь это тот же TypeScript в обоих контурах.
     const templatePath = findTemplatePath()
     if (!fs.existsSync(templatePath)) {
       return NextResponse.json({
@@ -228,58 +139,25 @@ export async function POST(request: NextRequest) {
         message: `Шаблон отчёта не найден: ${templatePath}. Должен быть lib/templates/report-mendxza.xlsx`,
       }, { status: 500 })
     }
-    console.log(`Используемый шаблон для отчетов: ${templatePath}`)
-    console.log(`Запуск Python: ${pythonCmd} ${args.join(' ')}`)
-    const pythonProcess = spawn(pythonCmd, args, {
-      env: {
-        ...process.env,
-        TEMPLATE_PATH: templatePath,
-        REPORT_APPROVAL_DATE: approvalDate,
-        ...(hasColumnMapping ? { COLUMN_MAPPING_PATH: columnMappingPath } : {}),
-      }
+
+    fs.mkdirSync(reportsOutDir, { recursive: true })
+    const users = JSON.parse(fs.readFileSync(exportedPaths.usersPath, 'utf-8'))
+    const releases = JSON.parse(fs.readFileSync(exportedPaths.releasesPath, 'utf-8'))
+
+    const processed = await processReports({
+      statementPath: tempFilePath,
+      quarter,
+      year,
+      users,
+      releases,
+      reportsDir: reportsOutDir,
+      templatePath,
+      columnMapping: hasColumnMapping ? columnMapping : null,
+      approvalDate: new Date(`${approvalDate}T00:00:00Z`),
     })
+    for (const line of processed.logs) console.log(line)
+    const output = processed.logs.join('\n')
 
-    let output = ''
-    let errorOutput = ''
-
-    pythonProcess.stdout.on('data', (data) => {
-      output += data.toString()
-      console.log(`Python stdout: ${data}`)
-    })
-
-    pythonProcess.stderr.on('data', (data) => {
-      errorOutput += data.toString()
-      console.error(`Python stderr: ${data}`)
-    })
-
-    return new Promise<Response>((resolve) => {
-      // Без этого обработчика отсутствующий интерпретатор не давал ошибки: событие
-      // 'error' оставалось необработанным, промис не резолвился, и запрос висел до
-      // таймаута платформы (5 минут) и отдавал 504 без объяснения. Так себя ведёт
-      // Vercel — в его Node-рантайме python3 нет вообще.
-      pythonProcess.on('error', (err) => {
-        const isMissing = (err as NodeJS.ErrnoException).code === 'ENOENT'
-        console.error('Не удалось запустить Python:', err)
-        try {
-          if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath)
-          if (exportedPaths) cleanupExportedData(exportedPaths)
-        } catch (cleanupErr) {
-          console.error('Ошибка очистки после сбоя запуска Python:', cleanupErr)
-        }
-        resolve(
-          NextResponse.json(
-            {
-              success: false,
-              message: isMissing
-                ? `Python не найден (${pythonCmd}). Генератор отчётов требует python3 с pandas и openpyxl — на этом стенде их нет. Отчёты собираются там, где приложение работает в docker-образе.`
-                : `Не удалось запустить обработчик отчётов: ${err.message}`,
-            },
-            { status: 503 }
-          )
-        )
-      })
-
-      pythonProcess.on('close', async (code) => {
         // Cleanup input temp file immediately
         try {
           if (fs.existsSync(tempFilePath)) {
@@ -292,8 +170,7 @@ export async function POST(request: NextRequest) {
           console.error('Ошибка при удалении temp_upload:', err)
         }
 
-        if (code === 0) {
-          console.log('Python скрипт выполнен успешно')
+        {
           let uploadStats = {
             uploaded: 0,
             failed: 0,
@@ -303,9 +180,8 @@ export async function POST(request: NextRequest) {
           let reportsForResponse: ReportMetadataFromPython[] = []
           
           try {
-            // Read generated metadata
-            if (fs.existsSync(metadataJsonPath)) {
-              const currentReports = JSON.parse(fs.readFileSync(metadataJsonPath, 'utf-8'))
+            {
+              const currentReports = processed.metadata
               reportsForResponse = currentReports.map((report: {
                 id: string
                 artistName: string
@@ -399,7 +275,7 @@ export async function POST(request: NextRequest) {
                     data: {
                       id: report.id,
                       artistId: report.artistId || null,
-                      artistName: report.artistName || report.artistId,
+                      artistName: report.artistName || report.artistId || 'Неизвестный артист',
                       quarter: report.quarter,
                       year: report.year,
                       fileName: report.fileName,
@@ -477,10 +353,10 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          const incompleteArtists = parseIncompleteReportArtists(output)
-          const { unmatchedArtists, unmatchedTruncated } = parseUnmatchedArtists(output)
+          const incompleteArtists = processed.incompleteArtists
+          const { unmatchedArtists, unmatchedTruncated } = processed
 
-          resolve(NextResponse.json({
+          return NextResponse.json({
             success: true,
             message: incompleteArtists.length
               ? `Отчёты созданы. Пропущено артистов без полных данных: ${incompleteArtists.length}`
@@ -494,31 +370,8 @@ export async function POST(request: NextRequest) {
             reports: reportsForResponse,
             processedArtists: reportsForResponse.length,
             incompleteArtists,
-          }))
-        } else {
-          // Failure branch cleanup
-          if (exportedPaths) cleanupExportedData(exportedPaths)
-          try {
-            if (fs.existsSync(metadataJsonPath)) fs.unlinkSync(metadataJsonPath)
-            if (fs.existsSync(reportsOutDir)) {
-              fs.rmSync(reportsOutDir, { recursive: true, force: true })
-            }
-          } catch (err) {}
-
-          console.error(`Python скрипт завершился с ошибкой: ${code}`)
-          const incompleteArtists = parseIncompleteReportArtists(output)
-          resolve(NextResponse.json({
-            success: false,
-            message: resolveProcessFailureMessage(output, errorOutput, incompleteArtists),
-            error: errorOutput,
-            output: output,
-            incompleteArtists,
-            /** @deprecated use incompleteArtists */
-            missingContractArtists: incompleteArtists.map((a) => a.name),
-          }, { status: 500 }))
+          })
         }
-      })
-    })
 
   } catch (error) {
     // Top-level cleanup if exception happened before Spawn/Promise resolve

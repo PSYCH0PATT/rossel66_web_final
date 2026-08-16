@@ -51,7 +51,6 @@
     "test:forms": "pnpm test && pnpm test:integration",
     "check:drift": "npx tsx scripts/check-schema-drift.ts",
     "seed:e2e": "npx tsx scripts/seed-e2e.ts",
-    "test:python": "sh -c '${npm_config_python:-$([ -x .venv/bin/python3 ] && echo .venv/bin/python3 || echo python3)} -m unittest discover -s tests/python'",
     "verify": "bash scripts/verify.sh",
     "db:clone-to-staging": "bash scripts/clone-prod-db-to-staging.sh",
     "storage:clone-to-staging": "npx tsx scripts/clone-prod-storage-to-staging.mts"
@@ -81,6 +80,7 @@
     "cmdk": "^1.1.1",
     "d3-scale": "4.0.2",
     "d3-shape": "3.2.0",
+    "exceljs": "^4.4.0",
     "extract-zip": "^2.0.1",
     "framer-motion": "^11.15.0",
     "jszip": "^3.10.1",
