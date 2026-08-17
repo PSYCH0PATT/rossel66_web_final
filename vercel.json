@@ -6,11 +6,12 @@
       "dev": false
     }
   },
+  "//": "Расписание стейджа намеренно сдвинуто на час от боевого (crontab): контейнер на Timeweb работает в UTC, и без сдвига оба контура дёргали бы SFTP и внешние API в одну минуту. Боевые часы UTC заняты: 3, 9, 11, 13, 17, 21 — здесь их нет.",
   "crons": [
-    { "path": "/api/cron/analytics-flash", "schedule": "0 17 * * *" },
-    { "path": "/api/cron/playlists-sftp", "schedule": "0 13 * * *" },
-    { "path": "/api/cron/playlist-covers", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/analytics-cleanup", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/forms-health", "schedule": "0 9 * * *" }
+    { "path": "/api/cron/playlist-covers", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/analytics-cleanup", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/forms-health", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/playlists-sftp", "schedule": "0 14 * * *" },
+    { "path": "/api/cron/analytics-flash", "schedule": "0 18 * * *" }
   ]
 }
