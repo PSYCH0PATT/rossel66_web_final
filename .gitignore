@@ -63,6 +63,8 @@ sftp_downloads/*
 !sftp_downloads/.gitkeep
 *.xlsx
 !lib/templates/*.xlsx
+# Выписка-фикстура для регрессии отчётов: без неё golden-тест не на чем гонять
+!tests/fixtures/*.xlsx
 4c1c78d1-*.txt
 skills-lock.json
 
