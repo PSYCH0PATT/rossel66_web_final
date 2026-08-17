@@ -5,5 +5,12 @@
       "main": false,
       "dev": false
     }
-  }
+  },
+  "crons": [
+    { "path": "/api/cron/analytics-flash", "schedule": "0 17 * * *" },
+    { "path": "/api/cron/playlists-sftp", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/playlist-covers", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/analytics-cleanup", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/forms-health", "schedule": "0 9 * * *" }
+  ]
 }
