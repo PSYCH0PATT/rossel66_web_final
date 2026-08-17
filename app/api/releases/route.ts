@@ -88,10 +88,31 @@ export async function GET(request: Request) {
     }
 
     if (q) {
+      // Поиск ищет и по артисту: в админке набирали ник и получали пустой список,
+      // потому что запрос смотрел только в название и UPC. Ник (username) тоже
+      // учитывается — по нему артистов и опознают.
+      const matchedByArtist = await prisma.user.findMany({
+        where: {
+          role: "artist",
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { username: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true },
+      })
+      const matchedIds = matchedByArtist.map((u) => u.id)
+
       andParts.push({
         OR: [
           { title: { contains: q, mode: "insensitive" } },
           { upc: { contains: q, mode: "insensitive" } },
+          ...(matchedIds.length
+            ? [
+                { artistId: { in: matchedIds } },
+                { featuredArtistIds: { hasSome: matchedIds } },
+              ]
+            : []),
         ],
       })
     }
@@ -100,7 +121,10 @@ export async function GET(request: Request) {
       const matchingUsers = await prisma.user.findMany({
         where: {
           role: "artist",
-          name: { contains: artistName, mode: "insensitive" },
+          OR: [
+            { name: { contains: artistName, mode: "insensitive" } },
+            { username: { contains: artistName, mode: "insensitive" } },
+          ],
         },
         select: { id: true },
       })

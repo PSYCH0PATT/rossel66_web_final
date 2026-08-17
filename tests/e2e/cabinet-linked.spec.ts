@@ -193,6 +193,38 @@ test.describe.serial("связанные профили", () => {
     expect(await totalFor(`&profileId=${USERS.linked.id}`)).toBe(1000)
   })
 
+  test("в колонке артиста стоит владелец релиза, а не владелец кабинета", async ({ request }) => {
+    // Релизы группы принадлежат разным профилям: подписывать их именем главного
+    // было бы неверно — пользователь видел бы helmxnq под релизами lunstery.
+    const response = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&pageSize=100`
+    )
+    expect(response.status()).toBe(200)
+    const { releases } = await response.json()
+
+    const linkedRelease = releases.find((r: { artistId: string }) => r.artistId === USERS.linked.id)
+    expect(linkedRelease, "в группе должен быть релиз привязанного профиля").toBeTruthy()
+    expect(linkedRelease.artistName).toBe("E2E Linked")
+
+    const mainRelease = releases.find((r: { artistId: string }) => r.artistId === USERS.main.id)
+    expect(mainRelease.artistName).toBe("E2E Main")
+  })
+
+  test("поиск релизов в админке находит по нику артиста", async ({ request }) => {
+    // Раньше запрос смотрел только в название и UPC, и поиск по нику давал пусто.
+    const byUsername = await getAs(request, USERS.admin, "/api/releases?q=e2e-linked&pageSize=100")
+    expect(byUsername.status()).toBe(200)
+    const found = (await byUsername.json()).releases
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.every((r: { artistId: string }) => r.artistId === USERS.linked.id)).toBe(true)
+
+    // И по отображаемому имени тоже.
+    const byName = await getAs(request, USERS.admin, "/api/releases?q=E2E Linked&pageSize=100")
+    expect((await byName.json()).releases.length).toBeGreaterThan(0)
+  })
+
   test("привязанный профиль исчезает из списка артистов в админке", async ({ request }) => {
     const response = await getAs(request, USERS.admin, "/api/artists?pageSize=100")
     expect(response.status()).toBe(200)

@@ -23,7 +23,15 @@ interface Release {
   artistDisplay: string
 }
 
-function buildArtistDisplay(release: any, mainName: string): string {
+/**
+ * Кто указан в колонке «Артисты».
+ *
+ * Основным берётся артист самого релиза (`artistName` из API), а не владелец
+ * кабинета: в объединённом кабинете группы связанных профилей релизы принадлежат
+ * разным профилям, и подпись именем главного была бы неверной.
+ */
+function buildArtistDisplay(release: any, fallbackName: string): string {
+  const mainName = release.artistName || fallbackName
   const featuredNames: string[] = []
   if (Array.isArray(release.featuredArtistNames)) {
     for (const nm of release.featuredArtistNames) {
