@@ -25,14 +25,15 @@ test.describe.serial("связанные профили", () => {
     expect(response?.status()).toBe(404)
   })
 
-  test("до привязки главный видит только свои релизы", async ({ request }) => {
+  test("до привязки главный видит свои релизы и те, где он приглашён", async ({ request }) => {
     const response = await getAs(
       request,
       USERS.main,
       `/api/releases?artistId=${USERS.main.id}&pageSize=100`
     )
     expect(response.status()).toBe(200)
-    expect((await response.json()).total).toBe(2)
+    // 2 своих + 1 чужой, где главный приглашённый.
+    expect((await response.json()).total).toBe(3)
   })
 
   test("привязка доступна только админу", async ({ request }) => {
@@ -97,14 +98,14 @@ test.describe.serial("связанные профили", () => {
   })
 
   test("кабинет показывает релизы всех профилей группы", async ({ request }) => {
-    // Сид: 2 релиза у главного + 3 у привязанного.
+    // Сид: 2 у главного + 3 у привязанного + 1 с участием главного.
     const all = await getAs(
       request,
       USERS.main,
       `/api/releases?artistId=${USERS.main.id}&pageSize=100`
     )
     expect(all.status()).toBe(200)
-    expect((await all.json()).total).toBe(5)
+    expect((await all.json()).total).toBe(6)
   })
 
   test("фильтр «Профиль» сужает список до одного профиля", async ({ request }) => {
@@ -113,7 +114,8 @@ test.describe.serial("связанные профили", () => {
       USERS.main,
       `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.main.id}&pageSize=100`
     )
-    expect((await onlyMain.json()).total).toBe(2)
+    // 2 своих + 1 с участием.
+    expect((await onlyMain.json()).total).toBe(3)
 
     const onlyLinked = await getAs(
       request,
@@ -131,7 +133,7 @@ test.describe.serial("связанные профили", () => {
       `/api/releases?artistId=${USERS.main.id}&profileId=${USERS.solo.id}&pageSize=100`
     )
     const total = (await response.json()).total
-    expect(total, "чужой profileId игнорируется, отдаётся группа").toBe(5)
+    expect(total, "чужой profileId игнорируется, отдаётся группа").toBe(6)
   })
 
   test("релизы привязанного профиля открываются из кабинета группы", async ({ request }) => {
@@ -148,6 +150,28 @@ test.describe.serial("связанные профили", () => {
 
     const asStranger = await getAs(request, USERS.stranger, `/api/releases/${release.id}`)
     expect(asStranger.status()).toBe(403)
+  })
+
+  test("релиз с участием артиста открывается, а не отдаёт «не найден»", async ({ request }) => {
+    // Релиз принадлежит другому артисту, наш — приглашённый. В списке он есть,
+    // значит и карточка обязана открываться: раньше охват карточки был уже, чем у
+    // списка, и своя же строка отдавала 403.
+    const list = await getAs(
+      request,
+      USERS.main,
+      `/api/releases?artistId=${USERS.main.id}&pageSize=100`
+    )
+    const featured = (await list.json()).releases.find(
+      (r: { id: string }) => r.id === "e2e-rel-feat"
+    )
+    expect(featured, "релиз с участием должен быть в списке кабинета").toBeTruthy()
+
+    const card = await getAs(request, USERS.main, "/api/releases/e2e-rel-feat")
+    expect(card.status(), "карточка релиза с участием").toBe(200)
+
+    // Посторонний, которого в релизе нет, по-прежнему не проходит.
+    const outsider = await getAs(request, USERS.solo, "/api/releases/e2e-rel-feat")
+    expect(outsider.status()).toBe(403)
   })
 
   test("главный скачивает отчёт привязанного, посторонний — нет", async ({ request }) => {
@@ -256,7 +280,8 @@ test.describe.serial("связанные профили", () => {
       USERS.main,
       `/api/releases?artistId=${USERS.main.id}&pageSize=100`
     )
-    expect((await releases.json()).total, "снова только свои").toBe(2)
+    // Свои 2 + релиз с участием: он остаётся и после отвязки, артист в нём есть.
+    expect((await releases.json()).total, "релизы привязанного ушли").toBe(3)
 
     const admin = await getAs(request, USERS.admin, "/api/artists?pageSize=100")
     const usernames = (await admin.json()).artists.map((a: { username: string }) => a.username)

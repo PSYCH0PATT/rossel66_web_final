@@ -196,13 +196,19 @@ async function main() {
     ],
   })
 
-  // Релизы: у главного 2, у привязанного 3. Кабинет группы должен показывать 5,
-  // фильтр по профилю — 2 или 3. Контрактные числа для e2e.
+  // Релизы. Контрактные числа для e2e:
+  //   у главного 2 своих, у привязанного 3, плюс 1 чужой, где главный приглашённый.
+  //   кабинет группы  → 6 (5 своих + 1 с участием)
+  //   фильтр «главный» → 3 (2 своих + 1 с участием)
+  //   фильтр «привязанный» → 3
+  // Релиз с участием обязан не только показываться в списке, но и открываться:
+  // артист есть в этом релизе, значит он его.
   const release = (
     id: string,
     artistId: string,
     title: string,
-    releaseDate: string
+    releaseDate: string,
+    featuredArtistIds: string[] = []
   ) => ({
     id,
     artistId,
@@ -211,6 +217,7 @@ async function main() {
     releaseDateSort: new Date(releaseDate),
     status: "Доставлен",
     type: "single",
+    featuredArtistIds,
     tracks: [],
   })
 
@@ -223,6 +230,11 @@ async function main() {
       release("e2e-rel-linked-2", "e2e-linked-id", "E2E Linked Track Two", "2026-04-10"),
       release("e2e-rel-linked-3", "e2e-linked-id", "E2E Linked Track Three", "2026-05-10"),
       release("e2e-rel-solo-1", "e2e-solo-id", "E2E Solo Track", "2026-01-20"),
+      // Релиз чужого артиста, где главный — приглашённый. В списке кабинета он
+      // виден, значит и карточка обязана открываться.
+      release("e2e-rel-feat", "e2e-stranger-id", "E2E Featuring Track", "2026-06-10", [
+        "e2e-main-id",
+      ]),
     ],
   })
 

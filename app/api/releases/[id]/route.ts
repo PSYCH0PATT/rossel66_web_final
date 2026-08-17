@@ -19,10 +19,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const release = releaseFromPrisma(raw)
-    // Релиз может висеть на любом профиле группы (AKA) — кабинет у них общий.
+    // Тот же охват, что и в списке релизов: свои релизы группы (AKA) плюс те, где
+    // кто-то из группы приглашённый. Без второго условия карточка отдавала 403 на
+    // релиз, который в списке при этом показывался, — «Релиз не найден» на своей же
+    // строке.
     if (session.role !== "admin") {
       const groupIds = await getArtistGroupIds(session.id)
-      if (!release.artistId || !groupIds.includes(release.artistId)) {
+      const owns = release.artistId ? groupIds.includes(release.artistId) : false
+      const featured = (release.featuredArtistIds ?? []).some((id) => groupIds.includes(id))
+      if (!owns && !featured) {
         return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
       }
     }
@@ -50,6 +55,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (!raw) {
       return NextResponse.json({ success: false, error: "Release not found" }, { status: 404 })
     }
+    // На запись охват уже: приглашённый релиз видит, но не правит — это чужой релиз.
     if (session.role !== "admin") {
       const groupIds = await getArtistGroupIds(session.id)
       if (!raw.artistId || !groupIds.includes(raw.artistId)) {
