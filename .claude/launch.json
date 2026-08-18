@@ -4,8 +4,29 @@
     {
       "name": "rossel-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "rossel-stand",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "set -a; . ./.env.e2e; set +a; exec pnpm exec next dev -p 3000"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "rossel-staging",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "set -a; . ./.env.staging.local; DATABASE_URL=\"$STAGING_DATABASE_URL\"; NEXT_PUBLIC_SUPABASE_URL=\"$STAGING_SUPABASE_URL\"; SUPABASE_SERVICE_ROLE_KEY=\"$STAGING_SUPABASE_SERVICE_ROLE_KEY\"; AUTH_SECRET=\"$STAGING_AUTH_SECRET\"; BUILDIN_DUAL_WRITE=false; PYRUS_WRITE_DISABLED=true; ENABLE_IN_PROCESS_SCHEDULER=false; set +a; exec pnpm exec next dev -p 3001"
+      ],
+      "port": 3001
     }
   ]
 }
