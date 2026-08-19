@@ -14,14 +14,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { BarChart3, CalendarIcon, Loader2, TrendingUp } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
-import TrackPaidFreeDistribution from "@/components/analytics/TrackPaidFreeDistribution"
 import { UnmappedArtistsPanel, UnmappedArtistsTrigger } from "@/components/analytics/unmapped-artists-panel"
 import { formatDayMonthUtc } from "@/lib/format-date"
+import { PageHeader } from "@/components/ui/page-header"
+import { SegmentedControl } from "@/components/ui/segmented-control"
+import { DatePicker } from "@/components/ui/date-picker"
+import { FileInput } from "@/components/ui/file-input"
+import { Banner } from "@/components/ui/banner"
+import { Spinner } from "@/components/ui/spinner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { SkeletonValue } from "@/components/ui/skeleton-presets"
+import { SeriesBar } from "@/components/charts/series-bar"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -32,17 +39,6 @@ const PERIOD_OPTIONS = [
   { value: "180d", label: "6 месяцев" },
   { value: "365d", label: "Год" },
   { value: "custom", label: "Выбранный период" },
-]
-
-const BAR_COLORS = {
-  paid: "#10b981",
-  free: "#6b7280",
-}
-
-const SOURCE_COLORS = [
-  "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
-  "#14b8a6", "#a855f7",
 ]
 
 interface Track {
@@ -112,6 +108,20 @@ function getDateRange(period: string): { startDate: string; endDate: string } {
 
 /** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
 const formatDate = formatDayMonthUtc
+
+/** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт API синхронизации. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()
@@ -370,7 +380,7 @@ export default function AdminAnalyticsPage() {
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+          <Spinner />
         </div>
       )
   }
@@ -384,14 +394,16 @@ export default function AdminAnalyticsPage() {
     
       <div className="space-y-6">
         {/* TopAppBar Mapping */}
-        <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
-          {/* Left: breadcrumb + title + admin actions */}
-          <div className="flex flex-col gap-1 shrink-0">
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight uppercase">АНАЛИТИКА</h1>
+        <PageHeader
+          className="pb-6"
+          rowClassName="md:flex-col md:items-start md:gap-4 lg:flex-row lg:items-center lg:gap-6"
+          actionsClassName="w-full min-w-0 shrink lg:w-auto"
+          title="АНАЛИТИКА"
+          meta={
             <nav className="flex items-center gap-2 mt-2">
               <Button
                 variant="ghost"
-                className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7"
+                className="text-[10px] text-gray-500 hover:text-white hover:bg-surface-raised uppercase font-bold tracking-wider px-2 h-7"
                 onClick={() => {
                   setSyncRangeEnd(mskDateString())
                   setSyncDialogOpen(true)
@@ -401,17 +413,26 @@ export default function AdminAnalyticsPage() {
                 {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                 Синхронизировать
               </Button>
-              <label className="cursor-pointer">
-                <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
-                <Button variant="ghost" className="text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7" asChild disabled={importing}>
-                  <span>{importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin inline" /> : null}Загрузить CSV</span>
-                </Button>
-              </label>
+              <FileInput
+                accept=".csv"
+                onChange={handleImport}
+                disabled={importing}
+                buttonLabel={
+                  <>
+                    {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin inline" /> : null}
+                    Загрузить CSV
+                  </>
+                }
+                buttonVariant="ghost"
+                buttonClassName="text-[10px] text-gray-500 hover:text-white hover:bg-surface-raised uppercase font-bold tracking-wider px-2 h-7"
+                icon={null}
+                showFileName={false}
+              />
               <UnmappedArtistsTrigger count={unmappedCount} onOpen={() => setUnmappedOpen(true)} />
             </nav>
-          </div>
-
-          {/* Right: filters — на мобилке сетка 50/50 + период на всю ширину; с md — ряд */}
+          }
+          actions={
+          /* фильтры — на мобилке сетка 50/50 + период на всю ширину; с md — ряд */
           <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
             <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:contents">
             {/* Artist select — pill style */}
@@ -500,58 +521,31 @@ export default function AdminAnalyticsPage() {
             </div>
 
             {/* Period pills — tablet+ */}
-            <div className="hidden rounded-xl border border-white/10 bg-white/5 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:flex">
-              {[
+            <SegmentedControl
+              aria-label="Период"
+              className="hidden md:inline-flex"
+              value={period}
+              onValueChange={setPeriod}
+              options={[
                 { value: "7d", label: "7Д" },
                 { value: "30d", label: "30Д" },
                 { value: "90d", label: "90Д" },
                 { value: "180d", label: "180Д" },
                 { value: "365d", label: "Год" },
                 { value: "custom", label: "Custom" },
-              ].map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setPeriod(p.value)}
-                  className={`px-3 py-1.5 min-w-[max-content] text-[10px] font-bold uppercase tracking-widest transition-colors rounded-md ${
-                    period === p.value
-                      ? "text-emerald-400 bg-emerald-500/10"
-                      : "text-gray-500 hover:text-emerald-400"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+              ]}
+            />
 
             {/* Custom date pickers */}
             {period === "custom" && (
               <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
-                      <CalendarIcon className="mr-2 h-3 w-3" />
-                      {customStart ? customStart.toLocaleDateString("ru-RU") : "ОТ"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={customStart} onSelect={setCustomStart} />
-                  </PopoverContent>
-                </Popover>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
-                      <CalendarIcon className="mr-2 h-3 w-3" />
-                      {customEnd ? customEnd.toLocaleDateString("ru-RU") : "ДО"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker value={customStart} onChange={setCustomStart} placeholder="ОТ" />
+                <DatePicker value={customEnd} onChange={setCustomEnd} placeholder="ДО" />
               </div>
             )}
           </div>
-        </header>
+          }
+        />
 
         <Dialog
           open={syncDialogOpen}
@@ -560,7 +554,7 @@ export default function AdminAnalyticsPage() {
             if (open) setSyncRangeEnd(mskDateString())
           }}
         >
-          <DialogContent className="max-w-md border border-white/10 bg-[#141414] text-white shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:rounded-2xl [&>button]:text-gray-400 [&>button]:hover:text-white">
+          <DialogContent className="max-w-md border border-white/10 bg-surface-raised text-white shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:rounded-2xl [&>button]:text-gray-400 [&>button]:hover:text-white">
             <DialogHeader>
               <DialogTitle className="font-display text-xl uppercase tracking-tight text-white">
                 Синхронизация SFTP
@@ -572,28 +566,30 @@ export default function AdminAnalyticsPage() {
 
             <div className="space-y-5 pt-1">
               <div className="grid gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   disabled={syncing}
                   onClick={() => void runFlashSync({ mode: "today" })}
-                  className="rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5 disabled:opacity-50"
+                  className="h-auto flex-col items-start gap-0 rounded-lg border-white/10 bg-surface-overlay px-4 py-3 text-left hover:border-primary/30 hover:bg-primary/5"
                 >
                   <span className="text-xs font-bold uppercase tracking-widest text-white">Сегодня (МСК)</span>
                   <span className="mt-1 block text-[11px] font-mono text-gray-500">
                     Один дневной файл: {mskDateString()}
                   </span>
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
                   disabled={syncing}
                   onClick={() => void runFlashSync({ mode: "7days" })}
-                  className="rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 text-left transition-colors hover:border-emerald-500/20 hover:bg-emerald-500/5 disabled:opacity-50"
+                  className="h-auto flex-col items-start gap-0 rounded-lg border-white/10 bg-surface-overlay px-4 py-3 text-left hover:border-emerald-500/20 hover:bg-emerald-500/5"
                 >
                   <span className="text-xs font-bold uppercase tracking-widest text-white">Последние 7 дней</span>
                   <span className="mt-1 block text-[11px] font-mono text-gray-500">
                     Как в cron: все дни с задержкой дополнений по площадкам
                   </span>
-                </button>
+                </Button>
               </div>
 
               <div className="rounded-xl border border-white/5 bg-black/20 p-4">
@@ -602,60 +598,57 @@ export default function AdminAnalyticsPage() {
                   За период
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="date"
-                    value={syncRangeStart}
-                    onChange={(e) => setSyncRangeStart(e.target.value)}
-                    className="h-9 min-w-[9.5rem] rounded-lg border border-white/10 bg-[#0a0a0a] px-2 text-xs font-mono text-gray-200 focus:border-primary/40 focus:outline-none"
+                  <DatePicker
+                    value={parseIsoDate(syncRangeStart)}
+                    onChange={(date) => setSyncRangeStart(toIsoDate(date))}
+                    placeholder="дд.мм.гггг"
+                    className="min-w-[9.5rem] font-mono text-gray-200"
                   />
                   <span className="text-[10px] font-mono uppercase text-gray-600">—</span>
-                  <input
-                    type="date"
-                    value={syncRangeEnd}
-                    onChange={(e) => setSyncRangeEnd(e.target.value)}
-                    className="h-9 min-w-[9.5rem] rounded-lg border border-white/10 bg-[#0a0a0a] px-2 text-xs font-mono text-gray-200 focus:border-primary/40 focus:outline-none"
+                  <DatePicker
+                    value={parseIsoDate(syncRangeEnd)}
+                    onChange={(date) => setSyncRangeEnd(toIsoDate(date))}
+                    placeholder="дд.мм.гггг"
+                    className="min-w-[9.5rem] font-mono text-gray-200"
                   />
                 </div>
                 <Button
                   type="button"
+                  variant="cta"
                   disabled={syncing}
                   onClick={handleSyncRange}
-                  className="mt-4 w-full bg-[#10b981] font-bold text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400 hover:scale-[1.02] transition-all"
+                  className="mt-4 w-full transition-all hover:scale-[1.02]"
                 >
                   {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> : null}
                   Импорт за период
                 </Button>
               </div>
 
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <Banner variant="warning" icon={null} className="flex-col rounded-xl border-status-warning/20 bg-status-warning/5 p-4">
                 <p className="text-[11px] leading-relaxed text-amber-200/90">
                   Полный импорт скачает и обработает все доступные даты на SFTP. Дубликаты в БД не создаются, но это долго и нагружает диск.
                 </p>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="warning-outline"
                   disabled={syncing}
                   onClick={() => void runFlashSync({ mode: "all" })}
-                  className="mt-3 w-full border-amber-500/30 bg-transparent text-[10px] font-mono uppercase tracking-widest text-amber-200/90 hover:bg-amber-500/10 hover:text-amber-100"
+                  className="mt-3 w-full text-[10px] font-mono uppercase tracking-widest"
                 >
                   Импорт всех файлов
                 </Button>
-              </div>
+              </Banner>
             </div>
           </DialogContent>
         </Dialog>
 
         {importResult ? (
-          <div
-            role="status"
-            className={`rounded-xl border px-4 py-3 text-sm font-mono ${
-              importResult.startsWith('Ошибка')
-                ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-            }`}
+          <Banner
+            variant={importResult.startsWith('Ошибка') ? 'danger' : 'success'}
+            className="font-mono"
           >
             {importResult}
-          </div>
+          </Banner>
         ) : null}
 
         {/* HERO SUMMARY CARD */}
@@ -685,12 +678,19 @@ export default function AdminAnalyticsPage() {
           <div className="relative z-10 min-w-0 shrink">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Общее число стримов</h3>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="text-3xl font-black leading-none text-white font-display uppercase tracking-tight drop-shadow-[0_2px_15px_rgba(255,255,255,0.1)] tabular-nums sm:text-4xl">
-                {totalStreams.toLocaleString("ru-RU")}
-              </span>
-              <span className="text-emerald-400 flex shrink-0 items-center">
-                <span className="material-symbols-outlined text-[14px] leading-none">trending_up</span>
-              </span>
+              {/* F-54: пока идёт загрузка — скелетон, а не честный на вид «0». */}
+              {loading ? (
+                <SkeletonValue className="w-40 sm:h-10" />
+              ) : (
+                <>
+                  <span className="text-3xl font-black leading-none text-white font-display uppercase tracking-tight drop-shadow-[0_2px_15px_rgba(255,255,255,0.1)] tabular-nums sm:text-4xl">
+                    {totalStreams.toLocaleString("ru-RU")}
+                  </span>
+                  <span className="text-emerald-400 flex shrink-0 items-center">
+                    <span className="material-symbols-outlined text-[14px] leading-none">trending_up</span>
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -698,30 +698,41 @@ export default function AdminAnalyticsPage() {
           <div className="relative z-10 flex w-full min-w-0 flex-wrap items-stretch justify-between gap-4 border-t border-white/5 pt-4 sm:w-auto sm:justify-end sm:border-t-0 sm:pt-0">
             <div className="min-w-0 flex-1 sm:flex-none sm:text-right">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Платные</p>
-              <p className="text-xl font-black leading-none text-emerald-400 font-display tabular-nums sm:text-2xl">
-                {totalPaid.toLocaleString("ru-RU")}
-              </p>
+              {loading ? (
+                <SkeletonValue className="h-6 w-20 sm:ml-auto" />
+              ) : (
+                <p className="text-xl font-black leading-none text-emerald-400 font-display tabular-nums sm:text-2xl">
+                  {totalPaid.toLocaleString("ru-RU")}
+                </p>
+              )}
             </div>
             <div className="hidden w-px self-stretch bg-white/10 sm:block" aria-hidden />
             <div className="min-w-0 flex-1 text-right sm:flex-none">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">Бесплатные</p>
-              <p className="text-xl font-black leading-none text-gray-400 font-display tabular-nums sm:text-2xl">
-                {totalFree.toLocaleString("ru-RU")}
-              </p>
+              {loading ? (
+                <SkeletonValue className="ml-auto h-6 w-20" />
+              ) : (
+                <p className="text-xl font-black leading-none text-gray-400 font-display tabular-nums sm:text-2xl">
+                  {totalFree.toLocaleString("ru-RU")}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            <Spinner />
           </div>
         ) : !data || (data.streamsByDay.length === 0 && data.paidVsFree.every(p => p.value === 0)) ? (
-          <Card className="stat-card-glass bg-[#141414]/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden">
-            <CardContent className="py-16 text-center px-6">
-              <BarChart3 className="h-12 w-12 mx-auto text-gray-500 mb-4 opacity-50" />
-              <h3 className="text-lg font-bold text-white tracking-wide">Нет данных</h3>
-              <p className="text-gray-400 mt-2 text-sm">Импортируйте CSV файл из rossel_flash или дождитесь автоматического импорта в 20:00 МСК</p>
+          <Card className="stat-card-glass bg-surface-raised/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden">
+            <CardContent className="p-0">
+              <EmptyState
+                icon="bar_chart"
+                title="Нет данных"
+                description="Импортируйте CSV файл из rossel_flash или дождитесь автоматического импорта в 20:00 МСК"
+                className="px-6"
+              />
             </CardContent>
           </Card>
         ) : (
@@ -749,7 +760,12 @@ export default function AdminAnalyticsPage() {
                 <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">По трекам</p>
               </CardHeader>
               <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-                <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 h-[290px]">
+                {/* F-38/F-39: скролл с видимым скроллбаром и фейдом вместо «обрыва» списка. */}
+                <ScrollArea
+                  className="h-[290px]"
+                  viewportClassName="flex flex-col gap-1.5 pr-1"
+                  fadeClassName="from-surface-raised"
+                >
                   {tracksForChart.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                   ) : (
@@ -772,7 +788,7 @@ export default function AdminAnalyticsPage() {
                       )
                     })
                   )}
-                </div>
+                </ScrollArea>
               </CardContent>
             </Card>
 
@@ -783,7 +799,12 @@ export default function AdminAnalyticsPage() {
                 <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {tracksForChart.length} треков</p>
               </CardHeader>
               <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-                <div className="flex flex-col gap-0 overflow-y-auto pr-1 h-[290px]">
+                {/* F-38/F-39: второй scroll-trap — тот же ScrollArea с аффордансом. */}
+                <ScrollArea
+                  className="h-[290px]"
+                  viewportClassName="flex flex-col gap-0 pr-1"
+                  fadeClassName="from-surface-raised"
+                >
                   {tracksForChart.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                   ) : (
@@ -795,23 +816,14 @@ export default function AdminAnalyticsPage() {
                         <div key={item.isrc || idx} className="flex flex-col flex-shrink-0 group py-1.5 border-b border-white/[0.03] last:border-0">
                           <div className="flex items-center gap-3 w-full">
                             <span className="text-[11px] font-card-heading font-medium text-gray-400 truncate shrink-0 w-[130px] group-hover:text-gray-200 transition-colors" title={label}>{label}</span>
-                            <div className="flex-1 min-w-0 h-[3px] bg-gray-800/80 rounded-full overflow-hidden self-center relative">
-                              <div
-                                className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-                                style={{
-                                  width: `${Math.max(pct, 2)}%`,
-                                  backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
-                                  boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
-                                }}
-                              />
-                            </div>
+                            <SeriesBar percent={pct} index={idx} className="min-w-0 flex-1 self-center" />
                             <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 w-[66px] text-right tabular-nums">{item.value.toLocaleString('ru-RU')}</span>
                           </div>
                         </div>
                       )
                     })
                   )}
-                </div>
+                </ScrollArea>
               </CardContent>
             </Card>
             
@@ -832,16 +844,7 @@ export default function AdminAnalyticsPage() {
                           <span className="text-[11px] font-card-heading font-bold text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors">{item.name}</span>
                           <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 tabular-nums">{item.value.toLocaleString("ru-RU")}</span>
                         </div>
-                        <div className="w-full h-[3px] bg-gray-800/80 rounded-full overflow-hidden mt-1 relative">
-                          <div
-                            className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-                            style={{
-                              width: `${Math.max(pct, 2)}%`,
-                              backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
-                              boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
-                            }}
-                          />
-                        </div>
+                        <SeriesBar percent={pct} index={idx} className="mt-1 w-full" />
                       </div>
                     )
                   })}

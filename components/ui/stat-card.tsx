@@ -44,13 +44,21 @@ export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: string
   /** Фоновая иконка-вотермарка у правого края (stat-dash-bg-*). */
   bgIcon?: string
+  /**
+   * Классы вотермарки поверх тона: модификатор `stat-dash-bg-icon--short`
+   * для приземистых глифов (groups) и точечные оттенки.
+   */
+  bgIconClassName?: string
   tone?: keyof typeof TONES
   /** Дополнительная строка под значением (дельта, подпись периода). */
   footer?: React.ReactNode
 }
 
 const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
-  ({ label, value, icon, bgIcon, tone = "neutral", footer, className, children, ...props }, ref) => {
+  (
+    { label, value, icon, bgIcon, bgIconClassName, tone = "neutral", footer, className, children, ...props },
+    ref
+  ) => {
     const toneClasses = TONES[tone]
     return (
       <div
@@ -66,7 +74,8 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
             <span
               className={cn(
                 "material-symbols-outlined stat-dash-bg-icon",
-                toneClasses.watermark
+                toneClasses.watermark,
+                bgIconClassName
               )}
               aria-hidden
             >

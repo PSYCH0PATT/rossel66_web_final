@@ -5,18 +5,20 @@ import UnregisteredReportsList from "@/components/unregistered-reports-list"
 import SimpleReportUploader from "@/components/simple-report-uploader"
 import { MissingContractBanner } from "@/components/missing-contract-banner"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { PageHeader } from "@/components/ui/page-header"
+
+/** Общий вид вкладки: раньше эти классы были выписаны у каждой из четырёх. */
+const TAB_TRIGGER_CLASS =
+  "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
 
 export default function ReportsPage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-6">
-          <div className="border-b border-white/5 pb-8">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Отчёты</h1>
-            <p className="text-sm text-gray-400 font-light mt-2 max-w-md">
-              Зарегистрированные артисты, очередь без кабинета и загрузка файлов
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          size="md"
+          title="Отчёты"
+          subtitle="Зарегистрированные артисты, очередь без кабинета и загрузка файлов"
+        />
 
         {/* Предупреждение о незаполненных ФИО/договоре/проценте у артистов.
             Само себя скрывает, пока таких артистов нет. */}
@@ -24,32 +26,20 @@ export default function ReportsPage() {
 
         <Tabs defaultValue="reports" className="w-full">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-            <TabsTrigger
-              value="reports"
-              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
-            >
+            <TabsTrigger value="reports" className={TAB_TRIGGER_CLASS}>
               <span className="material-symbols-outlined text-lg sm:text-base">description</span>
               <span className="font-mono uppercase leading-tight sm:hidden">С кабинетом</span>
               <span className="hidden font-mono uppercase sm:inline">Зарегистрированные</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="pending-signature"
-              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
-            >
+            <TabsTrigger value="pending-signature" className={TAB_TRIGGER_CLASS}>
               <span className="material-symbols-outlined text-lg sm:text-base">draw</span>
               <span className="font-mono uppercase leading-tight">Ждут подписи</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="unregistered"
-              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
-            >
+            <TabsTrigger value="unregistered" className={TAB_TRIGGER_CLASS}>
               <span className="material-symbols-outlined text-lg sm:text-base">person_off</span>
               <span className="font-mono uppercase leading-tight">Без кабинета</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="upload"
-              className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
-            >
+            <TabsTrigger value="upload" className={TAB_TRIGGER_CLASS}>
               <span className="material-symbols-outlined text-lg sm:text-base">upload</span>
               <span className="font-mono uppercase leading-tight">Загрузка</span>
             </TabsTrigger>

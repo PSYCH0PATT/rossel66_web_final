@@ -1,8 +1,17 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { Banner } from "@/components/ui/banner"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FilterChip } from "@/components/ui/filter-chip"
+import { PageHeader } from "@/components/ui/page-header"
+import { Pagination } from "@/components/ui/pagination"
+import { SearchInput } from "@/components/ui/search-input"
+import { Spinner } from "@/components/ui/spinner"
+import { StatCard } from "@/components/ui/stat-card"
+import { StatusBadge } from "@/components/ui/status-badge"
 import type { AdminArtistItem } from "@/lib/cached-dashboard"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import {
@@ -112,118 +121,98 @@ export default function AdminArtistsClient() {
     }
   }
 
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const to = Math.min(page * pageSize, total)
-  const hasPrev = page > 1
-  const hasNext = page * pageSize < total
-
   return (
     <>
       {banner && (
-        <div
-          role="status"
-          className={`mb-6 rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
-            banner.type === "error"
-              ? "border-red-500/30 bg-red-500/10 text-red-200"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          }`}
+        <Banner
+          className="mb-6"
+          variant={banner.type === "error" ? "danger" : "success"}
         >
-          <span className="material-symbols-outlined flex-shrink-0">
-            {banner.type === "error" ? "error" : "check_circle"}
-          </span>
           {banner.text}
-        </div>
+        </Banner>
       )}
 
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-white/5 pb-8">
-          <div className="min-w-0">
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight uppercase">
-              Артисты
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-xl">
-              {debouncedQ
-                ? `Найдено: ${total} (поиск «${debouncedQ}»)`
-                : filter === "all"
-                  ? `Всего в системе: ${stats.all}`
-                  : filter === "verified"
-                    ? `Подтверждённые: ${stats.verified} из ${stats.all}`
-                    : `Неподтверждённые: ${stats.unverified} из ${stats.all}`}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/dashboard/admin/artists/bulk-add"
-              className="text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest border border-white/10 rounded-lg px-3 py-2 inline-flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      <PageHeader
+        className="mb-8"
+        rowClassName="md:flex-col md:items-start md:gap-6 lg:flex-row lg:items-end"
+        title="Артисты"
+        subtitle={
+          debouncedQ
+            ? `Найдено: ${total} (поиск «${debouncedQ}»)`
+            : filter === "all"
+              ? `Всего в системе: ${stats.all}`
+              : filter === "verified"
+                ? `Подтверждённые: ${stats.verified} из ${stats.all}`
+                : `Неподтверждённые: ${stats.unverified} из ${stats.all}`
+        }
+        actions={
+          <>
+            <Button
+              asChild
+              variant="outline"
+              className="gap-2 rounded-lg border-white/10 bg-transparent px-3 py-2 font-mono text-xs uppercase tracking-widest text-gray-500 hover:bg-transparent hover:text-primary"
             >
-              <span className="material-symbols-outlined text-lg">group_add</span>
-              <span className="hidden sm:inline">Массовое добавление</span>
-            </Link>
-            <Link
-              href="/dashboard/admin/artists/add"
-              className="bg-[#10b981] hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider rounded-lg px-4 py-2.5 inline-flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              <Link href="/dashboard/admin/artists/bulk-add">
+                <span className="material-symbols-outlined text-lg" aria-hidden>group_add</span>
+                <span className="hidden sm:inline">Массовое добавление</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="cta"
+              className="gap-2 rounded-lg px-4 py-2.5 text-xs uppercase tracking-wider"
             >
-              <span className="material-symbols-outlined text-lg">person_add</span>
-              <span className="hidden sm:inline">Добавить артиста</span>
-            </Link>
-          </div>
-        </div>
-      </div>
+              <Link href="/dashboard/admin/artists/add">
+                <span className="material-symbols-outlined text-lg" aria-hidden>person_add</span>
+                <span className="hidden sm:inline">Добавить артиста</span>
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="stat-card-glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-2">Всего</h3>
-          <p className="text-4xl font-bold text-white font-display tabular-nums">{stats.all}</p>
-        </div>
-        <div className="stat-card-glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-2">Подтверждены</h3>
-          <p className="text-4xl font-bold text-white font-display tabular-nums text-primary">{stats.verified}</p>
-        </div>
-        <div className="stat-card-glass p-6 rounded-2xl border border-white/5">
-          <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-2">Новые</h3>
-          <p className="text-4xl font-bold text-white font-display tabular-nums text-yellow-400">{stats.unverified}</p>
-        </div>
+        <StatCard
+          className="border border-white/5 p-6"
+          label="Всего"
+          value={stats.all}
+        />
+        {/* Значение белое: в прежней разметке text-primary перебивался
+            text-white, и карточка рендерилась белой — сохраняем как было. */}
+        <StatCard
+          className="border border-white/5 p-6"
+          label="Подтверждены"
+          value={stats.verified}
+        />
+        <StatCard
+          className="border border-white/5 p-6"
+          label="Новые"
+          value={<span className="text-yellow-400">{stats.unverified}</span>}
+        />
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end justify-between">
-        <div className="relative group max-w-md w-full">
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Поиск по имени или username…"
-            className="bg-black/40 border border-white/10 text-white text-sm rounded-lg focus:ring-[#10b981] focus:border-[#10b981] block min-h-11 w-full p-2.5 pl-10 placeholder-gray-600 font-mono transition-all group-hover:border-white/20 outline-none"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-600 group-hover:text-gray-400 transition-colors text-[18px]">
-            search
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
-          <span className="hidden sm:inline">На стр.</span>
-          {([20, 50, 100] as const).map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => {
-                setPageSize(size)
-                setPage(1)
-              }}
-              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded border px-2 py-1 font-mono text-xs transition-colors ${
-                pageSize === size
-                  ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
-                  : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
-          <span className="tabular-nums ml-2">
-            {from}–{to} / {total}
-          </span>
-        </div>
+        <SearchInput
+          value={q}
+          onValueChange={setQ}
+          placeholder="Поиск по имени или username…"
+          containerClassName="max-w-md w-full"
+          spellCheck={false}
+          autoComplete="off"
+        />
+        <Pagination
+          className="justify-end gap-2"
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          loading={loading}
+          itemForms={["артист", "артиста", "артистов"]}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size as 20 | 50 | 100)
+            setPage(1)
+          }}
+        />
       </div>
 
       <div className="flex flex-wrap gap-2 mb-8">
@@ -234,25 +223,21 @@ export default function AdminArtistsClient() {
             { id: "unverified" as const, label: `Новые (${stats.unverified})` },
           ] as const
         ).map((tab) => (
-          <button
+          <FilterChip
             key={tab.id}
-            type="button"
+            tone="success"
+            active={filter === tab.id}
             onClick={() => setFilter(tab.id)}
-            className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 font-mono text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-              filter === tab.id
-                ? "bg-primary/20 border-primary/30 text-primary"
-                : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-            }`}
+            className="min-h-11 rounded-lg border-white/5 bg-white/5 px-3 py-2 font-mono text-xs text-gray-400 hover:bg-white/10 hover:text-white data-[active=true]:border-primary/30 data-[active=true]:bg-primary/20 data-[active=true]:text-primary"
           >
             {tab.label}
-          </button>
+          </FilterChip>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
+        <div className="flex items-center justify-center py-16">
+          <Spinner label="Loading…" />
         </div>
       ) : (
         <>
@@ -328,32 +313,37 @@ export default function AdminArtistsClient() {
                 {/* Верхний правый угол: подтверждение (по наведению) и метка «Новый». */}
                 {isNew && (
                   <div className="absolute z-10 flex items-center gap-1" style={{ top: pad, right: pad }}>
-                    <button
-                      type="button"
+                    <Button
+                      size="icon"
+                      variant="success-outline"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         verifyArtist(artist.id)
                       }}
                       disabled={isVerifying[artist.id]}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/20 text-emerald-300 opacity-0 transition-opacity duration-150 hover:border-emerald-300/80 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:opacity-100 group-hover:opacity-100"
+                      className="h-5 w-5 shrink-0 rounded-full border-emerald-400/40 bg-emerald-500/20 text-emerald-300 opacity-0 transition-opacity duration-150 hover:border-emerald-300/80 focus-visible:opacity-100 group-hover:opacity-100 max-md:h-5 max-md:w-5 pointer-coarse:h-5 pointer-coarse:w-5"
                       aria-label={`Подтвердить артиста ${artist.name}`}
                       title="Подтвердить артиста"
                     >
                       {isVerifying[artist.id] ? (
-                        <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-emerald-300 border-t-transparent" />
+                        <Spinner size="sm" className="h-2.5 w-2.5 [&>span]:h-2.5 [&>span]:w-2.5" />
                       ) : (
-                        <span className="material-symbols-outlined leading-none" style={{ fontSize: 13 }}>
+                        <span className="material-symbols-outlined leading-none" style={{ fontSize: 13 }} aria-hidden>
                           check
                         </span>
                       )}
-                    </button>
+                    </Button>
 
                     {/* Текст центрируем flex-ом при leading-none: с прежними
                         px/py надпись сидела в контуре не по центру. */}
-                    <span className="inline-flex h-5 shrink-0 items-center justify-center rounded-full border border-sky-400/40 bg-sky-500/15 px-2 font-mono text-[9px] uppercase leading-none tracking-wider text-sky-300">
+                    <StatusBadge
+                      variant="delivered"
+                      withIcon={false}
+                      className="h-5 shrink-0 justify-center border-sky-400/40 bg-sky-500/15 px-2 py-0 font-mono text-[9px] font-normal leading-none tracking-wider text-sky-300"
+                    >
                       Новый
-                    </span>
+                    </StatusBadge>
                   </div>
                 )}
 
@@ -364,7 +354,7 @@ export default function AdminArtistsClient() {
                     <span className="flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/15 font-mono text-[11px] font-bold leading-none text-amber-300">
                       !
                     </span>
-                    <div className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-md border border-amber-400/30 bg-[#1c1508] px-2 py-1 font-mono text-[10px] leading-none text-amber-200 shadow-lg group-hover/warn:block">
+                    <div className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-md border border-amber-400/30 bg-status-warning/10 px-2 py-1 font-mono text-[10px] leading-none text-amber-200 shadow-lg backdrop-blur-md group-hover/warn:block">
                       Нет: {missingText}
                     </div>
                     <span className="sr-only">Нет данных для отчёта: {missingText}</span>
@@ -376,31 +366,24 @@ export default function AdminArtistsClient() {
           </div>
 
           {allArtists.length === 0 && (
-            <div className="text-center py-12 text-gray-500 font-mono text-sm uppercase tracking-wider mb-8">
-              Нет артистов по текущим фильтрам
-            </div>
+            <EmptyState
+              className="mb-8 py-12"
+              icon="person_search"
+              title="Нет артистов по текущим фильтрам"
+            />
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-            <button
-              type="button"
-              disabled={!hasPrev}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex min-h-11 items-center gap-1 rounded border border-white/5 bg-white/5 px-3 py-1 font-mono text-xs text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
-              Назад
-            </button>
-            <button
-              type="button"
-              disabled={!hasNext}
-              onClick={() => setPage((p) => p + 1)}
-              className="inline-flex min-h-11 items-center gap-1 rounded border border-white/5 bg-white/5 px-3 py-1 font-mono text-xs text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              Далее
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
-            </button>
-          </div>
+          {/* Навигация и счётчик — один Pagination на экран (C-06, F-27):
+              верхний блок задаёт размер страницы, нижний листает. */}
+          <Pagination
+            className="pt-4"
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            loading={loading}
+            itemForms={["артист", "артиста", "артистов"]}
+            onPageChange={setPage}
+          />
         </>
       )}
 

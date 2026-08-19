@@ -6,6 +6,13 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { formatDayMonthUtc } from "@/lib/format-date"
+import { ChartTooltip } from "@/components/charts/chart-tooltip"
+import { chartXAxisProps, chartYAxisProps } from "@/components/charts/chart-axis"
+import { STREAM_CHART_COLORS } from "@/lib/chart-colors"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Spinner } from "@/components/ui/spinner"
+import { SkeletonValue } from "@/components/ui/skeleton-presets"
+import { useMobileDetector } from "@/hooks/use-mobile-detector"
 
 interface StreamPoint {
   date: string
@@ -40,27 +47,8 @@ function statsFromSortedPoints(sorted: StreamPoint[]) {
   return { totalStreams, change }
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  const val = Number(payload[0]?.value || 0)
-  return (
-    <div style={{
-      background: 'rgba(15,15,15,0.95)',
-      border: '1px solid rgba(16,185,129,0.3)',
-      borderRadius: '8px',
-      padding: '8px 12px',
-    }}>
-      <p style={{ color: '#9ca3af', fontSize: '11px', marginBottom: '4px', fontFamily: 'monospace' }}>
-        {formatDate(label)}
-      </p>
-      <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 700 }}>
-        {val.toLocaleString('ru-RU')}
-      </p>
-    </div>
-  )
-}
-
 export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: StreamingChartProps) {
+  const isMobile = useMobileDetector()
   const sortedInitial = initialStreamsByDay
     ? [...initialStreamsByDay].sort((a, b) => a.date.localeCompare(b.date))
     : []
@@ -130,14 +118,11 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
         <div className="flex justify-between items-start mb-6">
           <div>
             <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Прослушивания за месяц</p>
-            <div className="h-9 w-32 bg-white/5 rounded animate-pulse" />
+            <SkeletonValue />
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-gray-500">
-            <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <span className="text-[10px] font-mono uppercase tracking-widest">Загрузка…</span>
-          </div>
+          <Spinner label="Загрузка…" />
         </div>
       </div>
     )
@@ -152,11 +137,12 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
             <h3 className="text-3xl font-display font-bold text-white">—</h3>
           </div>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-600">
-          <span className="material-symbols-outlined text-4xl opacity-30">bar_chart</span>
-          <p className="text-xs font-mono uppercase tracking-widest">Нет данных аналитики</p>
-          <p className="text-[10px] text-gray-700">Импортируйте CSV, чтобы увидеть прослушивания</p>
-        </div>
+        <EmptyState
+          className="flex-1 py-0"
+          icon="bar_chart"
+          title="Нет данных аналитики"
+          description="Импортируйте CSV, чтобы увидеть прослушивания"
+        />
       </div>
     )
   }
@@ -182,8 +168,8 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
           <AreaChart data={points} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="streamGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor={STREAM_CHART_COLORS.line} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={STREAM_CHART_COLORS.line} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
@@ -194,31 +180,21 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
             <XAxis
               dataKey="date"
               tickFormatter={formatDate}
-              stroke="transparent"
-              tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }}
-              tickLine={false}
-              interval="preserveStartEnd"
+              {...chartXAxisProps({ mobile: isMobile })}
             />
-            <YAxis
-              tickFormatter={formatNum}
-              stroke="transparent"
-              tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }}
-              tickLine={false}
-              axisLine={false}
-              width={40}
-            />
+            <YAxis {...chartYAxisProps()} />
             <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ stroke: 'rgba(16,185,129,0.3)', strokeWidth: 1 }}
+              content={<ChartTooltip labelFormatter={(l) => formatDate(String(l))} />}
+              cursor={{ stroke: STREAM_CHART_COLORS.tooltipBorder, strokeWidth: 1 }}
             />
             <Area
               type="monotone"
               dataKey="streams"
-              stroke="#10b981"
+              stroke={STREAM_CHART_COLORS.line}
               strokeWidth={2.5}
               fill="url(#streamGradient)"
               dot={false}
-              activeDot={{ r: 4, fill: '#10b981', stroke: '#064e3b', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: STREAM_CHART_COLORS.line, stroke: STREAM_CHART_COLORS.activeDotStroke, strokeWidth: 2 }}
               isAnimationActive={false}
               style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.4))' }}
             />

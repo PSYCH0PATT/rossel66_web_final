@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SectionHeader } from "@/components/ui/section-header"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type PickerArtist = {
   id: string
@@ -117,16 +127,13 @@ export function ArtistLinkedProfiles({
 
   return (
     <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-bold tracking-wide text-white">
-        <span className="h-6 w-1.5 rounded-full bg-sky-400" />
-        Связанные профили
-      </h2>
+      <SectionHeader className="mb-4" size="sm" accent="sky" title="Связанные профили" />
 
       {isLinkedItself ? (
-        <p className="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-sm text-gray-300">
+        <Banner variant="info" className="rounded-lg border-sky-500/20 bg-sky-500/5 px-3 py-2 text-gray-300">
           Этот профиль привязан к «{mainProfile?.name ?? "другому артисту"}». Вся статистика и
           отчёты собираются в кабинете главного профиля — отвязать можно в его карточке.
-        </p>
+        </Banner>
       ) : (
         <>
           <p className="mb-6 max-w-2xl text-sm font-light text-gray-400">
@@ -140,40 +147,39 @@ export function ArtistLinkedProfiles({
               <Label htmlFor="link-candidate" className="text-white">
                 Профиль для привязки
               </Label>
-              <select
-                id="link-candidate"
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                disabled={isLoading}
-                className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white focus:border-primary/40 focus:outline-none"
-              >
-                <option value="" className="bg-black">
-                  {isLoading ? "Загрузка…" : "Выберите артиста"}
-                </option>
-                {candidates.map((a) => (
-                  <option key={a.id} value={a.id} className="bg-black">
-                    {a.name} ({a.username})
-                  </option>
-                ))}
-              </select>
+              <Select value={selected} onValueChange={setSelected} disabled={isLoading}>
+                <SelectTrigger
+                  id="link-candidate"
+                  className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white"
+                >
+                  <SelectValue placeholder={isLoading ? "Загрузка…" : "Выберите артиста"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {candidates.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.username})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="button"
+              variant="cta"
               onClick={() => void handleLink()}
               disabled={!selected || isSaving}
-              className="h-11 rounded-lg bg-primary font-semibold text-black hover:bg-primary/90"
+              className="h-11 rounded-lg"
             >
               {isSaving ? "Привязка…" : "Привязать"}
             </Button>
           </div>
 
           {linked.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
-              <span className="material-symbols-outlined mx-auto mb-3 block text-4xl text-gray-500">
-                link
-              </span>
-              <p className="text-sm text-gray-400">Привязанных профилей нет</p>
-            </div>
+            <EmptyState
+              className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8"
+              icon="link"
+              title="Привязанных профилей нет"
+            />
           ) : (
             <div className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/5">
               {linked.map((profile) => (
@@ -188,10 +194,9 @@ export function ArtistLinkedProfiles({
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive-outline"
                     size="sm"
                     onClick={() => void handleUnlink(profile)}
-                    className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
                   >
                     Отвязать
                   </Button>
@@ -203,9 +208,9 @@ export function ArtistLinkedProfiles({
       )}
 
       {error && (
-        <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        <Banner variant="danger" className="mt-4 rounded-lg px-3 py-2">
           {error}
-        </p>
+        </Banner>
       )}
     </div>
   )

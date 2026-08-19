@@ -1,5 +1,6 @@
 import React from "react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { CHART_PAID_FREE_COLORS } from "@/lib/chart-colors"
 
 interface TrackThinPaidFreeBarProps {
   paid: number
@@ -23,21 +24,21 @@ export function TrackThinPaidFreeBar({ paid, free, className = "", heightClass =
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className={`w-full bg-[#141414] rounded-full flex overflow-hidden ${heightClass} ${className}`}>
+      <div className={`w-full bg-surface-raised rounded-full flex overflow-hidden ${heightClass} ${className}`}>
         {/* PAID SEGMENT */}
         {widthPaid > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div 
+              <div
                 className="h-full cursor-crosshair transition-all duration-300 relative z-10"
-                style={{ 
-                  width: `${widthPaid}%`, 
-                  backgroundColor: "#10b981", 
-                  boxShadow: "0 0 4px rgba(16,185,129,0.3)" 
+                style={{
+                  width: `${widthPaid}%`,
+                  backgroundColor: CHART_PAID_FREE_COLORS.paid,
+                  boxShadow: "0 0 4px rgba(16,185,129,0.3)"
                 }}
               />
             </TooltipTrigger>
-            <TooltipContent align="center" className="bg-[#141414] border border-white/10 text-emerald-400 font-mono text-xs shadow-xl">
+            <TooltipContent align="center" className="bg-surface-raised border border-white/10 text-emerald-400 font-mono text-xs shadow-xl">
               Платные: {formatPct(pctPaid)}
             </TooltipContent>
           </Tooltip>
@@ -45,17 +46,16 @@ export function TrackThinPaidFreeBar({ paid, free, className = "", heightClass =
 
         {/* FREE SEGMENT */}
         {widthFree > 0 && (
+          /* Серый сегмента — gray-600 классом: он на тон темнее gray-500 из
+             CHART_PAID_FREE_COLORS.free, менять оттенок волна 1 не должна. */
           <Tooltip>
             <TooltipTrigger asChild>
-              <div 
-                className="h-full cursor-crosshair transition-all duration-300 relative z-0"
-                style={{ 
-                  width: `${widthFree}%`, 
-                  backgroundColor: "#4b5563" 
-                }}
+              <div
+                className="h-full cursor-crosshair transition-all duration-300 relative z-0 bg-gray-600"
+                style={{ width: `${widthFree}%` }}
               />
             </TooltipTrigger>
-            <TooltipContent align="center" className="bg-[#141414] border border-white/10 text-gray-300 font-mono text-xs shadow-xl">
+            <TooltipContent align="center" className="bg-surface-raised border border-white/10 text-gray-300 font-mono text-xs shadow-xl">
               Бесплатные: {formatPct(pctFree)}
             </TooltipContent>
           </Tooltip>

@@ -13,12 +13,18 @@ import { plural } from "@/lib/plural"
  */
 
 export interface FileInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   onFilesChange?: (files: File[]) => void
   buttonLabel?: React.ReactNode
   /** Текст при пустом выборе. */
   emptyLabel?: React.ReactNode
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  /** Классы кнопки: компактные текстовые кнопки в рядах действий. */
+  buttonClassName?: string
+  /** Иконка на кнопке; null — без иконки. */
+  icon?: string | null
+  /** Показывать имя выбранного файла рядом с кнопкой. */
+  showFileName?: boolean
   containerClassName?: string
 }
 
@@ -26,9 +32,13 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
   (
     {
       onFilesChange,
+      onChange,
       buttonLabel = "Выбрать файл",
       emptyLabel = "Файл не выбран",
       buttonVariant = "outline",
+      buttonClassName,
+      icon = "upload_file",
+      showFileName = true,
       containerClassName,
       className,
       disabled,
@@ -47,19 +57,24 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           variant={buttonVariant}
           disabled={disabled}
           onClick={() => innerRef.current?.click()}
+          className={buttonClassName}
         >
-          <span className="material-symbols-outlined" aria-hidden>
-            upload_file
-          </span>
+          {icon && (
+            <span className="material-symbols-outlined" aria-hidden>
+              {icon}
+            </span>
+          )}
           {buttonLabel}
         </Button>
-        <span className="min-w-0 truncate font-mono text-xs text-gray-500">
-          {fileNames.length === 0
-            ? emptyLabel
-            : fileNames.length === 1
-              ? fileNames[0]
-              : `${fileNames.length} ${plural(fileNames.length, ["файл", "файла", "файлов"])}`}
-        </span>
+        {showFileName && (
+          <span className="min-w-0 truncate font-mono text-xs text-gray-500">
+            {fileNames.length === 0
+              ? emptyLabel
+              : fileNames.length === 1
+                ? fileNames[0]
+                : `${fileNames.length} ${plural(fileNames.length, ["файл", "файла", "файлов"])}`}
+          </span>
+        )}
         <input
           {...props}
           id={id}
@@ -75,6 +90,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
             const files = Array.from(e.target.files ?? [])
             setFileNames(files.map((f) => f.name))
             onFilesChange?.(files)
+            onChange?.(e)
           }}
         />
       </div>

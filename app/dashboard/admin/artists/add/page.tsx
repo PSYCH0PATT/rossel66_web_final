@@ -9,6 +9,10 @@ import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Banner } from "@/components/ui/banner"
+import { FileInput } from "@/components/ui/file-input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
 const inputClass =
@@ -145,46 +149,28 @@ export default function AddArtistPage() {
 
   return (
     <div className="space-y-6">
-        <div className="flex flex-col gap-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
-            <div className="min-w-0">
-              <Link
-                href="/dashboard/admin/artists"
-                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                К списку
-              </Link>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                Добавить артиста
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">Создание аккаунта и профиля в системе</p>
-            </div>
+        <PageHeader
+          className="mb-6"
+          size="md"
+          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
+          backHref="/dashboard/admin/artists"
+          title="Добавить артиста"
+          subtitle="Создание аккаунта и профиля в системе"
+          actions={
             <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary">person_add</span>
+              <span className="material-symbols-outlined text-2xl text-primary" aria-hidden>person_add</span>
             </div>
-          </div>
-        </div>
+          }
+        />
 
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
-            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
-            {error}
-          </div>
-        )}
+        {error && <Banner variant="danger">{error}</Banner>}
 
         {success && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
-            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
-            Артист успешно создан! Перенаправление...
-          </div>
+          <Banner variant="success">Артист успешно создан! Перенаправление...</Banner>
         )}
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            Информация об артисте
-          </h2>
+          <SectionHeader className="mb-6" size="sm" title="Информация об артисте" />
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -330,19 +316,14 @@ export default function AddArtistPage() {
                         <span className="material-symbols-outlined text-6xl text-gray-500">person</span>
                       </div>
                     )}
-                    <label
-                      htmlFor="avatar-upload"
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      <span className="material-symbols-outlined text-lg">upload</span>
-                      <span>Загрузить аватар</span>
-                    </label>
-                    <input
+                    <FileInput
                       id="avatar-upload"
-                      type="file"
                       accept="image/*"
                       onChange={handleAvatarChange}
-                      className="hidden"
+                      icon="upload"
+                      buttonLabel="Загрузить аватар"
+                      buttonClassName="gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-black hover:bg-primary/90"
+                      showFileName={false}
                     />
                     <p className="text-xs text-gray-500 mt-2">Рекомендуемый размер: 256×256 px</p>
                   </div>
@@ -416,7 +397,8 @@ export default function AddArtistPage() {
               </Button>
               <Button
                 type="submit"
-                className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
+                variant="cta"
+                className="rounded-lg"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Создание..." : "Создать артиста"}

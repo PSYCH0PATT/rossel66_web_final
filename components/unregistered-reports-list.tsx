@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react"
 import { formatDateRu } from "@/lib/format-date"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, FileText, Loader2, Users, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight } from "lucide-react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Download, FileText, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight } from "lucide-react"
 import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Spinner } from "@/components/ui/spinner"
 
 interface UnregisteredReport {
   id: string
@@ -93,29 +95,21 @@ export default function UnregisteredReportsList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-400">Загрузка отчётов...</span>
+        <Spinner label="Загрузка отчётов..." />
       </div>
     )
   }
 
   if (reports.length === 0) {
+    /* F-47: было три статус-сообщения на экране. Пилюля «Система работает
+       корректно» дублировала заголовок и спорила с баннером о неполных
+       данных — остаётся одно состояние экрана. */
     return (
-      <div className="text-center py-16">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-500/30 mb-6">
-          <Users className="h-10 w-10 text-emerald-400" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-3">
-          Отлично! Нет незарегистрированных отчётов
-        </h3>
-        <p className="text-slate-400 text-lg max-w-md mx-auto">
-          Все отчёты успешно назначены зарегистрированным артистам
-        </p>
-        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-          <span className="text-emerald-300 font-medium">Система работает корректно</span>
-        </div>
-      </div>
+      <EmptyState
+        icon="how_to_reg"
+        title="Отлично! Нет незарегистрированных отчётов"
+        description="Все отчёты успешно назначены зарегистрированным артистам"
+      />
     )
   }
 

@@ -8,6 +8,8 @@ import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
 import { dashboardLogout } from "@/lib/dashboard-logout"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 interface SidebarProps {
   role: "artist" | "admin"
   username?: string
@@ -83,6 +85,117 @@ const SidebarNavItem = memo(function SidebarNavItem({
   )
 })
 
+/** Шапка сайдбара: логотип и — в мобильном drawer'е — крестик закрытия. */
+function SidebarLogoBar({
+  homeHref,
+  onNavigate,
+  onClose,
+}: {
+  homeHref: string
+  onNavigate: () => void
+  onClose?: () => void
+}) {
+  return (
+    <div className="flex h-16 min-h-16 shrink-0 items-center border-b border-white/5 px-2 lg:px-6">
+      <Link
+        href={homeHref}
+        onClick={onNavigate}
+        aria-label="На главную дашборда"
+        className="flex h-full min-h-11 min-w-0 flex-1 items-center justify-center px-2"
+      >
+        <img
+          src="/images/logo.png"
+          alt=""
+          className="h-7 w-auto max-h-7 shrink-0 object-contain"
+        />
+      </Link>
+      {onClose && (
+        <button
+          type="button"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-400 tap-highlight-transparent hover:bg-white/5 hover:text-white [-webkit-tap-highlight-color:transparent]"
+          onClick={onClose}
+          aria-label="Закрыть меню"
+        >
+          <span className="material-symbols-outlined text-2xl leading-none">close</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Список разделов. В drawer'е заголовок группы служит заголовком диалога. */
+function SidebarNav({
+  role,
+  navItems,
+  pathname,
+  onNavigate,
+  titleAs: Title = "div",
+}: {
+  role: "artist" | "admin"
+  navItems: NavItemConfig[]
+  pathname: string
+  onNavigate: () => void
+  titleAs?: React.ElementType
+}) {
+  return (
+    <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
+      <Title className="px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">
+        {role === "artist" ? "Кабинет артиста" : "Панель управления"}
+      </Title>
+      {navItems.map((item) => (
+        <SidebarNavItem
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </nav>
+  )
+}
+
+/** Профиль и выход — нижний блок, который на 390 был недостижим (F-75). */
+function SidebarUserBlock({
+  role,
+  currentUsername,
+  settingsHref,
+  onNavigate,
+  onLogout,
+}: {
+  role: "artist" | "admin"
+  currentUsername: string
+  settingsHref: string
+  onNavigate: () => void
+  onLogout: () => void
+}) {
+  return (
+    <div className="p-6 border-t border-white/5">
+      <Link
+        href={settingsHref}
+        onClick={onNavigate}
+        className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer mb-2"
+      >
+        <div className="flex items-center overflow-hidden">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-800 border border-primary/50 text-white font-bold">
+            {currentUsername.charAt(0).toUpperCase()}
+          </div>
+          <div className="ml-3 overflow-hidden">
+            <p className="text-sm font-bold text-white truncate">{currentUsername || "User"}</p>
+            <p className="text-[10px] text-primary uppercase tracking-widest">{role === "artist" ? "Артист" : "Админ"}</p>
+          </div>
+        </div>
+      </Link>
+      <button
+        onClick={onLogout}
+        className="w-full flex items-center p-3 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+      >
+        <span className="material-symbols-outlined group-hover:text-red-400 transition-colors">logout</span>
+        <span className="ml-4 font-medium tracking-wide text-sm">Выйти</span>
+      </button>
+    </div>
+  )
+}
+
 export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -133,91 +246,71 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
   )
 
   const navItems = role === "artist" ? artistNavItems : adminNavItems
+  const homeHref = role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"
+  const settingsHref = role === "artist" ? `${artistBasePath}/settings` : "/dashboard/admin/settings"
 
   return (
     <>
-      {/* Main Sidebar (Desktop & Mobile when open) */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-[110] flex h-full w-64 flex-shrink-0 flex-col justify-between border-r border-white/5 bg-black/70 glass-panel backdrop-blur-xl transition-transform duration-300 ease-in-out md:static md:z-40 md:translate-x-0 md:bg-black/60 ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
-      >
-        <div className="max-md:pt-[max(0px,env(safe-area-inset-top,0px))]">
-          {/* Logo + close (mobile drawer) */}
-          <div className="flex h-16 min-h-16 shrink-0 items-center border-b border-white/5 px-2 lg:px-6">
-            <Link
-              href={role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"}
-              onClick={handleNavigation}
-              aria-label="На главную дашборда"
-              className="flex h-full min-h-11 min-w-0 flex-1 items-center justify-center px-2"
-            >
-              <img
-                src="/images/logo.png"
-                alt=""
-                className="h-7 w-auto max-h-7 shrink-0 object-contain"
-              />
-            </Link>
-            <button
-              type="button"
-              className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-400 tap-highlight-transparent hover:bg-white/5 hover:text-white [-webkit-tap-highlight-color:transparent]"
-              onClick={() => onMobileMenuOpenChange(false)}
-              aria-label="Закрыть меню"
-            >
-              <span className="material-symbols-outlined text-2xl leading-none">close</span>
-            </button>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
-            <div className="px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">
-              {role === "artist" ? "Кабинет артиста" : "Панель управления"}
-            </div>
-            {navItems.map((item) => (
-              <SidebarNavItem
-                key={item.href}
-                item={item}
-                pathname={pathname}
-                onNavigate={handleNavigation}
-              />
-            ))}
-          </nav>
+      {/* Desktop sidebar */}
+      <aside className="hidden h-full w-64 flex-shrink-0 flex-col justify-between border-r border-white/5 bg-black/60 glass-panel backdrop-blur-xl md:flex">
+        <div>
+          <SidebarLogoBar homeHref={homeHref} onNavigate={handleNavigation} />
+          <SidebarNav
+            role={role}
+            navItems={navItems}
+            pathname={pathname}
+            onNavigate={handleNavigation}
+          />
         </div>
-
-        {/* User / Settings Area */}
-        <div className="p-6 border-t border-white/5">
-          <Link
-            href={role === "artist" ? `${artistBasePath}/settings` : "/dashboard/admin/settings"}
-            onClick={handleNavigation}
-            className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer mb-2"
-          >
-            <div className="flex items-center overflow-hidden">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-800 border border-primary/50 text-white font-bold">
-                {currentUsername.charAt(0).toUpperCase()}
-              </div>
-              <div className="ml-3 overflow-hidden">
-                <p className="text-sm font-bold text-white truncate">{currentUsername || "User"}</p>
-                <p className="text-[10px] text-primary uppercase tracking-widest">{role === "artist" ? "Артист" : "Админ"}</p>
-              </div>
-            </div>
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center p-3 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
-          >
-            <span className="material-symbols-outlined group-hover:text-red-400 transition-colors">logout</span>
-            <span className="ml-4 font-medium tracking-wide text-sm">Выйти</span>
-          </button>
-        </div>
+        <SidebarUserBlock
+          role={role}
+          currentUsername={currentUsername}
+          settingsHref={settingsHref}
+          onNavigate={handleNavigation}
+          onLogout={handleLogout}
+        />
       </aside>
 
-      {/* Mobile Overlay Backdrop */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm md:hidden top-[calc(4rem+env(safe-area-inset-top,0px))]"
-          onClick={() => onMobileMenuOpenChange(false)}
-          aria-hidden
-        />
-      )}
+      {/*
+        Мобильный drawer — C-12 (F-75): у самописного `aside fixed h-full`
+        содержимое не скроллилось, и на 390 нижний блок с «Выйти» был
+        недостижим. Sheet даёт трап фокуса и Esc, ScrollArea — скролл списка;
+        z-стек прежний: панель над шапкой (z-110), подложка под ней (z-100),
+        поэтому бургер остаётся виден и закрывает меню повторным нажатием.
+      */}
+      <Sheet open={mobileMenuOpen} onOpenChange={onMobileMenuOpenChange}>
+        <SheetContent
+          side="left"
+          showClose={false}
+          overlayClassName="z-[100] top-[calc(4rem+env(safe-area-inset-top,0px))]"
+          aria-describedby={undefined}
+          className="z-[110] w-64 gap-0 border-r border-white/5 bg-black/70 p-0 pb-[env(safe-area-inset-bottom,0px)] pt-[max(0px,env(safe-area-inset-top,0px))] glass-panel backdrop-blur-xl sm:max-w-none md:hidden"
+        >
+          <div className="flex min-h-0 flex-1 flex-col">
+            <SidebarLogoBar
+              homeHref={homeHref}
+              onNavigate={handleNavigation}
+              onClose={() => onMobileMenuOpenChange(false)}
+            />
+            <ScrollArea className="flex-1" fadeClassName="from-black/70">
+              <SidebarNav
+                role={role}
+                navItems={navItems}
+                pathname={pathname}
+                onNavigate={handleNavigation}
+                titleAs={SheetTitle}
+              />
+            </ScrollArea>
+          </div>
+          <SidebarUserBlock
+            role={role}
+            currentUsername={currentUsername}
+            settingsHref={settingsHref}
+            onNavigate={handleNavigation}
+            onLogout={handleLogout}
+          />
+        </SheetContent>
+      </Sheet>
     </>
   )
 }

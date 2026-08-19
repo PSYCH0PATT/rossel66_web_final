@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   Download,
   FileText,
-  Loader2,
   Play,
   DollarSign,
   Calendar,
@@ -18,14 +17,17 @@ import {
   XCircle,
   Filter,
   FolderMinus,
-  ChevronLeft,
   PenLine,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
 import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FilterChip } from "@/components/ui/filter-chip"
+import { Pagination } from "@/components/ui/pagination"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
 
 interface Report {
   id: string
@@ -300,92 +302,67 @@ export default function ReportsList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-400">Загрузка отчётов…</span>
+        <Spinner label="Загрузка отчётов…" />
       </div>
     )
   }
 
   if (pairs.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 mb-6">
-          <FileText className="h-10 w-10 text-blue-400" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-3">Нет готовых отчётов</h3>
-        <p className="text-slate-400 text-lg max-w-md mx-auto">
-          Готовые отчёты будут появляться здесь после обработки данных
-        </p>
-      </div>
+      <EmptyState
+        icon="description"
+        title="Нет готовых отчётов"
+        description="Готовые отчёты будут появляться здесь после обработки данных"
+      />
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white">Готовые отчёты</h3>
-          <p className="text-sm text-slate-400">Отчёты зарегистрированных артистов (по кварталам и годам)</p>
-        </div>
-      </div>
+      <SectionHeader
+        className="mb-4"
+        as="h3"
+        size="sm"
+        accent="none"
+        title={
+          <span className="flex flex-col">
+            <span className="text-lg font-semibold text-white">Готовые отчёты</span>
+            <span className="text-sm font-normal text-slate-400">
+              Отчёты зарегистрированных артистов (по кварталам и годам)
+            </span>
+          </span>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2 mb-4 overflow-x-auto pb-2">
         <Filter className="h-4 w-4 text-slate-400 flex-shrink-0" />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setFilter("all")}
-          className="text-xs sm:text-sm whitespace-nowrap"
-          style={{
-            backgroundColor: filter === "all" ? "#3b82f6" : "transparent",
-            borderColor: filter === "all" ? "#3b82f6" : "#64748b",
-            color: filter === "all" ? "white" : "#cbd5e1",
-          }}
-        >
+        <FilterChip tone="info" active={filter === "all"} onClick={() => setFilter("all")}>
           Все отчёты
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        </FilterChip>
+        <FilterChip
+          tone="danger"
+          active={filter === "unsigned"}
           onClick={() => setFilter("unsigned")}
-          className="text-xs sm:text-sm whitespace-nowrap"
-          style={{
-            backgroundColor: filter === "unsigned" ? "#ef4444" : "transparent",
-            borderColor: filter === "unsigned" ? "#ef4444" : "#64748b",
-            color: filter === "unsigned" ? "white" : "#cbd5e1",
-          }}
         >
-          <XCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+          <XCircle className="mr-1" />
           <span>Неподписанные</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        </FilterChip>
+        <FilterChip
+          tone="orange"
+          active={filter === "unpaid"}
           onClick={() => setFilter("unpaid")}
-          className="text-xs sm:text-sm whitespace-nowrap"
-          style={{
-            backgroundColor: filter === "unpaid" ? "#f97316" : "transparent",
-            borderColor: filter === "unpaid" ? "#f97316" : "#64748b",
-            color: filter === "unpaid" ? "white" : "#cbd5e1",
-          }}
         >
-          <DollarSign className="h-4 w-4 mr-1 flex-shrink-0" />
+          <DollarSign className="mr-1" />
           <span>Невыплаченные</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        </FilterChip>
+        <FilterChip
+          tone="warning"
+          active={filter === "acknowledged_unsigned"}
           onClick={() => setFilter("acknowledged_unsigned")}
-          className="text-xs sm:text-sm whitespace-nowrap"
-          style={{
-            backgroundColor: filter === "acknowledged_unsigned" ? "#f59e0b" : "transparent",
-            borderColor: filter === "acknowledged_unsigned" ? "#f59e0b" : "#64748b",
-            color: filter === "acknowledged_unsigned" ? "white" : "#cbd5e1",
-          }}
         >
-          <PenLine className="h-4 w-4 mr-1 flex-shrink-0" />
+          <PenLine className="mr-1" />
           <span>Ознакомлен, не подписан</span>
-        </Button>
+        </FilterChip>
         <div className="ml-auto">
           <ReportSortControls
             value={sortState}
@@ -428,25 +405,23 @@ export default function ReportsList() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="success-outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDownloadAllReports(pair)
                     }}
-                    className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300"
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Скачать все
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="destructive-outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       void handleDeleteQuarter(pair)
                     }}
-                    className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
                     title="Удалить все отчёты этого квартала и года"
                   >
                     <FolderMinus className="h-4 w-4 mr-1" />
@@ -462,7 +437,7 @@ export default function ReportsList() {
               <CardContent className="pt-0">
                 {block?.loading && quarterReports.length === 0 ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                    <Spinner />
                   </div>
                 ) : quarterReports.length === 0 ? (
                   <p className="text-slate-400 text-sm py-4">
@@ -531,10 +506,7 @@ export default function ReportsList() {
                                     onCheckedChange={(checked) =>
                                       void handleStatusUpdate(report.id, "signed", checked, pair)
                                     }
-                                    style={{
-                                      backgroundColor: report.isSigned ? "#10b981" : "#475569",
-                                      border: "1px solid #64748b",
-                                    }}
+                                    className="border border-slate-500 data-[state=checked]:bg-brand data-[state=unchecked]:bg-slate-600"
                                   />
                                 </div>
                                 <div className="flex items-center gap-2 sm:gap-3">
@@ -554,10 +526,7 @@ export default function ReportsList() {
                                     onCheckedChange={(checked) =>
                                       void handleStatusUpdate(report.id, "paid", checked, pair)
                                     }
-                                    style={{
-                                      backgroundColor: report.isPaid ? "#10b981" : "#475569",
-                                      border: "1px solid #64748b",
-                                    }}
+                                    className="border border-slate-500 data-[state=checked]:bg-brand data-[state=unchecked]:bg-slate-600"
                                   />
                                 </div>
                               </div>
@@ -586,51 +555,16 @@ export default function ReportsList() {
                       ))}
                     </div>
                     {total > 0 && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-4 border-t border-slate-600/30">
-                        <span className="text-sm text-slate-400">
-                          {from}–{to} из {total}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-400">На странице:</span>
-                          <Select
-                            value={String(pageSize)}
-                            onValueChange={(v) => {
-                              const ps = Number(v)
-                              void loadQuarterPage(pair, 1, ps)
-                            }}
-                          >
-                            <SelectTrigger className="w-[90px] border-slate-600 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="20">20</SelectItem>
-                              <SelectItem value="50">50</SelectItem>
-                              <SelectItem value="100">100</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={block?.loading || page <= 1}
-                            onClick={() => void loadQuarterPage(pair, page - 1, pageSize)}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm text-slate-300">
-                            {page} / {totalPages}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={block?.loading || page >= totalPages}
-                            onClick={() => void loadQuarterPage(pair, page + 1, pageSize)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      <Pagination
+                        className="mt-4 border-t border-slate-600/30 pt-4"
+                        page={page}
+                        total={total}
+                        pageSize={pageSize}
+                        loading={block?.loading}
+                        itemForms={["отчёт", "отчёта", "отчётов"]}
+                        onPageChange={(next) => void loadQuarterPage(pair, next, pageSize)}
+                        onPageSizeChange={(size) => void loadQuarterPage(pair, 1, size)}
+                      />
                     )}
                   </>
                 )}

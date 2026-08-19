@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import { Music, ListMusic, FileText, DollarSign, User, FileCheck, UserPlus, UserMinus, CheckCircle } from 'lucide-react'
 import { Activity } from '@/lib/storage'
+import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { SkeletonRows } from '@/components/ui/skeleton-presets'
+import { cn } from '@/lib/utils'
 
 interface ActivityFeedProps {
   userId?: string
@@ -163,29 +167,11 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
   }
 
   if (loading) {
-    return (
-      <div className="divide-y divide-white/5">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="p-4 flex items-center gap-4 animate-pulse">
-            <div className="w-12 h-12 rounded-lg bg-white/5 flex-shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3 bg-white/5 rounded w-1/3" />
-              <div className="h-2.5 bg-white/5 rounded w-2/3" />
-            </div>
-            <div className="w-10 h-8 bg-white/5 rounded" />
-          </div>
-        ))}
-      </div>
-    )
+    return <SkeletonRows rows={4} className="p-4" />
   }
 
   if (activities.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 text-gray-500">
-        <span className="material-symbols-outlined text-4xl mb-2 opacity-30">inbox</span>
-        <p className="text-sm font-mono uppercase tracking-widest">Событий пока нет</p>
-      </div>
-    )
+    return <EmptyState className="py-10" icon="inbox" title="Событий пока нет" />
   }
 
   return (
@@ -208,9 +194,15 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h4 className="text-white font-bold text-sm truncate">{activity.title}</h4>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] border uppercase font-bold tracking-wider flex-shrink-0 ${badge.classes}`}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                    badge.classes
+                  )}
+                >
                   {badge.text}
-                </span>
+                </Badge>
               </div>
               <p className="text-gray-400 text-xs truncate">
                 {descriptionForDisplay(activity)}

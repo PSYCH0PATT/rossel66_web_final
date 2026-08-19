@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from "lucide-react"
+import { Banner } from "@/components/ui/banner"
+import { FileInput } from "@/components/ui/file-input"
+import { Spinner } from "@/components/ui/spinner"
+import { Upload, FileSpreadsheet } from "lucide-react"
 
 export default function SimpleReportUploader() {
   const [file, setFile] = useState<File | null>(null)
@@ -122,13 +124,12 @@ export default function SimpleReportUploader() {
             {/* Загрузка файла */}
             <div className="space-y-2">
               <Label htmlFor="file" className="text-white">Excel файл (.xlsx)</Label>
-              <Input
+              <FileInput
                 id="file"
-                type="file"
                 accept=".xlsx,.xls"
                 onChange={handleFileChange}
                 disabled={isUploading}
-                className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+                showFileName={false}
               />
               {file && (
                 <div className="flex items-center gap-2 text-sm text-emerald-400">
@@ -209,14 +210,15 @@ export default function SimpleReportUploader() {
             </div>
 
             {/* Кнопка загрузки */}
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
+              variant="cta"
               disabled={isUploading || !file || !artistName.trim() || !quarter}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full"
             >
               {isUploading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Spinner size="sm" className="mr-2" />
                   Загрузка...
                 </>
               ) : (
@@ -232,18 +234,9 @@ export default function SimpleReportUploader() {
 
       {/* Результат загрузки */}
       {result && (
-        <Alert className={`${result.success ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-red-500/50 bg-red-500/10'}`}>
-          <div className="flex items-center gap-2">
-            {result.success ? (
-              <CheckCircle className="h-4 w-4 text-emerald-400" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-red-400" />
-            )}
-            <AlertDescription className={result.success ? 'text-emerald-300' : 'text-red-300'}>
-              {result.message}
-            </AlertDescription>
-          </div>
-        </Alert>
+        <Banner variant={result.success ? "success" : "danger"}>
+          {result.message}
+        </Banner>
       )}
     </div>
   )

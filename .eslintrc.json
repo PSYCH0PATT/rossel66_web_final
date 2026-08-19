@@ -49,15 +49,8 @@
     {
       "files": [
         "app/dashboard/admin/activity/page.tsx",
-        "app/dashboard/admin/analytics/page.tsx",
-        "app/dashboard/admin/artists/\\[id\\]/page.tsx",
-        "app/dashboard/admin/artists/add/page.tsx",
-        "app/dashboard/admin/artists/admin-artists-client.tsx",
-        "app/dashboard/admin/artists/bulk-add/page.tsx",
-        "app/dashboard/admin/dashboard/admin-dashboard-client.tsx",
         "app/dashboard/admin/payments/admin-payments-client.tsx",
         "app/dashboard/admin/playlists/history/page.tsx",
-        "app/dashboard/admin/playlists/page.tsx",
         "app/dashboard/admin/releases/\\[id\\]/page.tsx",
         "app/dashboard/admin/releases/add/page.tsx",
         "app/dashboard/admin/releases/admin-releases-client.tsx",

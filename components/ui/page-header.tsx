@@ -43,6 +43,15 @@ export interface PageHeaderProps
   breadcrumbs?: PageHeaderCrumb[]
   /** Слот действий справа от заголовка (primary — здесь, не внизу экрана). */
   actions?: React.ReactNode
+  /**
+   * Слот под заголовком: подписи и служебные действия, привязанные к H1
+   * (ряд «Синхронизировать / Загрузить CSV / Сопоставить» в аналитике).
+   */
+  meta?: React.ReactNode
+  /** Классы ряда «заголовок ↔ действия»: другая точка слома или выравнивание. */
+  rowClassName?: string
+  /** Классы слота действий: например, фильтры на всю ширину мобильного экрана. */
+  actionsClassName?: string
   size?: "md" | "lg"
 }
 
@@ -55,6 +64,9 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
       backLabel = "К списку",
       breadcrumbs,
       actions,
+      meta,
+      rowClassName,
+      actionsClassName,
       size = "lg",
       className,
       ...props
@@ -97,7 +109,12 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
           </BreadcrumbList>
         </Breadcrumb>
       )}
-      <div className="flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between md:gap-6">
+      <div
+        className={cn(
+          "flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between md:gap-6",
+          rowClassName
+        )}
+      >
         <div className="min-w-0">
           <h1
             className={cn(
@@ -114,9 +131,10 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
               {subtitle}
             </p>
           )}
+          {meta}
         </div>
         {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <div className={cn("flex shrink-0 flex-wrap items-center gap-3", actionsClassName)}>
             {actions}
           </div>
         )}

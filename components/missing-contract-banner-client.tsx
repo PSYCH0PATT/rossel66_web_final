@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Banner } from "@/components/ui/banner"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ARTIST_REPORT_FIELD_LABELS,
   ARTIST_REPORT_REQUIRED_FIELDS,
@@ -47,14 +50,11 @@ export function MissingContractBanner() {
 
   if (state.status === "error") {
     return (
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 md:px-6 md:py-4">
-        <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined text-amber-300 mt-0.5">warning</span>
-          <p className="text-sm text-amber-100 font-medium">
-            Не удалось проверить данные артистов для отчётов
-          </p>
-        </div>
-      </div>
+      <Banner variant="warning" className="rounded-2xl md:px-6 md:py-4">
+        <p className="text-sm text-amber-100 font-medium">
+          Не удалось проверить данные артистов для отчётов
+        </p>
+      </Banner>
     )
   }
 
@@ -76,38 +76,42 @@ export function MissingContractBanner() {
     .join(" · ")
 
   return (
-    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 md:px-6 md:py-4 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        <span className="material-symbols-outlined text-amber-300 mt-0.5">warning</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-amber-100 font-medium">
-            У {incomplete.length} артистов не хватает данных для отчётов в Supabase
-          </p>
-          <p className="text-xs text-amber-200/70 mt-1 font-light">
-            Обязательно: ФИО, номер договора и процент. Без них отчёт не создаётся.
-          </p>
-          <p className="text-xs text-amber-200/90 mt-2 font-mono uppercase tracking-widest">
-            {fieldSummary}
-          </p>
-          <ul className="mt-3 max-h-40 overflow-y-auto text-xs text-amber-100/90 space-y-1 font-mono">
-            {incomplete.slice(0, 15).map((a) => (
-              <li key={a.id}>
-                {a.name} — нет:{" "}
-                {a.missingFields.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")}
-              </li>
-            ))}
-            {incomplete.length > 15 && (
-              <li className="text-amber-200/60">…и ещё {incomplete.length - 15}</li>
-            )}
-          </ul>
-        </div>
-      </div>
-      <Link
-        href="/dashboard/admin/artists"
-        className="self-start sm:self-end text-xs font-mono uppercase tracking-widest text-amber-200 hover:text-white border border-amber-500/30 rounded-lg px-3 py-2 whitespace-nowrap transition-colors"
+    <Banner variant="warning" className="rounded-2xl md:px-6 md:py-4">
+      <p className="text-sm text-amber-100 font-medium">
+        У {incomplete.length} артистов не хватает данных для отчётов в Supabase
+      </p>
+      <p className="text-xs text-amber-200/70 mt-1 font-light">
+        Обязательно: ФИО, номер договора и процент. Без них отчёт не создаётся.
+      </p>
+      <p className="text-xs text-amber-200/90 mt-2 font-mono uppercase tracking-widest">
+        {fieldSummary}
+      </p>
+      {/* F-44: список артистов скроллится с видимым скроллбаром и фейдом —
+          раньше это был скролл-в-скролле без единого аффорданса. */}
+      <ScrollArea
+        className="mt-3"
+        viewportClassName="max-h-40"
+        fadeClassName="from-status-warning/10"
       >
-        К списку артистов
-      </Link>
-    </div>
+        <ul className="text-xs text-amber-100/90 space-y-1 font-mono">
+          {incomplete.slice(0, 15).map((a) => (
+            <li key={a.id}>
+              {a.name} — нет:{" "}
+              {a.missingFields.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")}
+            </li>
+          ))}
+          {incomplete.length > 15 && (
+            <li className="text-amber-200/60">…и ещё {incomplete.length - 15}</li>
+          )}
+        </ul>
+      </ScrollArea>
+      <Button
+        asChild
+        variant="warning-outline"
+        className="mt-3 h-auto self-start rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-widest sm:self-end"
+      >
+        <Link href="/dashboard/admin/artists">К списку артистов</Link>
+      </Button>
+    </Banner>
   )
 }
