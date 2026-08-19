@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation"
-import Link from "next/link"
 import Image from "next/image"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
@@ -65,24 +64,6 @@ export default async function ArtistPlaylistDetailPage({
     <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2 min-w-0">
-            <Link
-              href={`/dashboard/artist/${params.username}/dashboard`}
-              className="hover:text-[#10b981] cursor-pointer transition-colors flex-shrink-0"
-            >
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 10 }}>
-              chevron_right
-            </span>
-            <Link href={listHref} className="hover:text-[#10b981] cursor-pointer transition-colors flex-shrink-0">
-              Плейлисты
-            </Link>
-            <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: 10 }}>
-              chevron_right
-            </span>
-            <span className="text-white truncate">{nameShort}</span>
-          </div>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">

@@ -387,11 +387,6 @@ export default function AdminAnalyticsPage() {
         <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
           {/* Left: breadcrumb + title + admin actions */}
           <div className="flex flex-col gap-1 shrink-0">
-            <div className="flex items-center text-xs text-gray-500 uppercase tracking-widest space-x-2 mb-1">
-              <span className="hover:text-primary cursor-pointer transition-colors">ДАШБОРД</span>
-              <span className="material-symbols-outlined text-[10px] mx-1">chevron_right</span>
-              <span className="text-white">Аналитика</span>
-            </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight uppercase">АНАЛИТИКА</h1>
             <nav className="flex items-center gap-2 mt-2">
               <Button

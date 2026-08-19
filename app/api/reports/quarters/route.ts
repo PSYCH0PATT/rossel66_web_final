@@ -16,14 +16,29 @@ export async function GET(request: Request) {
     `
     const quarters = rows.map(r => r.quarter)
 
-    const pairRows = await prisma.$queryRaw<{ quarter: string; year: number }[]>`
-      SELECT DISTINCT quarter, year FROM "Report"
-      WHERE "isRegistered" = true
-        AND year IS NOT NULL
-        AND quarter ~ '^Q[1-4]$'
+    /**
+     * Счётчик обязан совпадать с тем, что покажет раскрытый квартал, иначе цифра
+     * в свёрнутом виде снова будет врать. Поэтому здесь та же дедупликация, что
+     * в /api/reports/list/[quarter]: один отчёт на (quarter, year, artistName).
+     */
+    const pairRows = await prisma.$queryRaw<{ quarter: string; year: number; count: number }[]>`
+      SELECT quarter, year, COUNT(*)::int AS count FROM (
+        SELECT DISTINCT ON (quarter, year, lower(trim(COALESCE("artistName", ''))))
+          quarter, year
+        FROM "Report"
+        WHERE "isRegistered" = true
+          AND year IS NOT NULL
+          AND quarter ~ '^Q[1-4]$'
+        ORDER BY quarter, year, lower(trim(COALESCE("artistName", ''))), "uploadedAt" DESC
+      ) deduped
+      GROUP BY quarter, year
       ORDER BY year DESC, quarter ASC
     `
-    const quarterYearPairs = pairRows.map((r) => ({ quarter: r.quarter, year: r.year }))
+    const quarterYearPairs = pairRows.map((r) => ({
+      quarter: r.quarter,
+      year: r.year,
+      count: Number(r.count),
+    }))
 
     const response = NextResponse.json({ quarters, quarterYearPairs })
     response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=30')

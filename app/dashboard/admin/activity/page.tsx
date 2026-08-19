@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
 import type { ActivityType } from "@/lib/storage"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
@@ -214,13 +213,6 @@ export default function AdminActivityPage() {
   return (
     <div className="space-y-8">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Активность</span>
-          </div>
           <div className="border-b border-white/5 pb-8">
             <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Активность</h1>
             <p className="text-sm text-gray-400 font-light mt-2">Журнал событий платформы</p>

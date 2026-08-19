@@ -237,18 +237,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
     <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         {/* Breadcrumb */}
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Релизы</span>
-        </div>
 
         {/* Page header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
@@ -413,9 +401,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                             <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center backdrop-blur-[1px]">
-                          <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>play_arrow</span>
-                        </div>
                       </div>
                     </td>
 

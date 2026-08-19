@@ -38,22 +38,10 @@ export default function ArtistDashboardClient({
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="mb-6 flex flex-col gap-3 md:mb-8 md:gap-6">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">ГЛАВНАЯ</span>
-        </div>
         <div className="flex flex-col items-start gap-4 border-b border-white/5 pb-4 md:flex-row md:items-end md:justify-between md:gap-6 md:pb-8">
           <div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
-              ДАШБОРД
+              ГЛАВНАЯ
             </h1>
             <p className="text-sm text-gray-400 font-light max-w-md">
               С возвращением, {artist.name || artist.username}. Кратко, что происходит с вашей музыкой сегодня.

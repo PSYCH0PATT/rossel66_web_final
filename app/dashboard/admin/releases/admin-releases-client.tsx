@@ -248,11 +248,6 @@ export default function AdminReleasesClient() {
       {/* Header section */}
       <div className="flex flex-col gap-6 mb-8">
         {/* Breadcrumb */}
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-[#10b981] cursor-pointer transition-colors">ДАШБОРД</span>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>chevron_right</span>
-          <span className="text-white">Релизы</span>
-        </div>
 
         {/* Строка 1: только заголовок. Строка 2: все кнопки */}
         <div className="border-b border-white/5 pb-6">
@@ -519,9 +514,6 @@ export default function AdminReleasesClient() {
                             <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center backdrop-blur-[1px]">
-                          <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>play_arrow</span>
-                        </div>
                       </div>
                     </td>
 

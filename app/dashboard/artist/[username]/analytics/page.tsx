@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useCallback, type ReactNode } from "react"
-import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
 import { ProfileFilter } from "@/components/profile-filter"
@@ -219,18 +218,6 @@ export default function ArtistAnalyticsPage() {
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Аналитика</span>
-        </div>
 
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-white/5 pb-8">
           <div>

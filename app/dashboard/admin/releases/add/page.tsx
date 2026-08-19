@@ -168,17 +168,6 @@ export default function AddReleasePage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
         <div className="space-y-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/releases" className="hover:text-primary">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Новый релиз</span>
-          </div>
           <div className="border-b border-white/5 pb-8">
             <Link
               href="/dashboard/admin/releases"

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface ParseStats {
@@ -133,17 +132,6 @@ export default function KoalaParserPage() {
     
       <div className="space-y-8 max-w-7xl mx-auto pb-8">
         <div className="space-y-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/releases" className="hover:text-primary">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Koala Parser</span>
-          </div>
           <div className="border-b border-white/5 pb-8 flex flex-col gap-4 lg:flex-row items-start lg:items-end lg:justify-between">
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">

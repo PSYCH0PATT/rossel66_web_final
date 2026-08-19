@@ -146,17 +146,6 @@ export default function AddArtistPage() {
   return (
     <div className="space-y-6">
         <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Добавить</span>
-          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
             <div className="min-w-0">
               <Link

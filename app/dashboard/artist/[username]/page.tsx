@@ -81,15 +81,6 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
     
       <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link href={dash} className="hover:text-[#10b981] cursor-pointer transition-colors">
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Профиль</span>
-        </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
           <div>

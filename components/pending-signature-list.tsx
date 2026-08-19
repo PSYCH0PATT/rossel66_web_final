@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
+import { downloadFileFromApi } from "@/lib/download-file"
 
 interface PendingReport {
   id: string
@@ -201,7 +202,12 @@ export default function PendingSignatureList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/api/reports/download/${report.id}`, "_blank")}
+                      onClick={() =>
+                        void downloadFileFromApi(
+                          `/api/reports/download/${report.id}`,
+                          `${report.artistName} ${report.quarter} ${report.year}.xlsx`
+                        )
+                      }
                       className="whitespace-nowrap border-green-500/50 text-xs text-green-400 hover:bg-green-500/20 hover:text-green-300 sm:text-sm"
                     >
                       <Download className="h-3 w-3 sm:mr-1 sm:h-4 sm:w-4" />

@@ -5,6 +5,7 @@ import { formatDateRu } from "@/lib/format-date"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, FileText, Loader2, Users, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight } from "lucide-react"
+import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
 
 interface UnregisteredReport {
   id: string
@@ -43,27 +44,8 @@ export default function UnregisteredReportsList() {
     fetchReports()
   }, [])
 
-  const handleDownload = async (reportId: string, fileName: string) => {
-    try {
-      const response = await fetch(`/api/reports/download/${reportId}`)
-      
-      if (!response.ok) {
-        throw new Error('Ошибка при скачивании файла')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.style.display = 'none'
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error('Ошибка при скачивании:', error)
-    }
+  const handleDownload = (reportId: string, fileName: string) => {
+    void downloadFileFromApi(`/api/reports/download/${reportId}`, fileName)
   }
 
   const handleDelete = async (reportId: string, artistName: string) => {
@@ -88,8 +70,14 @@ export default function UnregisteredReportsList() {
     }
   }
 
-  const handleDownloadAll = (quarter: string) => {
-    window.open(`/api/reports/download-all/${quarter}`, "_blank")
+  /** Метка квартала приходит как «Q1 2026» — год нужен роуту и имени архива. */
+  const handleDownloadAll = (quarterLabel: string) => {
+    const [quarter, year] = quarterLabel.split(" ")
+    const suffix = year ? `?${new URLSearchParams({ year })}` : ""
+    void downloadFileFromApi(
+      `/api/reports/download-all/${encodeURIComponent(quarter)}${suffix}`,
+      quarterArchiveName(quarter, year)
+    )
   }
 
   const toggleQuarter = (quarter: string) => {
@@ -177,7 +165,7 @@ export default function UnregisteredReportsList() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDownloadAll(quarter.split(' ')[0])
+                      handleDownloadAll(quarter)
                     }}
                     className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300"
                   >

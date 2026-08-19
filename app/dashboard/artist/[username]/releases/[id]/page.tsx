@@ -225,21 +225,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
       <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href={dashHref} className="hover:text-[#10b981] cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-              chevron_right
-            </span>
-            <Link href={releasesHref} className="hover:text-[#10b981] cursor-pointer transition-colors">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-              chevron_right
-            </span>
-            <span className="text-white truncate max-w-[200px]">{titleShort}</span>
-          </div>
           <button
             type="button"
             onClick={() => router.back()}

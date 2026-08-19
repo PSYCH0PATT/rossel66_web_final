@@ -55,15 +55,10 @@ export default function AdminDashboardClient({
   return (
     <>
     <div className="mb-8 flex flex-col gap-3 md:mb-12 md:gap-6">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-primary cursor-pointer transition-colors">ДАШБОРД</span>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-          <span className="text-white">Обзор</span>
-        </div>
         <div className="flex flex-col items-start gap-4 border-b border-white/5 pb-4 md:flex-row md:items-end md:justify-between md:gap-6 md:pb-8">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-tight uppercase">
-              ДАШБОРД
+              ГЛАВНАЯ
             </h1>
             <p className="text-sm text-gray-400 font-light max-w-md">
               Панель управления лейблом. Обзор текущих метрик и недавней активности.

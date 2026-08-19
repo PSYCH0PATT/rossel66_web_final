@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import Link from "next/link"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 import { fetchAllArtistsFromApi } from "@/lib/fetch-all-artists"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
@@ -315,13 +314,6 @@ export default function AdminSettingsPage() {
     <>
     <div className="space-y-8">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Настройки</span>
-          </div>
           <div className="border-b border-white/5 pb-8">
             <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Настройки</h1>
             <p className="text-sm text-gray-400 font-light mt-2">Пароль и управление данными</p>

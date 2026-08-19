@@ -472,7 +472,7 @@ export default function ReportProcessor() {
                   <div className="space-y-2">
                     <h4 className="font-medium">Созданные отчёты:</h4>
                     {result.reports.map((report) => (
-                      <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-gray-900">
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{report.artistName}</span>
                           <Badge variant={report.isRegistered ? "default" : "secondary"}>

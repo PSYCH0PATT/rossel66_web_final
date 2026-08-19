@@ -14,6 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { downloadFileFromApi } from "@/lib/download-file"
 
 interface UnregisteredReport {
   id: string
@@ -126,13 +127,6 @@ export default function UnregisteredReportsPage() {
     <>
       <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Незарегистрированные отчёты</span>
-          </div>
           <div className="border-b border-white/5 pb-8 flex flex-col sm:flex-row items-start sm:items-end sm:justify-between gap-4">
             <div>
               <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
@@ -234,7 +228,12 @@ export default function UnregisteredReportsPage() {
                             variant="outline"
                             size="sm"
                             className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
-                            onClick={() => window.open(`/api/reports/download/${report.id}`, "_blank")}
+                            onClick={() =>
+                              void downloadFileFromApi(
+                                `/api/reports/download/${report.id}`,
+                                report.fileName
+                              )
+                            }
                           >
                             <span className="material-symbols-outlined text-base mr-1">download</span>
                             Скачать

@@ -1,11 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import type { Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { formatDateRu } from "@/lib/format-date"
 import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
+import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 import { DashboardFooter } from "@/components/dashboard-footer"
@@ -61,8 +61,8 @@ export default function ArtistReports({ username, reports: initialReports, artis
     return quarterOrder[a] - quarterOrder[b]
   })
 
-  const handleDownloadReport = (reportId: string) => {
-    window.open(`/api/reports/download/${reportId}`, "_blank")
+  const handleDownloadReport = (reportId: string, fileName: string) => {
+    void downloadFileFromApi(`/api/reports/download/${reportId}`, fileName)
   }
 
   const handleClosePreview = () => {
@@ -106,18 +106,6 @@ export default function ArtistReports({ username, reports: initialReports, artis
     <>
       <div className="p-0 md:p-0 max-w-full pb-24">
       <div className="flex flex-col gap-6 mb-8">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Отчёты</span>
-        </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
           <div>
@@ -225,7 +213,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDownloadReport(report.id)}
+                            onClick={() => handleDownloadReport(report.id, report.fileName)}
                             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             aria-label="Скачать"
                             title="Скачать"

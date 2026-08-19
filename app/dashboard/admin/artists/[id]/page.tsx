@@ -14,6 +14,7 @@ import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { ArtistAdvances } from "@/components/artist-advances"
 import { ArtistLinkedProfiles } from "@/components/artist-linked-profiles"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function EditArtistPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -35,6 +36,9 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [artistNotFound, setArtistNotFound] = useState(false)
+  /** Удаление переехало сюда с карточки в списке: там оно срабатывало по наведению. */
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   // Новые поля для артиста
   const [fio, setFio] = useState("")
   const [fioShort, setFioShort] = useState("")
@@ -265,6 +269,28 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     }
   }
 
+  const handleDeleteArtist = async () => {
+    setIsDeleting(true)
+    setError("")
+    try {
+      const response = await fetch(`/api/artists?id=${encodeURIComponent(artistId)}`, {
+        method: "DELETE",
+      })
+      const result = await response.json()
+      if (result.success) {
+        router.push("/dashboard/admin/artists")
+        return
+      }
+      setError(result.error || "Не удалось удалить артиста")
+      setDeleteOpen(false)
+    } catch {
+      setError("Произошла ошибка при удалении артиста")
+      setDeleteOpen(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (artistNotFound) {
     return (
       <div className="space-y-6">
@@ -290,17 +316,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     
       <div className="space-y-6">
         <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white truncate max-w-[180px]">{name}</span>
-          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
             <div className="min-w-0">
               <Link
@@ -826,6 +841,58 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
             <ArtistAdvances artistId={artistId} />
           </TabsContent>
         </Tabs>
+
+        <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/[0.04] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="font-display text-base font-semibold uppercase tracking-wide text-red-200">
+                Удаление артиста
+              </h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Профиль «{name || username}» будет удалён безвозвратно вместе с доступом в кабинет.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(true)}
+              className="shrink-0 border-red-500/50 text-red-300 hover:bg-red-500/15 hover:text-red-200"
+            >
+              <span className="material-symbols-outlined mr-1 text-base">delete</span>
+              Удалить артиста
+            </Button>
+          </div>
+        </div>
+
+        <Dialog open={deleteOpen} onOpenChange={(open) => !isDeleting && setDeleteOpen(open)}>
+          <DialogContent className="max-w-md border border-white/10 bg-[#0f0f0f] text-white sm:rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg">Удалить артиста?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-400">
+              Артист «{name || username}» будет удалён безвозвратно. Это действие нельзя отменить.
+            </p>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isDeleting}
+                onClick={() => setDeleteOpen(false)}
+                className="border-white/15 text-gray-300 hover:bg-white/5"
+              >
+                Отмена
+              </Button>
+              <Button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteArtist}
+                className="bg-red-600 text-white hover:bg-red-500"
+              >
+                {isDeleting ? "Удаление…" : "Удалить"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <DashboardFooter />
       </div>

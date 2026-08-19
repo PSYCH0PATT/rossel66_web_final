@@ -27,7 +27,20 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     const session = getSessionUser()!
     const quarter = params.quarter
 
+    /**
+     * QA5: раньше выборка шла по одному кварталу без года, поэтому архив за
+     * «Q1 2026» собирал ещё и Q1 других лет. Год приходит из UI параметром.
+     */
+    const yearParam = new URL(request.url).searchParams.get("year")
+    const year =
+      yearParam !== null && yearParam !== "" && !Number.isNaN(Number(yearParam))
+        ? Number(yearParam)
+        : null
+
     const where: Prisma.ReportWhereInput = { quarter }
+    if (year !== null) {
+      where.year = year
+    }
     if (session.role === "artist") {
       where.artistId = session.id
     }
@@ -87,7 +100,9 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     // Отправляем архив клиенту
     const headers = new Headers()
     headers.set("Content-Type", "application/zip")
-    headers.set("Content-Disposition", attachmentContentDisposition(`${quarter}_reports.zip`))
+    headers.set("Content-Disposition", attachmentContentDisposition(
+        year !== null ? `${quarter}_${year}_reports.zip` : `${quarter}_reports.zip`
+      ))
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,

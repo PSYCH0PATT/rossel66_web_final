@@ -18,7 +18,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import Link from "next/link"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 import { formatDateRu } from "@/lib/format-date"
 import { DashboardFooter } from "@/components/dashboard-footer"
@@ -882,13 +881,6 @@ export default function PlaylistsPage() {
           </div>
         )}
         <div className="space-y-4 mb-2">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Плейлисты</span>
-          </div>
           <div className="border-b border-white/5 pb-8">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight mb-2">
               Плейлисты

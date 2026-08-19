@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
+import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
 
 interface Report {
   id: string
@@ -43,7 +44,7 @@ interface Report {
   isAcknowledged?: boolean
 }
 
-type QuarterYear = { quarter: string; year: number }
+type QuarterYear = { quarter: string; year: number; count?: number }
 
 type StatusFilter = "all" | "unsigned" | "unpaid" | "acknowledged_unsigned"
 
@@ -175,12 +176,20 @@ export default function ReportsList() {
     })
   }
 
-  const handleDownloadReport = (reportId: string) => {
-    window.open(`/api/reports/download/${reportId}`, "_blank")
+  const handleDownloadReport = (reportId: string, fileName: string) => {
+    void downloadFileFromApi(`/api/reports/download/${reportId}`, fileName)
   }
 
-  const handleDownloadAllReports = (quarter: string) => {
-    window.open(`/api/reports/download-all/${quarter}`, "_blank")
+  /**
+   * Год обязателен: без него роут отбирал отчёты по одному лишь кварталу, и в
+   * архив за «Q1 2026» попал бы ещё и Q1 других лет.
+   */
+  const handleDownloadAllReports = (pair: QuarterYear) => {
+    const params = new URLSearchParams({ year: String(pair.year) })
+    void downloadFileFromApi(
+      `/api/reports/download-all/${encodeURIComponent(pair.quarter)}?${params}`,
+      quarterArchiveName(pair.quarter, pair.year)
+    )
   }
 
   const handleDeleteQuarter = async (pair: QuarterYear) => {
@@ -391,7 +400,7 @@ export default function ReportsList() {
         const isCollapsed = collapsedQuarters.has(key)
         const block = cache[key]
         const quarterReports = block ? applyFilter(block.reports) : []
-        const total = block?.total ?? 0
+        const total = block?.total ?? pair.count ?? 0
         const page = block?.page ?? 1
         const pageSize = block?.pageSize ?? 20
         const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -423,7 +432,7 @@ export default function ReportsList() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDownloadAllReports(pair.quarter)
+                      handleDownloadAllReports(pair)
                     }}
                     className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300"
                   >
@@ -558,7 +567,7 @@ export default function ReportsList() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDownloadReport(report.id)}
+                              onClick={() => handleDownloadReport(report.id, report.fileName)}
                               className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300 whitespace-nowrap text-xs sm:text-sm"
                             >
                               <Download className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
