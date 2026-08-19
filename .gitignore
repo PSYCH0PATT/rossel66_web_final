@@ -129,6 +129,7 @@ parsers/test_cover_data_url.txt
 debug_*.html
 sftp_analysis_report.json
 
-# Визуальная регрессия: эталон screens/baseline/ коммитим, рабочие выводы — нет
-/screens/current/
-/screens/diff/
+# Визуальная регрессия (scripts/visual-baseline.ts): 70 PNG на прогон, ~40 МБ.
+# Дифф гоняется локально на машине, где снят эталон, — в git скрины не нужны.
+# Эталон из 1c0b052 остаётся в истории: её не переписываем, просто больше не растим.
+/screens/
