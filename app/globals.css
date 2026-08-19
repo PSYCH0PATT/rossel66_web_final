@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700&display=swap');
+/* Цветовые токены ЛК (этап 2.1). @import обязан идти до @tailwind. */
+@import './tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -1574,21 +1576,21 @@ body:has([data-page="home"]) {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: rgb(var(--surface-scrollbar-track));
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgb(var(--surface-scrollbar-thumb));
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
+  background: rgb(var(--brand));
 }
 
 .glass-panel {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(10, 10, 10, 0.4);
+  background: rgb(var(--surface-page) / 0.4);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
@@ -1618,7 +1620,7 @@ body:has([data-page="home"]) {
 }
 
 .stat-card-glass {
-  background: rgba(20, 20, 20, 0.6);
+  background: rgb(var(--surface-raised) / 0.6);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -1626,8 +1628,8 @@ body:has([data-page="home"]) {
 }
 
 .stat-card-glass:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(30, 30, 30, 0.7);
+  border-color: rgb(var(--brand) / 0.3);
+  background: rgb(var(--surface-hover) / 0.7);
   transform: translateY(-2px);
 }
 
@@ -1695,21 +1697,22 @@ body:has([data-page="home"]) {
   font-variation-settings: "FILL" 0, "wght" 700, "GRAD" 0, "opsz" 20;
 }
 
-/* Цвета бейджей как в эталоне (primary #10b981, accent-azure #0ea5e9, purple-400) */
+/* Цвета бейджей как в эталоне (brand #10b981, brand-azure #0ea5e9, purple-400).
+   Значения не менялись — только переехали на токены из app/tokens.css. */
 .stat-dash-metric-badge--primary {
-  color: #10b981;
-  background-color: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.2);
+  color: rgb(var(--brand));
+  background-color: rgb(var(--brand) / 0.1);
+  border-color: rgb(var(--brand) / 0.2);
 }
 .stat-dash-metric-badge--azure {
-  color: #0ea5e9;
-  background-color: rgba(14, 165, 233, 0.1);
-  border-color: rgba(14, 165, 233, 0.2);
+  color: rgb(var(--brand-azure));
+  background-color: rgb(var(--brand-azure) / 0.1);
+  border-color: rgb(var(--brand-azure) / 0.2);
 }
 .stat-dash-metric-badge--purple {
-  color: #c084fc;
-  background-color: rgba(168, 85, 247, 0.1);
-  border-color: rgba(168, 85, 247, 0.2);
+  color: rgb(var(--brand-purple-fg));
+  background-color: rgb(var(--brand-purple) / 0.1);
+  border-color: rgb(var(--brand-purple) / 0.2);
 }
 
 /* ====== RELEASES TABLE (releases.html design) ====== */
@@ -1720,8 +1723,8 @@ body:has([data-page="home"]) {
 }
 
 .table-row-hover:hover {
-  background: rgba(16, 185, 129, 0.03);
-  border-bottom-color: rgba(16, 185, 129, 0.2);
+  background: rgb(var(--brand) / 0.03);
+  border-bottom-color: rgb(var(--brand) / 0.2);
 }
 
 .release-status-badge {
@@ -1738,32 +1741,32 @@ body:has([data-page="home"]) {
 }
 
 .release-status-badge--live {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+  background: rgb(var(--status-success) / 0.1);
+  color: rgb(var(--status-success));
+  border: 1px solid rgb(var(--status-success) / 0.2);
+  box-shadow: 0 0 10px rgb(var(--status-success) / 0.1);
 }
 
 .release-status-badge--delivered {
-  background: rgba(14, 165, 233, 0.1);
-  color: #0ea5e9;
-  border: 1px solid rgba(14, 165, 233, 0.2);
+  background: rgb(var(--status-info) / 0.1);
+  color: rgb(var(--status-info));
+  border: 1px solid rgb(var(--status-info) / 0.2);
 }
 
 .release-status-badge--moderation {
-  background: rgba(234, 179, 8, 0.1);
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  background: rgb(var(--status-moderation) / 0.1);
+  color: rgb(var(--status-moderation));
+  border: 1px solid rgb(var(--status-moderation) / 0.2);
 }
 
 .release-status-badge--draft {
-  background: rgba(30, 30, 30, 0.8);
-  color: #9ca3af;
-  border: 1px solid rgba(75, 85, 99, 0.5);
+  background: rgb(var(--surface-hover) / 0.8);
+  color: rgb(var(--status-neutral));
+  border: 1px solid rgb(75 85 99 / 0.5); /* gray-600, кандидат в токен рамки */
 }
 
 .release-status-badge--rejected {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgb(var(--status-danger) / 0.1);
+  color: rgb(var(--status-danger));
+  border: 1px solid rgb(var(--status-danger) / 0.2);
 }
