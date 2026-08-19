@@ -5,6 +5,7 @@ import { releaseFromPrisma } from "@/lib/storage-adapters"
 import { getSessionUser, requireAuth } from "@/lib/server-auth"
 import { getArtistGroupIds } from "@/lib/artist-links"
 import { releasePutSchema } from "@/lib/api-schemas"
+import { stripUnchangedArtistId } from "@/lib/release-artist-link"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -63,7 +64,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     }
 
-    const body = await request.json()
+    // F-02: пустой artistId означает «поле не меняли» — карточка могла отрисовать
+    // селект до того, как подтянулся список артистов. Затирать связь по такому
+    // значению нельзя (updateRelease пишет `artistId || null`), поэтому поле
+    // выбрасывается из обновления, а не роняет весь запрос в 400.
+    const body = stripUnchangedArtistId(await request.json())
     const parsed = releasePutSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(

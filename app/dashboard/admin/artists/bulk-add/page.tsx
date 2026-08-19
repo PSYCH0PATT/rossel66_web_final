@@ -15,6 +15,7 @@ import {
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
+import { DEFAULT_BULK_ARTIST_NAMES, planBulkArtistAdd } from "@/lib/bulk-artist-add"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
 export default function BulkAddArtistsPage() {
@@ -24,30 +25,9 @@ export default function BulkAddArtistsPage() {
   const [error, setError] = useState("")
   const [addedArtists, setAddedArtists] = useState<Array<{ name: string; password: string }>>([])
   const [isEditing, setIsEditing] = useState(false)
-  const [artistNames, setArtistNames] = useState([
-    "передоз",
-    "ЭНТЕNДАНS",
-    "ASTRODYA",
-    "EnellySayk",
-    "Etxrnxtx",
-    "Jelato",
-    "LXNOWER",
-    "Makishima",
-    "Matcukito Kioto",
-    "MEELBRN",
-    "MENDXZA",
-    "night moral",
-    "Nnaia",
-    "PLVT",
-    "Roudie J.",
-    "SLAVKESH",
-    "Sour Diesel",
-    "Takeda",
-    "TXYK",
-    "W.1ce3",
-    "WIDE PIE",
-    "wvlaik",
-  ])
+  // F-01: список пуст по умолчанию. Раньше здесь были зашиты 22 имени, половина
+  // из них уже была в базе, и один клик «Добавить всех» плодил дубли.
+  const [artistNames, setArtistNames] = useState<string[]>([...DEFAULT_BULK_ARTIST_NAMES])
   const [editText, setEditText] = useState("")
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newArtistName, setNewArtistName] = useState("")
@@ -96,48 +76,46 @@ export default function BulkAddArtistsPage() {
 
     try {
       const existingUsers = await fetchAllUsersFromApi()
+      // F-01: дубли отсекаются и по логину, и по имени — и внутри самого списка тоже.
+      const plan = planBulkArtistAdd(artistNames, existingUsers)
 
       const addedArtistsInfo: Array<{ name: string; password: string }> = []
       let successCount = 0
       let errorCount = 0
+      let skippedCount = plan.skippedDuplicates.length
 
-      for (const name of artistNames) {
+      for (const candidate of plan.toCreate) {
         try {
           const randomDigits = generateRandomDigits()
-          const password = `${name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")}${randomDigits}`
+          const password = `${candidate.username}${randomDigits}`
 
-          const username = name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")
+          const response = await fetch("/api/artists", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: candidate.username,
+              password,
+              name: candidate.name,
+              email: undefined,
+              avatarUrl: undefined,
+              vkMusicUrl: undefined,
+              yandexMusicUrl: undefined,
+              spotifyUrl: undefined,
+            }),
+          })
 
-          const existingUser = existingUsers.some(
-            (user: { username: string }) => user.username.toLowerCase() === username.toLowerCase(),
-          )
+          const result = await response.json()
 
-          if (!existingUser) {
-            const response = await fetch("/api/artists", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                username,
-                password,
-                name,
-                email: undefined,
-                avatarUrl: undefined,
-                vkMusicUrl: undefined,
-                yandexMusicUrl: undefined,
-                spotifyUrl: undefined,
-              }),
-            })
-
-            const result = await response.json()
-
-            if (result.success) {
-              addedArtistsInfo.push({ name, password })
-              successCount++
-            } else {
-              errorCount++
-            }
+          if (result.success) {
+            addedArtistsInfo.push({ name: candidate.name, password })
+            successCount++
+          } else if (result.duplicate) {
+            // Сервер отбил дубль, которого не было в загруженном списке.
+            skippedCount++
+          } else {
+            errorCount++
           }
 
           await new Promise((resolve) => setTimeout(resolve, 100))
@@ -148,15 +126,19 @@ export default function BulkAddArtistsPage() {
 
       setAddedArtists(addedArtistsInfo)
 
+      const skippedNote = skippedCount > 0 ? `, пропущено как дубль: ${skippedCount}` : ""
+
       if (successCount > 0) {
         setSuccess(true)
-        if (errorCount > 0) {
-          setError(`Создано ${successCount} артистов, ${errorCount} ошибок`)
+        if (errorCount > 0 || skippedCount > 0) {
+          setError(`Создано ${successCount} артистов, ${errorCount} ошибок${skippedNote}`)
         }
       } else if (errorCount > 0) {
-        setError(`Не удалось создать ни одного артиста. Ошибок: ${errorCount}`)
+        setError(`Не удалось создать ни одного артиста. Ошибок: ${errorCount}${skippedNote}`)
+      } else if (skippedCount > 0) {
+        setError(`Новых артистов нет${skippedNote}`)
       } else {
-        setError("Все артисты уже существуют в системе")
+        setError("Список пуст: добавьте имена артистов")
       }
     } catch {
       setError("Произошла ошибка при добавлении артистов")
@@ -169,17 +151,6 @@ export default function BulkAddArtistsPage() {
     <>
     <div className="space-y-6">
         <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Массовое добавление</span>
-          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
             <div className="min-w-0">
               <Link

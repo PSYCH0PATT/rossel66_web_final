@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { isHashedPassword, verifyPassword } from "@/lib/password"
 import type { Prisma } from "@prisma/client"
-import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
+import { addUser, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
 import * as path from "path"
 import { supabase, ensureBucketExists } from "@/lib/supabase"
 import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
 import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
+import { duplicateArtistReason } from "@/lib/bulk-artist-add"
 import {
   getArtistReportMissingFields,
   type IncompleteReportArtist,
@@ -86,10 +87,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Username, password and name are required" }, { status: 400 })
     }
 
-    // Check if username already exists
-    const existingUser = await getUserByUsername(username)
-    if (existingUser) {
-      return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+    // F-01: дедупликация на сервере, а не только в форме. Массовое добавление
+    // шлёт имена пачкой, и клиентский список существующих артистов может быть
+    // неполным или устареть между запросами; дубль по имени клиент не ловил
+    // вовсе. Флаг duplicate в ответе позволяет собрать отчёт «пропущено как
+    // дубль: N», не путая дубли с настоящими ошибками.
+    const collisions = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { equals: username, mode: "insensitive" } },
+          { name: { equals: name.trim(), mode: "insensitive" } },
+        ],
+      },
+      select: { username: true, name: true },
+    })
+    const duplicateReason = duplicateArtistReason({ username, name }, collisions)
+    if (duplicateReason !== null) {
+      return NextResponse.json(
+        {
+          success: false,
+          duplicate: true,
+          duplicateReason,
+          error:
+            duplicateReason === "username"
+              ? "Username already exists"
+              : "Артист с таким именем уже существует",
+        },
+        { status: 400 }
+      )
     }
 
     // Add user to database

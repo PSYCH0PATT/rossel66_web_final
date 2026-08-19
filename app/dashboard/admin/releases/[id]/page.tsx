@@ -8,6 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { buildReleaseArtistSelect } from "@/lib/release-artist-link"
 
 type Release = {
   id: string
@@ -43,9 +44,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
         setRelease(data.release)
         setArtistName(data.release.artistName || "")
       }
-      // load artists for artist select (same source as artist profile / list)
+      // F-02: постраничный /api/artists отдаёт 20 записей и прячет привязанные
+      // профили, поэтому привязанный артист часто в список не попадал и селект
+      // показывал пустоту. forPicker=1 — выборка под селект, без пагинации.
       try {
-        const ares = await fetch('/api/artists')
+        const ares = await fetch('/api/artists?forPicker=1')
         const adata = await ares.json()
         if (adata?.success && Array.isArray(adata.artists)) setUsers(adata.artists)
       } catch {}
@@ -163,6 +166,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
       )
   }
 
+  // F-02: селект «Артист» инициализируется текущей связью. Если привязанного
+  // артиста нет в загруженном списке, он всё равно попадает в опции — иначе
+  // Radix рисует плейсхолдер, связь выглядит отсутствующей и её легко потерять.
+  const artistSelect = buildReleaseArtistSelect({
+    artistId: release.artistId,
+    artistName,
+    artists: users,
+  })
+
   const inputCls =
     "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
@@ -171,17 +183,6 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
       <div className="space-y-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-4 min-w-0">
-            <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-              <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-                ДАШБОРД
-              </Link>
-              <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-              <Link href="/dashboard/admin/releases" className="hover:text-primary">
-                Релизы
-              </Link>
-              <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-              <span className="text-white truncate max-w-[200px]">{release.title}</span>
-            </div>
             <div className="border-b border-white/5 pb-6">
               <Link
                 href="/dashboard/admin/releases"
@@ -314,12 +315,12 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Артист</div>
-                  <Select value={release.artistId} onValueChange={(v) => setRelease({ ...release, artistId: v })}>
+                  <Select value={artistSelect.value} onValueChange={(v) => setRelease({ ...release, artistId: v })}>
                     <SelectTrigger className={`w-full ${inputCls} h-10`}>
                       <SelectValue placeholder={artistName || 'Выберите артиста'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map((u) => (
+                      {artistSelect.options.map((u) => (
                         <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                       ))}
                     </SelectContent>
