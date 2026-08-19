@@ -18,6 +18,25 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        /**
+         * C-02: варианты вместо 36 «диких» написаний raw-кнопок.
+         *
+         * `cta` — главный CTA с glow (инвентаризация #4: bg-#10b981 + тень
+         * 0 0 20px). Единый disabled: базовый opacity-50 всех вариантов, а у
+         * cta дополнительно гаснут glow и насыщенность — полупрозрачный ярко-
+         * зелёный иначе читается как активная кнопка (F-28).
+         *
+         * `*-outline` — сервисные/деструктивные действия вторым планом
+         * (#8, #20, #26). Цвет рамки и заливки — токены статусов, текст —
+         * читаемый светлый оттенок палитры (у токенов нет «-400»-градаций).
+         */
+        cta: "bg-brand font-bold text-black shadow-[0_0_20px_rgb(var(--brand)/0.25)] hover:bg-emerald-400 disabled:shadow-none disabled:saturate-50",
+        "destructive-outline":
+          "border border-status-danger/50 bg-transparent text-red-400 hover:border-status-danger/70 hover:bg-status-danger/10",
+        "success-outline":
+          "border border-status-success/50 bg-transparent text-emerald-400 hover:border-status-success/70 hover:bg-status-success/10",
+        "warning-outline":
+          "border border-status-warning/30 bg-transparent text-amber-200 hover:border-status-warning/60 hover:bg-status-warning/10",
       },
       /**
        * A11y-3: минимальный тач-таргет 44px.
