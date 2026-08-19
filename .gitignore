@@ -128,3 +128,7 @@ parsers/test_cover_data_url.txt
 *.doc
 debug_*.html
 sftp_analysis_report.json
+
+# Визуальная регрессия: эталон screens/baseline/ коммитим, рабочие выводы — нет
+/screens/current/
+/screens/diff/

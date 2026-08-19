@@ -1,0 +1,695 @@
+{
+  "viewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "routes": [
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/dashboard",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: A network error occurred."
+      ],
+      "files": [
+        "screens/baseline/admin/dashboard/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/analytics",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/analytics/1440x900.png",
+        "screens/baseline/admin/analytics/1440x900--chart-tooltip.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/reports",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/reports/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/reports-generator",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/reports-generator/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/playlists",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/playlists/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/playlists/history",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/playlists_history/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/add",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /spotify-logo.png",
+        "подзапрос HTTP 404: https://cdn.simpleicons.org/yandexmusic/FFCC00"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_add/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/bulk-add",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_bulk-add/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: https://cdn.simpleicons.org/yandexmusic/FFCC00",
+        "подзапрос HTTP 404: /spotify-logo.png"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/reports",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_reports/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/payments",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /dashboard/admin/payments/payment_e2e-report-main-q2?_rsc=1xgnq",
+        "подзапрос HTTP 404: /dashboard/admin/payments/payment_e2e-report-main-q1?_rsc=1xgnq"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_payments/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/releases",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /dashboard/admin/artists/e2e-main-id/releases/e2e-rel-main-2?_rsc=b9ogf",
+        "подзапрос HTTP 404: /dashboard/admin/artists/e2e-main-id/releases/e2e-rel-main-1?_rsc=b9ogf"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_releases/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/playlists",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_playlists/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases/1440x900.png",
+        "screens/baseline/admin/releases/1440x900--filters-open.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/add",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_add/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/e2e-rel-main-1",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_e2e-rel-main-1/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/koala-parser",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_koala-parser/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/zvonko-parser",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_zvonko-parser/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/payments",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/payments/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/activity",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/activity/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/settings",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/settings/1440x900.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/dashboard",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: A network error occurred."
+      ],
+      "files": [
+        "screens/baseline/admin/dashboard/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/analytics",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/analytics/390x844.png",
+        "screens/baseline/admin/analytics/390x844--chart-tooltip.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/reports",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/reports/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/reports-generator",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/reports-generator/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/playlists",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/playlists/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/playlists/history",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/playlists_history/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/add",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /spotify-logo.png",
+        "подзапрос HTTP 404: https://cdn.simpleicons.org/yandexmusic/FFCC00"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_add/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/bulk-add",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_bulk-add/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: https://cdn.simpleicons.org/yandexmusic/FFCC00",
+        "подзапрос HTTP 404: /spotify-logo.png"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/reports",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_reports/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/payments",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /dashboard/admin/payments/payment_e2e-report-main-q2?_rsc=1xgnq",
+        "подзапрос HTTP 404: /dashboard/admin/payments/payment_e2e-report-main-q1?_rsc=1xgnq"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_payments/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/releases",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "подзапрос HTTP 404: /dashboard/admin/artists/e2e-main-id/releases/e2e-rel-main-2?_rsc=b9ogf"
+      ],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_releases/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/artists/e2e-main-id/playlists",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/artists_e2e-main-id_playlists/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases/390x844.png",
+        "screens/baseline/admin/releases/390x844--filters-open.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/add",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_add/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/e2e-rel-main-1",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_e2e-rel-main-1/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/koala-parser",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_koala-parser/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/releases/zvonko-parser",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/releases_zvonko-parser/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/payments",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/payments/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/activity",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/activity/390x844.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "path": "/dashboard/admin/settings",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/admin/settings/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/dashboard",
+      "viewport": "1440x900",
+      "status": "warn",
+      "problems": [
+        "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpfu"
+      ],
+      "files": [
+        "screens/baseline/artist/dashboard/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/releases",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/releases/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/releases/e2e-rel-main-1",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/releases_e2e-rel-main-1/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/analytics",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/analytics/1440x900.png",
+        "screens/baseline/artist/analytics/1440x900--chart-tooltip.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/playlists",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/playlists/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/playlists/e2e-pl-main-1",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/playlists_e2e-pl-main-1/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/payments",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/payments/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/reports",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/reports/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/settings",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/settings/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/activity",
+      "viewport": "1440x900",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/activity/1440x900.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/dashboard",
+      "viewport": "390x844",
+      "status": "warn",
+      "problems": [
+        "pageerror: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpfu",
+        "pageerror: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpfu"
+      ],
+      "files": [
+        "screens/baseline/artist/dashboard/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/releases",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/releases/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/releases/e2e-rel-main-1",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/releases_e2e-rel-main-1/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/analytics",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/analytics/390x844.png",
+        "screens/baseline/artist/analytics/390x844--chart-tooltip.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/playlists",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/playlists/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/playlists/e2e-pl-main-1",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/playlists_e2e-pl-main-1/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/payments",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/payments/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/reports",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/reports/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/settings",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/settings/390x844.png"
+      ]
+    },
+    {
+      "role": "artist",
+      "path": "/dashboard/artist/e2e-main/activity",
+      "viewport": "390x844",
+      "status": "ok",
+      "problems": [],
+      "files": [
+        "screens/baseline/artist/activity/390x844.png"
+      ]
+    }
+  ]
+}
