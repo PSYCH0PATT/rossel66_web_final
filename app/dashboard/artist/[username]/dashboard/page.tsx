@@ -6,8 +6,8 @@ import {
   getCachedStreamAnalytics,
   getCachedActivitiesForFeed,
 } from "@/lib/cached-dashboard"
-import { buildCabinetStreamFilters } from "@/lib/analytics-request-filters"
-import { dashboardStreamWindow, STREAM_WINDOW_DAYS } from "@/lib/stream-window"
+import { buildArtistDashboardStreamFilters } from "@/lib/analytics-request-filters"
+import { STREAM_WINDOW_DAYS } from "@/lib/stream-window"
 import ArtistDashboardClient from "./artist-dashboard-client"
 
 export const revalidate = 600
@@ -30,11 +30,8 @@ export default async function ArtistDashboardPage({
 
   // F-18: окно и источник метрики — общие со страницей аналитики, иначе
   // «всего прослушиваний» на двух экранах кабинета расходится.
-  const window = dashboardStreamWindow(STREAM_WINDOW_DAYS)
-  const filters = await buildCabinetStreamFilters(data.artist, window)
-
   const [analytics, activities] = await Promise.all([
-    getCachedStreamAnalytics(filters),
+    getCachedStreamAnalytics(await buildArtistDashboardStreamFilters(data.artist)),
     getCachedActivitiesForFeed(data.artist.id, "artist", 5),
   ])
 

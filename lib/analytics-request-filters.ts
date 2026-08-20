@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { buildCabinetStreamAnalyticsWhere } from '@/lib/analytics-artist-match'
 import type { StreamFilters } from '@/lib/flash-storage'
+import { dashboardStreamWindow, STREAM_WINDOW_DAYS } from '@/lib/stream-window'
 
 type SessionUser = {
   id: string
@@ -32,6 +33,21 @@ export async function buildCabinetStreamFilters(
       options
     ),
   }
+}
+
+/**
+ * Фильтры графика стримов для дашборда артиста — окно + источник одним вызовом.
+ *
+ * Шов намеренный: пока страница собирала их сама, ничто не мешало ей снова
+ * разойтись с аналитикой (F-18). Теперь у обоих экранов одна точка входа, и
+ * расхождение ловится тестом (tests/integration/stream-metric.test.ts).
+ */
+export async function buildArtistDashboardStreamFilters(
+  artist: { id: string; name: string; username: string },
+  days: number = STREAM_WINDOW_DAYS,
+  now?: Date
+): Promise<StreamFilters> {
+  return buildCabinetStreamFilters(artist, dashboardStreamWindow(days, now))
 }
 
 /**

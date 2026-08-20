@@ -99,6 +99,13 @@ describe("F-03: журнал админа", () => {
 
     assert.equal(activities.length, 2, "в журнале осталась пара дублей")
     assert.equal(total, 2, "счётчик журнала считает дубли за события")
+
+    // Счётчик не должен прыгать при листании: на второй странице «всего»
+    // обязано остаться тем же числом.
+    const page2 = await getActivitiesFiltered({}, 1, 1)
+    const page1 = await getActivitiesFiltered({}, 1, 0)
+    assert.equal(page1.total, 2)
+    assert.equal(page2.total, 2)
   })
 
   it("колонка «КТО» получает имя, а не сырой числовой id", async (t) => {

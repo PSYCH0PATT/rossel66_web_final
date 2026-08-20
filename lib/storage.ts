@@ -887,6 +887,42 @@ export interface ActivityFilters {
   dateTo?: string
 }
 
+/**
+ * F-03: сколько событий останется после схлопывания пар.
+ *
+ * Считать `count()` по всей выборке нельзя — он вернёт число строк, включая
+ * дубли, и счётчик на экране разойдётся со списком. Вычитать дубли текущей
+ * страницы тоже нельзя: тогда «всего» прыгает при листании. Поэтому тянем
+ * только поля ключа дедупа (четыре узких колонки) и считаем честно. Журнал
+ * ограничен сверху ретеншном в 90 дней (ACTIVITY_RETENTION_DAYS); на всякий
+ * случай стоит потолок, за которым возвращаем число строк.
+ */
+const ACTIVITY_COUNT_SCAN_LIMIT = 20_000
+
+async function countDedupedActivities(where: any): Promise<number> {
+  const rows = await prisma.activity.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: ACTIVITY_COUNT_SCAN_LIMIT,
+    select: { id: true, type: true, metadata: true, createdAt: true },
+  })
+  if (rows.length === ACTIVITY_COUNT_SCAN_LIMIT) {
+    return prisma.activity.count({ where })
+  }
+  return dedupeActivities(
+    rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      userId: '',
+      userRole: 'admin' as const,
+      title: '',
+      description: '',
+      metadata: (r.metadata ?? undefined) as Record<string, unknown> | undefined,
+      createdAt: r.createdAt.toISOString(),
+    }))
+  ).length
+}
+
 /** F-03: имена акторов одним запросом — вместо сырых id на экране. */
 async function attachActorNames(activities: Activity[]): Promise<Activity[]> {
   const ids = [...new Set(
@@ -943,7 +979,7 @@ export async function getActivitiesFiltered(
       skip: offset,
       take: limit
     }),
-    prisma.activity.count({ where })
+    countDedupedActivities(where),
   ])
   
   // F-03: пары «уведомление артисту + уведомление админу» об одном объекте
@@ -952,7 +988,7 @@ export async function getActivitiesFiltered(
 
   return {
     activities: await attachActorNames(deduped),
-    total: total - (activities.length - deduped.length),
+    total,
   }
 }
 
