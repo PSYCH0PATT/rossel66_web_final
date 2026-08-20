@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { DollarSign, Calendar, CheckCircle, Clock, Plus, Edit, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
 import { formatDateRu } from "@/lib/format-date"
+import { formatMoney } from "@/lib/format-money"
 
 type UiPayment = {
   id: string
@@ -100,7 +102,7 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <Spinner />
         </div>
       )
   }
@@ -114,15 +116,12 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
               href="/dashboard/admin/artists"
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <span className="material-symbols-outlined text-base" aria-hidden>arrow_back</span>
               <span>Назад к списку артистов</span>
             </Link>
           </div>
 
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <Banner variant="danger">{error}</Banner>
         </div>
       )
   }
@@ -130,40 +129,35 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
   return (
     
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/admin/artists"
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Назад к списку артистов</span>
-          </Link>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">Выплаты артиста: {artist?.name}</h1>
-
-          <Button className="bg-azure hover:bg-azure-dark text-black">
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить выплату
-          </Button>
-        </div>
+        <PageHeader
+          size="md"
+          backHref="/dashboard/admin/artists"
+          backLabel="Назад к списку артистов"
+          title={`Выплаты артиста: ${artist?.name ?? ""}`}
+          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
+          actions={
+            <Button>
+              <span className="material-symbols-outlined text-lg mr-2" aria-hidden>add</span>
+              Добавить выплату
+            </Button>
+          }
+        />
 
         {years.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-            <DollarSign className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <h2 className="text-xl font-medium text-white mb-2">Нет выплат</h2>
-            <p className="text-gray-400 mb-6">Для этого артиста пока нет выплат</p>
-            <Button className="bg-azure hover:bg-azure-dark text-black">
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить первую выплату
-            </Button>
+          /* F-25: второе действие («Добавить первую выплату») ушло — CTA живёт
+             в слоте actions шапки, дублировать её в пустом состоянии нечем. */
+          <div className="card-glass rounded-2xl border border-white/5">
+            <EmptyState
+              icon="payments"
+              title="Нет выплат"
+              description="Для этого артиста пока нет выплат"
+            />
           </div>
         ) : (
           <div className="space-y-6">
             {years.map((year) => (
               <div key={year} className="space-y-4">
-                <h2 className="text-xl font-semibold text-white">{year}</h2>
+                <SectionHeader className="mb-0" title={year} />
 
                 <div className="space-y-3">
                   {paymentsByYear[year]
@@ -173,32 +167,27 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                       return quarterB - quarterA
                     })
                     .map((payment) => (
-                      <Card key={payment.id} className="bg-gray-900 border-gray-800 text-white">
-                        <CardContent className="p-4">
+                      <div key={payment.id} className="card-glass rounded-2xl border border-white/5 p-4 text-white">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               {payment.status === "completed" ? (
-                                <CheckCircle className="h-5 w-5 text-emerald" />
+                                <span className="material-symbols-outlined text-xl text-status-success" aria-hidden>check_circle</span>
                               ) : (
-                                <Clock className="h-5 w-5 text-amber-500" />
+                                <span className="material-symbols-outlined text-xl text-status-warning" aria-hidden>schedule</span>
                               )}
                               <div>
                                 <h4 className="font-medium">
                                   Выплата за {payment.quarter} {payment.year}
                                 </h4>
                                 <div className="text-sm text-gray-400 flex items-center gap-2 mt-1">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>
-                                    {payment.date
-                                      ? formatDateRu(payment.date)
-                                      : "—"}
-                                  </span>
+                                  <span className="material-symbols-outlined text-base" aria-hidden>calendar_today</span>
+                                  <span>{formatDateRu(payment.date)}</span>
                                 </div>
                               </div>
                             </div>
 
                             <div className="text-right">
-                              <div className="text-xl font-bold">{payment.amount.toLocaleString("ru-RU")} ₽</div>
+                              <div className="text-xl font-bold">{formatMoney(payment.amount)}</div>
                               <div className="text-xs text-gray-400">
                                 {payment.status === "completed" ? "Выплачено" : "В обработке"}
                               </div>
@@ -206,30 +195,21 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                           </div>
 
                           <div className="flex items-center justify-end gap-2 mt-4">
-                            <Link href={`/dashboard/admin/payments/${payment.id}`}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-azure text-azure hover:bg-azure hover:text-black"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/dashboard/admin/payments/${payment.id}`}>
+                                <span className="material-symbols-outlined text-base mr-2" aria-hidden>edit</span>
                                 Редактировать
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
 
                             {payment.status === "pending" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-emerald text-emerald hover:bg-emerald hover:text-black"
-                              >
-                                <DollarSign className="h-4 w-4 mr-2" />
+                              <Button variant="success-outline" size="sm">
+                                <span className="material-symbols-outlined text-base mr-2" aria-hidden>currency_ruble</span>
                                 Подтвердить выплату
                               </Button>
                             )}
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
                     ))}
                 </div>
               </div>

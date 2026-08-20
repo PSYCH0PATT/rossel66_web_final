@@ -45,42 +45,6 @@
           }
         ]
       }
-    },
-    {
-      "files": ["app/dashboard/login/page.tsx"],
-      "rules": {
-        "no-restricted-syntax": [
-          "warn",
-          {
-            "selector": "JSXOpeningElement[name.name='button']",
-            "message": "Не используйте raw <button> — берите components/ui/button (см. docs/ui-audit.md, C-02)."
-          },
-          {
-            "selector": "JSXOpeningElement[name.name='input']",
-            "message": "Не используйте raw <input> — берите components/ui/input (см. docs/ui-audit.md, C-17)."
-          },
-          {
-            "selector": "JSXOpeningElement[name.name='select']",
-            "message": "Не используйте raw <select> — берите components/ui/select (см. docs/ui-audit.md, C-17)."
-          },
-          {
-            "selector": "JSXOpeningElement[name.name='table']",
-            "message": "Не используйте raw <table> — берите components/ui/table (см. docs/ui-audit.md, C-10)."
-          },
-          {
-            "selector": "Literal[value=/(?:^|\\s)(bg|text|border)-\\[#/]",
-            "message": "Arbitrary-цвет в className запрещён — используйте цветовые токены (см. docs/ui-audit.md, C-04)."
-          },
-          {
-            "selector": "TemplateElement[value.raw=/(?:^|\\s)(bg|text|border)-\\[#/]",
-            "message": "Arbitrary-цвет в className запрещён — используйте цветовые токены (см. docs/ui-audit.md, C-04)."
-          },
-          {
-            "selector": "JSXAttribute[name.name='style'] Property[key.name=/^(color|background|backgroundColor|borderColor|fill|stroke)$/]",
-            "message": "Inline color-style запрещён — используйте цветовые токены (см. docs/ui-audit.md, C-04)."
-          }
-        ]
-      }
     }
   ]
 }

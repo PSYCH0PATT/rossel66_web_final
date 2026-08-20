@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { formatDateRu } from "@/lib/format-date"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import { Music, Calendar, Barcode, Plus, Edit, Trash, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function ArtistReleasesPage({ params }: { params: { id: string } }) {
   const artistId = params.id
@@ -58,26 +58,10 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
     return () => { cancelled = true }
   }, [artistId])
 
-  // Status badge colors
-  const statusColors = {
-    released: "bg-emerald text-black",
-    moderation: "bg-amber-500 text-black",
-    delivery: "bg-azure text-black",
-    scheduled: "bg-purple-500 text-white",
-  }
-
-  // Status translations
-  const statusLabels = {
-    released: "Вышел",
-    moderation: "Модерация",
-    delivery: "Отгрузка",
-    scheduled: "Запланирован",
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <Spinner />
         </div>
       )
   }
@@ -91,15 +75,12 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
               href="/dashboard/admin/artists"
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <span className="material-symbols-outlined text-base" aria-hidden>arrow_back</span>
               <span>Назад к списку артистов</span>
             </Link>
           </div>
 
-          <Alert variant="destructive" className="bg-red-900/50 border-red-800 text-white">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <Banner variant="danger">{error}</Banner>
         </div>
       )
   }
@@ -107,39 +88,33 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
   return (
     
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/admin/artists"
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Назад к списку артистов</span>
-          </Link>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">Релизы артиста: {artist?.name}</h1>
-
-          <Button className="bg-azure hover:bg-azure-dark text-black">
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить релиз
-          </Button>
-        </div>
+        <PageHeader
+          size="md"
+          backHref="/dashboard/admin/artists"
+          backLabel="Назад к списку артистов"
+          title={`Релизы артиста: ${artist?.name ?? ""}`}
+          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
+          actions={
+            <Button>
+              <span className="material-symbols-outlined text-lg mr-2" aria-hidden>add</span>
+              Добавить релиз
+            </Button>
+          }
+        />
 
         {artistReleases.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-            <Music className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <h2 className="text-xl font-medium text-white mb-2">Нет релизов</h2>
-            <p className="text-gray-400 mb-6">У этого артиста пока нет релизов</p>
-            <Button className="bg-azure hover:bg-azure-dark text-black">
-              <Plus className="h-4 w-4 mr-2" />
-              Добавить первый релиз
-            </Button>
+          /* F-25: одно действие на экран — CTA осталась в шапке. */
+          <div className="card-glass rounded-2xl border border-white/5">
+            <EmptyState
+              icon="library_music"
+              title="Нет релизов"
+              description="У этого артиста пока нет релизов"
+            />
           </div>
         ) : (
           <div className="releases-grid">
             {artistReleases.map((release) => (
-              <Card key={release.id} className="bg-gray-900 border-gray-800 text-white overflow-hidden">
+              <div key={release.id} className="card-glass overflow-hidden rounded-2xl border border-white/5 text-white">
                 <div className="aspect-square relative">
                   <Image
                     src={release.coverUrl || "/placeholder.svg"}
@@ -147,55 +122,49 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
                     fill
                     className="object-cover"
                   />
-                  <Badge
-                    className={`absolute top-2 right-2 ${statusColors[release.status as keyof typeof statusColors]}`}
-                  >
-                    {statusLabels[release.status as keyof typeof statusLabels]}
-                  </Badge>
+                  {/* C-15/F-23: раньше подпись собиралась локальной картой из четырёх
+                      английских ключей и на реальных статусах пилюля оставалась пустой. */}
+                  <ReleaseStatusBadge className="absolute top-2 right-2" status={release.status} />
                 </div>
-                <CardContent className="p-4">
+                <div className="p-4">
                   <h2 className="text-lg font-bold mb-1">{release.title}</h2>
 
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <Barcode className="h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined text-base text-gray-400" aria-hidden>barcode</span>
                       <span className="text-gray-300">UPC: {release.upc}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined text-base text-gray-400" aria-hidden>calendar_today</span>
                       <span className="text-gray-300">Дата: {formatDateRu(release.releaseDate)}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Music className="h-4 w-4 text-gray-400" />
+                      <span className="material-symbols-outlined text-base text-gray-400" aria-hidden>music_note</span>
                       <span className="text-gray-300">Треков: {release.tracks?.length ?? 0}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 mt-4">
-                    <Link href={`/dashboard/admin/artists/${artistId}/releases/${release.id}`}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-azure text-azure hover:bg-azure hover:text-black"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/dashboard/admin/artists/${artistId}/releases/${release.id}`}>
+                        <span className="material-symbols-outlined text-base mr-2" aria-hidden>edit</span>
                         Редактировать
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
 
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                      variant="destructive-outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      aria-label={`Удалить ${release.title}`}
                     >
-                      <Trash className="h-4 w-4" />
-                      <span className="sr-only">Удалить</span>
+                      <span className="material-symbols-outlined text-base" aria-hidden>delete</span>
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}

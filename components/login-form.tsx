@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Banner } from "@/components/ui/banner"
 // Removed import of users from lib/data
 
 export default function LoginForm() {
@@ -76,12 +75,13 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-700/50 p-8 sm:p-10 shadow-2xl" style={{ backgroundColor: 'rgba(26, 29, 36, 0.7)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(4px)' }}>
+    /* C-04/C-05: фон формы был inline-стилем rgba(26,29,36,.7) — это ровно
+       токен --surface-field, а размытие стояло двумя разными значениями. */
+    <div className="rounded-2xl border border-gray-700/50 bg-surface-field/70 p-8 sm:p-10 shadow-2xl backdrop-blur-xs">
       {error && (
-        <Alert variant="destructive" className="mb-6 rounded-xl">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <Banner variant="danger" className="mb-6 rounded-xl">
+          {error}
+        </Banner>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,7 +95,7 @@ export default function LoginForm() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald-500 focus:ring-emerald-500/20 focus:ring-2 transition-all"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-primary focus:ring-primary/20 focus:ring-2 transition-all"
             placeholder="Введите ваш логин"
           />
         </div>
@@ -110,14 +110,17 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald-500 focus:ring-emerald-500/20 focus:ring-2 transition-all"
+            className="bg-white/5 border-white/10 text-white rounded-xl h-12 px-4 focus:border-primary focus:ring-primary/20 focus:ring-2 transition-all"
             placeholder="Введите ваш пароль"
           />
         </div>
 
+        {/* C-02, кнопка #5: тот же #10b981, но вариантом кита — с честным
+            disabled (F-28), который здесь реально включается на время входа. */}
         <Button
           type="submit"
-          className="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-xl h-12 text-base transition-all hover:shadow-lg hover:shadow-emerald-500/20"
+          variant="cta"
+          className="w-full rounded-xl h-12 text-base transition-all"
           disabled={isLoading}
         >
           {isLoading ? "Вход..." : "Войти"}

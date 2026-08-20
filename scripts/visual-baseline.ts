@@ -53,7 +53,7 @@ const SEED = {
   artistPlaylistId: "e2e-pl-main-1",
 } as const
 
-type Role = "admin" | "artist"
+type Role = "admin" | "artist" | "public"
 
 type RouteState = {
   /** Попадёт в имя файла: `{viewport}--{name}.png`. */
@@ -172,7 +172,20 @@ const ARTIST_ROUTES: RouteSpec[] = [
   { path: `/dashboard/artist/${ARTIST.username}/activity` },
 ]
 
-const ROLES: Array<{ role: Role; user: SeedUser; routes: RouteSpec[]; prefix: string }> = [
+/**
+ * Публичные экраны кабинета — снимаются БЕЗ сессионной куки, как их видит гость.
+ * Пока здесь один логин: до волны 4.4 он в каталог не входил («вне скоупа»),
+ * из-за чего у единственного экрана кабинета не было эталона.
+ */
+const PUBLIC_ROUTES: RouteSpec[] = [{ path: "/dashboard/login" }]
+
+const ROLES: Array<{
+  role: Role
+  /** null — контекст без логина (публичные экраны). */
+  user: SeedUser | null
+  routes: RouteSpec[]
+  prefix: string
+}> = [
   { role: "admin", user: USERS.admin, routes: ADMIN_ROUTES, prefix: "/dashboard/admin/" },
   {
     role: "artist",
@@ -180,6 +193,7 @@ const ROLES: Array<{ role: Role; user: SeedUser; routes: RouteSpec[]; prefix: st
     routes: ARTIST_ROUTES,
     prefix: `/dashboard/artist/${ARTIST.username}/`,
   },
+  { role: "public", user: null, routes: PUBLIC_ROUTES, prefix: "/dashboard/" },
 ]
 
 const VIEWPORTS = [
@@ -405,7 +419,8 @@ async function captureRoute(
     await stabilize(page)
 
     const landed = new URL(page.url()).pathname
-    if (landed === "/dashboard/login") {
+    // Сам экран логина — легальная цель (роль public), а не выброшенная сессия.
+    if (landed === "/dashboard/login" && route.path !== "/dashboard/login") {
       problems.add("редирект на /dashboard/login — сессия не принята (AUTH_SECRET стенда?)")
     } else if (landed !== route.path) {
       problems.add(`редирект на ${landed}`)
@@ -559,7 +574,7 @@ async function main() {
           locale: "ru-RU",
           timezoneId: "Europe/Moscow",
         })
-        await loginAs(context, user, baseUrl)
+        if (user) await loginAs(context, user, baseUrl)
         const page = await context.newPage()
 
         for (const { route, slug } of planned) {

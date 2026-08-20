@@ -84,22 +84,13 @@ module.exports = {
           neutral: "rgb(var(--status-neutral) / <alpha-value>)",
         },
         /**
-         * Легаси-палитра финансового дашборда. Значения оставлены как были:
-         * `bg-emerald` (#00C957) и `bg-azure` (#00FFFF) ещё живут на страницах
-         * `artists/[id]/{payments,releases}` — это волна 4.4.
-         * Удалены как неиспользуемые нигде в репозитории: `category.*`,
-         * `background-light`, `background-dark`, `glass-dark`, `glass-light`.
+         * Легаси-палитра финансового дашборда (`azure` #00FFFF, `emerald`
+         * #00C957) удалена в волне 4.4 вместе с последними носителями —
+         * страницами `artists/[id]/{payments,releases}`. Раньше по той же
+         * причине ушли `category.*`, `background-light`, `background-dark`,
+         * `glass-dark`, `glass-light`. NB: числовая шкала `emerald-400/500`
+         * приходит из палитры Tailwind и никуда не девалась.
          */
-        azure: {
-          DEFAULT: "#00FFFF",
-          light: "#7FFFFF",
-          dark: "#00CCCC",
-        },
-        emerald: {
-          DEFAULT: "#00C957",
-          light: "#7FFFD4",
-          dark: "#009645",
-        },
         // Фоновые блобы шелла кабинета (app/dashboard/layout.tsx).
         "accent-azure": "rgb(var(--brand-azure) / <alpha-value>)", // #0ea5e9, Sky 500
         "accent-emerald": "rgb(var(--brand) / <alpha-value>)", // #10b981, Emerald 500
@@ -143,6 +134,28 @@ module.exports = {
           "0%, 100%": { opacity: 0.7 },
           "50%": { opacity: 0.4 },
         },
+        /**
+         * Появление экрана логина. Волна 4.4: раньше эти четыре анимации жили
+         * в `styled-jsx`-блоке самой страницы и переопределяли глобальный
+         * `.animate-float` из globals.css. Имена с префиксом `login-` — чтобы
+         * не спорить с ним снова.
+         */
+        "login-fade-down": {
+          from: { opacity: 0, transform: "translateY(-20px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
+        "login-fade-up": {
+          from: { opacity: 0, transform: "translateY(20px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
+        "login-fade-in": {
+          from: { opacity: 0 },
+          to: { opacity: 1 },
+        },
+        "login-float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -150,6 +163,10 @@ module.exports = {
         'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         "pulse-slow-azure-blob":
           "pulse-azure-blob 6s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "login-fade-down": "login-fade-down 0.8s ease-out",
+        "login-fade-up": "login-fade-up 0.8s ease-out 0.2s backwards",
+        "login-fade-in": "login-fade-in 0.8s ease-out 0.4s backwards",
+        "login-float": "login-float 3s ease-in-out infinite",
       },
     },
   },
