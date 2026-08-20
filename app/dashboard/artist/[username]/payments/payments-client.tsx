@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { reportUploadedLabel } from "@/lib/report-period"
 
 interface Report {
   id: string
@@ -217,9 +218,9 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-gray-400">
                             <span className="inline-flex items-center gap-1 font-mono tabular-nums">
                               <span className="material-symbols-outlined text-sm text-gray-500">calendar_today</span>
-                              {report.uploadDate
-                                ? new Date(report.uploadDate).toLocaleDateString("ru-RU")
-                                : "—"}
+                              {/* F-15: дата загрузки файла подписана — без подписи
+                                  она читалась как дата периода отчёта. */}
+                              {reportUploadedLabel(report.uploadDate)}
                             </span>
                             {/* F-23: тот же StatusBadge, что на /reports — один стиль статуса. */}
                             <StatusBadge variant={report.isSigned ? "live" : "rejected"} withIcon={false}>

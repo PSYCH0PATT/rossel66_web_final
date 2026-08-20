@@ -149,6 +149,25 @@ RU/EN вперемешку (футер, пагинация, «CUSTOM», «No Ima
 
 **Итого: 18 багов.**
 
+### Статус багфикс-трека
+
+Закрыты (у каждого — тест, воспроизводивший баг до правки):
+
+| ID | Где правило теперь живёт | Тест |
+|---|---|---|
+| F-03 | `lib/activity-log.ts` — дедуп пар на чтении + подпись актора; парные записи убраны во всех шести местах записи | `lib/activity-log.test.ts`, `tests/integration/activity-feed.test.ts` |
+| F-04 | лента кабинета читает по группе профилей и `metadata.artistId` (`lib/storage.ts`, `/api/activities?cabinet=1`) | там же |
+| F-05 | `lib/format-compact-number.ts` — одна формула на ось и на метрику | `lib/format-compact-number.test.ts` |
+| F-14 | `lib/release-status.ts` — «Доставлен» требует хотя бы один трек, «0:00» → «—» | `lib/release-status.test.ts` |
+| F-15 | `lib/report-period.ts` — «Загружен: …» и период из квартала | `lib/report-period.test.ts` |
+| F-18 | `lib/stream-window.ts` + `buildCabinetStreamFilters` — одно окно и один источник у дашборда и аналитики | `lib/stream-window.test.ts` |
+| F-67 | `lib/business-date.ts` — дефолт даты по МСК, не по часовому поясу браузера | `lib/business-date.test.ts` |
+| F-69 | `lib/payments-filter.ts` — нулевые суммы не долг | `lib/payments-filter.test.ts` |
+
+Сняты как неактуальные: F-55 (не воспроизводится у rompy — см. `ia-decisions.md`), F-96 (экран визитки удаляется целиком).
+
+Остаётся по F-04 фича-трек: генерация и загрузка отчётов (`/api/reports/*-upload`, `process-python`) не пишут событий вовсе — до этого лента не покажет отчётность, сколько её ни фильтруй.
+
 ---
 
 ## 3. Локальные UI-фиксы

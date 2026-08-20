@@ -23,6 +23,8 @@ type Props = {
   reports: ArtistDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
   initialActivities: Activity[]
+  /** F-18: окно метрики — то же, что просит страница аналитики. */
+  streamWindowDays: number
 }
 
 export default function ArtistDashboardClient({
@@ -33,6 +35,7 @@ export default function ArtistDashboardClient({
   reports,
   initialStreamsByDay,
   initialActivities,
+  streamWindowDays,
 }: Props) {
   const totalEarnings = useMemo(
     () => reports.reduce((sum, report) => sum + (report.totalAmount || 0), 0),
@@ -133,7 +136,7 @@ export default function ArtistDashboardClient({
           <div className="card-glass rounded-2xl flex-1 border border-white/5 p-6 flex flex-col relative min-h-[320px]">
             <StreamingChart
               artistId={artist.id}
-              days={30}
+              days={streamWindowDays}
               initialStreamsByDay={initialStreamsByDay}
             />
           </div>

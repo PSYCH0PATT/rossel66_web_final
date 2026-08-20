@@ -9,6 +9,7 @@ import { Banner } from "@/components/ui/banner"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { releaseTrackCount } from "@/lib/release-status"
 import { Spinner } from "@/components/ui/spinner"
 
 export default function ArtistReleasesPage({ params }: { params: { id: string } }) {
@@ -124,7 +125,11 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
                   />
                   {/* C-15/F-23: раньше подпись собиралась локальной картой из четырёх
                       английских ключей и на реальных статусах пилюля оставалась пустой. */}
-                  <ReleaseStatusBadge className="absolute top-2 right-2" status={release.status} />
+                  <ReleaseStatusBadge
+                    className="absolute top-2 right-2"
+                    status={release.status}
+                    trackCount={releaseTrackCount(release.tracks)}
+                  />
                 </div>
                 <div className="p-4">
                   <h2 className="text-lg font-bold mb-1">{release.title}</h2>

@@ -473,24 +473,14 @@ async function processReleases(koalaReleases: KoalaRelease[]): Promise<ParseStat
         };
         
         await addReleaseWithActivities(newReleaseData, (createdRelease) => [
+          // F-03: одна запись на событие — пара «артисту + админу» задваивала
+          // журнал одним таймстампом.
           {
             type: 'release_added',
             userId: artist.id,
             userRole: 'artist',
             title: 'Новый релиз добавлен',
             description: `Добавлен релиз "${koalaRelease.title}"`,
-            metadata: {
-              releaseId: createdRelease.id,
-              koalaId: koalaRelease.koala_id,
-              status: koalaRelease.status
-            }
-          },
-          {
-            type: 'release_added',
-            userId: 'system',
-            userRole: 'admin',
-            title: 'Новый релиз добавлен',
-            description: `Добавлен релиз "${koalaRelease.title}" (артист: ${artist.name || artist.username})`,
             metadata: {
               releaseId: createdRelease.id,
               koalaId: koalaRelease.koala_id,

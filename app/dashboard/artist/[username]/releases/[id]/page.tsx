@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { releaseTrackCount, trackDurationText } from "@/lib/release-status"
 
 function parseDurationSeconds(duration?: string | number): number {
   if (duration == null || duration === "") return 0
@@ -146,7 +147,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
         className="mb-8"
         title="РЕЛИЗ"
         subtitle="Карточка релиза, треки и технические данные дистрибуции."
-        actions={<ReleaseStatusBadge status={release.status} />}
+        actions={<ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(tracks)} />}
       />
 
       {/* Hero */}
@@ -239,7 +240,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
                     <DataTableCell className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
                       <span className="inline-flex items-center gap-1 justify-end">
                         <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
-                        {track.duration || "—"}
+                        {trackDurationText(track.duration)}
                       </span>
                     </DataTableCell>
                   </DataTableRow>

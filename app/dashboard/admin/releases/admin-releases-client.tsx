@@ -417,7 +417,7 @@ export default function AdminReleasesClient() {
 
                   {/* Status */}
                   <DataTableCell>
-                    <ReleaseStatusBadge status={release.status} />
+                    <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
                   </DataTableCell>
 
                   {/* Tracks */}

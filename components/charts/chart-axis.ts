@@ -12,6 +12,8 @@
  * где mobile — из useMobileDetector().
  */
 
+import { formatAxisNumber } from "@/lib/format-compact-number"
+
 /** Стиль подписи тика: gray-500 моно 10px — STREAM_CHART_COLORS.axisTick. */
 export const CHART_AXIS_TICK = {
   fill: "#6b7280",
@@ -21,17 +23,13 @@ export const CHART_AXIS_TICK = {
 
 /**
  * Короткая запись числа шкалы: 950 → «950», 2 800 → «2.8K», 125 000 → «125K»,
- * 2 800 000 → «2.8M». До десяти единиц — один знак после точки, дальше целые.
+ * 2 800 000 → «2.8M».
+ *
+ * F-05: своя копия формулы жила здесь и в streaming-chart, обе округляли до
+ * целых единиц масштаба («0K» на шкале, «1000K» на границе) и обе были вне
+ * `pnpm test`. Единственная реализация теперь в `lib/format-compact-number.ts`.
  */
-export function formatAxisNumber(value: number): string {
-  const abs = Math.abs(value)
-  const sign = value < 0 ? "-" : ""
-  const short = (n: number) =>
-    n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10)
-  if (abs >= 1_000_000) return `${sign}${short(abs / 1_000_000)}M`
-  if (abs >= 1_000) return `${sign}${short(abs / 1_000)}K`
-  return String(value)
-}
+export { formatAxisNumber }
 
 export interface ChartAxisOptions {
   /** useMobileDetector(): на телефоне тики прореживаются сильнее. */

@@ -5,6 +5,7 @@ import {
   getCachedStreamAnalytics,
   getCachedActivitiesForFeed,
 } from "@/lib/cached-dashboard"
+import { dashboardStreamWindow, STREAM_WINDOW_DAYS } from "@/lib/stream-window"
 import AdminDashboardClient from "./admin-dashboard-client"
 
 export const revalidate = 600
@@ -14,18 +15,12 @@ export default async function AdminDashboardPage() {
   if (!session) redirect("/dashboard/login")
   if (session.role !== "admin") notFound()
 
-  const end = new Date()
-  const start = new Date()
-  start.setDate(end.getDate() - 30)
-  const startStr = start.toISOString().split("T")[0]
-  const endStr = end.toISOString().split("T")[0]
+  // F-18: то же окно, что у страницы аналитики (МСК, не UTC).
+  const window = dashboardStreamWindow(STREAM_WINDOW_DAYS)
 
   const [payload, analytics, activities] = await Promise.all([
     getCachedAdminDashboard(),
-    getCachedStreamAnalytics({
-      startDate: startStr,
-      endDate: endStr,
-    }),
+    getCachedStreamAnalytics(window),
     getCachedActivitiesForFeed(null, "admin", 5),
   ])
 
@@ -38,6 +33,7 @@ export default async function AdminDashboardPage() {
       payments={payload.payments}
       reports={payload.reports}
       initialStreamsByDay={analytics.streamsByDay}
+      streamWindowDays={STREAM_WINDOW_DAYS}
       initialActivities={activities}
     />
   )

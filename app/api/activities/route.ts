@@ -13,8 +13,20 @@ export async function GET(request: NextRequest) {
     let userId = searchParams.get('userId') || undefined
     const role = (searchParams.get('role') as 'artist' | 'admin') || undefined
 
-    if (session?.role === 'artist') {
-      userId = session.id
+    // F-04: лента кабинета собирается по группе связанных профилей и по
+    // metadata.artistId — события про релизы и отчёты пишет система, и артист
+    // указан в них только метаданными. Артист всегда видит только свою группу;
+    // админ, открывший кабинет артиста, видит ровно ту же ленту.
+    // `cabinet=1` ставит только лента кабинета (components/activity-feed.tsx):
+    // журнал админа на /activity остаётся строгим фильтром «кто сделал».
+    const cabinetMode = searchParams.get('cabinet') === '1'
+    let artistGroupIds: string[] | undefined
+    const cabinetOwnerId =
+      session?.role === 'artist' ? session.id : cabinetMode ? userId : undefined
+    if (cabinetOwnerId) {
+      const { getArtistGroupIds } = await import('@/lib/artist-links')
+      artistGroupIds = await getArtistGroupIds(cabinetOwnerId)
+      userId = undefined
     }
     // H5: не фильтруем по неполному хардкод-вайтлисту (иначе валидный, но не
     // перечисленный тип отбрасывался → фильтр не применялся → возвращались ВСЕ).
@@ -29,8 +41,9 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
 
     const filters = {
+      ...(artistGroupIds?.length && { artistGroupIds }),
       ...(userId && { userId }),
-      ...(role && { role }),
+      ...(!artistGroupIds && role && { role }),
       ...(types?.length && { types }),
       ...(dateFrom && { dateFrom }),
       ...(dateTo && { dateTo })

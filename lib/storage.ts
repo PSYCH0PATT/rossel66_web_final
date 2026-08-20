@@ -16,6 +16,11 @@ import {
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
 import { releaseDateToSortDate } from '@/lib/release-date-sort'
 import { normalizeReleaseDate } from '@/lib/release-date'
+import {
+  activityActorLabel,
+  dedupeActivities,
+  SYSTEM_ACTOR_ID,
+} from '@/lib/activity-log'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -169,6 +174,12 @@ export interface Activity {
   description: string
   metadata?: Record<string, any>
   createdAt: string
+  /**
+   * F-03: имя актора резолвится на сервере. Раньше экран искал его в
+   * подгруженной странице списка пользователей и почти всегда показывал
+   * вместо имени сырой числовой id.
+   */
+  userName?: string
 }
 
 const ACTIVITY_RETENTION_DAYS = 90
@@ -864,10 +875,36 @@ export async function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>):
 
 export interface ActivityFilters {
   userId?: string
+  /**
+   * F-04: лента кабинета. Событие попадает в неё, если записано на любой
+   * профиль группы ИЛИ указывает на него в metadata.artistId — события про
+   * релизы и отчёты пишет система, и артист там только в метаданных.
+   */
+  artistGroupIds?: string[]
   role?: 'artist' | 'admin'
   types?: ActivityType[]
   dateFrom?: string
   dateTo?: string
+}
+
+/** F-03: имена акторов одним запросом — вместо сырых id на экране. */
+async function attachActorNames(activities: Activity[]): Promise<Activity[]> {
+  const ids = [...new Set(
+    activities.map((a) => a.userId).filter((id) => id && id !== SYSTEM_ACTOR_ID)
+  )]
+
+  const users = ids.length
+    ? await prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, username: true },
+      })
+    : []
+  const namesById = new Map(users.map((u) => [u.id, u.name || u.username]))
+
+  return activities.map((activity) => ({
+    ...activity,
+    userName: activityActorLabel(activity, namesById),
+  }))
 }
 
 export async function getActivitiesFiltered(
@@ -877,7 +914,14 @@ export async function getActivitiesFiltered(
 ): Promise<{ activities: Activity[]; total: number }> {
   const where: any = {}
   
-  if (filters.userId) {
+  if (filters.artistGroupIds?.length) {
+    where.OR = [
+      { userId: { in: filters.artistGroupIds } },
+      ...filters.artistGroupIds.map((id) => ({
+        metadata: { path: ['artistId'], equals: id },
+      })),
+    ]
+  } else if (filters.userId) {
     where.userId = filters.userId
   }
   if (filters.role) {
@@ -902,9 +946,13 @@ export async function getActivitiesFiltered(
     prisma.activity.count({ where })
   ])
   
-  return { 
-    activities: activities.map(activityFromPrisma), 
-    total 
+  // F-03: пары «уведомление артисту + уведомление админу» об одном объекте
+  // схлопываются на чтении — в базе они уже есть, миграцией их не убрать.
+  const deduped = dedupeActivities(activities.map(activityFromPrisma))
+
+  return {
+    activities: await attachActorNames(deduped),
+    total: total - (activities.length - deduped.length),
   }
 }
 
@@ -914,7 +962,7 @@ export async function getActivitiesByUserId(userId: string, limit: number = 10):
     orderBy: { createdAt: 'desc' },
     take: limit
   })
-  return activities.map(activityFromPrisma)
+  return attachActorNames(dedupeActivities(activities.map(activityFromPrisma)))
 }
 
 export async function getActivitiesByRole(role: 'artist' | 'admin', limit: number = 10): Promise<Activity[]> {

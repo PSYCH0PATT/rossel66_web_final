@@ -36,6 +36,9 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
       const params = new URLSearchParams()
       if (userId) params.append('userId', userId)
       if (role) params.append('role', role)
+      // F-04: лента кабинета — по группе профилей и metadata.artistId,
+      // а не строго по userId (см. app/api/activities/route.ts).
+      if (role === 'artist') params.append('cabinet', '1')
       params.append('limit', limit.toString())
 
       const response = await fetch(`/api/activities?${params}`)

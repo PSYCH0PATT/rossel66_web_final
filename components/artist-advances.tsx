@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
 import { formatDateRu } from "@/lib/format-date"
+import { todayIso } from "@/lib/business-date"
 
 type Advance = {
   id: string
@@ -23,12 +24,6 @@ type Advance = {
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
-function todayIso() {
-  const now = new Date()
-  const tzOffsetMs = now.getTimezoneOffset() * 60_000
-  return new Date(now.getTime() - tzOffsetMs).toISOString().slice(0, 10)
-}
 
 /**
  * Авансы артиста: выдача, история, удаление.

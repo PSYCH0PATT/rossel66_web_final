@@ -194,24 +194,22 @@ export async function POST(request: Request) {
     if (assignedReleases > 0) {
       const artistReleases = await getReleasesByArtistId(newUser.id)
       for (const release of artistReleases) {
-        // Уведомление для артиста
+        // F-03: одна запись на событие. Раньше их было две — «артисту» и
+        // «админу» — и в общем журнале они стояли парой одним таймстампом,
+        // причём вторая без имени актора. Артист видит эту же строку:
+        // лента кабинета читает и по metadata.artistId (F-04).
         await addActivity({
           type: 'release_added',
           userId: newUser.id,
           userRole: 'artist',
           title: 'Добавлен релиз',
           description: `Добавлен релиз "${release.title}"`,
-          metadata: { artistId: newUser.id, releaseId: release.id, releaseTitle: release.title }
-        })
-        
-        // Уведомление для админа
-        await addActivity({
-          type: 'release_added',
-          userId: 'system',
-          userRole: 'admin',
-          title: 'Добавлен релиз',
-          description: `Добавлен релиз "${release.title}" (артист: ${newUser.name || newUser.username})`,
-          metadata: { artistId: newUser.id, artistName: newUser.name, releaseId: release.id, releaseTitle: release.title }
+          metadata: {
+            artistId: newUser.id,
+            artistName: newUser.name,
+            releaseId: release.id,
+            releaseTitle: release.title,
+          }
         })
       }
     }

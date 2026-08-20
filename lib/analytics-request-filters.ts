@@ -10,6 +10,31 @@ type SessionUser = {
 }
 
 /**
+ * Фильтры стримов кабинета артиста — один источник для дашборда и аналитики.
+ *
+ * F-18: дашборд просил аналитику строго по `artistId`, а страница аналитики —
+ * через `cabinetWhere` (группа AKA + коллабы без artistId). Одна и та же
+ * метрика выходила разной («60» против «107», «335K» против «364 590»).
+ * Оба экрана обязаны спрашивать одно и то же.
+ */
+export async function buildCabinetStreamFilters(
+  artist: { id: string; name: string; username: string },
+  window?: { startDate?: string; endDate?: string },
+  options?: { solo?: boolean }
+): Promise<StreamFilters> {
+  return {
+    startDate: window?.startDate,
+    endDate: window?.endDate,
+    cabinetWhere: await buildCabinetStreamAnalyticsWhere(
+      artist.id,
+      artist.name,
+      artist.username,
+      options
+    ),
+  }
+}
+
+/**
  * Строит StreamFilters из query params и роли пользователя.
  */
 export async function buildAnalyticsFiltersFromRequest(

@@ -522,7 +522,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                           ...release,
                           tracks: [
                             ...release.tracks,
-                            { id: `track_${Date.now()}`, title: '', isrc: '', duration: '00:00' },
+                            { id: `track_${Date.now()}`, title: '', isrc: '', duration: '' },
                           ],
                         })
                       }

@@ -6,6 +6,8 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { formatDayMonthUtc } from "@/lib/format-date"
+import { formatCompactNumber } from "@/lib/format-compact-number"
+import { dashboardStreamWindow } from "@/lib/stream-window"
 import { ChartTooltip } from "@/components/charts/chart-tooltip"
 import { chartXAxisProps, chartYAxisProps } from "@/components/charts/chart-axis"
 import { STREAM_CHART_COLORS } from "@/lib/chart-colors"
@@ -24,12 +26,6 @@ interface StreamingChartProps {
   days?: number
   /** Если передан с сервера — клиент не делает повторный fetch */
   initialStreamsByDay?: StreamPoint[]
-}
-
-function formatNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
-  return String(n)
 }
 
 /** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
@@ -77,14 +73,9 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
   async function load() {
     try {
       setLoading(true)
-      const end = new Date()
-      const start = new Date()
-      start.setDate(end.getDate() - days)
-
-      const params = new URLSearchParams({
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
-      })
+      // F-18: окно — то же, что у страницы аналитики (МСК, не UTC).
+      const { startDate, endDate } = dashboardStreamWindow(days)
+      const params = new URLSearchParams({ startDate, endDate })
       if (artistId) params.append('artistId', artistId)
 
       const res = await fetch(`/api/analytics/streams?${params}`)
@@ -152,9 +143,10 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Всего прослушиваний</p>
+          {/* F-18: период метрики подписан — иначе её не с чем сверить в аналитике. */}
+          <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">Всего прослушиваний за {days} дней</p>
           <h3 className="text-3xl font-display font-bold text-white leading-none">
-            {formatNum(total)}
+            {formatCompactNumber(total)}
             <span className={`text-sm font-sans font-normal ml-2 ${changePositive ? 'text-primary' : 'text-red-400'}`}>
               {changeStr}
             </span>

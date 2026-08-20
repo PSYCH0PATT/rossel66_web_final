@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
-import { formatDateRu } from "@/lib/format-date"
+import { reportUploadedLabel } from "@/lib/report-period"
 import { formatMoney } from "@/lib/format-money"
 
 type UiPayment = {
@@ -181,7 +181,8 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                                 </h4>
                                 <div className="text-sm text-gray-400 flex items-center gap-2 mt-1">
                                   <span className="material-symbols-outlined text-base" aria-hidden>calendar_today</span>
-                                  <span>{formatDateRu(payment.date)}</span>
+                                  {/* F-15: «Загружен: …» — дата файла, не дата периода. */}
+                                  <span>{reportUploadedLabel(payment.date)}</span>
                                 </div>
                               </div>
                             </div>

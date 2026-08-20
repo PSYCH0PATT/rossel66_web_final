@@ -31,6 +31,7 @@ import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SkeletonRows } from "@/components/ui/skeleton-presets"
 import type { ActivityType } from "@/lib/storage"
+import { activityActorLabel } from "@/lib/activity-log"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
 const CATEGORIES = [
@@ -119,6 +120,8 @@ interface ActivityItem {
   description: string
   metadata?: Record<string, unknown>
   createdAt: string
+  /** F-03: подпись актора, посчитанная на сервере. */
+  userName?: string
 }
 
 interface UserOption {
@@ -243,9 +246,14 @@ export default function AdminActivityPage() {
     })
 
   const whoLabel = (item: ActivityItem) => {
-    if (item.userId === "system") return "Система"
+    // F-03: имя резолвит сервер (lib/storage.ts) — в подгруженной странице
+    // списка пользователей его почти никогда не было, и в колонку падал
+    // сырой числовой id.
+    if (item.userName) return item.userName
     const u = users.find((x) => x.id === item.userId)
-    return u ? u.name || u.username || item.userId : item.userId
+    const fallback = new Map<string, string>()
+    if (u) fallback.set(u.id, u.name || u.username || "")
+    return activityActorLabel(item, fallback)
   }
 
   const selectedUser = users.find((u) => u.id === userId)

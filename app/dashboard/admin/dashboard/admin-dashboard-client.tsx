@@ -27,6 +27,8 @@ type Props = {
   payments: Payment[]
   reports: AdminDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
+  /** F-18: окно метрики — то же, что просит страница аналитики. */
+  streamWindowDays: number
   initialActivities: Activity[]
 }
 
@@ -38,6 +40,7 @@ export default function AdminDashboardClient({
   payments,
   reports,
   initialStreamsByDay,
+  streamWindowDays,
   initialActivities,
 }: Props) {
   const router = useRouter()
@@ -175,7 +178,7 @@ export default function AdminDashboardClient({
           />
 
           <div className="card-glass rounded-2xl flex-1 border border-white/5 p-8 flex flex-col relative min-h-[360px]">
-            <StreamingChart days={30} initialStreamsByDay={initialStreamsByDay} />
+            <StreamingChart days={streamWindowDays} initialStreamsByDay={initialStreamsByDay} />
           </div>
         </div>
       </div>

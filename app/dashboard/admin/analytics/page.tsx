@@ -29,6 +29,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SkeletonValue } from "@/components/ui/skeleton-presets"
 import { SeriesBar } from "@/components/charts/series-bar"
+import { mskDateString } from "@/lib/msk-date"
+import { analyticsStreamWindow } from "@/lib/stream-window"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
@@ -77,34 +79,11 @@ interface AnalyticsData {
   totalStreams?: number
 }
 
-/** Календарная дата в Europe/Moscow (совпадает с именами rossel_flash_YYYY_MM_DD.csv). */
-function mskDateString(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Moscow",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date)
-}
-
-function getDateRange(period: string): { startDate: string; endDate: string } {
-  const end = new Date()
-  const start = new Date()
-
-  switch (period) {
-    case "7d": start.setDate(end.getDate() - 7); break
-    case "30d": start.setDate(end.getDate() - 30); break
-    case "90d": start.setDate(end.getDate() - 90); break
-    case "180d": start.setDate(end.getDate() - 180); break
-    case "365d": start.setDate(end.getDate() - 365); break
-    default: start.setDate(end.getDate() - 30); break
-  }
-
-  return {
-    startDate: mskDateString(start),
-    endDate: mskDateString(end),
-  }
-}
+/**
+ * F-18: окно периода — общее с дашбордом (lib/stream-window.ts). Пока пресет
+ * жил здесь своей копией, дашборд и аналитика считали «30 дней» по-разному.
+ */
+const getDateRange = analyticsStreamWindow
 
 /** A8: подпись дня в UTC — дата точки календарная, локальный getDate() сдвигал ось */
 const formatDate = formatDayMonthUtc

@@ -322,12 +322,21 @@ export const getCachedStreamAnalytics = unstable_cache(
 export const getCachedActivitiesForFeed = unstable_cache(
   async (userId: string | null, role: "artist" | "admin" | null, limit: number): Promise<Activity[]> => {
     const filters: Parameters<typeof getActivitiesFiltered>[0] = {}
-    if (userId) filters.userId = userId
-    if (role) filters.role = role
+    if (userId && role === "artist") {
+      // F-04: кабинет у группы связанных профилей один, а события про релизы
+      // и отчёты пишет система — артист в них указан только в metadata.
+      // Фильтр по одному userId оставлял ленту почти пустой.
+      const { getArtistGroupIds } = await import("@/lib/artist-links")
+      filters.artistGroupIds = await getArtistGroupIds(userId)
+    } else if (userId) {
+      filters.userId = userId
+    } else if (role) {
+      filters.role = role
+    }
     const { activities } = await getActivitiesFiltered(filters, limit, 0)
     return activities
   },
-  ["activities-feed-v1"],
+  ["activities-feed-v2"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 

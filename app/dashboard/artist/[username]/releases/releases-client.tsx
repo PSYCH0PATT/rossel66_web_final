@@ -24,6 +24,7 @@ import { Pagination } from "@/components/ui/pagination"
 import { SearchInput } from "@/components/ui/search-input"
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { releaseTrackCount } from "@/lib/release-status"
 import { FOOTER_STRINGS } from "@/lib/ui-strings"
 
 interface Release {
@@ -236,7 +237,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                             <div className="mt-1 flex items-center justify-between gap-2">
                               <p className="text-sm text-gray-300 truncate">{release.artistDisplay}</p>
                               <div className="shrink-0">
-                                <ReleaseStatusBadge status={release.status} />
+                                <ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(release.tracks)} />
                               </div>
                             </div>
                           </div>
@@ -318,7 +319,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                         </DataTableCell>
 
                         <DataTableCell className="px-6 py-4">
-                          <ReleaseStatusBadge status={release.status} />
+                          <ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(release.tracks)} />
                         </DataTableCell>
 
                         <DataTableCell className="px-6 py-4 text-right">

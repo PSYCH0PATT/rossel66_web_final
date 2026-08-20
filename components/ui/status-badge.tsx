@@ -2,6 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { releaseStatusLabel, releaseStatusVariant } from "@/lib/release-status"
 
 /**
  * Статус-бейдж — C-15 (docs/ui-audit.md). Один компонент вместо дубля
@@ -97,68 +98,39 @@ const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
 )
 StatusBadge.displayName = "StatusBadge"
 
-export type ReleaseStatusVariant =
-  | "live"
-  | "delivered"
-  | "moderation"
-  | "rejected"
-  | "draft"
-
 /**
- * Маппинг сырых статусов релиза (русские и английские написания из данных)
- * на вариант бейджа — бывший дубль getStatusVariant в двух клиентах.
+ * Маппинг сырых статусов релиза и русские подписи живут в
+ * `lib/release-status.ts`: там же правило F-14 — «доставлен» без единого трека
+ * это дыра в данных, а не статус.
  */
-export function releaseStatusVariant(status?: string): ReleaseStatusVariant {
-  switch (status) {
-    case "Доставлен":
-    case "released":
-    case "Одобрен":
-      return "live"
-    case "В доставке":
-    case "delivery":
-      return "delivered"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "moderation"
-    case "Отклонен":
-    case "Отклонён":
-    case "Снят":
-      return "rejected"
-    default:
-      return "draft"
-  }
-}
-
-/** Единая русская подпись статуса — бывший дубль getStatusLabel. */
-export function releaseStatusLabel(status?: string): string {
-  switch (releaseStatusVariant(status)) {
-    case "live":
-      return "Доставлен"
-    case "delivered":
-      return "В доставке"
-    case "moderation":
-      return "Модерируется"
-    case "rejected":
-      return "Отклонен"
-    default:
-      return status || "Драфт"
-  }
-}
+export {
+  releaseStatusLabel,
+  releaseStatusVariant,
+  releaseTrackCount,
+  trackDurationText,
+} from "@/lib/release-status"
+export type { ReleaseStatusVariant } from "@/lib/release-status"
 
 export interface ReleaseStatusBadgeProps
   extends Omit<StatusBadgeProps, "variant" | "children"> {
   status?: string
+  /**
+   * Сколько треков известно у релиза. F-14: при нуле статус «Доставлен»
+   * подменяется на «Нет данных» — доставки без треклиста не бывает.
+   */
+  trackCount?: number
 }
 
 /** Бейдж статуса релиза по сырому значению из данных. */
 const ReleaseStatusBadge = React.forwardRef<HTMLSpanElement, ReleaseStatusBadgeProps>(
-  ({ status, ...props }, ref) => (
-    <StatusBadge ref={ref} variant={releaseStatusVariant(status)} {...props}>
-      {releaseStatusLabel(status)}
-    </StatusBadge>
-  )
+  ({ status, trackCount, ...props }, ref) => {
+    const context = trackCount === undefined ? undefined : { trackCount }
+    return (
+      <StatusBadge ref={ref} variant={releaseStatusVariant(status, context)} {...props}>
+        {releaseStatusLabel(status, context)}
+      </StatusBadge>
+    )
+  }
 )
 ReleaseStatusBadge.displayName = "ReleaseStatusBadge"
 
