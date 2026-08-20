@@ -57,13 +57,6 @@
         "app/dashboard/admin/releases/zvonko-parser/page.tsx",
         "app/dashboard/admin/settings/page.tsx",
         "app/dashboard/admin/unregistered-reports/page.tsx",
-        "app/dashboard/artist/\\[username\\]/analytics/page.tsx",
-        "app/dashboard/artist/\\[username\\]/dashboard/artist-dashboard-client.tsx",
-        "app/dashboard/artist/\\[username\\]/payments/payments-client.tsx",
-        "app/dashboard/artist/\\[username\\]/playlists/\\[id\\]/page.tsx",
-        "app/dashboard/artist/\\[username\\]/releases/\\[id\\]/page.tsx",
-        "app/dashboard/artist/\\[username\\]/releases/releases-client.tsx",
-        "app/dashboard/artist/\\[username\\]/settings/artist-settings-client.tsx",
         "app/dashboard/login/page.tsx"
       ],
       "rules": {

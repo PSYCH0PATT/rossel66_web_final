@@ -3,104 +3,23 @@
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { notFound, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { DashboardFooter } from "@/components/dashboard-footer"
-
-type StatusVariant = "live" | "delivered" | "moderation" | "draft" | "rejected"
-
-function getStatusVariant(status?: string): StatusVariant {
-  switch (status) {
-    case "Доставлен":
-    case "released":
-    case "Одобрен":
-      return "live"
-    case "В доставке":
-    case "delivery":
-      return "delivered"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "moderation"
-    case "Отклонен":
-    case "Отклонён":
-    case "Снят":
-      return "rejected"
-    default:
-      return "draft"
-  }
-}
-
-function getStatusLabel(status?: string): string {
-  switch (status) {
-    case "Доставлен":
-      return "Доставлен"
-    case "released":
-      return "В релизе"
-    case "Одобрен":
-      return "Одобрен"
-    case "В доставке":
-    case "delivery":
-      return "В доставке"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "На модерации"
-    case "Отклонен":
-    case "Отклонён":
-      return "Отклонён"
-    case "Снят":
-      return "Снят"
-    default:
-      if (!status || status === "draft") return "Черновик"
-      return status
-  }
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const variant = getStatusVariant(status)
-  const label = getStatusLabel(status)
-
-  if (variant === "live") {
-    return (
-      <span className="release-status-badge release-status-badge--live">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-        {label}
-      </span>
-    )
-  }
-  if (variant === "delivered") {
-    return (
-      <span className="release-status-badge release-status-badge--delivered">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>check</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "moderation") {
-    return (
-      <span className="release-status-badge release-status-badge--moderation">
-        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>sync</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "rejected") {
-    return (
-      <span className="release-status-badge release-status-badge--rejected">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>block</span>
-        {label}
-      </span>
-    )
-  }
-  return (
-    <span className="release-status-badge release-status-badge--draft">
-      <span className="material-symbols-outlined" style={{ fontSize: 10 }}>edit</span>
-      {label}
-    </span>
-  )
-}
+import { Button } from "@/components/ui/button"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
+import { ReleaseStatusBadge } from "@/components/ui/status-badge"
 
 function parseDurationSeconds(duration?: string | number): number {
   if (duration == null || duration === "") return 0
@@ -185,67 +104,50 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
-        </div>
-      )
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Spinner size="lg" label="Загрузка…" />
+      </div>
+    )
   }
 
   if (!artist || !release) {
     return (
-      
-        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center">
-          <div className="text-red-500/85 p-3 bg-red-500/10 rounded-full border border-red-500/20">
-            <span className="material-symbols-outlined" style={{ fontSize: 32 }}>error</span>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-white text-lg font-medium">Релиз не найден</h3>
-            <p className="text-gray-400 text-sm max-w-sm">
-              Релиз удален или у вас нет прав на его просмотр.
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/artist/${params.username}/releases`}
-            className="text-xs text-primary font-mono uppercase tracking-widest border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-lg px-4 py-2 mt-2 transition-all duration-300"
-          >
-            Вернуться к релизам
-          </Link>
-        </div>
-      )
+      <EmptyState
+        className="min-h-[40vh]"
+        icon="error"
+        title="Релиз не найден"
+        description="Релиз удален или у вас нет прав на его просмотр."
+        action={
+          <Button asChild variant="outline">
+            <Link href={`/dashboard/artist/${params.username}/releases`}>Вернуться к релизам</Link>
+          </Button>
+        }
+      />
+    )
   }
 
-  const dashHref = `/dashboard/artist/${params.username}/dashboard`
-  const releasesHref = `/dashboard/artist/${params.username}/releases`
-  const titleShort =
-    release.title.length > 32 ? `${release.title.slice(0, 32)}…` : release.title
-
   return (
-    
-      <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest border border-white/10 rounded-lg px-3 py-2 inline-flex items-center gap-2 self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            aria-label="Назад"
-          >
-            <span className="material-symbols-outlined text-base">arrow_back</span>
-            Назад
-          </button>
-        </div>
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div className="min-w-0">
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">РЕЛИЗ</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Карточка релиза, треки и технические данные дистрибуции.
-            </p>
-          </div>
-          <StatusBadge status={release.status} />
-        </div>
+    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          aria-label="Назад"
+          className="self-start rounded-lg border border-white/10 font-mono text-xs uppercase tracking-widest text-gray-500 hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden>
+            arrow_back
+          </span>
+          Назад
+        </Button>
       </div>
+
+      <PageHeader
+        className="mb-8"
+        title="РЕЛИЗ"
+        subtitle="Карточка релиза, треки и технические данные дистрибуции."
+        actions={<ReleaseStatusBadge status={release.status} />}
+      />
 
       {/* Hero */}
       <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
@@ -260,7 +162,12 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
             />
           </div>
           <div className="flex-1 min-w-0 space-y-4">
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-white tracking-tight break-words">
+            {/*
+              F-52: название релиза больше не печатается дисплейным шрифтом.
+              Syncopate — капс-шрифт без строчных и без «ё»: пользовательская
+              строка «Я всё ещё одна» превращалась в «я все еще одна».
+            */}
+            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight break-words">
               {release.title}
             </h2>
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
@@ -296,58 +203,57 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
 
       {/* Tracks table */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            ТРЕКИ
-          </h2>
-        </div>
-        
+        <SectionHeader className="mb-6" title="ТРЕКИ" />
+
         {tracks.length > 0 ? (
           <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
-                    <th className="px-6 py-4 font-mono w-14">#</th>
-                    <th className="px-6 py-4 font-mono">Название</th>
-                    <th className="px-6 py-4 font-mono">ISRC</th>
-                    <th className="px-6 py-4 font-mono text-right">Длительность</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {tracks.map((track: any, index: number) => (
-                    <tr
-                      key={track.id ?? index}
-                      className="group border-b border-white/5 transition-all duration-200 table-row-hover"
-                    >
-                      <td className="px-6 py-3 text-gray-400 font-mono tabular-nums">{index + 1}</td>
-                      <td className="px-6 py-3">
-                        <div className="font-bold text-white group-hover:text-[#10b981] transition-colors min-w-0 break-words">
-                          {track.title}
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
-                        {track.isrc || "—"}
-                      </td>
-                      <td className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
-                        <span className="inline-flex items-center gap-1 justify-end">
-                          <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
-                          {track.duration || "—"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
+            {/*
+              C-10: горизонтальный скролл теперь с видимым скроллбаром и тенями
+              у краёв, первая колонка залипает — на 390 таблица шире вьюпорта,
+              и «Длительность» раньше просто обрезалась без аффорданса.
+            */}
+            <DataTable stickyFirstColumn tableClassName="text-left">
+              <DataTableHeader>
+                <DataTableHeadRow className="bg-black/40">
+                  <DataTableHeadCell className="w-14 px-6 py-4">#</DataTableHeadCell>
+                  <DataTableHeadCell className="px-6 py-4">Название</DataTableHeadCell>
+                  <DataTableHeadCell className="px-6 py-4">ISRC</DataTableHeadCell>
+                  <DataTableHeadCell className="px-6 py-4 text-right">Длительность</DataTableHeadCell>
+                </DataTableHeadRow>
+              </DataTableHeader>
+              <DataTableBody className="text-sm">
+                {tracks.map((track: any, index: number) => (
+                  <DataTableRow key={track.id ?? index} className="group">
+                    <DataTableCell className="px-6 py-3 text-gray-400 font-mono tabular-nums">
+                      {index + 1}
+                    </DataTableCell>
+                    <DataTableCell className="px-6 py-3">
+                      <div className="font-bold text-white transition-colors group-hover:text-brand min-w-0 break-words">
+                        {track.title}
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
+                      {track.isrc || "—"}
+                    </DataTableCell>
+                    <DataTableCell className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
+                      <span className="inline-flex items-center gap-1 justify-end">
+                        <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
+                        {track.duration || "—"}
+                      </span>
+                    </DataTableCell>
+                  </DataTableRow>
+                ))}
+              </DataTableBody>
+            </DataTable>
           </div>
         ) : (
-          <div className="card-glass rounded-2xl border border-white/5 p-8 text-center">
-            <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">music_off</span>
-            <p className="text-gray-500 font-mono text-xs uppercase tracking-wider mb-1">Треки не загружены</p>
-            <p className="text-[10px] text-gray-600">Список треков пуст или не был импортирован.</p>
+          <div className="card-glass rounded-2xl border border-white/5">
+            <EmptyState
+              icon="music_off"
+              title="Треки не загружены"
+              description="Список треков пуст или не был импортирован."
+            />
           </div>
         )}
       </div>
@@ -402,6 +308,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
       </div>
 
       <DashboardFooter role="artist" />
-      </div>
-    )
+    </div>
+  )
 }

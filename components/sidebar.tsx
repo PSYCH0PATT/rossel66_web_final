@@ -219,12 +219,15 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
 
   const artistNavItems: NavItemConfig[] = useMemo(
     () => [
+      // Порядок = приоритету владельца (docs/ia-decisions.md, §3): аналитика
+      // первым содержательным разделом, дальше релизы → отчёты → выплаты →
+      // плейлисты. Набор пунктов прежний, переставлен только порядок.
       { href: `${artistBasePath}/dashboard`, label: "Главная" },
+      { href: `${artistBasePath}/analytics`, label: "Аналитика" },
       { href: `${artistBasePath}/releases`, label: "Релизы" },
       { href: `${artistBasePath}/reports`, label: "Отчёты" },
       { href: `${artistBasePath}/payments`, label: "Выплаты" },
       { href: `${artistBasePath}/playlists`, label: "Плейлисты" },
-      { href: `${artistBasePath}/analytics`, label: "Аналитика" },
     ],
     [artistBasePath]
   )

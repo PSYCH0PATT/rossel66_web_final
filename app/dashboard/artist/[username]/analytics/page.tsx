@@ -7,20 +7,39 @@ import { ProfileFilter } from "@/components/profile-filter"
 import dynamic from "next/dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { BarChart3, CalendarIcon, Loader2 } from "lucide-react"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { SegmentedControl } from "@/components/ui/segmented-control"
+import { Spinner } from "@/components/ui/spinner"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
+import { SeriesBar } from "@/components/charts/series-bar"
 import { formatDayMonthUtc } from "@/lib/format-date"
+import { PERIOD_STRINGS } from "@/lib/ui-strings"
 
 const DspStreamChart = dynamic(() => import("@/components/charts/DspStreamChart"), { ssr: false })
 
-const SOURCE_COLORS = [
-  "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
-  "#14b8a6", "#a855f7",
-]
+/** Подписи периода — из словаря (C-16): «Custom» в русском ряду был последним EN-словом (F-11). */
+const PERIOD_OPTIONS = [
+  { value: "7d", label: PERIOD_STRINGS.d7 },
+  { value: "30d", label: PERIOD_STRINGS.d30 },
+  { value: "90d", label: PERIOD_STRINGS.d90 },
+  { value: "180d", label: PERIOD_STRINGS.d180 },
+  { value: "365d", label: PERIOD_STRINGS.y1 },
+  { value: "custom", label: PERIOD_STRINGS.custom },
+] as const
+
+/** Тот же ряд компактными подписями — сегмент-контрол на md+. */
+const PERIOD_SEGMENTS = [
+  { value: "7d", label: PERIOD_STRINGS.short.d7 },
+  { value: "30d", label: PERIOD_STRINGS.short.d30 },
+  { value: "90d", label: PERIOD_STRINGS.short.d90 },
+  { value: "180d", label: PERIOD_STRINGS.short.d180 },
+  // «Год», а не «ГОД»: подпись совпадает с /admin/analytics — экраны-близнецы.
+  { value: "365d", label: PERIOD_STRINGS.y1 },
+  { value: "custom", label: PERIOD_STRINGS.short.custom },
+] as const
 
 interface Track {
   trackName: string
@@ -206,7 +225,7 @@ export default function ArtistAnalyticsPage() {
     if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        <Spinner />
       </div>
     )
   }
@@ -217,17 +236,14 @@ export default function ArtistAnalyticsPage() {
 
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">АНАЛИТИКА</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Стримы по площадкам, трекам и выбранному периоду.
-            </p>
-          </div>
-
-        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+      <PageHeader
+        className="mb-8"
+        title="АНАЛИТИКА"
+        subtitle="Стримы по площадкам, трекам и выбранному периоду."
+        rowClassName="md:flex-col md:items-start md:gap-6 lg:flex-row lg:items-end"
+        actionsClassName="w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center"
+        actions={
+          <>
           <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:contents">
           <ProfileFilter
             value={profileId}
@@ -261,14 +277,7 @@ export default function ArtistAnalyticsPage() {
                 <SelectValue placeholder="Период" />
               </SelectTrigger>
               <SelectContent>
-                {[
-                  { value: "7d", label: "7 дней" },
-                  { value: "30d", label: "30 дней" },
-                  { value: "90d", label: "90 дней" },
-                  { value: "180d", label: "180 дней" },
-                  { value: "365d", label: "Год" },
-                  { value: "custom", label: "Свой период" },
-                ].map((p) => (
+                {PERIOD_OPTIONS.map((p) => (
                   <SelectItem
                     key={p.value}
                     value={p.value}
@@ -282,59 +291,24 @@ export default function ArtistAnalyticsPage() {
           </div>
           </div>
 
-          <div className="hidden rounded-xl border border-white/10 bg-white/5 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:flex">
-            {[
-              { value: "7d", label: "7Д" },
-              { value: "30d", label: "30Д" },
-              { value: "90d", label: "90Д" },
-              { value: "180d", label: "180Д" },
-              { value: "365d", label: "Год" },
-              { value: "custom", label: "Custom" },
-            ].map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setPeriod(p.value)}
-                className={`min-w-[max-content] rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                  period === p.value
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "text-gray-500 hover:text-emerald-400"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          {/* Period pills — tablet+ */}
+          <SegmentedControl
+            aria-label="Период"
+            className="hidden md:inline-flex"
+            value={period}
+            onValueChange={setPeriod}
+            options={PERIOD_SEGMENTS}
+          />
 
           {period === "custom" && (
             <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
-                    <CalendarIcon className="mr-2 h-3 w-3" />
-                    {customStart ? customStart.toLocaleDateString("ru-RU") : "ОТ"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={customStart} onSelect={setCustomStart} />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="bg-[#141414]/60 backdrop-blur-xl border border-white/5 text-gray-300 text-xs uppercase shadow-[0_4px_20px_rgba(0,0,0,0.2)] h-9">
-                    <CalendarIcon className="mr-2 h-3 w-3" />
-                    {customEnd ? customEnd.toLocaleDateString("ru-RU") : "ДО"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} />
-                </PopoverContent>
-              </Popover>
+              <DatePicker value={customStart} onChange={setCustomStart} placeholder="ОТ" />
+              <DatePicker value={customEnd} onChange={setCustomEnd} placeholder="ДО" />
             </div>
           )}
-        </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="space-y-6">
       {/* HERO SUMMARY CARD */}
@@ -392,14 +366,17 @@ export default function ArtistAnalyticsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+          <Spinner />
         </div>
       ) : !data || (data.streamsByDay.length === 0 && data.paidVsFree.every(p => p.value === 0)) ? (
-        <Card className="stat-card-glass bg-[#141414]/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden">
-          <CardContent className="py-16 text-center px-6">
-            <BarChart3 className="h-12 w-12 mx-auto text-gray-500 mb-4 opacity-50" />
-            <h3 className="text-lg font-bold text-white tracking-wide">Нет данных</h3>
-            <p className="text-gray-400 mt-2 text-sm">Данные аналитики появятся после импорта из rossel_flash</p>
+        <Card className="stat-card-glass bg-surface-raised/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden">
+          <CardContent className="p-0">
+            <EmptyState
+              className="px-6"
+              icon="bar_chart"
+              title="Нет данных"
+              description="Данные аналитики появятся после импорта из rossel_flash"
+            />
           </CardContent>
         </Card>
       ) : (
@@ -427,7 +404,12 @@ export default function ArtistAnalyticsPage() {
               <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">По трекам</p>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-              <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 h-[290px]">
+              {/* F-38/F-39: скролл с видимым скроллбаром и фейдом вместо «обрыва» списка. */}
+              <ScrollArea
+                className="h-[290px]"
+                viewportClassName="flex flex-col gap-1.5 pr-1"
+                fadeClassName="from-surface-raised"
+              >
                 {(data.streamsByTrack ?? []).length === 0 ? (
                   <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                 ) : (
@@ -450,7 +432,7 @@ export default function ArtistAnalyticsPage() {
                     )
                   })
                 )}
-              </div>
+              </ScrollArea>
             </CardContent>
           </Card>
 
@@ -461,7 +443,12 @@ export default function ArtistAnalyticsPage() {
               <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {(data.streamsByTrack ?? []).length} треков</p>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-              <div className="flex flex-col gap-0 overflow-y-auto pr-1 h-[290px]">
+              {/* F-38/F-39: второй scroll-trap — тот же ScrollArea с аффордансом. */}
+              <ScrollArea
+                className="h-[290px]"
+                viewportClassName="flex flex-col gap-0 pr-1"
+                fadeClassName="from-surface-raised"
+              >
                 {((data.streamsByTrack ?? []).length === 0) ? (
                   <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                 ) : (
@@ -474,23 +461,14 @@ export default function ArtistAnalyticsPage() {
                       <div key={item.isrc || idx} className="flex flex-col flex-shrink-0 group py-1.5 border-b border-white/[0.03] last:border-0">
                         <div className="flex items-center gap-3 w-full">
                           <span className="text-[11px] font-card-heading font-medium text-gray-400 truncate shrink-0 w-[130px] group-hover:text-gray-200 transition-colors" title={label}>{label}</span>
-                          <div className="flex-1 min-w-0 h-[3px] bg-gray-800/80 rounded-full overflow-hidden self-center relative">
-                            <div
-                              className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-                              style={{
-                                width: `${Math.max(pct, 2)}%`,
-                                backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
-                                boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
-                              }}
-                            />
-                          </div>
+                          <SeriesBar percent={pct} index={idx} className="min-w-0 flex-1 self-center" />
                           <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 w-[66px] text-right tabular-nums">{item.value.toLocaleString('ru-RU')}</span>
                         </div>
                       </div>
                     )
                   })
                 )}
-              </div>
+              </ScrollArea>
             </CardContent>
           </Card>
 
@@ -511,16 +489,7 @@ export default function ArtistAnalyticsPage() {
                         <span className="text-[11px] font-card-heading font-bold text-gray-300 uppercase tracking-wider group-hover:text-white transition-colors">{item.name}</span>
                         <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 tabular-nums">{item.value.toLocaleString("ru-RU")}</span>
                       </div>
-                      <div className="w-full h-[3px] bg-gray-800/80 rounded-full overflow-hidden mt-1 relative">
-                        <div
-                          className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-                          style={{
-                            width: `${Math.max(pct, 2)}%`,
-                            backgroundColor: SOURCE_COLORS[idx % SOURCE_COLORS.length],
-                            boxShadow: `0 0 6px ${SOURCE_COLORS[idx % SOURCE_COLORS.length]}50`
-                          }}
-                        />
-                      </div>
+                      <SeriesBar percent={pct} index={idx} className="mt-1 w-full" />
                     </div>
                   )
                 })}

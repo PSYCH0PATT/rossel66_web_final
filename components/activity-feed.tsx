@@ -83,52 +83,46 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
     }
   }
 
-  /** Badge label + color classes — 1:1 match with HTML prototype */
+  /**
+   * Бейдж типа события. F-11: подписи латиницей («RELEASE», «FINANCE») —
+   * админ-жаргон в русскоязычном кабинете; цвета прежние.
+   */
   const getBadge = (type: Activity['type']): { text: string; classes: string } => {
     switch (type) {
       case 'release_added':
       case 'release_status_updated':
-        return { text: 'RELEASE', classes: 'bg-green-500/20 text-green-400 border-green-500/20' }
+        return { text: 'Релиз', classes: 'bg-green-500/20 text-green-400 border-green-500/20' }
       case 'playlist_found':
-        return { text: 'PLAYLIST', classes: 'bg-purple-500/20 text-purple-400 border-purple-500/20' }
+        return { text: 'Плейлист', classes: 'bg-purple-500/20 text-purple-400 border-purple-500/20' }
       case 'report_received':
       case 'reports_generated':
-        return { text: 'REPORT', classes: 'bg-blue-500/20 text-blue-400 border-blue-500/20' }
+        return { text: 'Отчёт', classes: 'bg-blue-500/20 text-blue-400 border-blue-500/20' }
       case 'payment_sent':
-        return { text: 'FINANCE', classes: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20' }
+        return { text: 'Финансы', classes: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20' }
       case 'artist_added':
-        return { text: 'ARTIST', classes: 'bg-teal-500/20 text-teal-400 border-teal-500/20' }
+        return { text: 'Артист', classes: 'bg-teal-500/20 text-teal-400 border-teal-500/20' }
       case 'artist_removed':
-        return { text: 'ARTIST', classes: 'bg-red-500/20 text-red-400 border-red-500/20' }
+        return { text: 'Артист', classes: 'bg-red-500/20 text-red-400 border-red-500/20' }
       case 'user_data_updated':
-        return { text: 'SYSTEM', classes: 'bg-blue-500/20 text-blue-400 border-blue-500/20' }
+        return { text: 'Система', classes: 'bg-blue-500/20 text-blue-400 border-blue-500/20' }
       default:
-        return { text: 'SYSTEM', classes: 'bg-gray-500/20 text-gray-400 border-gray-500/20' }
+        return { text: 'Система', classes: 'bg-gray-500/20 text-gray-400 border-gray-500/20' }
     }
   }
 
-  /** Right-side metric display per type */
-  const getMetric = (activity: Activity): { value: string; label: string } => {
-    switch (activity.type) {
-      case 'release_added': return { value: 'NEW', label: 'Release' }
-      case 'playlist_found': return { value: '+1', label: 'Playlist' }
-      case 'report_received': return { value: 'READY', label: 'Report' }
-      case 'reports_generated': return { value: 'DONE', label: 'Generated' }
-      case 'payment_sent': return { value: 'PAID', label: 'Processed' }
-      case 'artist_added': return { value: 'NEW', label: 'Artist' }
-      case 'artist_removed': return { value: 'DEL', label: 'Artist' }
-      case 'release_status_updated': return { value: 'UPD', label: 'Status' }
-      case 'user_data_updated': return { value: 'UPD', label: 'Profile' }
-      default: return { value: '—', label: 'Event' }
-    }
-  }
-
-  /** Вторая строка справа: релиз / контекст вместо заглушки «Date» */
-  const secondaryContextLabel = (activity: Activity, metric: { label: string }): string => {
+  /**
+   * Вторая строка справа — имя релиза или плейлиста из метаданных.
+   *
+   * F-29: раньше при пустых метаданных сюда падала подпись типа события
+   * («Playlist», «Release»), и тип оказывался написан дважды в одной строке —
+   * бейджем и серым текстом. Теперь тип несёт только бейдж, а строка без
+   * контекста не рендерится вовсе.
+   */
+  const secondaryContextLabel = (activity: Activity): string => {
     const m = activity.metadata
     if (m && typeof m.releaseName === 'string' && m.releaseName.trim()) return m.releaseName.trim()
     if (m && typeof m.playlistName === 'string' && m.playlistName.trim()) return m.playlistName.trim()
-    return metric.label
+    return ''
   }
 
   /** Simplified description for artist role */
@@ -178,11 +172,11 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
     <div className="divide-y divide-white/5">
       {activities.map((activity) => {
         const badge = getBadge(activity.type)
-        const metric = getMetric(activity)
+        const context = secondaryContextLabel(activity)
         const iconBg = getIconBg(activity.type)
         const iconName = getIconName(activity.type)
         return (
-          <div key={activity.id} className="p-4 hover:bg-white/5 transition-colors flex items-center gap-4 group cursor-pointer">
+          <div key={activity.id} className="p-4 hover:bg-white/5 transition-colors flex items-start gap-4 group cursor-pointer sm:items-center">
             {/* Icon box — exact match HTML prototype */}
             <div className={`w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative`}>
               <div className={`w-full h-full bg-gradient-to-br ${iconBg} flex items-center justify-center`}>
@@ -190,31 +184,40 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
               </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-white font-bold text-sm truncate">{activity.title}</h4>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                    badge.classes
-                  )}
-                >
-                  {badge.text}
-                </Badge>
+            {/*
+              F-78: на 390 бейдж и колонка даты съедали заголовок до ~14 символов.
+              До sm заголовок занимает всю ширину строки, а дата с контекстом
+              переносится под описание; с sm раскладка прежняя — в один ряд.
+            */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-white font-bold text-sm truncate">{activity.title}</h4>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                      badge.classes
+                    )}
+                  >
+                    {badge.text}
+                  </Badge>
+                </div>
+                <p className="text-gray-400 text-xs truncate">
+                  {descriptionForDisplay(activity)}
+                </p>
               </div>
-              <p className="text-gray-400 text-xs truncate">
-                {descriptionForDisplay(activity)}
-              </p>
-            </div>
 
-            {/* Metric — right side, same as HTML prototype */}
-            <div className="text-right flex-shrink-0 min-w-0 max-w-[28%] sm:max-w-[36%]">
-              <p className="text-white font-mono text-sm truncate">{formatDate(activity.createdAt)}</p>
-              <p className="text-gray-500 text-[10px] uppercase tracking-wider truncate" title={secondaryContextLabel(activity, metric)}>
-                {secondaryContextLabel(activity, metric)}
-              </p>
+              {/* Metric — right side, same as HTML prototype */}
+              <div className="min-w-0 shrink-0 sm:max-w-[36%] sm:text-right">
+                <p className="text-white font-mono text-sm truncate">{formatDate(activity.createdAt)}</p>
+                {context && (
+                  <p className="text-gray-500 text-[10px] uppercase tracking-wider truncate" title={context}>
+                    {context}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div

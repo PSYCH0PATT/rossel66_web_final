@@ -1,6 +1,12 @@
 "use client"
 
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { StatCard } from "@/components/ui/stat-card"
+import { StatusBadge } from "@/components/ui/status-badge"
 
 interface Report {
   id: string
@@ -56,84 +62,55 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
   return (
     <>
       <div className="max-w-full p-0 pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ВЫПЛАТЫ</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Баланс, доступная сумма к выплате и история отчётов по кварталам.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        className="mb-8"
+        title="ВЫПЛАТЫ"
+        subtitle="Баланс, доступная сумма к выплате и история отчётов по кварталам."
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6 mb-8">
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group border border-white/5">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#10b981]">account_balance_wallet</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary mb-3 border border-primary/20">
-                <span className="material-symbols-outlined text-xl">currency_ruble</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Общий баланс</h3>
-            </div>
-            <div>
-              <p
-                data-testid="total-balance"
-                className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl"
-              >
-                {fmt(totalBal)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Накопленные средства</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          className="border border-white/5"
+          label="Общий баланс"
+          icon="currency_ruble"
+          tone="primary"
+          bgIcon="account_balance_wallet"
+          value={
+            <span data-testid="total-balance">
+              {fmt(totalBal)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
+            </span>
+          }
+          footer="Накопленные средства"
+        />
 
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group border border-white/5">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#eab308]">savings</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-yellow-500/10 text-yellow-400 mb-3 border border-yellow-500/20">
-                <span className="material-symbols-outlined text-xl">account_balance</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Доступно к выплате</h3>
-            </div>
-            <div>
-              <p
-                data-testid="available-for-payout"
-                className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl"
-              >
-                {fmt(avail)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Минимум: 3&nbsp;000 ₽</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          className="border border-white/5"
+          label="Доступно к выплате"
+          icon="account_balance"
+          tone="warning"
+          bgIcon="savings"
+          bgIconClassName="text-status-moderation"
+          value={
+            <span data-testid="available-for-payout">
+              {fmt(avail)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
+            </span>
+          }
+          footer={<>Минимум: 3&nbsp;000 ₽</>}
+        />
 
-        <div className="stat-card-glass col-span-2 p-4 md:col-span-2 md:p-6 xl:col-span-1 rounded-2xl relative overflow-hidden group border border-white/5">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">check_circle</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 border border-purple-500/20">
-                <span className="material-symbols-outlined text-xl">done_all</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Выплачено</h3>
-            </div>
-            <div>
-              <p className="text-xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
-                {fmt(paidAmount)} <span className="text-sm text-gray-400 font-sans font-normal md:text-lg">₽</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-2">За всё время</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          className="col-span-2 border border-white/5 md:col-span-2 xl:col-span-1"
+          label="Выплачено"
+          icon="done_all"
+          tone="purple"
+          bgIcon="check_circle"
+          value={
+            <>
+              {fmt(paidAmount)} <span className="text-sm text-gray-500 font-sans">₽</span>
+            </>
+          }
+          footer="За всё время"
+        />
       </div>
 
       {advanceTotal > 0 && (
@@ -195,10 +172,7 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
           при непогашенном авансе к выплате ноль по другой причине, её объясняет
           карточка выше. */}
       {balance && balance.totalBalance > 0 && balance.availableForPayout === 0 && advanceRemaining === 0 && (
-        <div className="card-glass rounded-2xl border border-yellow-500/20 p-4 md:p-5 mb-10 flex gap-3 items-start">
-          <span className="material-symbols-outlined text-yellow-400 text-2xl flex-shrink-0" aria-hidden>
-            info
-          </span>
+        <Banner variant="warning" icon="info" className="mb-10 p-4 md:p-5">
           <div>
             <h4 className="font-bold text-white text-sm mb-1">Недостаточно средств для выплаты</h4>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -206,17 +180,12 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
               Осталось накопить {fmt(Math.max(0, 3000 - balance.totalBalance))} ₽.
             </p>
           </div>
-        </div>
+        </Banner>
       )}
 
       {reports.length > 0 ? (
         <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-primary rounded-full" />
-              История отчётов
-            </h2>
-          </div>
+          <SectionHeader className="mb-6" title="История отчётов" />
 
           <div className="space-y-10">
             {years.map((year) => (
@@ -252,26 +221,20 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
                                 ? new Date(report.uploadDate).toLocaleDateString("ru-RU")
                                 : "—"}
                             </span>
-                            <span className="inline-flex items-center gap-1">
-                              <span
-                                className={`material-symbols-outlined text-sm ${report.isSigned ? "text-emerald-400" : "text-red-400"}`}
-                              >
-                                {report.isSigned ? "verified" : "schedule"}
-                              </span>
+                            {/* F-23: тот же StatusBadge, что на /reports — один стиль статуса. */}
+                            <StatusBadge variant={report.isSigned ? "live" : "rejected"} withIcon={false}>
                               {report.isSigned ? "Подписан" : "Не подписан"}
-                            </span>
+                            </StatusBadge>
                           </div>
                         </div>
                         <div className="text-left sm:text-right flex-shrink-0">
                           <div className="text-xl font-bold text-white font-display tabular-nums">
                             {fmt(report.totalAmount ?? 0)} <span className="text-sm text-gray-500 font-sans">₽</span>
                           </div>
-                          <div
-                            className={`text-[10px] font-mono uppercase tracking-wider mt-1 ${
-                              report.isPaid ? "text-emerald-400" : "text-yellow-400"
-                            }`}
-                          >
-                            {report.isPaid ? "Выплачено" : "Не выплачено"}
+                          <div className="mt-1">
+                            <StatusBadge variant={report.isPaid ? "live" : "warning"} withIcon={false}>
+                              {report.isPaid ? "Выплачено" : "Не выплачено"}
+                            </StatusBadge>
                           </div>
                         </div>
                       </div>
@@ -282,12 +245,13 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 card-glass rounded-2xl border border-white/5 mb-12">
-          <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">receipt_long</span>
-          <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">У вас пока нет отчётов</p>
-          <p className="text-[10px] text-gray-600 mt-2 text-center max-w-md px-4">
-            Здесь будут отображаться ваши отчёты и связанные с ними выплаты.
-          </p>
+        <div className="card-glass rounded-2xl border border-white/5 mb-12">
+          <EmptyState
+            className="py-16"
+            icon="receipt_long"
+            title="У вас пока нет отчётов"
+            description="Здесь будут отображаться ваши отчёты и связанные с ними выплаты."
+          />
         </div>
       )}
 

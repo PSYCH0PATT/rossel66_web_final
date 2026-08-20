@@ -9,6 +9,13 @@ import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { Banner } from "@/components/ui/banner"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FilterChip } from "@/components/ui/filter-chip"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { StatusBadge } from "@/components/ui/status-badge"
 
 interface ArtistReportsProps {
   username: string
@@ -105,39 +112,31 @@ export default function ArtistReports({ username, reports: initialReports, artis
   return (
     <>
       <div className="p-0 md:p-0 max-w-full pb-24">
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ОТЧЁТЫ</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Квартальные отчёты, предпросмотр и скачивание PDF.
-            </p>
-          </div>
-          {years.length > 1 && (
+      <PageHeader
+        className="mb-8"
+        title="ОТЧЁТЫ"
+        subtitle="Квартальные отчёты, предпросмотр и скачивание PDF."
+        actions={
+          years.length > 1 ? (
             <div className="flex flex-wrap gap-2">
               {years.map((year) => (
-                <button
+                <FilterChip
                   key={year}
-                  type="button"
+                  tone="success"
+                  active={year === currentYear}
                   onClick={() => setCurrentYear(year)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                    year === currentYear
-                      ? "bg-primary/20 border-primary/30 text-primary"
-                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                  }`}
                 >
                   {year}
-                </button>
+                </FilterChip>
               ))}
             </div>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {years.length > 0 ? (
         <>
-          <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-5 mb-8">
+          <Banner variant="info" icon={null} className="mb-8 block rounded-2xl p-4 md:p-5">
             <p className="text-sm text-gray-400 leading-relaxed">
               Пожалуйста, внимательно проверьте отчёт перед получением выплаты. Нажав кнопку «Ознакомился», вы подтверждаете, что все треки учтены, данные верны и вы согласны с итоговой суммой. После этого мы отправим вам ссылку на подписание документа в рабочий чат.
             </p>
@@ -147,15 +146,23 @@ export default function ArtistReports({ username, reports: initialReports, artis
             {ackMessage && (
               <p className="text-sm text-primary mt-3 font-mono">{ackMessage}</p>
             )}
-          </div>
+          </Banner>
 
           {sortedQuarters.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               {sortedQuarters.map((quarter) => (
                 <div key={quarter} className="space-y-4">
-                  <h2 className="text-sm font-mono uppercase tracking-widest text-gray-500 border-b border-white/5 pb-2">
-                    {quarter} {currentYear}
-                  </h2>
+                  <SectionHeader
+                    as="h3"
+                    size="sm"
+                    accent="none"
+                    className="mb-0 border-b border-white/5 pb-2"
+                    title={
+                      <span className="font-mono text-sm uppercase tracking-widest text-gray-500">
+                        {quarter} {currentYear}
+                      </span>
+                    }
+                  />
                   <div className="space-y-3">
                     {reportsByQuarter[quarter].map((report) => (
                       <div
@@ -184,42 +191,46 @@ export default function ArtistReports({ username, reports: initialReports, artis
                             {report.uploadDate ? `Загружен: ${formatDateRu(report.uploadDate)}` : "—"}
                           </p>
                           <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] font-mono uppercase tracking-wider">
-                            <span className={`inline-flex items-center gap-1 ${report.isSigned ? "text-emerald-400" : "text-red-400"}`}>
-                              <span className="material-symbols-outlined text-sm">
-                                {report.isSigned ? "verified" : "cancel"}
-                              </span>
+                            {/* F-23: один стиль статуса — тот же StatusBadge, что на /payments. */}
+                            <StatusBadge variant={report.isSigned ? "live" : "rejected"} withIcon={false}>
                               {report.isSigned ? "Подписан" : "Не подписан"}
-                            </span>
+                            </StatusBadge>
                             {report.isAcknowledged && (
-                              <span className="inline-flex items-center gap-1 text-emerald-400">
-                                <span className="material-symbols-outlined text-sm">task_alt</span>
+                              <StatusBadge variant="live" withIcon={false}>
                                 Ознакомлен
-                              </span>
+                              </StatusBadge>
                             )}
                             <span className="text-yellow-400/90 tabular-nums">
                               {Math.round(report.totalAmount || 0).toLocaleString("ru-RU")} ₽
                             </span>
                           </div>
                         </div>
+                        {/* C-13: икон-кнопки — ui/button size=icon, тач 44px из коробки. */}
                         <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            type="button"
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => setPreviewReportId(report.id)}
-                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             aria-label="Предпросмотр"
                             title="Предпросмотр"
+                            className="rounded-lg text-gray-500"
                           >
-                            <span className="material-symbols-outlined text-[20px]">visibility</span>
-                          </button>
-                          <button
-                            type="button"
+                            <span className="material-symbols-outlined text-[20px]" aria-hidden>
+                              visibility
+                            </span>
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleDownloadReport(report.id, report.fileName)}
-                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                             aria-label="Скачать"
                             title="Скачать"
+                            className="rounded-lg text-gray-500"
                           >
-                            <span className="material-symbols-outlined text-[20px]">download</span>
-                          </button>
+                            <span className="material-symbols-outlined text-[20px]" aria-hidden>
+                              download
+                            </span>
+                          </Button>
                         </div>
                         </div>
                         <div className="mt-4 pt-3 border-t border-white/5">
@@ -229,23 +240,24 @@ export default function ArtistReports({ username, reports: initialReports, artis
                               Вы ознакомились
                             </span>
                           ) : acknowledgeGate.allowed ? (
-                            <button
-                              type="button"
+                            <Button
+                              variant="cta"
                               disabled={acknowledgingId === report.id}
                               onClick={() => handleAcknowledge(report.id)}
-                              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#10b981] px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-black shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 hover:bg-emerald-400 disabled:opacity-60"
+                              className="rounded-lg font-mono text-xs uppercase tracking-widest"
                             >
                               {acknowledgingId === report.id ? "Сохранение..." : "Ознакомился"}
-                            </button>
+                            </Button>
                           ) : (
                             <div className="space-y-2">
-                              <button
-                                type="button"
+                              {/* F-28: недоступная CTA действительно выглядит недоступной. */}
+                              <Button
+                                variant="outline"
                                 disabled
-                                className="rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest border border-white/10 text-gray-500 cursor-not-allowed"
+                                className="rounded-lg font-mono text-xs uppercase tracking-widest"
                               >
                                 Ознакомился
-                              </button>
+                              </Button>
                               <p className="text-xs text-gray-500 leading-relaxed">{acknowledgeGate.reason}</p>
                             </div>
                           )}
@@ -257,17 +269,20 @@ export default function ArtistReports({ username, reports: initialReports, artis
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500 font-mono text-sm uppercase tracking-wider mb-12">
-              Нет отчётов за {currentYear} год
-            </div>
+            <EmptyState
+              className="mb-12"
+              icon="folder_off"
+              title={`Нет отчётов за ${currentYear} год`}
+            />
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 card-glass rounded-2xl border border-white/5 mb-12">
-          <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">folder_off</span>
-          <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">
-            Отчёты для {artistName} пока не сгенерированы
-          </p>
+        <div className="card-glass rounded-2xl border border-white/5 mb-12">
+          <EmptyState
+            className="py-16"
+            icon="folder_off"
+            title={`Отчёты для ${artistName} пока не сгенерированы`}
+          />
         </div>
       )}
 
@@ -275,7 +290,7 @@ export default function ArtistReports({ username, reports: initialReports, artis
       </div>
 
       <Dialog open={previewReportId !== null} onOpenChange={(open) => !open && handleClosePreview()}>
-        <DialogContent className="max-w-4xl bg-[#0f0f0f] border border-white/10 text-white sm:rounded-xl">
+        <DialogContent className="max-w-4xl bg-surface-dialog border border-white/10 text-white sm:rounded-xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg tracking-wide text-white">Предпросмотр отчёта</DialogTitle>
           </DialogHeader>

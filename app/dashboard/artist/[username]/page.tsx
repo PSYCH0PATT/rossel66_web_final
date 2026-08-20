@@ -6,12 +6,42 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader, SectionHeaderLink } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
 
 type ReleasePreview = {
   id: string
   title: string
   coverUrl?: string | null
   releaseDate: string
+}
+
+/**
+ * F-72: у кнопки площадки было ДВЕ иконки — платформенная слева и «открыть во
+ * внешнем» справа. Осталась одна, та, что говорит о поведении ссылки.
+ */
+function PlatformLink({
+  href,
+  label,
+  className,
+}: {
+  href: string
+  label: string
+  className: string
+}) {
+  return (
+    <Button asChild variant="outline" size="sm" className={className}>
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        {label}
+        <span className="material-symbols-outlined text-sm" aria-hidden>
+          open_in_new
+        </span>
+      </a>
+    </Button>
+  )
 }
 
 export default function ArtistProfilePage({ params }: { params: { username: string } }) {
@@ -66,31 +96,22 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-gray-500">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-[10px] font-mono uppercase tracking-widest">Loading…</span>
-        </div>
-      )
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Spinner size="lg" label="Загрузка…" />
+      </div>
+    )
   }
 
-  const dash = `/dashboard/artist/${params.username}/dashboard`
   const releasesHref = `/dashboard/artist/${params.username}/releases`
   const playlistsHref = `/dashboard/artist/${params.username}/playlists`
 
   return (
-    
-      <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">{artist.name}</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Публичная карточка и быстрые ссылки на релизы и плейлисты.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+      <PageHeader
+        className="mb-8"
+        title={artist.name}
+        subtitle="Публичная карточка и быстрые ссылки на релизы и плейлисты."
+      />
 
       <div className="flex flex-col lg:flex-row gap-8 mb-12">
         <div className="w-full lg:w-1/3">
@@ -113,40 +134,25 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
 
             <div className="flex flex-wrap justify-center gap-2 mt-6">
               {artist.vkMusicUrl && (
-                <a
+                <PlatformLink
                   href={artist.vkMusicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-blue-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span className="material-symbols-outlined text-sm">library_music</span>
-                  VK
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>
-                </a>
+                  label="VK"
+                  className="border-white/10 text-xs text-blue-400 hover:text-blue-400"
+                />
               )}
               {artist.yandexMusicUrl && (
-                <a
+                <PlatformLink
                   href={artist.yandexMusicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-yellow-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span className="material-symbols-outlined text-sm">music_note</span>
-                  Яндекс
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>
-                </a>
+                  label="Яндекс"
+                  className="border-white/10 text-xs text-yellow-400 hover:text-yellow-400"
+                />
               )}
               {artist.spotifyUrl && (
-                <a
+                <PlatformLink
                   href={artist.spotifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-white/10 text-xs text-emerald-400 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span className="material-symbols-outlined text-sm">graphic_eq</span>
-                  Spotify
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>
-                </a>
+                  label="Spotify"
+                  className="border-white/10 text-xs text-emerald-400 hover:text-emerald-400"
+                />
               )}
             </div>
           </div>
@@ -154,18 +160,15 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
 
         <div className="w-full lg:w-2/3 space-y-8">
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                Последние релизы
-              </h2>
-              <Link
-                href={releasesHref}
-                className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
-              >
-                Все релизы
-              </Link>
-            </div>
+            <SectionHeader
+              className="mb-4"
+              title="Последние релизы"
+              action={
+                <SectionHeaderLink asChild>
+                  <Link href={releasesHref}>Все релизы</Link>
+                </SectionHeaderLink>
+              }
+            />
             <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6">
               {releases.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -185,7 +188,7 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white text-sm truncate group-hover:text-[#10b981] transition-colors">
+                        <p className="font-bold text-white text-sm truncate transition-colors group-hover:text-brand">
                           {release.title}
                         </p>
                         <p className="text-[10px] font-mono text-gray-500 tabular-nums">
@@ -199,44 +202,39 @@ export default function ArtistProfilePage({ params }: { params: { username: stri
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">album</span>
-                  <p className="text-gray-500 font-mono text-xs uppercase tracking-wider">Нет релизов</p>
-                </div>
+                <EmptyState icon="album" title="Нет релизов" />
               )}
             </div>
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
-                Плейлисты
-              </h2>
-              <Link
-                href={playlistsHref}
-                className="text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 pb-0.5 hover:border-primary transition-all"
-              >
-                Все плейлисты
-              </Link>
-            </div>
-            <div className="card-glass rounded-2xl border border-white/5 p-8 text-center">
-              <span className="material-symbols-outlined text-4xl text-gray-600 opacity-30 block mb-2">queue_music</span>
-              <p className="text-gray-500 font-mono text-xs uppercase tracking-wider mb-2">Смотрите плейлисты</p>
-              <p className="text-[10px] text-gray-600 mb-4">Полный список — на отдельной странице.</p>
-              <Link
-                href={playlistsHref}
-                className="inline-flex items-center gap-2 text-xs text-primary font-mono uppercase tracking-widest border border-primary/30 rounded-lg px-4 py-2 hover:bg-primary/10 transition-colors"
-              >
-                Перейти к плейлистам
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </Link>
+            <SectionHeader
+              className="mb-4"
+              title="Плейлисты"
+              accent="azure"
+              action={
+                <SectionHeaderLink asChild>
+                  <Link href={playlistsHref}>Все плейлисты</Link>
+                </SectionHeaderLink>
+              }
+            />
+            {/*
+              F-25: раньше в блоке было ДВА входа в один и тот же раздел —
+              ссылка «Все плейлисты» в заголовке и кнопка «Перейти к плейлистам»
+              внутри. EmptyState держит одно действие; вход остался в заголовке.
+            */}
+            <div className="card-glass rounded-2xl border border-white/5">
+              <EmptyState
+                icon="queue_music"
+                title="Смотрите плейлисты"
+                description="Полный список — на отдельной странице."
+              />
             </div>
           </div>
         </div>
       </div>
 
       <DashboardFooter role="artist" />
-      </div>
-    )
+    </div>
+  )
 }

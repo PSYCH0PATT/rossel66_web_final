@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getCachedActivitiesForFeed } from "@/lib/cached-dashboard"
 import { ActivityFeed } from "@/components/activity-feed"
+import { DashboardFooter } from "@/components/dashboard-footer"
+import { PageHeader } from "@/components/ui/page-header"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
 
@@ -34,24 +36,18 @@ export default async function ArtistActivityPage({
 
   return (
     <div className="max-w-full p-0 pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
-              АКТИВНОСТЬ
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              События по вашим релизам, плейлистам, отчётам и выплатам.
-            </p>
-          </div>
+      <PageHeader
+        className="mb-8"
+        title="АКТИВНОСТЬ"
+        subtitle="События по вашим релизам, плейлистам, отчётам и выплатам."
+        actions={
           <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">
             {activities.length > 0
               ? `Показано событий: ${activities.length}`
               : "Событий пока нет"}
           </p>
-        </div>
-      </div>
+        }
+      />
 
       <div className="card-glass rounded-2xl overflow-hidden border border-white/5">
         <ActivityFeed
@@ -61,6 +57,9 @@ export default async function ArtistActivityPage({
           initialActivities={activities}
         />
       </div>
+
+      {/* F-30: единственный экран артиста, где футера не было. */}
+      <DashboardFooter role="artist" />
     </div>
   )
 }
