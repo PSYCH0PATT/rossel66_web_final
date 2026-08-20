@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FileInput } from "@/components/ui/file-input"
+import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
 import Image from "next/image"
 import Link from "next/link"
-import { notFound } from "next/navigation"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { buildReleaseArtistSelect } from "@/lib/release-artist-link"
 
@@ -101,14 +108,20 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
     }
   }
 
-  const statusBadgeClass = (s?: string) => {
+  /**
+   * C-15: бейдж из кита вместо CSS-классов .release-status-badge--*.
+   * Маппинг сохранён местный: здесь «Новый» — это модерация, тогда как в
+   * общем releaseStatusVariant он попадает в «драфт». Расхождение данных,
+   * а не стиля: молча сводить его к общему нельзя.
+   */
+  const statusVariant = (s?: string): ReleaseStatusVariant => {
     const key = s || "Доставлен"
-    if (["Доставлен", "released", "Одобрен"].includes(key)) return "release-status-badge release-status-badge--live"
-    if (["В доставке", "delivery"].includes(key)) return "release-status-badge release-status-badge--delivered"
+    if (["Доставлен", "released", "Одобрен"].includes(key)) return "live"
+    if (["В доставке", "delivery"].includes(key)) return "delivered"
     if (["Модерируется", "На модерации", "moderation", "scheduled", "Новый", "новый"].includes(key))
-      return "release-status-badge release-status-badge--moderation"
-    if (["Отклонен", "Отклонён", "Снят"].includes(key)) return "release-status-badge release-status-badge--rejected"
-    return "release-status-badge release-status-badge--draft"
+      return "moderation"
+    if (["Отклонен", "Отклонён", "Снят"].includes(key)) return "rejected"
+    return "draft"
   }
 
   const statusLabels: Record<string, string> = {
@@ -129,11 +142,24 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
     "Новый": "Модерируется",
   }
 
+  /** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+  const parseIsoDate = (value?: string): Date | undefined => {
+    const [year, month, day] = (value || "").slice(0, 10).split("-").map(Number)
+    if (!year || !month || !day) return undefined
+    return new Date(year, month - 1, day)
+  }
+
+  /** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт PUT /api/releases. */
+  const toIsoDate = (date?: Date): string => {
+    if (!date) return ""
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  }
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
+      <div className="flex justify-center py-16">
+          <Spinner label="Загрузка…" />
         </div>
       )
   }
@@ -141,28 +167,27 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   if (isDeleted) {
     return (
       
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400 card-glass border border-white/5 p-8 rounded-2xl max-w-lg mx-auto mt-12 text-center">
-          <span className="material-symbols-outlined text-destructive text-5xl animate-pulse">delete_forever</span>
-          <h2 className="font-display text-2xl font-bold text-white uppercase tracking-wider">Релиз удален</h2>
-          <p className="text-sm text-gray-400 max-w-sm">
-            Данный релиз не найден в базе данных. Возможно, он был удален в процессе очистки дубликатов.
-          </p>
-          <Link href="/dashboard/admin/releases" className="mt-4">
-            <Button className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold inline-flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
-              Вернуться к релизу
+        <EmptyState
+          className="card-glass border border-white/5 p-8 rounded-2xl max-w-lg mx-auto mt-12"
+          icon="delete_forever"
+          title="Релиз удален"
+          description="Данный релиз не найден в базе данных. Возможно, он был удален в процессе очистки дубликатов."
+          action={
+            <Button asChild variant="cta" className="rounded-lg">
+              <Link href="/dashboard/admin/releases">
+                <span className="material-symbols-outlined text-lg" aria-hidden>arrow_back</span>
+                Вернуться к релизу
+              </Link>
             </Button>
-          </Link>
-        </div>
+          }
+        />
       )
   }
 
   if (!release) {
     return (
       
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
-          <p className="text-sm font-mono uppercase tracking-widest">Релиз не найден</p>
-        </div>
+        <EmptyState className="py-16" title="Релиз не найден" />
       )
   }
 
@@ -181,52 +206,46 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   return (
     
       <div className="space-y-8 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-4 min-w-0">
-            <div className="border-b border-white/5 pb-6">
-              <Link
-                href="/dashboard/admin/releases"
-                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                К списку
-              </Link>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase line-clamp-2">
-                {release.title}
-              </h1>
-              <p className="text-sm text-gray-400 mt-2 font-mono">{artistName}</p>
-            </div>
-          </div>
-          <Button
-            onClick={() => void save()}
-            disabled={saving}
-            className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold shrink-0 inline-flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-lg">save</span>
-            {saving ? "Сохранение..." : "Сохранить"}
-          </Button>
-        </div>
+        {/* C-01: H1 = название релиза, «Сохранить» — в слоте actions (F-32) */}
+        <PageHeader
+          size="md"
+          className="pb-6"
+          backHref="/dashboard/admin/releases"
+          title={release.title}
+          subtitle={artistName}
+          actions={
+            <Button
+              onClick={() => void save()}
+              disabled={saving}
+              variant="cta"
+              className="rounded-lg"
+            >
+              <span className="material-symbols-outlined text-lg" aria-hidden>save</span>
+              {saving ? "Сохранение..." : "Сохранить"}
+            </Button>
+          }
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <div className="card-glass rounded-2xl border border-white/5 overflow-hidden text-white">
               <div className="aspect-square relative">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
-                <span
-                  className={`absolute top-3 right-3 ${statusBadgeClass(release.status)}`}
+                <StatusBadge
+                  className="absolute top-3 right-3"
+                  variant={statusVariant(release.status)}
+                  withIcon={false}
                 >
                   {statusLabels[release.status || "Доставлен"] || release.status || "Доставлен"}
-                </span>
+                </StatusBadge>
               </div>
               <div className="p-4 md:p-6 space-y-3">
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Название</div>
-                  <Input className={inputCls} value={release.title} onChange={(e) => setRelease({ ...release, title: e.target.value })} />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">UPC</div>
-                  <Input className={inputCls} value={release.upc || ''} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
-                </div>
+                <FormField label="Название" htmlFor="release-title">
+                  <Input id="release-title" className={inputCls} value={release.title} onChange={(e) => setRelease({ ...release, title: e.target.value })} />
+                </FormField>
+                <FormField label="UPC" htmlFor="release-upc">
+                  <Input id="release-upc" className={inputCls} value={release.upc || ''} onChange={(e) => setRelease({ ...release, upc: e.target.value })} />
+                </FormField>
                 {release.koalaId && (
                   <div>
                     <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Koala ID</div>
@@ -250,59 +269,52 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                     </a>
                   </div>
                 )}
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Дата релиза</div>
-                  <Input
-                    className={inputCls}
-                    type="date"
-                    value={release.releaseDate?.slice(0, 10)}
-                    onChange={(e) => setRelease({ ...release, releaseDate: e.target.value })}
+                {/* F-12: нативный date-инпут выпадал из тёмной темы */}
+                <FormField label="Дата релиза" htmlFor="release-date">
+                  <DatePicker
+                    id="release-date"
+                    value={parseIsoDate(release.releaseDate)}
+                    onChange={(date) => setRelease({ ...release, releaseDate: toIsoDate(date) })}
+                    placeholder="дд.мм.гггг"
+                    className={`${inputCls} w-full justify-start normal-case text-sm text-white`}
                   />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Обложка (URL)</div>
+                </FormField>
+                <FormField label="Обложка (URL)" htmlFor="release-cover-url">
                   <Input
+                    id="release-cover-url"
                     className={inputCls}
                     placeholder="https://..."
                     value={release.coverUrl || ''}
                     onChange={(e) => setRelease({ ...release, coverUrl: e.target.value })}
                   />
-                </div>
-                <div>
-                  <label htmlFor="cover-upload" className="block text-xs text-gray-500 font-mono uppercase tracking-widest mb-2">
-                    Загрузить обложку
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="cover-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-                        const formData = new FormData()
-                        formData.append('file', file)
-                        const res = await fetch('/api/uploads/covers', { method: 'POST', body: formData })
-                        const data = await res.json()
-                        if (data?.success && data.url) {
-                          setRelease((prev) => (prev ? { ...prev, coverUrl: data.url } : null))
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="cover-upload"
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-black rounded-lg cursor-pointer bg-primary hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:scale-[1.02] transition-all"
-                    >
-                      <span className="material-symbols-outlined text-lg">upload</span>
-                      Выбрать файл
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Статус</div>
+                </FormField>
+                {/* F-12: нативный file-инпут → кнопка из кита */}
+                <FormField label="Загрузить обложку" htmlFor="cover-upload">
+                  <FileInput
+                    id="cover-upload"
+                    accept="image/*"
+                    buttonLabel="Выбрать файл"
+                    buttonVariant="cta"
+                    icon="upload"
+                    showFileName={false}
+                    containerClassName="w-full"
+                    buttonClassName="w-full rounded-lg"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const formData = new FormData()
+                      formData.append('file', file)
+                      const res = await fetch('/api/uploads/covers', { method: 'POST', body: formData })
+                      const data = await res.json()
+                      if (data?.success && data.url) {
+                        setRelease((prev) => (prev ? { ...prev, coverUrl: data.url } : null))
+                      }
+                    }}
+                  />
+                </FormField>
+                <FormField label="Статус" htmlFor="release-status">
                   <Select value={release.status || 'Модерируется'} onValueChange={(v) => setRelease({ ...release, status: v })}>
-                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                    <SelectTrigger id="release-status" className={`w-full ${inputCls} h-10`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -312,11 +324,10 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                       <SelectItem value="Доставлен">Доставлен</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-1">Артист</div>
+                </FormField>
+                <FormField label="Артист" htmlFor="release-artist">
                   <Select value={artistSelect.value} onValueChange={(v) => setRelease({ ...release, artistId: v })}>
-                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                    <SelectTrigger id="release-artist" className={`w-full ${inputCls} h-10`}>
                       <SelectValue placeholder={artistName || 'Выберите артиста'} />
                     </SelectTrigger>
                     <SelectContent>
@@ -325,7 +336,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               </div>
             </div>
           </div>
@@ -334,11 +345,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
             <div className="card-glass rounded-2xl border border-white/5 text-white relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
               <div className="p-6 md:p-8">
-                <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                  <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-                  <span className="material-symbols-outlined text-primary text-2xl">queue_music</span>
-                  Список треков
-                </h2>
+                <SectionHeader
+                  className="mb-6"
+                  title={
+                    <>
+                      <span className="material-symbols-outlined text-primary text-2xl" aria-hidden>queue_music</span>
+                      Список треков
+                    </>
+                  }
+                />
                 <div className="space-y-3">
                   {release.tracks.map((track, index) => (
                     <div
@@ -353,47 +368,56 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                           <div className="text-sm text-gray-400 font-mono uppercase tracking-widest">Трек</div>
                         </div>
                         <Button
-                          variant="outline"
+                          variant="destructive-outline"
                           size="sm"
                           onClick={() =>
                             setRelease({ ...release, tracks: release.tracks.filter((_, i) => i !== index) })
                           }
-                          className="border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
                         >
                           Удалить
                         </Button>
                       </div>
+                      {/* F-82: у полей трека всегда подпись — placeholder исчезал при вводе */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Input
-                          className={inputCls}
-                          value={track.title}
-                          onChange={(e) => {
-                            const tracks = [...release.tracks]
-                            tracks[index] = { ...track, title: e.target.value }
-                            setRelease({ ...release, tracks })
-                          }}
-                          placeholder="Название"
-                        />
-                        <Input
-                          className={inputCls}
-                          value={track.isrc || ''}
-                          onChange={(e) => {
-                            const tracks = [...release.tracks]
-                            tracks[index] = { ...track, isrc: e.target.value }
-                            setRelease({ ...release, tracks })
-                          }}
-                          placeholder="ISRC"
-                        />
-                        <Input
-                          className={inputCls}
-                          value={track.duration || ''}
-                          onChange={(e) => {
-                            const tracks = [...release.tracks]
-                            tracks[index] = { ...track, duration: e.target.value }
-                            setRelease({ ...release, tracks })
-                          }}
-                          placeholder="Длительность mm:ss"
-                        />
+                        <FormField label="Название" htmlFor={`track-title-${index}`}>
+                          <Input
+                            id={`track-title-${index}`}
+                            className={inputCls}
+                            value={track.title}
+                            onChange={(e) => {
+                              const tracks = [...release.tracks]
+                              tracks[index] = { ...track, title: e.target.value }
+                              setRelease({ ...release, tracks })
+                            }}
+                            placeholder="Название"
+                          />
+                        </FormField>
+                        <FormField label="ISRC" htmlFor={`track-isrc-${index}`}>
+                          <Input
+                            id={`track-isrc-${index}`}
+                            className={inputCls}
+                            value={track.isrc || ''}
+                            onChange={(e) => {
+                              const tracks = [...release.tracks]
+                              tracks[index] = { ...track, isrc: e.target.value }
+                              setRelease({ ...release, tracks })
+                            }}
+                            placeholder="ISRC"
+                          />
+                        </FormField>
+                        <FormField label="Длительность" htmlFor={`track-duration-${index}`}>
+                          <Input
+                            id={`track-duration-${index}`}
+                            className={inputCls}
+                            value={track.duration || ''}
+                            onChange={(e) => {
+                              const tracks = [...release.tracks]
+                              tracks[index] = { ...track, duration: e.target.value }
+                              setRelease({ ...release, tracks })
+                            }}
+                            placeholder="Длительность mm:ss"
+                          />
+                        </FormField>
                       </div>
 
                       {/* Доли роялти - показываем только если есть несколько артистов */}
@@ -457,10 +481,10 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {allArtists.map((artistName) => (
-                                <div key={artistName} className="space-y-1">
-                                  <label className="text-xs text-gray-500 font-mono uppercase tracking-widest">{artistName}</label>
+                                <FormField key={artistName} label={artistName} htmlFor={`share-${index}-${artistName}`} className="space-y-1">
                                   <div className="flex items-center gap-2">
                                     <Input
+                                      id={`share-${index}-${artistName}`}
                                       type="number"
                                       min="0"
                                       max="100"
@@ -477,7 +501,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                                     />
                                     <span className="text-sm text-gray-500">%</span>
                                   </div>
-                                </div>
+                                </FormField>
                               ))}
                             </div>
                             {totalShare === 0 && (
@@ -518,4 +542,3 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
       </div>
     )
 }
-

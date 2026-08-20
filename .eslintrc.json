@@ -47,18 +47,7 @@
       }
     },
     {
-      "files": [
-        "app/dashboard/admin/activity/page.tsx",
-        "app/dashboard/admin/payments/admin-payments-client.tsx",
-        "app/dashboard/admin/playlists/history/page.tsx",
-        "app/dashboard/admin/releases/\\[id\\]/page.tsx",
-        "app/dashboard/admin/releases/add/page.tsx",
-        "app/dashboard/admin/releases/admin-releases-client.tsx",
-        "app/dashboard/admin/releases/zvonko-parser/page.tsx",
-        "app/dashboard/admin/settings/page.tsx",
-        "app/dashboard/admin/unregistered-reports/page.tsx",
-        "app/dashboard/login/page.tsx"
-      ],
+      "files": ["app/dashboard/login/page.tsx"],
       "rules": {
         "no-restricted-syntax": [
           "warn",

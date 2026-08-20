@@ -1,8 +1,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FormField } from "@/components/ui/form-field"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
+import { StatusBadge } from "@/components/ui/status-badge"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +27,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { downloadFileFromApi } from "@/lib/download-file"
 
@@ -118,7 +132,7 @@ export default function UnregisteredReportsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-          <span className="inline-block size-8 border-2 border-primary/30 border-t-primary rounded-full motion-safe:animate-spin" aria-hidden />
+          <Spinner />
         </div>
       )
   }
@@ -126,102 +140,74 @@ export default function UnregisteredReportsPage() {
   return (
     <>
       <div className="space-y-8 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-6">
-          <div className="border-b border-white/5 pb-8 flex flex-col sm:flex-row items-start sm:items-end sm:justify-between gap-4">
-            <div>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                Отчёты без кабинета
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">
-                Назначение вручную зарегистрированным артистам
-              </p>
-            </div>
-            <Link
-              href="/dashboard/admin/dashboard"
-              className="inline-flex items-center gap-2 text-xs font-mono uppercase text-gray-500 hover:text-primary"
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              К панели
-            </Link>
-          </div>
-        </div>
+        {/* C-01: возврат — в back-слоте шапки; кнопки-дубля в пустом
+            состоянии больше нет (F-25) */}
+        <PageHeader
+          size="md"
+          backHref="/dashboard/admin/dashboard"
+          backLabel="К панели"
+          title="Отчёты без кабинета"
+          subtitle="Назначение вручную зарегистрированным артистам"
+        />
 
         {banner && (
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
-              banner.type === "ok"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : "border-red-500/30 bg-red-500/10 text-red-200"
-            }`}
-            role="status"
+          <Banner
+            variant={banner.type === "ok" ? "success" : "danger"}
+            onClose={() => setBanner(null)}
           >
-            <span className="material-symbols-outlined flex-shrink-0">{banner.type === "ok" ? "check_circle" : "error"}</span>
             {banner.text}
-            <button
-              type="button"
-              onClick={() => setBanner(null)}
-              className="ml-auto text-gray-500 hover:text-white rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Закрыть"
-            >
-              <span className="material-symbols-outlined text-lg">close</span>
-            </button>
-          </div>
+          </Banner>
         )}
 
         {reports.length === 0 ? (
-          <div className="card-glass rounded-2xl border border-white/5 p-12 text-center">
-            <span className="material-symbols-outlined text-5xl text-gray-600 block mb-4">description</span>
-            <h3 className="text-lg font-medium text-white mb-2">Нет таких отчётов</h3>
-            <p className="text-gray-500 text-sm font-mono mb-6">Все отчёты назначены</p>
-            <Button asChild className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
-              <Link href="/dashboard/admin/dashboard">На панель</Link>
-            </Button>
-          </div>
+          <EmptyState
+            className="card-glass rounded-2xl border border-white/5 p-12"
+            icon="description"
+            title="Нет таких отчётов"
+            description="Все отчёты назначены"
+          />
         ) : (
           <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6 overflow-hidden">
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-              <span className="w-1.5 h-6 bg-primary rounded-full" />
-              Список ({reports.length})
-            </h2>
-            <div className="rounded-xl border border-white/10 overflow-x-auto table-glass">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-xs font-mono uppercase text-gray-500">Артист</TableHead>
-                    <TableHead className="text-xs font-mono uppercase text-gray-500">Период</TableHead>
-                    <TableHead className="text-xs font-mono uppercase text-gray-500 [font-variant-numeric:tabular-nums]">
+            <SectionHeader className="mb-6" size="sm" title={`Список (${reports.length})`} />
+            <div className="rounded-xl border border-white/10 overflow-hidden table-glass">
+              <DataTable>
+                <DataTableHeader>
+                  <DataTableHeadRow>
+                    <DataTableHeadCell>Артист</DataTableHeadCell>
+                    <DataTableHeadCell>Период</DataTableHeadCell>
+                    <DataTableHeadCell className="[font-variant-numeric:tabular-nums]">
                       Прослушивания
-                    </TableHead>
-                    <TableHead className="text-xs font-mono uppercase text-gray-500">Сумма</TableHead>
-                    <TableHead className="text-xs font-mono uppercase text-gray-500">Дата</TableHead>
-                    <TableHead className="text-xs font-mono uppercase text-gray-500 text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>Сумма</DataTableHeadCell>
+                    <DataTableHeadCell>Дата</DataTableHeadCell>
+                    <DataTableHeadCell className="text-right">Действия</DataTableHeadCell>
+                  </DataTableHeadRow>
+                </DataTableHeader>
+                <DataTableBody>
                   {reports.map((report) => (
-                    <TableRow key={report.id} className="border-white/5 hover:bg-white/[0.04]">
-                      <TableCell className="font-medium text-white max-w-[180px]">
+                    <DataTableRow key={report.id}>
+                      <DataTableCell className="font-medium text-white max-w-[180px]">
                         <span className="truncate block">{report.artistName}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="release-status-badge text-[0.65rem] border border-white/15 text-gray-300 bg-white/5">
+                      </DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge variant="draft" withIcon={false}>
                           {report.quarter} {report.year}
-                        </span>
-                      </TableCell>
+                        </StatusBadge>
+                      </DataTableCell>
                       {/* C7: у коллабов число учитывается у каждого участника — не суммировать */}
-                      <TableCell
+                      <DataTableCell
                         className="text-gray-300 [font-variant-numeric:tabular-nums]"
                         title="У совместных треков одно и то же число прослушиваний учитывается у каждого участника — складывать по разным артистам нельзя."
                       >
                         {report.totalPlays.toLocaleString("ru-RU")}
-                      </TableCell>
-                      <TableCell className="font-display text-primary [font-variant-numeric:tabular-nums]">
+                      </DataTableCell>
+                      <DataTableCell className="font-display text-primary [font-variant-numeric:tabular-nums]">
                         {formatCurrency(report.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-gray-400 text-sm [font-variant-numeric:tabular-nums]">
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400 text-sm [font-variant-numeric:tabular-nums]">
                         {formatDate(report.uploadDate)}
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </DataTableCell>
+                      <DataTableCell className="text-right">
                         <div className="flex flex-wrap justify-end gap-2">
                           <Button
                             type="button"
@@ -241,7 +227,8 @@ export default function UnregisteredReportsPage() {
                           <Button
                             type="button"
                             size="sm"
-                            className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
+                            variant="cta"
+                            className="rounded-lg"
                             onClick={() => {
                               setAssignFor(report)
                               setSelectedArtist("")
@@ -251,11 +238,11 @@ export default function UnregisteredReportsPage() {
                             Назначить
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </DataTableBody>
+              </DataTable>
             </div>
           </div>
         )}
@@ -264,7 +251,7 @@ export default function UnregisteredReportsPage() {
       </div>
 
       <Dialog open={!!assignFor} onOpenChange={(o) => !o && setAssignFor(null)}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+        <DialogContent className="bg-surface-dialog border border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase">Назначить отчёт</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -272,19 +259,20 @@ export default function UnregisteredReportsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <label className="text-xs font-mono uppercase text-gray-500 block">Артист</label>
-            <Select value={selectedArtist} onValueChange={setSelectedArtist}>
-              <SelectTrigger className="rounded-lg border-white/10 bg-white/5 text-white">
-                <SelectValue placeholder="Выберите артиста" />
-              </SelectTrigger>
-              <SelectContent>
-                {artists.map((artist) => (
-                  <SelectItem key={artist.id} value={artist.id}>
-                    {artist.name} (@{artist.username})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FormField label="Артист" htmlFor="assign-artist">
+              <Select value={selectedArtist} onValueChange={setSelectedArtist}>
+                <SelectTrigger id="assign-artist" className="rounded-lg border-white/10 bg-white/5 text-white">
+                  <SelectValue placeholder="Выберите артиста" />
+                </SelectTrigger>
+                <SelectContent>
+                  {artists.map((artist) => (
+                    <SelectItem key={artist.id} value={artist.id}>
+                      {artist.name} (@{artist.username})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" className="border-white/20" onClick={() => setAssignFor(null)}>
@@ -292,7 +280,7 @@ export default function UnregisteredReportsPage() {
             </Button>
             <Button
               type="button"
-              className="bg-primary text-black hover:bg-primary/90"
+              variant="cta"
               onClick={() => void handleAssignReport()}
               disabled={!selectedArtist}
             >

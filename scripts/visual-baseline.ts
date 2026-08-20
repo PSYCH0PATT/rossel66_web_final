@@ -121,9 +121,10 @@ const releaseFilters: RouteState = {
 }
 
 /**
- * Админ-ЛК. Не включены:
- *   /dashboard/admin/unregistered-reports — экран под удаление (ia-decisions.md);
- *   /dashboard/login и лендинг — публичные, вне скоупа overhaul.
+ * Админ-ЛК. Не включены /dashboard/login и лендинг — публичные, вне скоупа
+ * overhaul. /dashboard/admin/unregistered-reports в каталоге есть: экран
+ * помечен «под удаление» (ia-decisions.md), но пока живой и мигрирует
+ * волной 3, а значит должен сверяться со своим эталоном, как остальные.
  */
 const ADMIN_ROUTES: RouteSpec[] = [
   { path: "/dashboard/admin/dashboard" },
@@ -148,6 +149,7 @@ const ADMIN_ROUTES: RouteSpec[] = [
   { path: "/dashboard/admin/payments" },
   { path: "/dashboard/admin/activity" },
   { path: "/dashboard/admin/settings" },
+  { path: "/dashboard/admin/unregistered-reports" },
 ]
 
 /**

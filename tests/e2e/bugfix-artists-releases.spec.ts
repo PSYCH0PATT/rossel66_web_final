@@ -113,7 +113,8 @@ test.describe.serial("F-02 связь релиза с артистом", () => {
 
     await expect(page.getByRole("heading", { name: "E2E F02 Release" })).toBeVisible()
 
-    const trigger = page.locator('div:text-is("Артист") + button[role="combobox"]')
+    // Волна 3 (docs/ui-audit.md, C-17): подпись поля стала <label> из FormField.
+    const trigger = page.locator('label:text-is("Артист") + button[role="combobox"]')
     await expect(trigger).toBeVisible()
     await trigger.click()
 
