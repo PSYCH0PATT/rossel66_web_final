@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Image from "next/image"
+import { PlaylistCoverImage } from "@/components/playlist-cover-image"
+import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { Banner } from "@/components/ui/banner"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FormField } from "@/components/ui/form-field"
@@ -13,7 +14,9 @@ import { PageHeader } from "@/components/ui/page-header"
 import { PlatformBadge, PlatformDot } from "@/components/ui/platform-badge"
 import { SearchInput } from "@/components/ui/search-input"
 import { SectionHeader } from "@/components/ui/section-header"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { listSkeletonCount } from "@/lib/list-skeleton"
 import {
   Dialog,
   DialogContent,
@@ -103,7 +106,15 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
   const bandlinkPlaylist = playlist as BandlinkPlaylist
   const platformName = isVK ? vkPlaylist.platform || "VK Музыка" : bandlinkPlaylist.platform
   const playlistUrl = isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url
-  const coverUrl = isVK ? vkPlaylist.playlist_cover_url || "/placeholder.svg" : bandlinkPlaylist.playlist_cover_url || "/placeholder.svg"
+  /**
+   * F-06: битая обложка на экране — это alt-текст поверх карточки, а не «пусто».
+   * Нерисуемый адрес отсекается правилом getPlaylistCoverUrl ещё до src, а если
+   * рисуемый URL всё-таки отдаст 404 — PlaylistCoverImage подменит его заглушкой
+   * платформы (как в кабинете артиста).
+   */
+  const rawCoverUrl = isVK ? vkPlaylist.playlist_cover_url : bandlinkPlaylist.playlist_cover_url
+  const coverUrl = getPlaylistCoverUrl(platformName, rawCoverUrl)
+  const coverFallback = getPlaylistCoverUrl(platformName, null)
   const title = isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name
   const artistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name
 
@@ -160,8 +171,9 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
   return (
     <div className="playlist-card group relative aspect-square rounded-2xl overflow-hidden card-glass">
       <div className="absolute inset-0 z-0">
-        <Image
+        <PlaylistCoverImage
           src={coverUrl}
+          fallbackSrc={coverFallback}
           alt={title}
           fill
           className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
@@ -304,6 +316,9 @@ export default function PlaylistsPage() {
   const [playlistQuery, setPlaylistQuery] = useState('')
   const [debouncedPlaylistQuery, setDebouncedPlaylistQuery] = useState('')
   const [playlistTotal, setPlaylistTotal] = useState(0)
+  // F-86: до первого ответа сетка не рисовала ничего — на 390 это целый
+  // вьюпорт пустого фона, после которого карточки «всплывают».
+  const [playlistsLoading, setPlaylistsLoading] = useState(true)
   const playlistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'added_at' | 'parsed_at'>('added_at')
@@ -359,6 +374,7 @@ export default function PlaylistsPage() {
   }
 
   const loadResults = async () => {
+    setPlaylistsLoading(true)
     try {
       /**
        * F-PARS-7: фильтр по артисту работал поверх первых 100 записей.
@@ -429,7 +445,7 @@ export default function PlaylistsPage() {
             artist_name: currentArtistName,
             playlist_name: p.playlist_name,
             playlist_url: p.playlist_url,
-            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_cover_url: p.playlist_cover_url || "",
             playlist_id: '',
             owner_id: '',
             parsed_at: p.parsed_at || p.added_at,
@@ -449,7 +465,7 @@ export default function PlaylistsPage() {
             track_names: trackNames,
             likes_count: '',
             platform: platform,
-            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_cover_url: p.playlist_cover_url || "",
             playlist_url: p.playlist_url,
             added_at: p.added_at || p.parsed_at,
             parsed_at: p.parsed_at || p.added_at,
@@ -465,6 +481,8 @@ export default function PlaylistsPage() {
       setBandlinkResults(bandlinkFormatted)
     } catch (error) {
       console.error('Ошибка загрузки плейлистов:', error)
+    } finally {
+      setPlaylistsLoading(false)
     }
   }
   
@@ -743,6 +761,20 @@ export default function PlaylistsPage() {
                 </div>
               </div>
             </div>
+
+            {/* F-86: место под карточки, пока идёт запрос */}
+            {playlistsLoading && vkResults.length + bandlinkResults.length === 0 && (
+              <div className="space-y-4" aria-busy="true" aria-label="Загрузка плейлистов">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                  {Array.from(
+                    { length: listSkeletonCount({ pageSize: PLAYLISTS_PAGE_TAKE, max: 8 }) },
+                    (_, i) => (
+                      <Skeleton key={i} className="aspect-square rounded-2xl bg-white/5" />
+                    )
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* VK Музыка */}
             {vkPlaylists.length > 0 && (

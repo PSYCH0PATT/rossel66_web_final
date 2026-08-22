@@ -18,6 +18,8 @@ import {
   ARTIST_REPORT_FIELD_LABELS,
   getArtistReportMissingFields,
 } from "@/lib/artist-report-requirements"
+import { listSkeletonCount } from "@/lib/list-skeleton"
+import { SkeletonLine } from "@/components/ui/skeleton-presets"
 
 export default function AdminArtistsClient() {
   const [allArtists, setAllArtists] = useState<AdminArtistItem[]>([])
@@ -63,12 +65,21 @@ export default function AdminArtistsClient() {
     return () => window.removeEventListener("resize", updateCols)
   }, [])
 
+  const skeletonCount = listSkeletonCount({
+    pageSize,
+    total: allArtists.length > 0 ? total : null,
+    page,
+    previousCount: allArtists.length || null,
+  })
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       params.set("page", String(page))
       params.set("pageSize", String(pageSize))
+      // F-37: боевой список — без тестовых учёток («test», логины прогонов)
+      params.set("hideTest", "1")
       if (debouncedQ) params.set("q", debouncedQ)
       if (filter === "verified") params.set("verified", "true")
       if (filter === "unverified") params.set("verified", "false")
@@ -236,8 +247,28 @@ export default function AdminArtistsClient() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Spinner label="Loading…" />
+        /**
+         * F-86: на время запроса экран схлопывался в один спиннер, и при
+         * скролле на 390 попадался целый вьюпорт пустого фона. Держим место
+         * ровно под те карточки, которые сейчас придут.
+         */
+        <div
+          className="grid gap-2 sm:gap-3 mb-8"
+          style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
+          aria-busy="true"
+          aria-label="Загрузка списка артистов"
+        >
+          {Array.from({ length: skeletonCount }, (_, i) => (
+            <div
+              key={i}
+              className="artist-card-container w-full overflow-hidden rounded-lg border border-white/5 card-glass"
+              style={{ padding: "max(8px, 0.55vw)" }}
+            >
+              <SkeletonLine className="mb-2 h-3.5 w-2/3 bg-white/5" />
+              <SkeletonLine className="mb-2 h-3 w-1/2 bg-white/5" />
+              <SkeletonLine className="h-2.5 w-1/3 bg-white/5" />
+            </div>
+          ))}
         </div>
       ) : (
         <>

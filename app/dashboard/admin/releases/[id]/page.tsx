@@ -16,6 +16,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { buildReleaseArtistSelect } from "@/lib/release-artist-link"
+import { coverFieldView } from "@/lib/cover-field"
 
 type Release = {
   id: string
@@ -203,6 +204,8 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   const inputCls =
     "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
+  const coverField = coverFieldView(release.coverUrl)
+
   return (
     
       <div className="space-y-8 max-w-7xl mx-auto">
@@ -279,12 +282,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                     className={`${inputCls} w-full justify-start normal-case text-sm text-white`}
                   />
                 </FormField>
+                {/* F-33: встроенная обложка (data-URI) — подпись вместо сотен символов base64 */}
                 <FormField label="Обложка (URL)" htmlFor="release-cover-url">
                   <Input
                     id="release-cover-url"
                     className={inputCls}
                     placeholder="https://..."
-                    value={release.coverUrl || ''}
+                    value={coverField.value}
+                    readOnly={coverField.readOnly}
+                    title={coverField.readOnly ? "Заменить можно через «Загрузить обложку»" : undefined}
                     onChange={(e) => setRelease({ ...release, coverUrl: e.target.value })}
                   />
                 </FormField>

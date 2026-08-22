@@ -30,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SkeletonRows } from "@/components/ui/skeleton-presets"
+import { listSkeletonCount } from "@/lib/list-skeleton"
 import type { ActivityType } from "@/lib/storage"
 import { activityActorLabel } from "@/lib/activity-log"
 import { DashboardFooter } from "@/components/dashboard-footer"
@@ -430,7 +431,17 @@ export default function AdminActivityPage() {
           </div>
 
           {loading ? (
-            <SkeletonRows className="py-6" rows={6} />
+            /* F-86: строк-заглушек столько, сколько придёт записей, — страница
+               не прыгает после ответа и при листании */
+            <SkeletonRows
+              className="py-6"
+              rows={listSkeletonCount({
+                pageSize,
+                total: activities.length > 0 ? total : null,
+                page: Math.floor(offset / pageSize) + 1,
+                previousCount: activities.length || null,
+              })}
+            />
           ) : activities.length === 0 ? (
             <EmptyState className="py-12" title="Нет записей" />
           ) : (

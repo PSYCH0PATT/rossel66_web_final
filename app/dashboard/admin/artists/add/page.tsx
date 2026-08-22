@@ -14,6 +14,7 @@ import { FileInput } from "@/components/ui/file-input"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { DashboardFooter } from "@/components/dashboard-footer"
+import { PLATFORM_ICONS } from "@/lib/platform-icon"
 
 const inputClass =
   "h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -239,7 +240,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="vkMusicUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="https://cdn.simpleicons.org/vk/0077FF" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.vk} alt="" className="h-4 w-4" />
                     ВК Музыка
                   </Label>
                   <div className="relative">
@@ -260,7 +261,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="yandexMusicUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="https://cdn.simpleicons.org/yandexmusic/FFCC00" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.yandex} alt="" className="h-4 w-4" />
                     Яндекс Музыка
                   </Label>
                   <div className="relative">
@@ -281,7 +282,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="spotifyUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="/spotify-logo.png" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.spotify} alt="" className="h-4 w-4" />
                     Spotify
                   </Label>
                   <div className="relative">

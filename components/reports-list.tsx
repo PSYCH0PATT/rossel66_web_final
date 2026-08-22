@@ -28,6 +28,7 @@ import { FilterChip } from "@/components/ui/filter-chip"
 import { Pagination } from "@/components/ui/pagination"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
+import { reportFolderActions } from "@/lib/report-folder"
 
 interface Report {
   id: string
@@ -383,6 +384,9 @@ export default function ReportsList() {
         const totalPages = Math.max(1, Math.ceil(total / pageSize))
         const from = total === 0 ? 0 : (page - 1) * pageSize + 1
         const to = Math.min(page * pageSize, total)
+        // F-46: над пустой папкой действовать нечем — «Скачать все» отдавало
+        // пустой архив, «Удалить папку» предлагало удалить ничего.
+        const folderActions = reportFolderActions({ total, loading: block?.loading })
 
         return (
           <Card key={key} className="bg-transparent border-slate-600/30">
@@ -407,6 +411,8 @@ export default function ReportsList() {
                   <Button
                     variant="success-outline"
                     size="sm"
+                    disabled={!folderActions.canDownloadAll}
+                    title={folderActions.disabledReason ?? undefined}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDownloadAllReports(pair)
@@ -418,11 +424,12 @@ export default function ReportsList() {
                   <Button
                     variant="destructive-outline"
                     size="sm"
+                    disabled={!folderActions.canDeleteFolder}
+                    title={folderActions.disabledReason ?? "Удалить все отчёты этого квартала и года"}
                     onClick={(e) => {
                       e.stopPropagation()
                       void handleDeleteQuarter(pair)
                     }}
-                    title="Удалить все отчёты этого квартала и года"
                   >
                     <FolderMinus className="h-4 w-4 mr-1" />
                     Удалить папку

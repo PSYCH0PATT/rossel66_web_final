@@ -8,6 +8,7 @@ import { supabase, ensureBucketExists } from "@/lib/supabase"
 import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
 import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
 import { duplicateArtistReason } from "@/lib/bulk-artist-add"
+import { excludeTestAccountsWhere, shouldHideTestAccounts } from "@/lib/test-accounts"
 import {
   getArtistReportMissingFields,
   type IncompleteReportArtist,
@@ -390,12 +391,20 @@ export async function GET(request: Request) {
           }
         : undefined
 
+    // F-37: экран списка артистов просит выдачу без тестовых учёток
+    // (hideTest=1). Условие уходит в оба where — как и mainArtistId ниже, —
+    // поэтому список, total и счётчики считаются по одной выборке. Прямые
+    // запросы к API (прогоны, интеграции) фильтр не трогает.
+    const hideTestAccounts = shouldHideTestAccounts(searchParams.get("hideTest") === "1")
+    const testAccountsWhere = hideTestAccounts ? excludeTestAccountsWhere() : {}
+
     // Привязанные профили (AKA) в списке не показываются: своей карточки у них
     // больше нет, всё управление — в карточке главного. Условие стоит в обоих
     // where, поэтому синхронно уходит и из списка, и из total, и из счётчиков.
     const where: Prisma.UserWhereInput = {
       role: "artist",
       mainArtistId: null,
+      ...testAccountsWhere,
       ...(verifiedParam !== null ? { verified: verifiedParam === "true" } : {}),
       ...(searchWhere ?? {}),
     }
@@ -403,6 +412,7 @@ export async function GET(request: Request) {
     const baseArtistWhere: Prisma.UserWhereInput = {
       role: "artist",
       mainArtistId: null,
+      ...testAccountsWhere,
       ...(searchWhere ?? {}),
     }
 

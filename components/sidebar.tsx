@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
 import { dashboardLogout } from "@/lib/dashboard-logout"
+import { dashboardNavRole, isNavItemActive } from "@/lib/dashboard-nav"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 interface SidebarProps {
@@ -22,13 +23,16 @@ type NavItemConfig = { href: string; label: string }
 const SidebarNavItem = memo(function SidebarNavItem({
   item,
   pathname,
+  navHrefs,
   onNavigate,
 }: {
   item: NavItemConfig
   pathname: string
+  navHrefs: readonly string[]
   onNavigate: () => void
 }) {
-  const isActive = pathname === item.href
+  // F-56: строгое равенство гасило подсветку на любой вложенной странице
+  const isActive = isNavItemActive(pathname, item.href, navHrefs)
   let iconName = ""
   switch (item.label) {
     case "Главная":
@@ -137,6 +141,7 @@ function SidebarNav({
   onNavigate: () => void
   titleAs?: React.ElementType
 }) {
+  const navHrefs = navItems.map((item) => item.href)
   return (
     <nav className="mt-6 px-2 lg:mt-8 lg:px-4 space-y-1">
       <Title className="px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">
@@ -147,6 +152,7 @@ function SidebarNav({
           key={item.href}
           item={item}
           pathname={pathname}
+          navHrefs={navHrefs}
           onNavigate={onNavigate}
         />
       ))}
@@ -248,8 +254,15 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
     []
   )
 
-  const navItems = role === "artist" ? artistNavItems : adminNavItems
-  const homeHref = role === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"
+  /**
+   * F-56: пункты и «домой» задаёт кабинет, в котором мы находимся, — иначе
+   * админ, открывший кабинет артиста, получал админское меню и не мог
+   * пройти по разделам кабинета. Нижний блок остаётся про саму сессию:
+   * это профиль вошедшего, и настройки у него свои.
+   */
+  const navRole = dashboardNavRole({ sessionRole: role, pathname })
+  const navItems = navRole === "artist" ? artistNavItems : adminNavItems
+  const homeHref = navRole === "artist" ? `${artistBasePath}/dashboard` : "/dashboard/admin/dashboard"
   const settingsHref = role === "artist" ? `${artistBasePath}/settings` : "/dashboard/admin/settings"
 
   return (
@@ -259,7 +272,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
         <div>
           <SidebarLogoBar homeHref={homeHref} onNavigate={handleNavigation} />
           <SidebarNav
-            role={role}
+            role={navRole}
             navItems={navItems}
             pathname={pathname}
             onNavigate={handleNavigation}
@@ -297,7 +310,7 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
             />
             <ScrollArea className="flex-1" fadeClassName="from-black/70">
               <SidebarNav
-                role={role}
+                role={navRole}
                 navItems={navItems}
                 pathname={pathname}
                 onNavigate={handleNavigation}
