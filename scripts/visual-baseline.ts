@@ -108,6 +108,42 @@ const chartTooltip: RouteState = {
   },
 }
 
+/**
+ * Виды объединённого экрана «Отчёты» (решение 0-а): вместо табов /reports и
+ * отдельных экранов /payments, /unregistered-reports и /reports-generator —
+ * один ряд чипов. Эталон снимается по каждому виду, иначе после слияния три
+ * экрана остались бы без своих скринов.
+ */
+function reportsView(name: string, chip: string | RegExp): RouteState {
+  return {
+    name,
+    apply: async (page) => {
+      const chipButton = page.getByRole("button", { name: chip }).first()
+      if ((await chipButton.count()) === 0) return false
+      await chipButton.click()
+      await stabilize(page)
+      return true
+    },
+  }
+}
+
+/**
+ * Раскрытая квартальная папка: именно в ней живёт таблица «артист · отчёт ·
+ * сумма · подпись · выплачено» — бывший экран /payments (0-а). В свёрнутом
+ * виде её на скрине не видно вовсе.
+ */
+const reportsQuarterOpen: RouteState = {
+  name: "quarter-open",
+  apply: async (page) => {
+    const folder = page.getByText(/^Q[1-4] 20\d\d$/).first()
+    if ((await folder.count()) === 0) return false
+    await folder.click()
+    await page.locator("table").first().waitFor({ state: "visible", timeout: 10_000 })
+    await stabilize(page)
+    return true
+  },
+}
+
 /** Фильтры релизов: в админке это Dialog за кнопкой «Фильтры». */
 const releaseFilters: RouteState = {
   name: "filters-open",
@@ -122,15 +158,24 @@ const releaseFilters: RouteState = {
 
 /**
  * Админ-ЛК. Не включены /dashboard/login и лендинг — публичные, вне скоупа
- * overhaul. /dashboard/admin/unregistered-reports в каталоге есть: экран
- * помечен «под удаление» (ia-decisions.md), но пока живой и мигрирует
- * волной 3, а значит должен сверяться со своим эталоном, как остальные.
+ * overhaul. Нет и трёх адресов, которые после этапа 5 отвечают редиректом:
+ * /payments, /unregistered-reports и /reports-generator влиты в объединённые
+ * «Отчёты» (решение 0-а, вопросы №1 и №3) — снимать у них нечего, их вёрстка
+ * теперь снимается видами роута /dashboard/admin/reports.
  */
 const ADMIN_ROUTES: RouteSpec[] = [
   { path: "/dashboard/admin/dashboard" },
   { path: "/dashboard/admin/analytics", states: [chartTooltip] },
-  { path: "/dashboard/admin/reports" },
-  { path: "/dashboard/admin/reports-generator" },
+  {
+    path: "/dashboard/admin/reports",
+    states: [
+      reportsQuarterOpen,
+      reportsView("view-pending", "Ждут подписи"),
+      reportsView("view-unpaid", /Невыплаченные/),
+      reportsView("view-unregistered", "Без кабинета"),
+      reportsView("view-generator", "Генератор"),
+    ],
+  },
   { path: "/dashboard/admin/playlists" },
   { path: "/dashboard/admin/playlists/history" },
   { path: "/dashboard/admin/artists" },
@@ -146,16 +191,14 @@ const ADMIN_ROUTES: RouteSpec[] = [
   { path: `/dashboard/admin/releases/${SEED.adminReleaseId}` },
   { path: "/dashboard/admin/releases/koala-parser" },
   { path: "/dashboard/admin/releases/zvonko-parser" },
-  { path: "/dashboard/admin/payments" },
   { path: "/dashboard/admin/activity" },
   { path: "/dashboard/admin/settings" },
-  { path: "/dashboard/admin/unregistered-reports" },
 ]
 
 /**
- * Артист-ЛК. Не включена `/dashboard/artist/[username]` — публичная визитка,
- * тоже под удаление. `/dashboard/artist` и `/dashboard/artist/analytics` —
- * серверные редиректы без собственной вёрстки, снимать нечего.
+ * Артист-ЛК. `/dashboard/artist/[username]` (бывшая визитка, вопрос №6),
+ * `/dashboard/artist` и `/dashboard/artist/analytics` — серверные редиректы
+ * без собственной вёрстки, снимать нечего.
  */
 const ARTIST_ROUTES: RouteSpec[] = [
   { path: `/dashboard/artist/${ARTIST.username}/dashboard` },

@@ -53,9 +53,6 @@ const SidebarNavItem = memo(function SidebarNavItem({
     case "Артисты":
       iconName = "groups"
       break
-    case "Генератор отчётов":
-      iconName = "receipt_long"
-      break
     case "История плейлистов":
       iconName = "history"
       break
@@ -243,9 +240,10 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
       { href: "/dashboard/admin/dashboard", label: "Главная" },
       { href: "/dashboard/admin/artists", label: "Артисты" },
       { href: "/dashboard/admin/releases", label: "Релизы" },
+      // 0-а и ответ №3 (docs/ia-decisions.md): «Выплаты» и «Генератор отчётов»
+      // стали видами объединённого экрана «Отчёты» — отдельных пунктов у них
+      // больше нет, роуты остались редиректами ради закладок.
       { href: "/dashboard/admin/reports", label: "Отчёты" },
-      { href: "/dashboard/admin/payments", label: "Выплаты" },
-      { href: "/dashboard/admin/reports-generator", label: "Генератор отчётов" },
       { href: "/dashboard/admin/playlists", label: "Плейлисты" },
       { href: "/dashboard/admin/playlists/history", label: "История плейлистов" },
       { href: "/dashboard/admin/analytics", label: "Аналитика" },

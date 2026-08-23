@@ -41,11 +41,14 @@ export async function GET(request: Request, { params }: { params: { quarter: str
     // D3: серверный фильтр «неподписанные / неоплаченные», чтобы total и пагинация
     // соответствовали видимым строкам (раньше фильтр был page-local на клиенте).
     const statusFilter = searchParams.get("filter")
+    // F-69: нулевая сумма — не долг. Счётчик «Невыплаченных» считает по этому
+    // же правилу (lib/payments-filter.ts), и на объединённом экране (0-а) он
+    // стоит прямо над списком — расходиться им нельзя.
     const filterSql =
       statusFilter === "unsigned"
         ? Prisma.sql`AND "isSigned" IS NOT TRUE`
         : statusFilter === "unpaid"
-          ? Prisma.sql`AND "isPaid" IS NOT TRUE`
+          ? Prisma.sql`AND "isPaid" IS NOT TRUE AND COALESCE("totalAmount", 0) > 0`
           : statusFilter === "acknowledged_unsigned"
             ? Prisma.sql`AND "isAcknowledged" = true AND "isSigned" IS NOT TRUE`
             : Prisma.empty

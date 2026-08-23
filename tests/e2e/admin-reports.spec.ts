@@ -104,10 +104,11 @@ test.describe.serial("очередь на подпись", () => {
     expect((await queue(request)).total).toBe(SEEDED_QUEUE)
   })
 
-  test("вкладка «Ждут подписи» показывает очередь админу", async ({ page, context }) => {
+  test("вид «Ждут подписи» показывает очередь админу", async ({ page, context }) => {
     await loginAs(context, USERS.admin, BASE)
     await page.goto("/dashboard/admin/reports")
-    await page.getByRole("tab", { name: /Ждут подписи/i }).click()
+    // 0-а: вместо табов — ряд чипов объединённого экрана.
+    await page.getByRole("button", { name: "Ждут подписи", exact: true }).click()
     await expect(page.getByRole("heading", { name: "Ждут подписи" })).toBeVisible()
     await expect(page.getByText(`${SEEDED_QUEUE} отчётов ознакомлены`)).toBeVisible()
   })

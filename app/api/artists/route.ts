@@ -546,10 +546,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }
 
+    // Ответ №5 к решению 0-б: в дефолтной ленте остаются самостоятельные
+    // действия артиста (сменил пароль, аватарку), а правки админа — нет.
+    // Отличить их можно только по актору, а он писался всегда «Системой»:
+    // свой профиль артист правит этим же роутом (self-or-admin).
+    const selfUpdate = session.id === updatedUser.id
     await addActivity({
       type: 'user_data_updated',
-      userId: 'system',
-      userRole: 'admin',
+      userId: selfUpdate ? session.id : 'system',
+      userRole: selfUpdate ? session.role : 'admin',
       title: 'Данные артиста обновлены',
       description: `Профиль артиста "${updatedUser.name}" был обновлен`,
       metadata: { artistId: updatedUser.id, artistName: updatedUser.name }

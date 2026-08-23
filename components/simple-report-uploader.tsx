@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -108,129 +107,118 @@ export default function SimpleReportUploader() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-transparent border-slate-600/30 text-white">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Upload className="h-5 w-5 text-emerald-400" />
-            Загрузка отчёта
-          </CardTitle>
-          <CardDescription className="text-slate-300">
-            Загрузите Excel файл с отчётом и укажите основные данные
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Загрузка файла */}
-            <div className="space-y-2">
-              <Label htmlFor="file" className="text-white">Excel файл (.xlsx)</Label>
-              <FileInput
-                id="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-                disabled={isUploading}
-                showFileName={false}
-              />
-              {file && (
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  <span>Выбран файл: {file.name}</span>
-                </div>
-              )}
+    /* C-01/F-71: одна шапка на диалог — заголовок и пояснение живут в
+       DialogHeader вызывающего экрана, здесь остаётся только форма. */
+    <div className="space-y-6 text-white">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Загрузка файла */}
+        <div className="space-y-2">
+          <Label htmlFor="file" className="text-white">Excel файл (.xlsx)</Label>
+          <FileInput
+            id="file"
+            accept=".xlsx,.xls"
+            onChange={handleFileChange}
+            disabled={isUploading}
+            showFileName={false}
+          />
+          {file && (
+            <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <FileSpreadsheet className="h-4 w-4" />
+              <span>Выбран файл: {file.name}</span>
             </div>
+          )}
+        </div>
 
-            {/* Основные данные */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="artistName" className="text-white">Имя исполнителя *</Label>
-                <Input
-                  id="artistName"
-                  type="text"
-                  value={artistName}
-                  onChange={(e) => setArtistName(e.target.value)}
-                  disabled={isUploading}
-                  placeholder="Введите имя артиста"
-                  className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
-                />
-              </div>
+        {/* Основные данные */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="artistName" className="text-white">Имя исполнителя *</Label>
+            <Input
+              id="artistName"
+              type="text"
+              value={artistName}
+              onChange={(e) => setArtistName(e.target.value)}
+              disabled={isUploading}
+              placeholder="Введите имя артиста"
+              className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="totalAmount" className="text-white">Общая сумма (₽)</Label>
-                <Input
-                  id="totalAmount"
-                  type="number"
-                  step="0.01"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  disabled={isUploading}
-                  placeholder="Автоматически из файла"
-                  className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="totalAmount" className="text-white">Общая сумма (₽)</Label>
+            <Input
+              id="totalAmount"
+              type="number"
+              step="0.01"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              disabled={isUploading}
+              placeholder="Автоматически из файла"
+              className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="totalPlays" className="text-white">Прослушивания</Label>
-                <Input
-                  id="totalPlays"
-                  type="number"
-                  value={totalPlays}
-                  onChange={(e) => setTotalPlays(e.target.value)}
-                  disabled={isUploading}
-                  placeholder="Автоматически из файла"
-                  className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="totalPlays" className="text-white">Прослушивания</Label>
+            <Input
+              id="totalPlays"
+              type="number"
+              value={totalPlays}
+              onChange={(e) => setTotalPlays(e.target.value)}
+              disabled={isUploading}
+              placeholder="Автоматически из файла"
+              className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="quarter" className="text-white">Квартал *</Label>
-                <Select value={quarter} onValueChange={setQuarter} disabled={isUploading}>
-                  <SelectTrigger className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors">
-                    <SelectValue placeholder="Выберите квартал" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Q1">1 квартал (Январь - Март)</SelectItem>
-                    <SelectItem value="Q2">2 квартал (Апрель - Июнь)</SelectItem>
-                    <SelectItem value="Q3">3 квартал (Июль - Сентябрь)</SelectItem>
-                    <SelectItem value="Q4">4 квартал (Октябрь - Декабрь)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="quarter" className="text-white">Квартал *</Label>
+            <Select value={quarter} onValueChange={setQuarter} disabled={isUploading}>
+              <SelectTrigger className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors">
+                <SelectValue placeholder="Выберите квартал" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Q1">1 квартал (Январь - Март)</SelectItem>
+                <SelectItem value="Q2">2 квартал (Апрель - Июнь)</SelectItem>
+                <SelectItem value="Q3">3 квартал (Июль - Сентябрь)</SelectItem>
+                <SelectItem value="Q4">4 квартал (Октябрь - Декабрь)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="year" className="text-white">Год</Label>
-              <Input
-                id="year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
-                disabled={isUploading}
-                className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors w-32"
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="year" className="text-white">Год</Label>
+          <Input
+            id="year"
+            type="number"
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            disabled={isUploading}
+            className="bg-transparent border-slate-600/30 text-white hover:border-slate-500/60 focus:border-emerald-400 transition-colors w-32"
+          />
+        </div>
 
-            {/* Кнопка загрузки */}
-            <Button
-              type="submit"
-              variant="cta"
-              disabled={isUploading || !file || !artistName.trim() || !quarter}
-              className="w-full"
-            >
-              {isUploading ? (
-                <>
-                  <Spinner size="sm" className="mr-2" />
-                  Загрузка...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Загрузить отчёт
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Кнопка загрузки */}
+        <Button
+          type="submit"
+          variant="cta"
+          disabled={isUploading || !file || !artistName.trim() || !quarter}
+          className="w-full"
+        >
+          {isUploading ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Загрузка...
+            </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Загрузить отчёт
+            </>
+          )}
+        </Button>
+      </form>
 
       {/* Результат загрузки */}
       {result && (

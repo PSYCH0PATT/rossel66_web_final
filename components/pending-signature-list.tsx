@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Pagination } from "@/components/ui/pagination"
 import { Spinner } from "@/components/ui/spinner"
-import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
+import type { SortField, SortState } from "@/components/report-sort-controls"
 import { downloadFileFromApi } from "@/lib/download-file"
 
 interface PendingReport {
@@ -32,29 +32,37 @@ interface PendingReport {
   uploadDate: string
 }
 
-const DEFAULT_SORT: SortState = { sort: "acknowledgedAt", dir: "asc" }
+export const PENDING_DEFAULT_SORT: SortState = { sort: "acknowledgedAt", dir: "asc" }
+
+export const PENDING_SORT_FIELDS: SortField[] = [
+  "acknowledgedAt",
+  "artistName",
+  "totalAmount",
+  "totalPlays",
+  "year",
+  "uploadedAt",
+]
 
 /**
  * Отчёты, с которыми артист ознакомился, но подписи ещё нет. Плоский список по
  * всем кварталам: раньше такие строки приходилось выискивать по квартальным
  * карточкам вручную.
  */
-export default function PendingSignatureList() {
+export default function PendingSignatureList({ sort }: { sort: SortState }) {
   const [reports, setReports] = useState<PendingReport[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT)
   const [isLoading, setIsLoading] = useState(true)
 
-  const load = useCallback(async (nextPage: number, nextSize: number, sort: SortState) => {
+  const load = useCallback(async (nextPage: number, nextSize: number, nextSort: SortState) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
         page: String(nextPage),
         pageSize: String(nextSize),
-        sort: sort.sort,
-        dir: sort.dir,
+        sort: nextSort.sort,
+        dir: nextSort.dir,
       })
       const res = await fetch(`/api/reports/attention?${params}`)
       if (!res.ok) throw new Error("Не удалось загрузить очередь")
@@ -72,14 +80,11 @@ export default function PendingSignatureList() {
     }
   }, [])
 
+  // Сортировка живёт в Toolbar экрана «Отчёты» (1.3): её смена — это новая
+  // первая страница очереди.
   useEffect(() => {
-    void load(1, 20, DEFAULT_SORT)
-  }, [load])
-
-  const changeSort = (next: SortState) => {
-    setSortState(next)
-    void load(1, pageSize, next)
-  }
+    void load(1, 20, sort)
+  }, [load, sort])
 
   const handleSign = async (reportId: string) => {
     try {
@@ -116,12 +121,6 @@ export default function PendingSignatureList() {
               </p>
             </div>
           </div>
-          <ReportSortControls
-            value={sortState}
-            onChange={changeSort}
-            disabled={isLoading}
-            fields={["acknowledgedAt", "artistName", "totalAmount", "totalPlays", "year", "uploadedAt"]}
-          />
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -224,8 +223,8 @@ export default function PendingSignatureList() {
                 pageSize={pageSize}
                 loading={isLoading}
                 itemForms={["отчёт", "отчёта", "отчётов"]}
-                onPageChange={(next) => void load(next, pageSize, sortState)}
-                onPageSizeChange={(size) => void load(1, size, sortState)}
+                onPageChange={(next) => void load(next, pageSize, sort)}
+                onPageSizeChange={(size) => void load(1, size, sort)}
               />
             )}
           </>

@@ -21,6 +21,7 @@ import {
   dedupeActivities,
   SYSTEM_ACTOR_ID,
 } from '@/lib/activity-log'
+import { activityViewFilter, type ActivityView } from '@/lib/activity-views'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -883,6 +884,11 @@ export interface ActivityFilters {
   artistGroupIds?: string[]
   role?: 'artist' | 'admin'
   types?: ActivityType[]
+  /**
+   * Вид журнала (0-б): «Главное» — три желания владельца плюс самостоятельные
+   * действия артиста (ответ №5). Складывается с остальными фильтрами по И.
+   */
+  view?: ActivityView
   dateFrom?: string
   dateTo?: string
 }
@@ -965,6 +971,19 @@ export async function getActivitiesFiltered(
   }
   if (filters.types?.length) {
     where.type = { in: filters.types }
+  }
+  if (filters.view) {
+    // Вид — это ИЛИ из типов и оговорки про самостоятельные действия артиста,
+    // поэтому уходит в AND: иначе он затёр бы OR группы профилей (F-04).
+    const view = activityViewFilter(filters.view)
+    const legs: any[] = []
+    if (view.types.length) legs.push({ type: { in: view.types } })
+    if (view.includeArtistSelfProfile) {
+      legs.push({ type: 'user_data_updated', userRole: 'artist' })
+    }
+    if (legs.length) {
+      where.AND = [...(where.AND ?? []), { OR: legs }]
+    }
   }
   if (filters.dateFrom || filters.dateTo) {
     where.createdAt = {}

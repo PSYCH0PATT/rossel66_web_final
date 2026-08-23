@@ -1,16 +1,11 @@
 import { redirect } from "next/navigation"
-import { getSessionUser } from "@/lib/server-auth"
-import AdminPaymentsClient from "./admin-payments-client"
-import { dashboardHomeHref } from "@/lib/dashboard-home"
 
-export const revalidate = 600
-
-export default async function AdminPaymentsPage() {
-  const session = getSessionUser()
-  if (!session) redirect("/dashboard/login")
-  if (session.role !== "admin") redirect(dashboardHomeHref(session))
-
-  return (
-    <AdminPaymentsClient />
-    )
+/**
+ * Экран «Выплаты» влит в объединённые «Отчёты» — решение 0-а и ответ владельца
+ * на вопрос №2 (docs/ia-decisions.md): сущность одна, статусы дублировались на
+ * трёх экранах. Пункт сайдбара снят, роут остаётся редиректом, чтобы старые
+ * закладки вели на нужный вид.
+ */
+export default function AdminPaymentsPage() {
+  redirect("/dashboard/admin/reports?filter=unpaid")
 }

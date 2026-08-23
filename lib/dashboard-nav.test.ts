@@ -37,13 +37,13 @@ const ARTIST_HREFS = [
   '/dashboard/artist/rompy/playlists',
 ]
 
+/** Состав пунктов админ-сайдбара (components/sidebar.tsx). «Выплаты» и
+ *  «Генератор отчётов» стали видами объединённых «Отчётов» — решение 0-а. */
 const ADMIN_HREFS = [
   '/dashboard/admin/dashboard',
   '/dashboard/admin/artists',
   '/dashboard/admin/releases',
   '/dashboard/admin/reports',
-  '/dashboard/admin/payments',
-  '/dashboard/admin/reports-generator',
   '/dashboard/admin/playlists',
   '/dashboard/admin/playlists/history',
   '/dashboard/admin/analytics',
@@ -65,10 +65,13 @@ test('F-56: вложенный раздел не подсвечивает род
 })
 
 test('F-56: соседний раздел с общим префиксом не подсвечивается', () => {
+  // /reports-generator теперь редирект на вид объединённых «Отчётов», но по
+  // самому адресу «Отчёты» подсвечиваться не должны: правило сравнивает
+  // разделы целиком, а не по префиксу строки.
   const active = ADMIN_HREFS.filter((href) =>
     isNavItemActive('/dashboard/admin/reports-generator', href, ADMIN_HREFS)
   )
-  assert.deepEqual(active, ['/dashboard/admin/reports-generator'])
+  assert.deepEqual(active, [])
 })
 
 test('F-56: на странице вне навигации не подсвечен никто', () => {

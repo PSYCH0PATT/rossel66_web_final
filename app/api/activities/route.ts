@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
+import { isActivityView } from '@/lib/activity-views'
 import { getSessionUser, requireAuth, requireAdmin } from '@/lib/server-auth'
 
 // GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
+// `view=main|playlists|signatures|errors|all` — виды журнала из решения 0-б
+// (docs/ia-decisions.md): дефолт экрана «Главное» вместо всех 470 записей.
 export async function GET(request: NextRequest) {
   try {
     const denied = await requireAuth(request)
@@ -35,6 +38,10 @@ export async function GET(request: NextRequest) {
     const types: ActivityType[] | undefined = typeParam.length
       ? (typeParam as ActivityType[])
       : undefined
+    // 0-б: вид журнала. «Все события» — это отсутствие ограничения, поэтому
+    // в фильтры не уходит.
+    const viewParam = searchParams.get('view')
+    const view = isActivityView(viewParam) && viewParam !== 'all' ? viewParam : undefined
     const dateFrom = searchParams.get('dateFrom') || undefined
     const dateTo = searchParams.get('dateTo') || undefined
     const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 500)
@@ -45,6 +52,7 @@ export async function GET(request: NextRequest) {
       ...(userId && { userId }),
       ...(!artistGroupIds && role && { role }),
       ...(types?.length && { types }),
+      ...(view && { view }),
       ...(dateFrom && { dateFrom }),
       ...(dateTo && { dateTo })
     }

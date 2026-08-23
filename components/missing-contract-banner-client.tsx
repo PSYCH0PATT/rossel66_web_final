@@ -17,8 +17,17 @@ type LoadState =
   | { status: "error" }
   | { status: "ready"; incomplete: IncompleteReportArtist[] }
 
+/**
+ * Предупреждение о неполных данных артистов — 1.3/0-а (docs/ia-decisions.md).
+ *
+ * Баннер занимал весь первый экран /reports и нёс собственный скролл на 67
+ * строк (F-44), а текст ссылался на Supabase — имя хранилища, которое админу
+ * ничего не говорит (F-45). Теперь это свёрнутая строка со счётчиком, детали —
+ * по развороту, и стоит она ПОСЛЕ шапки и фильтров.
+ */
 export function MissingContractBanner() {
   const [state, setState] = useState<LoadState>({ status: "loading" })
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -77,41 +86,59 @@ export function MissingContractBanner() {
 
   return (
     <Banner variant="warning" className="rounded-2xl md:px-6 md:py-4">
-      <p className="text-sm text-amber-100 font-medium">
-        У {incomplete.length} артистов не хватает данных для отчётов в Supabase
-      </p>
-      <p className="text-xs text-amber-200/70 mt-1 font-light">
-        Обязательно: ФИО, номер договора и процент. Без них отчёт не создаётся.
-      </p>
-      <p className="text-xs text-amber-200/90 mt-2 font-mono uppercase tracking-widest">
-        {fieldSummary}
-      </p>
-      {/* F-44: список артистов скроллится с видимым скроллбаром и фейдом —
-          раньше это был скролл-в-скролле без единого аффорданса. */}
-      <ScrollArea
-        className="mt-3"
-        viewportClassName="max-h-40"
-        fadeClassName="from-status-warning/10"
-      >
-        <ul className="text-xs text-amber-100/90 space-y-1 font-mono">
-          {incomplete.slice(0, 15).map((a) => (
-            <li key={a.id}>
-              {a.name} — нет:{" "}
-              {a.missingFields.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")}
-            </li>
-          ))}
-          {incomplete.length > 15 && (
-            <li className="text-amber-200/60">…и ещё {incomplete.length - 15}</li>
-          )}
-        </ul>
-      </ScrollArea>
-      <Button
-        asChild
-        variant="warning-outline"
-        className="mt-3 h-auto self-start rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-widest sm:self-end"
-      >
-        <Link href="/dashboard/admin/artists">К списку артистов</Link>
-      </Button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {/* F-45: без «Supabase» — админу важно, что данных нет, а не где они лежат */}
+        <p className="text-sm text-amber-100 font-medium">
+          У {incomplete.length} артистов не хватает данных для отчётов
+        </p>
+        <Button
+          type="button"
+          variant="warning-outline"
+          aria-expanded={open}
+          aria-controls="missing-contract-details"
+          onClick={() => setOpen((prev) => !prev)}
+          className="h-auto rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-widest"
+        >
+          {open ? "Свернуть" : "Подробнее"}
+        </Button>
+      </div>
+
+      {open && (
+        <div id="missing-contract-details">
+          <p className="text-xs text-amber-200/70 mt-1 font-light">
+            Обязательно: ФИО, номер договора и процент. Без них отчёт не создаётся.
+          </p>
+          <p className="text-xs text-amber-200/90 mt-2 font-mono uppercase tracking-widest">
+            {fieldSummary}
+          </p>
+          {/* F-44: список артистов скроллится с видимым скроллбаром и фейдом —
+              раньше это был скролл-в-скролле без единого аффорданса. */}
+          <ScrollArea
+            className="mt-3"
+            viewportClassName="max-h-40"
+            fadeClassName="from-status-warning/10"
+          >
+            <ul className="text-xs text-amber-100/90 space-y-1 font-mono">
+              {incomplete.slice(0, 15).map((a) => (
+                <li key={a.id}>
+                  {a.name} — нет:{" "}
+                  {a.missingFields.map((f) => ARTIST_REPORT_FIELD_LABELS[f]).join(", ")}
+                </li>
+              ))}
+              {incomplete.length > 15 && (
+                <li className="text-amber-200/60">…и ещё {incomplete.length - 15}</li>
+              )}
+            </ul>
+          </ScrollArea>
+          <Button
+            asChild
+            variant="warning-outline"
+            className="mt-3 h-auto self-start rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-widest sm:self-end"
+          >
+            <Link href="/dashboard/admin/artists">К списку артистов</Link>
+          </Button>
+        </div>
+      )}
     </Banner>
   )
 }

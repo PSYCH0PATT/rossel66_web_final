@@ -32,20 +32,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SkeletonRows } from "@/components/ui/skeleton-presets"
 import { listSkeletonCount } from "@/lib/list-skeleton"
 import type { ActivityType } from "@/lib/storage"
+import type { ActivityView } from "@/lib/activity-views"
 import { activityActorLabel } from "@/lib/activity-log"
 import { DashboardFooter } from "@/components/dashboard-footer"
 
-const CATEGORIES = [
-  { id: "all", label: "Общее", types: undefined },
-  { id: "releases", label: "Релизы", types: ["release_added", "release_status_updated"] as ActivityType[] },
-  { id: "playlists", label: "Плейлисты", types: ["playlist_found"] as ActivityType[] },
-  { id: "reports", label: "Отчёты", types: ["report_received", "reports_generated"] as ActivityType[] },
-  { id: "payments", label: "Выплаты", types: ["payment_sent"] as ActivityType[] },
-  {
-    id: "artists",
-    label: "Артисты",
-    types: ["artist_added", "artist_removed", "user_data_updated"] as ActivityType[],
-  },
+/**
+ * Виды журнала — решение 0-б (docs/ia-decisions.md). Прежние шесть категорий
+ * («Общее / Релизы / Плейлисты / Отчёты / Выплаты / Артисты») пересобраны под
+ * задачи владельца: дефолт «Главное» — плейлисты, подписания и поломки плюс
+ * самостоятельные действия артиста; всё остальное живёт под «Все события».
+ */
+const VIEWS: { id: ActivityView; label: string }[] = [
+  { id: "main", label: "Главное" },
+  { id: "playlists", label: "Плейлисты" },
+  { id: "signatures", label: "Подписания" },
+  { id: "errors", label: "Ошибки" },
+  { id: "all", label: "Все события" },
 ]
 
 const TYPE_LABELS: Record<ActivityType, string> = {
@@ -150,7 +152,8 @@ export default function AdminActivityPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [categoryId, setCategoryId] = useState("all")
+  const [view, setView] = useState<ActivityView>("main")
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [role, setRole] = useState<string>("all")
   const [userId, setUserId] = useState<string>("")
   const [dateFrom, setDateFrom] = useState("")
@@ -213,10 +216,8 @@ export default function AdminActivityPage() {
       if (dateFrom) params.set("dateFrom", dateFrom)
       if (dateTo) params.set("dateTo", dateTo)
 
-      const cat = CATEGORIES.find((c) => c.id === categoryId)
-      if (cat?.types?.length) {
-        cat.types.forEach((t) => params.append("type", t))
-      }
+      // «Все события» — это отсутствие вида: полный журнал как раньше.
+      if (view !== "all") params.set("view", view)
 
       const res = await fetch(`/api/activities?${params.toString()}`)
       const data = await res.json()
@@ -229,7 +230,7 @@ export default function AdminActivityPage() {
     } finally {
       setLoading(false)
     }
-  }, [categoryId, role, userId, dateFrom, dateTo, offset, pageSize])
+  }, [view, role, userId, dateFrom, dateTo, offset, pageSize])
 
   useEffect(() => {
     loadActivities()
@@ -257,6 +258,10 @@ export default function AdminActivityPage() {
     return activityActorLabel(item, fallback)
   }
 
+  /** Сколько инцидент-фильтров включено — подпись на свёрнутом блоке. */
+  const activeFilterCount =
+    (role !== "all" ? 1 : 0) + (userId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+
   const selectedUser = users.find((u) => u.id === userId)
   const selectedUserLabel = userId ? selectedUser?.name || selectedUser?.username || userId : "Все"
 
@@ -271,23 +276,64 @@ export default function AdminActivityPage() {
           <SectionHeader className="mb-0" size="sm" title="Фильтры и лента" />
 
           <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
-            {CATEGORIES.map((cat) => (
+            {VIEWS.map((item) => (
               <FilterChip
-                key={cat.id}
+                key={item.id}
                 tone="success"
-                active={categoryId === cat.id}
+                active={view === item.id}
                 className={CHIP_CLASS}
                 onClick={() => {
-                  setCategoryId(cat.id)
+                  setView(item.id)
                   resetOffset()
                 }}
               >
-                {cat.label}
+                {item.label}
               </FilterChip>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+          {/* 0-б: блок инцидент-фильтров — инструмент разбора, а не ежедневный
+              контрол: свёрнут по умолчанию, счётчик показывает, что фильтр
+              включён и лента поэтому короче (C-11). «Обновить» остаётся у
+              ленты и приглушён до ghost (F-20). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={filtersOpen}
+              aria-controls="activity-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base mr-1" aria-hidden>tune</span>
+              Фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              <span className="material-symbols-outlined text-base ml-1" aria-hidden>
+                {filtersOpen ? "expand_less" : "expand_more"}
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setOffset(0)
+                loadActivities()
+              }}
+              className="ml-auto rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base mr-1" aria-hidden>refresh</span>
+              Обновить
+            </Button>
+          </div>
+
+          {/* Свёрнут — значит не отрисован: у div с классом `grid` атрибут
+              hidden ничего не скрывает, display из класса сильнее. */}
+          {filtersOpen && (
+          <div
+            id="activity-filters"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3"
+          >
             <FormField label="Роль" htmlFor="filter-role" className="space-y-1.5">
               <Select
                 value={role}
@@ -413,22 +459,8 @@ export default function AdminActivityPage() {
                 </SelectContent>
               </Select>
             </FormField>
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setOffset(0)
-                  loadActivities()
-                }}
-                className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5 w-full md:w-auto"
-              >
-                <span className="material-symbols-outlined text-base mr-1">refresh</span>
-                Обновить
-              </Button>
-            </div>
           </div>
+          )}
 
           {loading ? (
             /* F-86: строк-заглушек столько, сколько придёт записей, — страница

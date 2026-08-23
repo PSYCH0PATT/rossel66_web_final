@@ -21,7 +21,8 @@ export default async function AdminDashboardPage() {
   const [payload, analytics, activities] = await Promise.all([
     getCachedAdminDashboard(),
     getCachedStreamAnalytics(window),
-    getCachedActivitiesForFeed(null, "admin", 5),
+    // 0-б: лента дашборда — те же три типа событий владельца, что и журнал.
+    getCachedActivitiesForFeed(null, "admin", 5, "main"),
   ])
 
   return (

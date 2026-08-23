@@ -1,68 +1,32 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ReportsList from "@/components/reports-list"
-import PendingSignatureList from "@/components/pending-signature-list"
-import UnregisteredReportsList from "@/components/unregistered-reports-list"
-import SimpleReportUploader from "@/components/simple-report-uploader"
-import { MissingContractBanner } from "@/components/missing-contract-banner"
-import { DashboardFooter } from "@/components/dashboard-footer"
-import { PageHeader } from "@/components/ui/page-header"
+import AdminReportsClient, { type ReportsView } from "./admin-reports-client"
 
-/** Общий вид вкладки: раньше эти классы были выписаны у каждой из четырёх. */
-const TAB_TRIGGER_CLASS =
-  "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] text-gray-400 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:bg-primary/20 data-[state=active]:text-primary sm:flex-row sm:gap-2 sm:px-2 sm:text-sm"
+/**
+ * Адреса объединённого экрана (решение 0-а, вопросы №1 и №3):
+ * /payments → ?filter=unpaid, /unregistered-reports → ?tab=unregistered,
+ * /reports-generator → ?tab=generator. Редиректы ведут сюда, поэтому вид
+ * выбирается по query, а не сбрасывается на «Все».
+ */
+function viewFromQuery(params: { tab?: string; filter?: string }): ReportsView {
+  const raw = params.tab ?? params.filter
+  switch (raw) {
+    case "unpaid":
+      return "unpaid"
+    case "pending":
+    case "pending-signature":
+      return "pending"
+    case "unregistered":
+      return "unregistered"
+    case "generator":
+      return "generator"
+    default:
+      return "all"
+  }
+}
 
-export default function ReportsPage() {
-  return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-        <PageHeader
-          size="md"
-          title="Отчёты"
-          subtitle="Зарегистрированные артисты, очередь без кабинета и загрузка файлов"
-        />
-
-        {/* Предупреждение о незаполненных ФИО/договоре/проценте у артистов.
-            Само себя скрывает, пока таких артистов нет. */}
-        <MissingContractBanner />
-
-        <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-8 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-            <TabsTrigger value="reports" className={TAB_TRIGGER_CLASS}>
-              <span className="material-symbols-outlined text-lg sm:text-base">description</span>
-              <span className="font-mono uppercase leading-tight sm:hidden">С кабинетом</span>
-              <span className="hidden font-mono uppercase sm:inline">Зарегистрированные</span>
-            </TabsTrigger>
-            <TabsTrigger value="pending-signature" className={TAB_TRIGGER_CLASS}>
-              <span className="material-symbols-outlined text-lg sm:text-base">draw</span>
-              <span className="font-mono uppercase leading-tight">Ждут подписи</span>
-            </TabsTrigger>
-            <TabsTrigger value="unregistered" className={TAB_TRIGGER_CLASS}>
-              <span className="material-symbols-outlined text-lg sm:text-base">person_off</span>
-              <span className="font-mono uppercase leading-tight">Без кабинета</span>
-            </TabsTrigger>
-            <TabsTrigger value="upload" className={TAB_TRIGGER_CLASS}>
-              <span className="material-symbols-outlined text-lg sm:text-base">upload</span>
-              <span className="font-mono uppercase leading-tight">Загрузка</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="reports" className="space-y-4">
-            <ReportsList />
-          </TabsContent>
-
-          <TabsContent value="pending-signature" className="space-y-4">
-            <PendingSignatureList />
-          </TabsContent>
-
-          <TabsContent value="unregistered" className="space-y-4">
-            <UnregisteredReportsList />
-          </TabsContent>
-
-          <TabsContent value="upload" className="space-y-4">
-            <SimpleReportUploader />
-          </TabsContent>
-        </Tabs>
-
-        <DashboardFooter />
-      </div>
-    )
+export default function ReportsPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string; filter?: string }
+}) {
+  return <AdminReportsClient initialView={viewFromQuery(searchParams)} />
 }

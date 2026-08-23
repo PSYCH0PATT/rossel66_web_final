@@ -13,6 +13,7 @@ import {
   playlistRowVisibleToCabinetUser,
 } from "@/lib/playlist-artist-match"
 import { getActivitiesFiltered, type Activity, type Report, type User, type Release } from "@/lib/storage"
+import type { ActivityView } from "@/lib/activity-views"
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 import { reportEffectiveYear } from "@/lib/report-year"
@@ -320,7 +321,13 @@ export const getCachedStreamAnalytics = unstable_cache(
 )
 
 export const getCachedActivitiesForFeed = unstable_cache(
-  async (userId: string | null, role: "artist" | "admin" | null, limit: number): Promise<Activity[]> => {
+  async (
+    userId: string | null,
+    role: "artist" | "admin" | null,
+    limit: number,
+    /** Вид журнала (0-б): лента дашборда показывает «Главное». */
+    view?: ActivityView
+  ): Promise<Activity[]> => {
     const filters: Parameters<typeof getActivitiesFiltered>[0] = {}
     if (userId && role === "artist") {
       // F-04: кабинет у группы связанных профилей один, а события про релизы
@@ -330,9 +337,13 @@ export const getCachedActivitiesForFeed = unstable_cache(
       filters.artistGroupIds = await getArtistGroupIds(userId)
     } else if (userId) {
       filters.userId = userId
-    } else if (role) {
+    } else if (role && !view) {
+      // При виде из 0-б роль не сужаем: «Ознакомление с отчётом» пишется
+      // только на артиста (app/api/reports/acknowledge/route.ts), и с
+      // role=admin второе желание владельца в ленту не попадало бы вовсе.
       filters.role = role
     }
+    if (view) filters.view = view
     const { activities } = await getActivitiesFiltered(filters, limit, 0)
     return activities
   },

@@ -61,7 +61,32 @@ test("/dashboard/admin/reports открывается @smoke", async ({ page, co
   await loginAs(context, USERS.admin, BASE)
   await page.goto("/dashboard/admin/reports")
   await expect(page.getByRole("heading", { name: "Отчёты", exact: true })).toBeVisible()
-  await expect(page.getByRole("tablist")).toBeVisible()
+  // 0-а: табов у экрана больше нет — виды переключает ряд чипов, и «Выплаты»
+  // теперь один из них.
+  await expect(page.getByRole("button", { name: "Все", exact: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: /Невыплаченные/ })).toBeVisible()
+})
+
+test("сросшиеся экраны отвечают редиректом на объединённые «Отчёты» @smoke", async ({
+  page,
+  context,
+}) => {
+  await loginAs(context, USERS.admin, BASE)
+  for (const [from, view] of [
+    ["/dashboard/admin/payments", "filter=unpaid"],
+    ["/dashboard/admin/unregistered-reports", "tab=unregistered"],
+    ["/dashboard/admin/reports-generator", "tab=generator"],
+  ]) {
+    await page.goto(from)
+    await expect(page).toHaveURL(new RegExp(`/dashboard/admin/reports\\?${view}$`))
+  }
+})
+
+test("визитка артиста ведёт на его главную @smoke", async ({ page, context }) => {
+  await loginAs(context, USERS.main, BASE)
+  await page.goto(`/dashboard/artist/${USERS.main.username}`)
+  await page.waitForURL(`**/dashboard/artist/${USERS.main.username}/dashboard`)
+  await expect(page.getByRole("heading", { name: "ГЛАВНАЯ", exact: true })).toBeVisible()
 })
 
 test.fixme(
