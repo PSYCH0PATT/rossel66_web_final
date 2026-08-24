@@ -53,6 +53,19 @@ export interface PageHeaderProps
   /** Слот действий справа от заголовка (primary — здесь, не внизу экрана). */
   actions?: React.ReactNode
   /**
+   * Бейдж вплотную к H1 — статус самой сущности, а не действие. На карте
+   * релиза он висел на линии subtitle в слоте actions и не читался как
+   * свойство релиза (вердикт 3.4, блок 1).
+   */
+  titleBadge?: React.ReactNode
+  /**
+   * `section` (по умолчанию) — имя раздела дисплейным капсом.
+   * `entity` — имя сущности как его написал человек: Syncopate не знает
+   * строчных и буквы «ё», и «Я всё ещё одна» превращалось в «я все еще одна»
+   * (F-52). Кегль и ритм канона в обоих случаях одни и те же.
+   */
+  titleStyle?: "section" | "entity"
+  /**
    * Слот под заголовком: подписи и служебные действия, привязанные к H1
    * (ряд «Синхронизировать / Загрузить CSV / Сопоставить» в аналитике).
    */
@@ -63,6 +76,25 @@ export interface PageHeaderProps
   actionsClassName?: string
 }
 
+/**
+ * Классы H1 — намеренно готовые строки, а НЕ cn(): tailwind-merge считает
+ * `text-balance` и `text-4xl` одной группой `text-*` и выкидывает первый как
+ * перебитый. Пока размер приходил вторым аргументом cn(), `text-balance` не
+ * доезжал до разметки вовсе — то есть фикс F-83 («РЕДАКТИРОВАНИ / Е» на 390)
+ * в бою не работал. Проверить: twMerge("text-balance …", "text-4xl") вернёт
+ * строку без text-balance.
+ *
+ * Кегль у обоих вариантов один и тот же — различаются только шрифт и регистр,
+ * поэтому канон C-01 (одна высота и один размер заголовка на всех экранах)
+ * не задет. Размер на узких экранах дополнительно ужимает dashboard.css
+ * (медиазапросы на `.dashboard-theme h1`).
+ */
+const TITLE_CLASS = {
+  section:
+    "text-balance font-display text-4xl font-bold uppercase tracking-tight text-white md:text-5xl",
+  entity: "text-balance text-4xl font-bold tracking-tight text-white md:text-5xl",
+} as const
+
 const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
   (
     {
@@ -72,6 +104,8 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
       backLabel = "К списку",
       breadcrumbs,
       actions,
+      titleBadge,
+      titleStyle = "section",
       meta,
       rowClassName,
       actionsClassName,
@@ -130,21 +164,14 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
         )}
       >
         <div className="min-w-0">
-          <h1
-            // Здесь намеренно голая строка, а НЕ cn(): tailwind-merge считает
-            // `text-balance` и `text-4xl` одной группой `text-*` и выкидывает
-            // первый как перебитый. Пока размер приходил вторым аргументом
-            // cn(), `text-balance` не доезжал до разметки вовсе — то есть
-            // фикс F-83 («РЕДАКТИРОВАНИ / Е» на 390) в бою не работал.
-            // Проверить: twMerge("text-balance …", "text-4xl") вернёт строку
-            // без text-balance.
-            //
-            // Размер на узких экранах дополнительно ужимает dashboard.css
-            // (медиазапросы на `.dashboard-theme h1`).
-            className="text-balance font-display text-4xl font-bold uppercase tracking-tight text-white md:text-5xl"
-          >
-            {title}
-          </h1>
+          {titleBadge ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h1 className={TITLE_CLASS[titleStyle]}>{title}</h1>
+              {titleBadge}
+            </div>
+          ) : (
+            <h1 className={TITLE_CLASS[titleStyle]}>{title}</h1>
+          )}
           {subtitle && (
             <p className="mt-2 max-w-md text-sm font-light text-gray-400">
               {subtitle}

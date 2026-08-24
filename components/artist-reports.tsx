@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { formatDateRu } from "@/lib/format-date"
+import { formatMoney } from "@/lib/format-money"
 import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
 import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -50,6 +51,8 @@ export default function ArtistReports({
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null)
   const [ackMessage, setAckMessage] = useState<string | null>(null)
+  /** C-11/F-44: на 390 инструкция занимала весь первый экран. */
+  const [instructionOpen, setInstructionOpen] = useState(false)
 
   const acknowledgeGate = useMemo(() => canAcknowledgeReports(reports), [reports])
 
@@ -145,20 +148,44 @@ export default function ArtistReports({
 
       {years.length > 0 ? (
         <>
+          {/*
+            F-44: два абзаца во всю ширину занимали на 390 весь первый экран, и
+            карточка отчёта — то, за чем артист сюда пришёл — уходила под фолд.
+            Текст цел, читается один раз и сворачивается.
+          */}
           <Banner variant="info" icon={null} className="mb-8 block rounded-2xl p-4 md:p-5">
-            <p className="text-sm text-gray-400 leading-relaxed">
-              Пожалуйста, внимательно проверьте отчёт перед получением выплаты. Нажав кнопку «Ознакомился», вы подтверждаете, что все треки учтены, данные верны и вы согласны с итоговой суммой. После этого мы отправим вам ссылку на подписание документа в рабочий чат.
-            </p>
-            <p className="text-sm text-gray-400 leading-relaxed mt-3">
-              Если вы обнаружили ошибку, не нашли какой-либо трек или у вас возникли вопросы — не нажимайте кнопку, а напишите в рабочую группу в Telegram, чтобы мы могли оперативно всё исправить.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="text-sm text-gray-300">
+                Проверьте отчёт перед тем, как нажать «Ознакомился».
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                aria-expanded={instructionOpen}
+                aria-controls="reports-instruction"
+                onClick={() => setInstructionOpen((prev) => !prev)}
+                className="h-auto rounded-lg px-3 py-1.5 font-mono text-xs uppercase tracking-widest"
+              >
+                {instructionOpen ? "Свернуть" : "Подробнее"}
+              </Button>
+            </div>
+            {instructionOpen && (
+              <div id="reports-instruction">
+                <p className="text-sm text-gray-400 leading-relaxed mt-3">
+                  Пожалуйста, внимательно проверьте отчёт перед получением выплаты. Нажав кнопку «Ознакомился», вы подтверждаете, что все треки учтены, данные верны и вы согласны с итоговой суммой. После этого мы отправим вам ссылку на подписание документа в рабочий чат.
+                </p>
+                <p className="text-sm text-gray-400 leading-relaxed mt-3">
+                  Если вы обнаружили ошибку, не нашли какой-либо трек или у вас возникли вопросы — не нажимайте кнопку, а напишите в рабочую группу в Telegram, чтобы мы могли оперативно всё исправить.
+                </p>
+              </div>
+            )}
             {ackMessage && (
               <p className="text-sm text-primary mt-3 font-mono">{ackMessage}</p>
             )}
           </Banner>
 
           {sortedQuarters.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div className="space-y-8 mb-12">
               {sortedQuarters.map((quarter) => (
                 <div key={quarter} className="space-y-4">
                   <SectionHeader
@@ -178,7 +205,10 @@ export default function ArtistReports({
                         key={report.id}
                         className="card-glass rounded-2xl border border-white/5 p-4 hover:border-white/10 transition-colors"
                       >
-                        <div className="flex items-center gap-4">
+                        {/* На 390 подписанная кнопка скачивания не помещается в
+                            один ряд с текстом — там действия уходят под строку. */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <div className="flex min-w-0 flex-1 items-center gap-4">
                         <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
                           <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-black flex items-center justify-center">
                             <span className="material-symbols-outlined text-xl text-emerald-400">description</span>
@@ -210,12 +240,13 @@ export default function ArtistReports({
                               </StatusBadge>
                             )}
                             <span className="text-yellow-400/90 tabular-nums">
-                              {Math.round(report.totalAmount || 0).toLocaleString("ru-RU")} ₽
+                              {formatMoney(report.totalAmount)}
                             </span>
                           </div>
                         </div>
+                        </div>
                         {/* C-13: икон-кнопки — ui/button size=icon, тач 44px из коробки. */}
-                        <div className="flex gap-1 flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
                           <Button
                             size="icon"
                             variant="ghost"
@@ -228,17 +259,17 @@ export default function ArtistReports({
                               visibility
                             </span>
                           </Button>
+                          {/* C-13: у скачивания появилась подпись — до неё
+                              главное действие экрана было безымянной иконкой. */}
                           <Button
-                            size="icon"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => handleDownloadReport(report.id, report.fileName)}
-                            aria-label="Скачать"
-                            title="Скачать"
-                            className="rounded-lg text-gray-500"
+                            className="rounded-lg font-mono text-xs uppercase tracking-widest"
                           >
-                            <span className="material-symbols-outlined text-[20px]" aria-hidden>
+                            <span className="material-symbols-outlined mr-2 text-[18px]" aria-hidden>
                               download
                             </span>
+                            Скачать PDF
                           </Button>
                         </div>
                         </div>

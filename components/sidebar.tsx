@@ -176,7 +176,8 @@ function SidebarUserBlock({
       <Link
         href={settingsHref}
         onClick={onNavigate}
-        className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors cursor-pointer mb-2"
+        title="Настройки"
+        className="group/profile mb-2 flex cursor-pointer items-center justify-between rounded-xl border border-white/5 bg-white/5 p-3 transition-colors hover:border-white/10"
       >
         <div className="flex items-center overflow-hidden">
           <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-800 border border-primary/50 text-white font-bold">
@@ -187,6 +188,19 @@ function SidebarUserBlock({
             <p className="text-[10px] text-primary uppercase tracking-widest">{role === "artist" ? "Артист" : "Админ"}</p>
           </div>
         </div>
+        {/*
+          F-94: блок профиля — единственный вход в настройки на десктопе, и
+          выглядел он подписью, а не кнопкой: ни стрелки, ни намёка на переход.
+          Пункт в навигацию не добавляем (экран редкий) — даём аффорданс.
+          Стрелка без подписи намеренно: слово «Настройки» рядом с именем и
+          ролью съедало их до «e2e… / АРТИС» на сайдбаре шириной 256px.
+        */}
+        <span className="ml-2 shrink-0 text-gray-500 transition-colors group-hover/profile:text-primary">
+          <span className="sr-only">Настройки</span>
+          <span className="material-symbols-outlined text-xl leading-none" aria-hidden>
+            chevron_right
+          </span>
+        </span>
       </Link>
       <button
         onClick={onLogout}

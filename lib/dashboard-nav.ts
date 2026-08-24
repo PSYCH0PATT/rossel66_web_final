@@ -31,15 +31,39 @@ function matchesSection(pathname: string, href: string): boolean {
 }
 
 /**
+ * Экраны без своего пункта меню и их родитель (F-90).
+ *
+ * «Активность» артиста — намеренный orphan: пункта в навигации у неё нет и не
+ * нужно, вход только по ссылке «Все события» с главной (ответ владельца №8).
+ * Но при открытом /activity не подсвечивался вообще ни один пункт, и кабинет
+ * выглядел «нигде». Родителем считаем тот раздел, откуда ведёт единственный
+ * вход, — «Главную».
+ */
+const ORPHAN_PARENTS: ReadonlyArray<{ suffix: string; parent: string }> = [
+  { suffix: '/activity', parent: '/dashboard' },
+]
+
+/** Адрес, по которому решается подсветка: у orphan-экрана — его родитель. */
+function navPathname(pathname: string): string {
+  for (const { suffix, parent } of ORPHAN_PARENTS) {
+    if (pathname.startsWith('/dashboard/artist/') && pathname.endsWith(suffix)) {
+      return pathname.slice(0, -suffix.length) + parent
+    }
+  }
+  return pathname
+}
+
+/**
  * Активен ли пункт навигации. При вложенных разделах (`/playlists` и
  * `/playlists/history`) выигрывает самый длинный совпавший href — подсвечен
  * всегда ровно один пункт.
  */
 export function isNavItemActive(pathname: string, href: string, allHrefs: readonly string[]): boolean {
-  if (!matchesSection(pathname, href)) return false
+  const target = navPathname(pathname)
+  if (!matchesSection(target, href)) return false
 
   const longest = allHrefs
-    .filter((candidate) => matchesSection(pathname, candidate))
+    .filter((candidate) => matchesSection(target, candidate))
     .reduce((best, candidate) => (candidate.length > best.length ? candidate : best), '')
 
   return longest === href

@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
+import { EMPTY_STRINGS } from "@/lib/ui-strings"
 
 export type ArtistSettingsInitial = {
   id: string
@@ -174,7 +175,7 @@ export default function ArtistSettingsClient({
         subtitle="Профиль, аватар и смена пароля."
       />
 
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
         {/* F-59: у трёх секций были зелёная, синяя и фиолетовая полосы без логики. */}
         <SectionHeader className="mb-6" title="Профиль" />
         <dl className="space-y-5">
@@ -185,7 +186,7 @@ export default function ArtistSettingsClient({
           </div>
           <div>
             <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Почта</dt>
-            <dd className="text-lg text-white mt-1">{artist.email || "Не указан"}</dd>
+            <dd className="text-lg text-white mt-1">{artist.email || EMPTY_STRINGS.notSet}</dd>
             <p className="text-xs text-gray-600 mt-1">Email может изменить только администратор</p>
           </div>
           <div>
@@ -195,7 +196,7 @@ export default function ArtistSettingsClient({
         </dl>
       </div>
 
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
         <SectionHeader className="mb-6" title="Аватар" />
         <form onSubmit={handleAvatarSubmit} className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -239,19 +240,20 @@ export default function ArtistSettingsClient({
               />
             </div>
           </div>
-          {/* C-02: обе submit-кнопки формы — один вариант кита с единым disabled (F-28). */}
+          {/* C-02 + 0-г: обе submit-кнопки — один вариант кита с единым disabled
+              (F-28), и на редком экране это outline, а не filled. */}
           <Button
             type="submit"
-            variant="cta"
+            variant="outline"
             disabled={avatarSubmitting || !avatarFile}
-            className="h-12 w-full rounded-xl"
+            className="h-12 w-full rounded-xl border-white/15 text-gray-200 hover:bg-white/5"
           >
             {avatarSubmitting ? "Сохранение…" : "Сохранить аватарку"}
           </Button>
         </form>
       </div>
 
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
         <SectionHeader className="mb-6" title="Смена пароля" />
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-lg">
           <FormField
@@ -301,7 +303,12 @@ export default function ArtistSettingsClient({
               required
             />
           </FormField>
-          <Button type="submit" variant="cta" disabled={pwSubmitting} className="h-12 w-full rounded-xl">
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={pwSubmitting}
+            className="h-12 w-full rounded-xl border-white/15 text-gray-200 hover:bg-white/5"
+          >
             {pwSubmitting ? "Обновление…" : "Обновить пароль"}
           </Button>
         </form>

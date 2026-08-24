@@ -10,10 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import { Spinner } from "@/components/ui/spinner"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
+import {
+  AllTracksToggle,
+  TrackRowButton,
+  visibleTracks,
+} from "@/components/analytics/track-top-list"
 import { SeriesBar } from "@/components/charts/series-bar"
 import { formatDayMonthUtc } from "@/lib/format-date"
 import { PERIOD_STRINGS } from "@/lib/ui-strings"
@@ -81,6 +85,9 @@ export default function ArtistAnalyticsPage() {
   const [customEnd, setCustomEnd] = useState<Date | undefined>()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [chartMounted, setChartMounted] = useState(false)
+  /** C-11: списки треков показывают топ-10, полный набор — по кнопке. */
+  const [showAllPaidFree, setShowAllPaidFree] = useState(false)
+  const [showAllByStreams, setShowAllByStreams] = useState(false)
 
   useEffect(() => {
     setChartMounted(true)
@@ -211,6 +218,9 @@ export default function ArtistAnalyticsPage() {
   const totalStreams = data?.streamsByDay.reduce((s, d) => s + d.streams, 0) || 0
   const totalPaid = data?.paidVsFree.find(p => p.name === "Платные")?.value || 0
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
+  const tracksForChart = data?.streamsByTrack ?? []
+  const visiblePaidFree = visibleTracks(tracksForChart, showAllPaidFree)
+  const visibleByStreams = visibleTracks(tracksForChart, showAllByStreams)
 
   return (
     <div className="space-y-8">
@@ -381,35 +391,40 @@ export default function ArtistAnalyticsPage() {
               <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">По трекам</p>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-              {/* F-38/F-39: скролл с видимым скроллбаром и фейдом вместо «обрыва» списка. */}
-              <ScrollArea
-                className="h-[290px]"
-                viewportClassName="flex flex-col gap-1.5 pr-1"
-                fadeClassName="from-surface-raised"
-              >
-                {(data.streamsByTrack ?? []).length === 0 ? (
+              {/* C-11 (F-38/F-39): вложенный скролл перехватывал колесо — вместо
+                  него топ-10 и раскрытие по кнопке. Клик по треку показывает
+                  статистику одного трека (решение 0-д п.5). */}
+              <div className="flex flex-col gap-1.5">
+                {tracksForChart.length === 0 ? (
                   <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                 ) : (
-                  (data.streamsByTrack ?? []).map((item, idx) => {
+                  visiblePaidFree.map((item, idx) => {
                     const total = item.paid + item.free
                     const pctPaid = total > 0 ? (item.paid / total) * 100 : 0
                     const pctFree = total > 0 ? (item.free / total) * 100 : 0
                     const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
                     return (
-                      <div key={`pf-${item.isrc || idx}`} className="flex flex-col flex-shrink-0 gap-1 group py-1 border-b border-white/[0.03] last:border-0">
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-[11px] font-card-heading font-semibold text-gray-300 truncate max-w-[55%] group-hover:text-white transition-colors" title={label}>{label}</span>
-                          <div className="flex gap-2 shrink-0">
-                            <span className="text-[11px] text-emerald-400 font-card-heading font-bold tabular-nums">{item.paid > 0 ? `${pctPaid.toFixed(0)}%` : ''}</span>
-                            <span className="text-[11px] text-gray-500 font-card-heading font-bold tabular-nums">{item.free > 0 ? `${pctFree.toFixed(0)}%` : ''}</span>
-                          </div>
-                        </div>
-                        <TrackThinPaidFreeBar paid={item.paid} free={item.free} heightClass="h-[4px]" />
-                      </div>
+                      <TrackRowButton key={`pf-${item.isrc || idx}`} isrc={item.isrc} label={label} onSelect={setSelectedTrack}>
+                        <span className="flex w-full flex-col gap-1 py-1">
+                          <span className="flex w-full items-center justify-between">
+                            <span className="max-w-[55%] truncate font-card-heading text-[11px] font-semibold text-gray-300 group-hover:text-white" title={label}>{label}</span>
+                            <span className="flex shrink-0 gap-2">
+                              <span className="font-card-heading text-[11px] font-bold tabular-nums text-emerald-400">{item.paid > 0 ? `${pctPaid.toFixed(0)}%` : ''}</span>
+                              <span className="font-card-heading text-[11px] font-bold tabular-nums text-gray-500">{item.free > 0 ? `${pctFree.toFixed(0)}%` : ''}</span>
+                            </span>
+                          </span>
+                          <TrackThinPaidFreeBar paid={item.paid} free={item.free} heightClass="h-[4px]" />
+                        </span>
+                      </TrackRowButton>
                     )
                   })
                 )}
-              </ScrollArea>
+              </div>
+              <AllTracksToggle
+                total={tracksForChart.length}
+                expanded={showAllPaidFree}
+                onToggle={() => setShowAllPaidFree((v) => !v)}
+              />
             </CardContent>
           </Card>
 
@@ -417,35 +432,35 @@ export default function ArtistAnalyticsPage() {
           <Card className="card-glass border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.2)] rounded-2xl relative overflow-hidden flex flex-col p-5">
             <CardHeader className="p-0 mb-1 flex-shrink-0">
               <CardTitle className="font-card-heading font-bold tracking-[0.08em] uppercase text-white text-base leading-tight">Прослушивания по трекам</CardTitle>
-              <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {(data.streamsByTrack ?? []).length} треков</p>
+              <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {tracksForChart.length} треков</p>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-              {/* F-38/F-39: второй scroll-trap — тот же ScrollArea с аффордансом. */}
-              <ScrollArea
-                className="h-[290px]"
-                viewportClassName="flex flex-col gap-0 pr-1"
-                fadeClassName="from-surface-raised"
-              >
-                {((data.streamsByTrack ?? []).length === 0) ? (
+              {/* C-11 (F-38/F-39): второй scroll-trap — тот же топ-10 с раскрытием. */}
+              <div className="flex flex-col">
+                {tracksForChart.length === 0 ? (
                   <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                 ) : (
-                  (data.streamsByTrack ?? []).map((item, idx) => {
-                    const list = data.streamsByTrack ?? []
-                    const maxVal = list[0]?.value || 1
+                  visibleByStreams.map((item, idx) => {
+                    const maxVal = tracksForChart[0]?.value || 1
                     const pct = (item.value / maxVal) * 100
                     const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
                     return (
-                      <div key={item.isrc || idx} className="flex flex-col flex-shrink-0 group py-1.5 border-b border-white/[0.03] last:border-0">
-                        <div className="flex items-center gap-3 w-full">
-                          <span className="text-[11px] font-card-heading font-medium text-gray-400 truncate shrink-0 w-[130px] group-hover:text-gray-200 transition-colors" title={label}>{label}</span>
+                      <TrackRowButton key={item.isrc || idx} isrc={item.isrc} label={label} onSelect={setSelectedTrack}>
+                        <span className="flex w-full items-center gap-3 py-1.5">
+                          <span className="w-[130px] shrink-0 truncate font-card-heading text-[11px] font-medium text-gray-400 group-hover:text-gray-200" title={label}>{label}</span>
                           <SeriesBar percent={pct} index={idx} className="min-w-0 flex-1 self-center" />
-                          <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 w-[66px] text-right tabular-nums">{item.value.toLocaleString('ru-RU')}</span>
-                        </div>
-                      </div>
+                          <span className="w-[66px] shrink-0 text-right font-card-heading text-[11px] font-semibold tabular-nums text-white">{item.value.toLocaleString('ru-RU')}</span>
+                        </span>
+                      </TrackRowButton>
                     )
                   })
                 )}
-              </ScrollArea>
+              </div>
+              <AllTracksToggle
+                total={tracksForChart.length}
+                expanded={showAllByStreams}
+                onToggle={() => setShowAllByStreams((v) => !v)}
+              />
             </CardContent>
           </Card>
 

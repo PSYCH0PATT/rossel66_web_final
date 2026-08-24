@@ -82,3 +82,24 @@ test('F-56: на странице вне навигации не подсвеч�
   )
   assert.deepEqual(active, [])
 })
+
+/**
+ * F-90 — «Активность» артиста пункта в меню не имеет по решению владельца
+ * (вход только по «Все события»), и при её открытии не подсвечивался ни один
+ * пункт: кабинет выглядел «нигде». Родителем считаем «Главную» — оттуда
+ * единственный вход.
+ */
+test('F-90: на /activity подсвечена «Главная», и только она', () => {
+  const path = '/dashboard/artist/rompy/activity'
+  assert.equal(isNavItemActive(path, '/dashboard/artist/rompy/dashboard', ARTIST_HREFS), true)
+  const others = ARTIST_HREFS.filter((href) => !href.endsWith('/dashboard'))
+  for (const href of others) {
+    assert.equal(isNavItemActive(path, href, ARTIST_HREFS), false, href)
+  }
+})
+
+test('F-90: у админской активности свой пункт — родитель ей не нужен', () => {
+  const path = '/dashboard/admin/activity'
+  assert.equal(isNavItemActive(path, '/dashboard/admin/activity', ADMIN_HREFS), true)
+  assert.equal(isNavItemActive(path, '/dashboard/admin/dashboard', ADMIN_HREFS), false)
+})

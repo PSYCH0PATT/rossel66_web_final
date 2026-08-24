@@ -3,6 +3,7 @@ import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { humanizeCredits } from "@/lib/humanize-credits"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
@@ -65,7 +66,6 @@ export default async function PlaylistsPage({
     selectedProfile === "all"
       ? allPlaylists
       : allPlaylists.filter((p) => p.profile_id === selectedProfile)
-  const total = playlists.length
 
   return (
     <div className="space-y-8">
@@ -77,12 +77,12 @@ export default async function PlaylistsPage({
         />
 
         {playlists.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
             {playlists.map((playlist) => {
               const cover = getPlaylistCoverUrl(playlist.platform, playlist.cover_url)
               const trackLine = firstTrackLabel(playlist.track_data)
               const releaseLine = firstReleaseLabel(playlist.track_data)
-              const subtitleLine = releaseLine || trackLine || "—"
+              const subtitleLine = humanizeCredits(releaseLine || trackLine) || "—"
 
               return (
                 <a

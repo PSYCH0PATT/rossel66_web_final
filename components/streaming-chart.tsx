@@ -5,7 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { formatDayMonthUtc } from "@/lib/format-date"
+import { formatDateRu, formatDayMonthUtc } from "@/lib/format-date"
 import { formatCompactNumber } from "@/lib/format-compact-number"
 import { dashboardStreamWindow } from "@/lib/stream-window"
 import { ChartTooltip } from "@/components/charts/chart-tooltip"
@@ -176,7 +176,9 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
             />
             <YAxis {...chartYAxisProps()} />
             <Tooltip
-              content={<ChartTooltip labelFormatter={(l) => formatDate(String(l))} />}
+              // F-74: на оси день и месяц (иначе подписи слипаются), а в
+              // тултипе — полная дата с годом, как на остальных экранах.
+              content={<ChartTooltip labelFormatter={(l) => formatDateRu(String(l))} />}
               cursor={{ stroke: STREAM_CHART_COLORS.tooltipBorder, strokeWidth: 1 }}
             />
             <Area

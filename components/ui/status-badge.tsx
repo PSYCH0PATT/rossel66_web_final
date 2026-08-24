@@ -39,18 +39,25 @@ const statusBadgeVariants = cva(
   }
 )
 
-/** Иконка статуса — как в текущих бейджах релизов. */
+/**
+ * Иконка статуса.
+ *
+ * F-92: галочка и точка стояли ролями наоборот — промежуточное «В доставке»
+ * получало галочку («готово»), а финальное «Доставлен» — пульсирующую точку
+ * («ещё идёт»). Теперь галочка означает финал, точка — процесс. Точка красится
+ * `bg-current`, иначе на лазурном бейдже доставки осталась бы зелёная.
+ */
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   live: (
-    <span
-      className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
-      aria-hidden
-    />
-  ),
-  delivered: (
     <span className="material-symbols-outlined text-[10px] leading-none" aria-hidden>
       check
     </span>
+  ),
+  delivered: (
+    <span
+      className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+      aria-hidden
+    />
   ),
   moderation: (
     <span

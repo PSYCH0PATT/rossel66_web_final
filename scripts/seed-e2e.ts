@@ -305,7 +305,14 @@ async function main() {
     artistId: string,
     title: string,
     releaseDate: string,
-    featuredArtistIds: string[] = []
+    featuredArtistIds: string[] = [],
+    extra: Partial<{
+      status: string
+      type: string
+      upc: string
+      tracks: { id: string; title: string; isrc: string; duration: string }[]
+      featuredArtistNames: string[]
+    }> = {}
   ) => ({
     id,
     artistId,
@@ -316,13 +323,33 @@ async function main() {
     type: "single",
     featuredArtistIds,
     tracks: [],
+    ...extra,
   })
 
   await prisma.release.deleteMany({})
   await prisma.release.createMany({
     data: [
-      release("e2e-rel-main-1", "e2e-main-id", "E2E Main Track One", "2026-01-10"),
-      release("e2e-rel-main-2", "e2e-main-id", "E2E Main Track Two", "2026-02-10"),
+      /*
+       * Карта релиза — экран вердикта 3.4, и снимать её пустой нельзя
+       * (правило приёмки docs/ui-audit.md §4): без треков, UPC и фитов
+       * проверить нечего — ни сводки «2 трека · ISRC · длительность», ни
+       * человекочитаемой строки артистов, ни бейджа «Доставлен» (при нуле
+       * треков F-14 подменяет его на «Нет данных»).
+       */
+      release("e2e-rel-main-1", "e2e-main-id", "E2E Main Track One", "2026-01-10", [], {
+        type: "album",
+        upc: "0000000000017",
+        featuredArtistNames: ["E2E Linked"],
+        tracks: [
+          { id: "e2e-trk-main-1", title: "E2E Main Track One", isrc: "RU-E2E-26-0001", duration: "3:21" },
+          { id: "e2e-trk-main-2", title: "E2E Main Track Two", isrc: "RU-E2E-26-0002", duration: "2:47" },
+        ],
+      }),
+      /* Промежуточный статус: у «В доставке» UPC ещё нет — это состояние, а
+       * не дыра в данных (F-93), и точка-иконка против галочки финала (F-92). */
+      release("e2e-rel-main-2", "e2e-main-id", "E2E Main Track Two", "2026-02-10", [], {
+        status: "В доставке",
+      }),
       release("e2e-rel-linked-1", "e2e-linked-id", "E2E Linked Track One", "2026-03-10"),
       release("e2e-rel-linked-2", "e2e-linked-id", "E2E Linked Track Two", "2026-04-10"),
       release("e2e-rel-linked-3", "e2e-linked-id", "E2E Linked Track Three", "2026-05-10"),

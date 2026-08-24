@@ -23,7 +23,7 @@ import { Pagination } from "@/components/ui/pagination"
 import { SearchInput } from "@/components/ui/search-input"
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
-import { releaseTrackCount } from "@/lib/release-status"
+import { releaseTypeLabel } from "@/lib/release-status"
 
 interface Release {
   id: string
@@ -34,44 +34,9 @@ interface Release {
   upc?: string
   releaseDate: string
   status?: string
-  tracks?: any[]
   trackCount?: number
   primaryIsrc?: string
   featuredArtistNames?: string[]
-  artistDisplay: string
-}
-
-/**
- * Кто указан в колонке «Артисты».
- *
- * Основным берётся артист самого релиза (`artistName` из API), а не владелец
- * кабинета: в объединённом кабинете группы связанных профилей релизы принадлежат
- * разным профилям, и подпись именем главного была бы неверной.
- */
-function buildArtistDisplay(release: any, fallbackName: string): string {
-  const mainName = release.artistName || fallbackName
-  const featuredNames: string[] = []
-  if (Array.isArray(release.featuredArtistNames)) {
-    for (const nm of release.featuredArtistNames) {
-      if (nm) featuredNames.push(nm)
-    }
-  }
-  if (Array.isArray(release.tracks)) {
-    for (const t of release.tracks as any[]) {
-      if (Array.isArray(t?.featuredArtistNames)) {
-        for (const nm of t.featuredArtistNames) {
-          if (nm && !featuredNames.includes(nm)) featuredNames.push(nm)
-        }
-      }
-    }
-  }
-  return featuredNames.length ? `${mainName}, ${featuredNames.join(", ")}` : mainName
-}
-
-function primaryIsrc(tracks: any[] | undefined): string | undefined {
-  if (!Array.isArray(tracks)) return undefined
-  const t = tracks.find((x) => x?.isrc)
-  return t?.isrc as string | undefined
 }
 
 const RELEASE_FORMS = ["релиз", "релиза", "релизов"] as const
@@ -79,10 +44,9 @@ const RELEASE_FORMS = ["релиз", "релиза", "релизов"] as const
 interface Props {
   artistId: string
   username: string
-  mainArtistName: string
 }
 
-export default function ReleasesClient({ artistId, username, mainArtistName }: Props) {
+export default function ReleasesClient({ artistId, username }: Props) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [q, setQ] = useState("")
@@ -115,13 +79,11 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
       upc: release.upc as string | undefined,
       releaseDate: String(release.releaseDate),
       status: release.status as string | undefined,
-      tracks: (release.tracks as any[]) ?? [],
       trackCount: release.trackCount as number | undefined,
       primaryIsrc: release.primaryIsrc as string | undefined,
       featuredArtistNames: release.featuredArtistNames as string[] | undefined,
-      artistDisplay: buildArtistDisplay(release, mainArtistName),
     }))
-  }, [data, mainArtistName])
+  }, [data])
 
   const loading = isLoading
   const total = typeof data?.total === "number" ? data.total : releases.length
@@ -137,15 +99,23 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
 
   // Единый русский формат DD.MM.YYYY (поддерживает и "DD.MM.YYYY", и ISO),
   // без английских «May 14, 2026» и «Invalid Date».
-  const formatDate = (dateStr: string) => formatDateRu(dateStr, "--")
+  const formatDate = (dateStr: string) => formatDateRu(dateStr, "—")
 
   const releaseHref = (id: string) => `/dashboard/artist/${username}/releases/${id}`
+
+  /*
+   * F-14 в списке считается по `trackCount` из ответа API, а не по `tracks`:
+   * списочный DTO треки не отдаёт (lib/release-list-dto.ts), поэтому прежний
+   * `releaseTrackCount(release.tracks)` всегда получал ноль — релиз с двумя
+   * треками показывался в списке как «Нет данных», а на своей карточке как
+   * «Доставлен». В админском списке это поле и так использовалось.
+   */
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="РЕЛИЗЫ"
-        subtitle="Управляйте дискографией, отслеживайте статус доставки и мониторинг дистрибуции на всех цифровых платформах."
+        subtitle="Ваши релизы и статусы доставки."
         actionsClassName="w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end"
         actions={
           <>
@@ -196,7 +166,7 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                 /* Mobile: карточки вместо таблицы */
                 <div className="space-y-3 p-3">
                   {releases.map((release) => {
-                    const isrc = release.primaryIsrc ?? primaryIsrc(release.tracks)
+                    const isrc = release.primaryIsrc
                     return (
                       <Link
                         key={release.id}
@@ -229,13 +199,10 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                               карточки в списке перестают прыгать.
                             */}
                             <div className="mt-0.5 min-h-4 font-mono text-xs uppercase tracking-wider text-gray-500">
-                              {release.type}
+                              {releaseTypeLabel(release.type)}
                             </div>
-                            <div className="mt-1 flex items-center justify-between gap-2">
-                              <p className="text-sm text-gray-300 truncate">{release.artistDisplay}</p>
-                              <div className="shrink-0">
-                                <ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(release.tracks)} />
-                              </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
                             </div>
                           </div>
                           <span className="material-symbols-outlined shrink-0 text-[22px] leading-none text-gray-500">
@@ -263,11 +230,9 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                     <DataTableHeadRow className="bg-black/40">
                       <DataTableHeadCell className="px-6 py-5">Обложка</DataTableHeadCell>
                       <DataTableHeadCell className="px-6 py-5">Название / версия</DataTableHeadCell>
-                      <DataTableHeadCell className="px-6 py-5">Артисты</DataTableHeadCell>
                       <DataTableHeadCell className="px-6 py-5">UPC</DataTableHeadCell>
                       <DataTableHeadCell className="px-6 py-5">Дата</DataTableHeadCell>
                       <DataTableHeadCell className="px-6 py-5">Статус</DataTableHeadCell>
-                      <DataTableHeadCell className="px-6 py-5 text-right">Действие</DataTableHeadCell>
                     </DataTableHeadRow>
                   </DataTableHeader>
                   <DataTableBody className="text-sm">
@@ -299,43 +264,22 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
                           </div>
                           {/* F-73: тот же фиксированный слот версии, что и в карточках. */}
                           <div className="min-h-4 text-xs text-gray-500 mt-0.5 font-mono">
-                            {release.type}
+                            {releaseTypeLabel(release.type)}
                           </div>
                         </DataTableCell>
 
-                        <DataTableCell className="px-6 py-4">
-                          <div className="text-gray-300">{release.artistDisplay}</div>
-                        </DataTableCell>
-
                         <DataTableCell className="px-6 py-4 font-mono text-xs text-gray-400 tracking-wider">
-                          {release.upc || "--"}
+                          {release.upc || "—"}
                         </DataTableCell>
 
                         <DataTableCell className="px-6 py-4 text-gray-400 font-mono text-xs">
-                          {release.releaseDate ? formatDate(release.releaseDate) : "--"}
+                          {release.releaseDate ? formatDate(release.releaseDate) : "—"}
                         </DataTableCell>
 
                         <DataTableCell className="px-6 py-4">
-                          <ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(release.tracks)} />
+                          <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
                         </DataTableCell>
 
-                        <DataTableCell className="px-6 py-4 text-right">
-                          <Button
-                            asChild
-                            size="icon"
-                            variant="ghost"
-                            className="h-9 w-9 rounded-full text-gray-500"
-                          >
-                            <Link
-                              href={releaseHref(release.id)}
-                              aria-label={`Открыть релиз «${release.title}»`}
-                            >
-                              <span className="material-symbols-outlined text-[18px] leading-none" aria-hidden>
-                                more_horiz
-                              </span>
-                            </Link>
-                          </Button>
-                        </DataTableCell>
                       </DataTableRow>
                     ))}
                   </DataTableBody>

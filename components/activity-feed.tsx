@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Music, ListMusic, FileText, DollarSign, User, FileCheck, UserPlus, UserMinus, CheckCircle } from 'lucide-react'
 import { Activity } from '@/lib/storage'
+import { formatDateRu } from '@/lib/format-date'
+import { humanizeCredits } from '@/lib/humanize-credits'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SkeletonRows } from '@/components/ui/skeleton-presets'
@@ -123,8 +125,12 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
    */
   const secondaryContextLabel = (activity: Activity): string => {
     const m = activity.metadata
-    if (m && typeof m.releaseName === 'string' && m.releaseName.trim()) return m.releaseName.trim()
-    if (m && typeof m.playlistName === 'string' && m.playlistName.trim()) return m.playlistName.trim()
+    // F-91: в метаданных это сырая склейка импорта («rompy;Лоло - беги»);
+    // человекочитаемый вид собирает humanizeCredits, регистр — из данных.
+    if (m && typeof m.releaseName === 'string' && m.releaseName.trim())
+      return humanizeCredits(m.releaseName)
+    if (m && typeof m.playlistName === 'string' && m.playlistName.trim())
+      return humanizeCredits(m.playlistName)
     return ''
   }
 
@@ -160,7 +166,8 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
     if (diffHours < 24) return `${diffHours} ч. назад`
     if (diffDays === 1) return '1 день назад'
     if (diffDays < 7) return `${diffDays} дн. назад`
-    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+    // F-74: «07.08» без года при dd.mm.yyyy на остальных экранах кабинета.
+    return formatDateRu(date)
   }
 
   if (loading) {
@@ -215,8 +222,9 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
               {/* Metric — right side, same as HTML prototype */}
               <div className="min-w-0 shrink-0 sm:max-w-[36%] sm:text-right">
                 <p className="text-white font-mono text-sm truncate">{formatDate(activity.createdAt)}</p>
+                {/* F-91: капс здесь и превращал «rompy, Лоло — беги» в «ROMPY;ЛОЛО - БЕГИ». */}
                 {context && (
-                  <p className="text-gray-500 text-[10px] uppercase tracking-wider truncate" title={context}>
+                  <p className="text-gray-500 text-[10px] tracking-wider truncate" title={context}>
                     {context}
                   </p>
                 )}

@@ -11,6 +11,7 @@ import {
   DataTableHeadCell,
   DataTableHeader,
   DataTableHeadRow,
+  DataTableResponsive,
   DataTableRow,
 } from "@/components/ui/data-table"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -18,7 +19,31 @@ import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
-import { releaseTrackCount, trackDurationText } from "@/lib/release-status"
+import {
+  releaseStatusVariant,
+  releaseTrackCount,
+  releaseTypeLabel,
+  trackDurationText,
+} from "@/lib/release-status"
+import { releaseArtistsLine } from "@/lib/release-artists"
+import { formatDateRu } from "@/lib/format-date"
+import { pluralize } from "@/lib/plural"
+
+/**
+ * Карта релиза артиста — целевой макет вердикта 3.4 (docs/ia-decisions.md).
+ *
+ * Было пять карточек, в которых ровно один новый факт: генерик-H1 «РЕЛИЗ»
+ * ~64px конкурировал с названием в хиро, «Техническая информация» повторяла
+ * UPC и дату экраном выше и добавляла админский «ID релиза», «Статистика»
+ * стояла отдельной полупустой карточкой, а треки — единственное, чего нет
+ * в списке релизов, — начинались с третьего экрана.
+ *
+ * Стало три блока без единого дубля: шапка (название + статус), хиро с
+ * фактами релиза и треки сразу под ней. Каждый показанный факт встречается
+ * на экране ровно один раз.
+ */
+
+const TRACK_FORMS = ["трек", "трека", "треков"] as const
 
 function parseDurationSeconds(duration?: string | number): number {
   if (duration == null || duration === "") return 0
@@ -30,6 +55,7 @@ function parseDurationSeconds(duration?: string | number): number {
   return 0
 }
 
+/** Суммарная длительность; неизвестная — «—», а не выдуманный ноль (F-93). */
 function formatSeconds(total: number): string {
   if (total <= 0) return "—"
   const h = Math.floor(total / 3600)
@@ -39,24 +65,23 @@ function formatSeconds(total: number): string {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "—"
-  try {
-    if (dateStr.includes('.')) {
-      const parts = dateStr.split('.')
-      if (parts.length === 3) {
-        const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`)
-        if (!isNaN(d.getTime())) {
-          return d.toLocaleDateString("ru-RU")
-        }
-      }
-    }
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr || "—"
-    return d.toLocaleDateString("ru-RU")
-  } catch {
-    return dateStr || "—"
-  }
+/** Пара «подпись — значение» правой половины хиро (бывшая пустая зона, F-10). */
+function ReleaseFact({
+  label,
+  children,
+  hint,
+}: {
+  label: string
+  children: React.ReactNode
+  hint?: string
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">{label}</p>
+      <p className="mt-1 break-words text-white">{children}</p>
+      {hint && <p className="mt-0.5 text-xs text-gray-500">{hint}</p>}
+    </div>
+  )
 }
 
 export default function ArtistReleaseDetailPage({ params }: { params: { username: string; id: string } }) {
@@ -68,7 +93,7 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
     const fetchData = async () => {
       try {
         const releaseResponse = await fetch(`/api/releases/${params.id}`)
-        
+
         if (releaseResponse.status === 404 || releaseResponse.status === 403) {
           setLoading(false)
           return
@@ -124,24 +149,48 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
     )
   }
 
+  const knownTracks = releaseTrackCount(tracks)
+  const typeLabel = releaseTypeLabel(release.type)
+  const artistsLine = releaseArtistsLine(release, artist.name)
+  const releaseDate = release.releaseDate ? formatDateRu(release.releaseDate) : "—"
+  /** У релиза «В доставке» UPC ещё не присвоен — это состояние, а не дыра. */
+  const inDelivery =
+    releaseStatusVariant(release.status, { trackCount: knownTracks }) === "delivered"
+
+  // Подпись шапки: тип · артисты · дата — одной строкой вместо трёх карточек.
+  const subtitle = [typeLabel, artistsLine, releaseDate !== "—" ? releaseDate : ""]
+    .filter(Boolean)
+    .join(" · ")
+
+  // Сводка бывшей карточки «Статистика» — в заголовок секции «Треки» (C-18).
+  const tracksSummary = [
+    pluralize(tracks.length, TRACK_FORMS),
+    `ISRC: ${isrcCount > 0 ? `${isrcCount} из ${tracks.length}` : "—"}`,
+    `длительность: ${formatSeconds(totalDurationSec)}`,
+  ].join(" · ")
+
   return (
     <div className="space-y-8">
-      {/* C-01: возврат живёт внутри шапки, как на восьми админ-экранах, а не
-          отдельным рядом над ней — иначе H1 стоит на своей высоте на каждой
-          странице. Кнопка осталась, сменились место и механика: вместо
-          router.back() — адрес списка релизов. */}
+      {/* Блок 1 — шапка: H1 = название релиза, статус вплотную к нему. */}
       <PageHeader
         backHref={`/dashboard/artist/${params.username}/releases`}
         backLabel="Назад"
-        title="РЕЛИЗ"
-        subtitle="Карточка релиза, треки и технические данные дистрибуции."
-        actions={<ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(tracks)} />}
+        title={release.title}
+        titleStyle="entity"
+        titleBadge={
+          <ReleaseStatusBadge status={release.status} trackCount={knownTracks} />
+        }
+        subtitle={subtitle}
       />
 
-      {/* Hero */}
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="relative w-full max-w-[220px] mx-auto lg:mx-0 aspect-square rounded-xl overflow-hidden border border-white/10 flex-shrink-0">
+      {/* Блок 2 — хиро: обложка и факты релиза, каждый по одному разу. */}
+      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+        <div className="flex flex-col gap-8 lg:flex-row">
+          {/*
+            На 390 обложка ограничена по ширине: во всю ширину экрана она
+            уводила название и статус за первый экран (вердикт 3.4, п.5).
+          */}
+          <div className="relative mx-auto aspect-square w-full max-w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-white/10 sm:max-w-[220px] lg:mx-0">
             <Image
               src={release.coverUrl || "/placeholder.svg"}
               alt={release.title}
@@ -150,91 +199,106 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
               sizes="220px"
             />
           </div>
-          <div className="flex-1 min-w-0 space-y-4">
-            {/*
-              F-52: название релиза больше не печатается дисплейным шрифтом.
-              Syncopate — капс-шрифт без строчных и без «ё»: пользовательская
-              строка «Я всё ещё одна» превращалась в «я все еще одна».
-            */}
-            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight break-words">
-              {release.title}
-            </h2>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
-              <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2">
-                <span className="material-symbols-outlined text-primary text-lg">person</span>
-                {artist.name}
-              </span>
-              {release.type && (
-                <span className="text-xs text-gray-500 font-mono uppercase">{release.type}</span>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div className="flex items-start gap-2">
-                <span className="material-symbols-outlined text-gray-500 text-lg mt-0.5">qr_code</span>
-                <div>
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">UPC</p>
-                  <p className="font-mono text-white tabular-nums">{release.upc || "—"}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="material-symbols-outlined text-gray-500 text-lg mt-0.5">calendar_today</span>
-                <div>
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Дата релиза</p>
-                  <p className="text-white tabular-nums">
-                    {formatDate(release.releaseDate)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <dl className="grid min-w-0 flex-1 grid-cols-1 gap-5 text-sm sm:grid-cols-2">
+            <ReleaseFact
+              label="UPC"
+              hint={!release.upc && inDelivery ? "Будет присвоен после доставки" : undefined}
+            >
+              <span className="font-mono tabular-nums">{release.upc || "—"}</span>
+            </ReleaseFact>
+            <ReleaseFact label="Дата релиза">
+              <span className="tabular-nums">{releaseDate}</span>
+            </ReleaseFact>
+            {typeLabel && <ReleaseFact label="Тип">{typeLabel}</ReleaseFact>}
+            {/* F-91: имена строкой, а не чипом, который выглядел кнопкой. */}
+            <ReleaseFact label="Артисты">{artistsLine}</ReleaseFact>
+          </dl>
         </div>
       </div>
 
-      {/* Tracks table */}
-      <div className="mb-8">
-        <SectionHeader className="mb-6" title="ТРЕКИ" />
+      {/* Блок 3 — треки: единственный контент, которого нет в списке релизов. */}
+      <div>
+        <SectionHeader
+          className="mb-6"
+          title={
+            <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              Треки
+              <span className="font-mono text-xs font-normal uppercase tracking-widest text-gray-500">
+                {tracksSummary}
+              </span>
+            </span>
+          }
+        />
 
         {tracks.length > 0 ? (
           <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
-            {/*
-              C-10: горизонтальный скролл теперь с видимым скроллбаром и тенями
-              у краёв, первая колонка залипает — на 390 таблица шире вьюпорта,
-              и «Длительность» раньше просто обрезалась без аффорданса.
-            */}
-            <DataTable stickyFirstColumn tableClassName="text-left">
-              <DataTableHeader>
-                <DataTableHeadRow className="bg-black/40">
-                  <DataTableHeadCell className="w-14 px-6 py-4">#</DataTableHeadCell>
-                  <DataTableHeadCell className="px-6 py-4">Название</DataTableHeadCell>
-                  <DataTableHeadCell className="px-6 py-4">ISRC</DataTableHeadCell>
-                  <DataTableHeadCell className="px-6 py-4 text-right">Длительность</DataTableHeadCell>
-                </DataTableHeadRow>
-              </DataTableHeader>
-              <DataTableBody className="text-sm">
-                {tracks.map((track: any, index: number) => (
-                  <DataTableRow key={track.id ?? index} className="group">
-                    <DataTableCell className="px-6 py-3 text-gray-400 font-mono tabular-nums">
-                      {index + 1}
-                    </DataTableCell>
-                    <DataTableCell className="px-6 py-3">
-                      <div className="font-bold text-white transition-colors group-hover:text-brand min-w-0 break-words">
-                        {track.title}
+            <DataTableResponsive
+              cards={
+                /* На 390 таблица была шире вьюпорта и «Длительность» обрезалась
+                   без всякого аффорданса — те же данные карточками (F-77). */
+                <div className="space-y-3 p-3">
+                  {tracks.map((track: any, index: number) => (
+                    <div
+                      key={track.id ?? index}
+                      className="rounded-xl border border-white/5 bg-surface-page/50 p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="font-mono text-xs tabular-nums text-gray-500">
+                          {index + 1}
+                        </span>
+                        <p className="min-w-0 flex-1 break-words font-bold text-white">
+                          {track.title}
+                        </p>
                       </div>
-                    </DataTableCell>
-                    <DataTableCell className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
-                      {track.isrc || "—"}
-                    </DataTableCell>
-                    <DataTableCell className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
-                      <span className="inline-flex items-center gap-1 justify-end">
-                        <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
-                        {trackDurationText(track.duration)}
-                      </span>
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
+                      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 border-t border-white/5 pt-3 font-mono text-[11px]">
+                        <dt className="uppercase tracking-wider text-gray-500">ISRC</dt>
+                        <dd className="break-all text-right text-gray-300">{track.isrc || "—"}</dd>
+                        <dt className="uppercase tracking-wider text-gray-500">Длительность</dt>
+                        <dd className="text-right tabular-nums text-gray-300">
+                          {trackDurationText(track.duration)}
+                        </dd>
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              }
+              table={
+                <DataTable tableClassName="text-left">
+                  <DataTableHeader>
+                    <DataTableHeadRow className="bg-black/40">
+                      <DataTableHeadCell className="w-14 px-6 py-4">#</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-4">Название</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-4">ISRC</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-4 text-right">Длительность</DataTableHeadCell>
+                    </DataTableHeadRow>
+                  </DataTableHeader>
+                  <DataTableBody className="text-sm">
+                    {tracks.map((track: any, index: number) => (
+                      <DataTableRow key={track.id ?? index} className="group">
+                        <DataTableCell className="px-6 py-3 text-gray-400 font-mono tabular-nums">
+                          {index + 1}
+                        </DataTableCell>
+                        <DataTableCell className="px-6 py-3">
+                          <div className="font-bold text-white transition-colors group-hover:text-brand min-w-0 break-words">
+                            {track.title}
+                          </div>
+                        </DataTableCell>
+                        <DataTableCell className="px-6 py-3 font-mono text-xs text-gray-400 tracking-wider tabular-nums">
+                          {track.isrc || "—"}
+                        </DataTableCell>
+                        <DataTableCell className="px-6 py-3 text-right text-gray-400 font-mono text-xs tabular-nums">
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
+                            {trackDurationText(track.duration)}
+                          </span>
+                        </DataTableCell>
+                      </DataTableRow>
+                    ))}
+                  </DataTableBody>
+                </DataTable>
+              }
+            />
           </div>
         ) : (
           <div className="card-glass rounded-2xl border border-white/5">
@@ -246,56 +310,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
           </div>
         )}
       </div>
-
-      {/* Tech + stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        <div className="stat-card-glass p-6 rounded-2xl border border-white/5">
-          <h2 className="text-sm font-mono uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-lg">info</span>
-            Техническая информация
-          </h2>
-          <dl className="space-y-4">
-            <div>
-              <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">ID релиза</dt>
-              <dd className="font-mono text-sm text-white break-all mt-1">{release.id}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">UPC</dt>
-              <dd className="font-mono text-sm text-white tabular-nums mt-1">{release.upc || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Дата релиза</dt>
-              <dd className="text-sm text-white mt-1 tabular-nums">
-                {formatDate(release.releaseDate)}
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="stat-card-glass p-6 rounded-2xl border border-white/5">
-          <h2 className="text-sm font-mono uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-accent-azure text-lg">bar_chart</span>
-            Статистика
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Треков</p>
-              <p className="text-3xl font-bold text-white font-display tabular-nums mt-1">{tracks.length}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">С ISRC</p>
-              <p className="text-3xl font-bold text-white font-display tabular-nums mt-1">{isrcCount}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Длительность</p>
-              <p className="text-xl font-bold text-white font-display tabular-nums mt-1">
-                {formatSeconds(totalDurationSec)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   )
 }

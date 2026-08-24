@@ -5,6 +5,7 @@ import {
   releaseStatusLabel,
   releaseStatusVariant,
   releaseTrackCount,
+  releaseTypeLabel,
   trackDurationText,
 } from "./release-status"
 
@@ -63,5 +64,19 @@ describe("trackDurationText", () => {
   it("реальная длительность остаётся как есть", () => {
     assert.equal(trackDurationText("3:41"), "3:41")
     assert.equal(trackDurationText("00:03:41"), "00:03:41")
+  })
+})
+
+describe("releaseTypeLabel", () => {
+  it("переводит типы релиза из данных (F-11/C-16)", () => {
+    assert.equal(releaseTypeLabel("single"), "Сингл")
+    assert.equal(releaseTypeLabel("album"), "Альбом")
+    assert.equal(releaseTypeLabel("EP"), "EP")
+  })
+
+  it("незнакомое значение отдаёт как есть, пустое — пустой строкой", () => {
+    assert.equal(releaseTypeLabel("mixtape"), "mixtape")
+    assert.equal(releaseTypeLabel(undefined), "")
+    assert.equal(releaseTypeLabel(null), "")
   })
 })

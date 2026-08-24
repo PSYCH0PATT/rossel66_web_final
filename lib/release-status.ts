@@ -101,3 +101,25 @@ export function releaseStatusLabel(
       return status || "Драфт"
   }
 }
+
+/**
+ * Тип релиза по-русски (C-16, F-11).
+ *
+ * В данных он латиницей — `single` / `album` / `ep`, — и в кабинете артиста
+ * печатался как есть: «SINGLE» под названием релиза и в его карточке. Это
+ * внутреннее значение поля, а не термин, который артист обязан знать.
+ * Незнакомое значение отдаём как пришло: выдумывать перевод нечему.
+ */
+export function releaseTypeLabel(type?: string | null): string {
+  const raw = String(type ?? "").trim()
+  switch (raw.toLowerCase()) {
+    case "single":
+      return "Сингл"
+    case "album":
+      return "Альбом"
+    case "ep":
+      return "EP"
+    default:
+      return raw
+  }
+}

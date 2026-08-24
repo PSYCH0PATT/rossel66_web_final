@@ -45,6 +45,7 @@ export default async function ArtistDashboardPage({
       initialStreamsByDay={analytics.streamsByDay}
       streamWindowDays={STREAM_WINDOW_DAYS}
       initialActivities={activities}
+      generatedAt={new Date().toISOString()}
     />
   )
 }

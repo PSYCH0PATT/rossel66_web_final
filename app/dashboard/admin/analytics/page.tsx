@@ -17,6 +17,11 @@ import {
 import { Loader2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
+import {
+  AllTracksToggle,
+  TrackRowButton,
+  visibleTracks,
+} from "@/components/analytics/track-top-list"
 import { UnmappedArtistsPanel } from "@/components/analytics/unmapped-artists-panel"
 import { formatDayMonthUtc } from "@/lib/format-date"
 import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
@@ -100,70 +105,6 @@ function toIsoDate(date?: Date): string {
   if (!date) return ""
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-/** Сколько треков видно до раскрытия — вердикт 1.2 «top-10 + все треки». */
-const TOP_TRACKS = 10
-
-/**
- * Строка трека в карточках аналитики. Клик выставляет трек в фильтр экрана —
- * то есть показывает статистику одного трека (0-д п.5). У строки без ISRC
- * фильтровать нечего, она остаётся неинтерактивной.
- */
-function TrackRowButton({
-  isrc,
-  label,
-  onSelect,
-  children,
-}: {
-  isrc?: string | null
-  label: string
-  onSelect: (isrc: string) => void
-  children: React.ReactNode
-}) {
-  if (!isrc) {
-    return (
-      <div className="group border-b border-white/[0.03] last:border-0">{children}</div>
-    )
-  }
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={() => onSelect(isrc)}
-      title={`Показать статистику: ${label}`}
-      className="group h-auto w-full justify-start rounded-none border-b border-white/[0.03] px-0 py-0 text-left last:border-0 hover:bg-white/[0.03] max-md:h-auto"
-    >
-      {children}
-    </Button>
-  )
-}
-
-/** «Все треки (N)» — раскрытие полного списка вместо вложенного скролла (C-11). */
-function AllTracksToggle({
-  total,
-  expanded,
-  onToggle,
-}: {
-  total: number
-  expanded: boolean
-  onToggle: () => void
-}) {
-  if (total <= TOP_TRACKS) return null
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={onToggle}
-      className="mt-2 self-start rounded-lg px-2 font-mono text-[10px] uppercase tracking-widest text-gray-400 hover:text-white"
-    >
-      <span className="material-symbols-outlined text-base" aria-hidden>
-        {expanded ? "expand_less" : "expand_more"}
-      </span>
-      {expanded ? `Топ-${TOP_TRACKS}` : `Все треки (${total})`}
-    </Button>
-  )
 }
 
 export default function AdminAnalyticsPage() {
@@ -437,8 +378,8 @@ export default function AdminAnalyticsPage() {
   const totalPaid = data?.paidVsFree.find(p => p.name === "Платные")?.value || 0
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
   const tracksForChart = (data?.streamsByTrack ?? []).slice()
-  const visiblePaidFree = showAllPaidFree ? tracksForChart : tracksForChart.slice(0, TOP_TRACKS)
-  const visibleByStreams = showAllByStreams ? tracksForChart : tracksForChart.slice(0, TOP_TRACKS)
+  const visiblePaidFree = visibleTracks(tracksForChart, showAllPaidFree)
+  const visibleByStreams = visibleTracks(tracksForChart, showAllByStreams)
 
   return (
     

@@ -35,16 +35,15 @@ export default async function ArtistActivityPage({
 
   return (
     <div className="space-y-8">
+      {/*
+        Вердикт 3.10: счётчик «Показано событий: 14» из шапки убран — счётчик
+        живёт в Pagination и только при нескольких страницах (F-21-паттерн);
+        пустую ленту показывает EmptyState самой ленты. Подзаголовок обещал
+        события «по выплатам», которых в ленте артиста нет вовсе.
+      */}
       <PageHeader
         title="АКТИВНОСТЬ"
-        subtitle="События по вашим релизам, плейлистам, отчётам и выплатам."
-        actions={
-          <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-            {activities.length > 0
-              ? `Показано событий: ${activities.length}`
-              : "Событий пока нет"}
-          </p>
-        }
+        subtitle="Статусы релизов, попадания в плейлисты и движение по отчётам."
       />
 
       <div className="card-glass rounded-2xl overflow-hidden border border-white/5">

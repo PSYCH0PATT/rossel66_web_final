@@ -1,4 +1,5 @@
 import * as React from "react"
+import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
@@ -52,15 +53,21 @@ export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   tone?: keyof typeof TONES
   /** Дополнительная строка под значением (дельта, подпись периода). */
   footer?: React.ReactNode
+  /**
+   * Карточка целиком ведёт в свой раздел. На дашборде артиста «Релизы 5» —
+   * это вход в релизы, а не подпись: раньше цифру приходилось искать заново
+   * в меню (вердикт 3.2).
+   */
+  href?: string
 }
 
 const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
   (
-    { label, value, icon, bgIcon, bgIconClassName, tone = "neutral", footer, className, children, ...props },
+    { label, value, icon, bgIcon, bgIconClassName, tone = "neutral", footer, href, className, children, ...props },
     ref
   ) => {
     const toneClasses = TONES[tone]
-    return (
+    const card = (
       <div
         ref={ref}
         className={cn(
@@ -110,6 +117,18 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
           {footer && <div className="mt-2 text-xs text-gray-400">{footer}</div>}
         </div>
       </div>
+    )
+
+    if (!href) return card
+    // Ссылкой оборачиваем, а не подменяем корень: карточка остаётся div'ом,
+    // её ref и типы прежние, а кликом становится вся плитка целиком.
+    return (
+      <Link
+        href={href}
+        className="block rounded-2xl outline-none transition-shadow hover:shadow-[0_0_0_1px_rgb(var(--brand)/0.35)] focus-visible:ring-2 focus-visible:ring-primary/60"
+      >
+        {card}
+      </Link>
     )
   }
 )
