@@ -74,9 +74,8 @@ export default async function ArtistPlaylistDetailPage({
   const added = playlist.firstSeenDate || playlist.createdAt.toISOString().split("T")[0]
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+    <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="ПЛЕЙЛИСТ"
         subtitle="Карточка плейлиста и треки из отчёта площадки."
         actions={

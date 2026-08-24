@@ -62,9 +62,8 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
 
   return (
     <>
-      <div className="max-w-full p-0 pb-6 md:pb-0">
+      <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="ВЫПЛАТЫ"
         subtitle="Баланс, доступная сумма к выплате и история отчётов по кварталам."
       />

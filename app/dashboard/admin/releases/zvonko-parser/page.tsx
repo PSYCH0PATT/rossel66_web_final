@@ -181,11 +181,10 @@ export default function ZvonkoParserPage() {
 
   return (
     
-      <div className="space-y-8 max-w-7xl mx-auto pb-8">
+      <div className="space-y-8">
         {/* F-36: шапка парсера — один шаблон с koala-parser; параметры запуска
             остаются здесь же, в слоте meta. F-35: CTA того же цвета, что там. */}
         <PageHeader
-          size="lg"
           title="Zvonko Digital Parser"
           subtitle="Парсинг, сравнение и добавление релизов из Zvonko Digital."
           meta={

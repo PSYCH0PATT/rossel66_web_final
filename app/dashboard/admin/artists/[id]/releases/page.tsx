@@ -88,9 +88,8 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
 
   return (
     
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
-          size="md"
           backHref="/dashboard/admin/artists"
           backLabel="Назад к списку артистов"
           title={`Релизы артиста: ${artist?.name ?? ""}`}

@@ -169,9 +169,8 @@ export default function ArtistSettingsClient({
 
   return (
     <>
-      <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+      <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="НАСТРОЙКИ"
         subtitle="Профиль, аватар и смена пароля."
       />

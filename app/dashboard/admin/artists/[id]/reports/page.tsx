@@ -17,11 +17,14 @@ export default async function AdminArtistReportsPage({ params }: { params: { id:
   })
   const reports = reportRows.map(reportFromPrisma)
 
+  /* C-01: заголовок отдаём в PageHeader компонента — свой <h1> здесь давал
+     вторую шапку подряд и был единственным голым h1 в кабинетах. */
   return (
-    
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Отчёты: {artist.name}</h1>
-        <ArtistReports username={artist.username} reports={reports} artistName={artist.name} />
-      </div>
-    )
+    <ArtistReports
+      username={artist.username}
+      reports={reports}
+      artistName={artist.name}
+      title={`Отчёты: ${artist.name}`}
+    />
+  )
 }

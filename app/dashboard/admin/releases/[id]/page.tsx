@@ -166,10 +166,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
   }
 
   if (isDeleted) {
+    // Ширину и поля состояния задаёт shell, как и у соседнего «Релиз не
+    // найден»: своих max-w/mx-auto/p-* у корня страницы не бывает.
     return (
-      
         <EmptyState
-          className="card-glass border border-white/5 p-8 rounded-2xl max-w-lg mx-auto mt-12"
+          className="card-glass rounded-2xl border border-white/5"
           icon="delete_forever"
           title="Релиз удален"
           description="Данный релиз не найден в базе данных. Возможно, он был удален в процессе очистки дубликатов."
@@ -208,11 +209,9 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
 
   return (
     
-      <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="space-y-8">
         {/* C-01: H1 = название релиза, «Сохранить» — в слоте actions (F-32) */}
         <PageHeader
-          size="md"
-          className="pb-6"
           backHref="/dashboard/admin/releases"
           title={release.title}
           subtitle={artistName}

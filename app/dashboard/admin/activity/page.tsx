@@ -270,7 +270,7 @@ export default function AdminActivityPage() {
 
   return (
     <div className="space-y-8">
-        <PageHeader size="md" title="Активность" subtitle="Журнал событий платформы" />
+        <PageHeader title="Активность" subtitle="Журнал событий платформы" />
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 space-y-6">
           <SectionHeader className="mb-0" size="sm" title="Фильтры и лента" />

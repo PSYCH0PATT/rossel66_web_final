@@ -90,9 +90,8 @@ export default function AdminReportsClient({ initialView }: { initialView: Repor
   const isFolders = view === "all" || view === "unpaid"
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8">
       <PageHeader
-        size="md"
         title="Отчёты"
         subtitle="Квартальные отчёты артистов: подписи, выплаты и очередь без кабинета"
         actions={

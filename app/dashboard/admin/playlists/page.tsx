@@ -663,7 +663,7 @@ export default function PlaylistsPage() {
 
   return (
     <>
-    <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-10 pb-24 space-y-8">
+    <div className="relative z-10 space-y-8">
         {actionBanner && (
           <Banner
             variant={actionBanner.type === "ok" ? "success" : "danger"}
@@ -673,7 +673,6 @@ export default function PlaylistsPage() {
           </Banner>
         )}
         <PageHeader
-          className="mb-2"
           title="Плейлисты"
           subtitle="Управление плейлистами из VK, МТС Музыки, Яндекс Музыки и других площадок (SFTP)."
         />

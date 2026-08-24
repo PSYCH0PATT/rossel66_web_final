@@ -133,18 +133,14 @@ export default function AdminArtistsClient() {
   }
 
   return (
-    <>
+    <div className="space-y-8">
       {banner && (
-        <Banner
-          className="mb-6"
-          variant={banner.type === "error" ? "danger" : "success"}
-        >
+        <Banner variant={banner.type === "error" ? "danger" : "success"}>
           {banner.text}
         </Banner>
       )}
 
       <PageHeader
-        className="mb-8"
         rowClassName="md:flex-col md:items-start md:gap-6 lg:flex-row lg:items-end"
         title="Артисты"
         subtitle={
@@ -419,7 +415,6 @@ export default function AdminArtistsClient() {
       )}
 
       <DashboardFooter />
-
-    </>
+    </div>
   )
 }

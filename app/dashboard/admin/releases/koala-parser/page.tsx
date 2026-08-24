@@ -148,10 +148,9 @@ export default function KoalaParserPage() {
 
   return (
     
-      <div className="space-y-8 max-w-7xl mx-auto pb-8">
+      <div className="space-y-8">
         {/* F-36: шапка парсера — один шаблон с zvonko-parser */}
         <PageHeader
-          size="lg"
           title="Koala Music Parser"
           subtitle="Импорт релизов из Koala Music: статус последнего запуска и таблица последних записей."
           actions={

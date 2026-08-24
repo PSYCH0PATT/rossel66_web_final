@@ -163,10 +163,8 @@ export default function BulkAddArtistsPage() {
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="space-y-8">
         <PageHeader
-          className="mb-6"
-          size="md"
           rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
           backHref="/dashboard/admin/artists"
           title="Массовое добавление"

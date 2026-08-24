@@ -144,9 +144,8 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
   const releaseHref = (id: string) => `/dashboard/artist/${username}/releases/${id}`
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="РЕЛИЗЫ"
         subtitle="Управляйте дискографией, отслеживайте статус доставки и мониторинг дистрибуции на всех цифровых платформах."
         actionsClassName="w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end"

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { DashboardFooter } from "@/components/dashboard-footer"
 import { Button } from "@/components/ui/button"
 import {
@@ -62,7 +61,6 @@ function formatDate(dateStr?: string) {
 }
 
 export default function ArtistReleaseDetailPage({ params }: { params: { username: string; id: string } }) {
-  const router = useRouter()
   const [release, setRelease] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [artist, setArtist] = useState<any>(null)
@@ -128,23 +126,14 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
   }
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          aria-label="Назад"
-          className="self-start rounded-lg border border-white/10 font-mono text-xs uppercase tracking-widest text-gray-500 hover:text-primary"
-        >
-          <span className="material-symbols-outlined text-base" aria-hidden>
-            arrow_back
-          </span>
-          Назад
-        </Button>
-      </div>
-
+    <div className="space-y-8">
+      {/* C-01: возврат живёт внутри шапки, как на восьми админ-экранах, а не
+          отдельным рядом над ней — иначе H1 стоит на своей высоте на каждой
+          странице. Кнопка осталась, сменились место и механика: вместо
+          router.back() — адрес списка релизов. */}
       <PageHeader
-        className="mb-8"
+        backHref={`/dashboard/artist/${params.username}/releases`}
+        backLabel="Назад"
         title="РЕЛИЗ"
         subtitle="Карточка релиза, треки и технические данные дистрибуции."
         actions={<ReleaseStatusBadge status={release.status} trackCount={releaseTrackCount(tracks)} />}

@@ -60,9 +60,8 @@ export default function AdminDashboardClient({
   }, [artistCount, releaseCount, reportCount, pendingReleases, payments])
 
   return (
-    <>
-    <PageHeader
-        className="mb-8 pb-4 md:mb-12 md:pb-8"
+    <div className="space-y-8">
+      <PageHeader
         title="ГЛАВНАЯ"
         subtitle="Панель управления лейблом. Обзор текущих метрик и недавней активности."
         actions={
@@ -184,6 +183,6 @@ export default function AdminDashboardClient({
       </div>
 
       <DashboardFooter />
-    </>
+    </div>
   )
 }

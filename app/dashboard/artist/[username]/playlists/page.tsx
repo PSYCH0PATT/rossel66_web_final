@@ -70,9 +70,8 @@ export default async function PlaylistsPage({
   const total = playlists.length
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="space-y-8">
         <PageHeader
-          className="mb-8"
           title="ПЛЕЙЛИСТЫ"
           subtitle="Плейлисты, в которые попали ваши треки на стриминговых платформах."
           actionsClassName="w-full md:w-auto"

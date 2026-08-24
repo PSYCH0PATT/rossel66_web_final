@@ -35,9 +35,8 @@ export default async function ArtistActivityPage({
   const activities = await getCachedActivitiesForFeed(row.id, "artist", ACTIVITY_LIMIT)
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="АКТИВНОСТЬ"
         subtitle="События по вашим релизам, плейлистам, отчётам и выплатам."
         actions={

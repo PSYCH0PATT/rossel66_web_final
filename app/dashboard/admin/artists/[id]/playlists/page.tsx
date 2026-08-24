@@ -88,9 +88,8 @@ export default function ArtistPlaylistsPage({ params }: { params: { id: string }
 
   return (
     
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
-          size="md"
           backHref={`/dashboard/admin/artists/${params.id}`}
           backLabel="Назад к профилю артиста"
           title={`Плейлисты артиста: ${artist?.name ?? ""}`}

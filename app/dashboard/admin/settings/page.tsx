@@ -322,7 +322,7 @@ export default function AdminSettingsPage() {
   return (
     <>
     <div className="space-y-8">
-        <PageHeader size="md" title="Настройки" subtitle="Пароль и управление данными" />
+        <PageHeader title="Настройки" subtitle="Пароль и управление данными" />
 
         {/* C-15: баннер из кита — кнопка закрытия больше не копируется по месту */}
         {banner && (

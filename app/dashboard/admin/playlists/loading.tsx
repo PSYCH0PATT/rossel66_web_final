@@ -7,7 +7,7 @@ import { SkeletonLine } from "@/components/ui/skeleton-presets"
  */
 export default function Loading() {
   return (
-    <div className="relative z-10 mx-auto max-w-7xl space-y-8 p-6 pb-24 md:p-10">
+    <div className="relative z-10 space-y-8">
       <div className="border-b border-white/5 pb-8">
         <Skeleton className="h-10 w-64 bg-white/5" />
         <SkeletonLine className="mt-3 w-80" />

@@ -165,12 +165,10 @@ export default function AdminReleasesClient() {
   }
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
+    <div className="space-y-8">
       {/* C-01: шапка экрана. Тулбар и поиск — в слоте meta, под H1. */}
       <PageHeader
-        size="lg"
         title="РЕЛИЗЫ"
-        className="mb-8 pb-6"
         rowClassName="items-stretch md:items-stretch"
         meta={
           <div className="mt-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">

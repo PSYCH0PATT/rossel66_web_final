@@ -184,9 +184,8 @@ export default function AddReleasePage() {
   ]
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-8">
+    <div className="space-y-8">
         <PageHeader
-          size="lg"
           backHref="/dashboard/admin/releases"
           title="Добавить релиз"
           subtitle="Заполните карточку релиза, обложку и треклист. UPC — 12 цифр."

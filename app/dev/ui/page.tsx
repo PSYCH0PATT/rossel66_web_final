@@ -216,7 +216,6 @@ export default function DevUiPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-16 px-4 py-8 md:px-8 md:py-12">
       <PageHeader
-        size="lg"
         title="UI-кит"
         subtitle="Витрина компонентов этапа 2.2: варианты и состояния. Страницы кабинета переезжают на них волнами этапа 4."
         actions={
@@ -242,11 +241,10 @@ export default function DevUiPage() {
       <DemoSection
         id="c-01"
         title="C-01 PageHeader"
-        note="Лечит 7 вариантов шапки: размеры lg (артист-ЛК и крупные админ-экраны) и md (админ-стандарт), крошки или back-link, слот actions. H1 — имя сущности, не действие."
+        note="Лечит 7 вариантов шапки: один размер H1 на весь кабинет, крошки или back-link, слот actions. H1 — имя сущности, не действие. Размер передать нечем: пропа size у компонента нет, ширину и поля страницы задаёт DashboardShell."
       >
-        <Demo label="size=lg + subtitle + actions" stack>
+        <Demo label="subtitle + actions" stack>
           <PageHeader
-            size="lg"
             title="Плейлисты"
             subtitle="Попадания треков в редакционные плейлисты площадок."
             actions={
@@ -257,9 +255,8 @@ export default function DevUiPage() {
             }
           />
         </Demo>
-        <Demo label="size=md + breadcrumbs (крошка = H1)" stack>
+        <Demo label="breadcrumbs (крошка = H1)" stack>
           <PageHeader
-            size="md"
             title="Меланхолия"
             subtitle="Редактирование релиза"
             breadcrumbs={[
@@ -269,9 +266,8 @@ export default function DevUiPage() {
             actions={<Button>Сохранить</Button>}
           />
         </Demo>
-        <Demo label="size=md + backHref" stack>
+        <Demo label="backHref" stack>
           <PageHeader
-            size="md"
             title="Добавить артиста"
             subtitle="Логин, имя и контакты."
             backHref="#c-01"

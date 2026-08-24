@@ -371,10 +371,9 @@ export default function AdminAnalyticsPage() {
 
   return (
     
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* TopAppBar Mapping */}
         <PageHeader
-          className="pb-6"
           rowClassName="md:flex-col md:items-start md:gap-4 lg:flex-row lg:items-center lg:gap-6"
           actionsClassName="w-full min-w-0 shrink lg:w-auto"
           title="АНАЛИТИКА"

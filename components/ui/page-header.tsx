@@ -15,14 +15,23 @@ import {
  * Единая шапка страницы кабинета — C-01 (docs/ui-audit.md).
  *
  * Паттерн «h1 + subtitle + border-b + actions» скопипащен в ~34 экранах в
- * 7 вариантах; этот компонент — их общий знаменатель:
- * - `size="md"` — админ-стандарт, h1 text-3xl/4xl (группа A);
- * - `size="lg"` — крупные экраны админки и весь артист-ЛК, text-4xl/5xl
- *   (группы B, E) — дефолт, таких экранов больше.
+ * 7 вариантах; этот компонент — их общий знаменатель.
+ *
+ * Размер H1 один на весь кабинет и задаётся здесь — снаружи его передать
+ * нечем. Проп `size` был удалён намеренно: волны 1–4 пересадили страницы на
+ * компонент, но `size="md"` на 11 экранах против `lg` на 18 оставил заголовки
+ * трёх разных размеров. Нужен другой размер — правится эта строка, а не
+ * страница.
+ *
+ * Ширину и поля страницы задаёт DashboardShell (`mx-auto max-w-7xl p-6
+ * md:p-10`), поэтому вертикальный отступ шапки (`pb-8`) тоже живёт здесь:
+ * `className` идёт через twMerge и внешний `pb-6` молча перебивал канон.
  *
  * Правило: H1 = имя сущности («МЕЛАНХОЛИЯ»), а не действие
  * («РЕДАКТИРОВАНИЕ») — действие живёт в subtitle или кнопке (F-24).
  * Слот actions держит primary-кнопку в одном месте на всех экранах (F-32).
+ * Возврат на уровень выше — `backHref`/`breadcrumbs` внутри шапки, а не
+ * отдельной кнопкой над ней.
  * Экран логина (группа G) остаётся автономным исключением — без PageHeader.
  */
 
@@ -52,7 +61,6 @@ export interface PageHeaderProps
   rowClassName?: string
   /** Классы слота действий: например, фильтры на всю ширину мобильного экрана. */
   actionsClassName?: string
-  size?: "md" | "lg"
 }
 
 const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
@@ -67,7 +75,6 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
       meta,
       rowClassName,
       actionsClassName,
-      size = "lg",
       className,
       ...props
     },
@@ -75,7 +82,14 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
   ) => (
     <header
       ref={ref}
-      className={cn("border-b border-white/5 pb-8", className)}
+      className={cn(
+        "border-b border-white/5",
+        className,
+        // Вертикальный ритм идёт ПОСЛЕ className намеренно: cn() это twMerge,
+        // побеждает последний класс. Внешние `pb-6`/`mb-8` больше не сдвигают
+        // шапку — отступ до контента задаёт `space-y-8` корня страницы.
+        "mb-0 pb-8"
+      )}
       {...props}
     >
       {backHref && !breadcrumbs && (
@@ -117,12 +131,17 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
       >
         <div className="min-w-0">
           <h1
-            className={cn(
-              // text-balance против переноса «РЕДАКТИРОВАНИ / Е» на 390 (F-83);
-              // размер на узких экранах дополнительно ужимает dashboard.css.
-              "text-balance font-display font-bold uppercase tracking-tight text-white",
-              size === "lg" ? "text-4xl md:text-5xl" : "text-3xl md:text-4xl"
-            )}
+            // Здесь намеренно голая строка, а НЕ cn(): tailwind-merge считает
+            // `text-balance` и `text-4xl` одной группой `text-*` и выкидывает
+            // первый как перебитый. Пока размер приходил вторым аргументом
+            // cn(), `text-balance` не доезжал до разметки вовсе — то есть
+            // фикс F-83 («РЕДАКТИРОВАНИ / Е» на 390) в бою не работал.
+            // Проверить: twMerge("text-balance …", "text-4xl") вернёт строку
+            // без text-balance.
+            //
+            // Размер на узких экранах дополнительно ужимает dashboard.css
+            // (медиазапросы на `.dashboard-theme h1`).
+            className="text-balance font-display text-4xl font-bold uppercase tracking-tight text-white md:text-5xl"
           >
             {title}
           </h1>

@@ -21,9 +21,20 @@ interface ArtistReportsProps {
   username: string
   reports: Report[]
   artistName: string
+  /**
+   * C-01: заголовок шапки. Админский экран отчётов артиста передаёт сюда своё
+   * «Отчёты: {имя}» — раньше он рисовал собственный `<h1>` над компонентом и
+   * на странице оказывалось два заголовка подряд разного размера.
+   */
+  title?: string
 }
 
-export default function ArtistReports({ username, reports: initialReports, artistName }: ArtistReportsProps) {
+export default function ArtistReports({
+  username,
+  reports: initialReports,
+  artistName,
+  title = "ОТЧЁТЫ",
+}: ArtistReportsProps) {
   const [reports, setReports] = useState(initialReports)
   // По умолчанию — самый свежий год, за который ЕСТЬ отчёты (а не календарный год).
   // Иначе артист с отчётами только за прошлый год видит «Нет отчётов за 2026».
@@ -111,10 +122,9 @@ export default function ArtistReports({ username, reports: initialReports, artis
 
   return (
     <>
-      <div className="p-0 md:p-0 max-w-full pb-24">
+      <div className="space-y-8">
       <PageHeader
-        className="mb-8"
-        title="ОТЧЁТЫ"
+        title={title}
         subtitle="Квартальные отчёты, предпросмотр и скачивание PDF."
         actions={
           years.length > 1 ? (

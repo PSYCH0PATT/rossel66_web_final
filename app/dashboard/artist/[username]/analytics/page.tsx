@@ -213,9 +213,8 @@ export default function ArtistAnalyticsPage() {
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="space-y-8">
       <PageHeader
-        className="mb-8"
         title="АНАЛИТИКА"
         subtitle="Стримы по площадкам, трекам и выбранному периоду."
         rowClassName="md:flex-col md:items-start md:gap-6 lg:flex-row lg:items-end"

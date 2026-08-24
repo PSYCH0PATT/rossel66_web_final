@@ -3,19 +3,12 @@
 import LoginForm from "@/components/login-form"
 import Image from "next/image"
 import Link from "next/link"
-import { Inter } from "next/font/google"
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-})
+import { LoginShell } from "@/components/login-shell"
 
 export default function LoginPage() {
+  /* Контент поверх particles; центрированная колонка — в LoginShell. */
   return (
-    <>
-      {/* Контент поверх particles */}
-      <div className={`${inter.variable} relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 font-sans`} style={{ zIndex: 10, fontFamily: 'var(--font-inter)' }}>
-        <div className="relative w-full max-w-md">
+    <LoginShell>
         {/* Лого с свечением */}
         <div className="flex flex-col items-center justify-center mb-8 sm:mb-10 animate-login-fade-down">
           <div className="relative mb-6 sm:mb-8 w-[120px] sm:w-[180px] max-w-[40vw] animate-login-float">
@@ -47,8 +40,6 @@ export default function LoginPage() {
           <span className="material-symbols-outlined text-base transition-transform group-hover:-translate-x-1" aria-hidden>arrow_back</span>
           Вернуться на сайт
         </Link>
-        </div>
-      </div>
-    </>
+    </LoginShell>
   )
 }

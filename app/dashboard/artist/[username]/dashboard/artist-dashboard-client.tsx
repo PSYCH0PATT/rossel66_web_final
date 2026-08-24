@@ -42,9 +42,8 @@ export default function ArtistDashboardClient({
     [reports]
   )
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
+    <div className="space-y-8">
       <PageHeader
-        className="mb-6 pb-4 md:mb-8 md:pb-8"
         title="ГЛАВНАЯ"
         subtitle={`С возвращением, ${artist.name || artist.username}. Кратко, что происходит с вашей музыкой сегодня.`}
         actions={

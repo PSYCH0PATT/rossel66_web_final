@@ -165,8 +165,8 @@ export default function PlaylistHistoryPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
-        <PageHeader size="md" title="История плейлистов" subtitle="Изменения из SFTP и синхронизаций" />
+    <div className="space-y-8">
+        <PageHeader title="История плейлистов" subtitle="Изменения из SFTP и синхронизаций" />
 
         <div className="card-glass rounded-2xl border border-white/5 p-6">
           <SectionHeader
