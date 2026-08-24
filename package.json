@@ -42,7 +42,7 @@
     "cleanup:test-accounts": "npx tsx scripts/cleanup-test-accounts.ts",
     "setup:buildin-e2e": "npx tsx scripts/setup-buildin-e2e-workspace.ts",
     "setup:buildin-form-queues": "npx tsx scripts/setup-buildin-form-queues.ts",
-    "test": "npx tsx --test lib/*.test.ts lib/*/*.test.ts",
+    "test": "npx tsx --test lib/*.test.ts lib/*/*.test.ts components/ui/*.test.ts",
     "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts",
     "test:buildin": "npx tsx --test lib/buildin/*.test.ts lib/playlist-placements.test.ts",
     "test:db:migrate": "npx tsx scripts/test-db-migrate.ts",

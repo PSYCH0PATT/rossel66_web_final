@@ -26,6 +26,8 @@ import {
  * Ширину и поля страницы задаёт DashboardShell (`mx-auto max-w-7xl p-6
  * md:p-10`), поэтому вертикальный отступ шапки (`pb-8`) тоже живёт здесь:
  * `className` идёт через twMerge и внешний `pb-6` молча перебивал канон.
+ * Адаптив заголовка (мобила/планшет/десктоп) — тоже здесь, см. TITLE_CLASS:
+ * в глобальном CSS размера H1 больше нет (B-09).
  *
  * Правило: H1 = имя сущности («МЕЛАНХОЛИЯ»), а не действие
  * («РЕДАКТИРОВАНИЕ») — действие живёт в subtitle или кнопке (F-24).
@@ -77,22 +79,41 @@ export interface PageHeaderProps
 }
 
 /**
- * Классы H1 — намеренно готовые строки, а НЕ cn(): tailwind-merge считает
- * `text-balance` и `text-4xl` одной группой `text-*` и выкидывает первый как
- * перебитый. Пока размер приходил вторым аргументом cn(), `text-balance` не
- * доезжал до разметки вовсе — то есть фикс F-83 («РЕДАКТИРОВАНИ / Е» на 390)
- * в бою не работал. Проверить: twMerge("text-balance …", "text-4xl") вернёт
- * строку без text-balance.
+ * Классы H1 — намеренно готовые строки, а НЕ cn(): tailwind-merge 2.1 не знает
+ * утилит переноса из Tailwind 3.4 и относит `text-balance` к группе цвета
+ * текста, поэтому его молча съедает идущий следом `text-white` — даже внутри
+ * одного аргумента. Пока строка шла через cn(), `text-balance` не доезжал до
+ * разметки вовсе, и фикс F-83 («РЕДАКТИРОВАНИ / Е» на 390) в бою не работал.
+ * Проверить: twMerge("text-balance …text-white") вернёт строку без text-balance.
+ * Сторож — components/ui/cn-merge.test.ts (B-11).
  *
  * Кегль у обоих вариантов один и тот же — различаются только шрифт и регистр,
  * поэтому канон C-01 (одна высота и один размер заголовка на всех экранах)
- * не задет. Размер на узких экранах дополнительно ужимает dashboard.css
- * (медиазапросы на `.dashboard-theme h1`).
+ * не задет.
+ *
+ * Адаптив тоже здесь и только здесь (B-09): раньше размер на узких экранах
+ * перебивали два медиазапроса `.dashboard-theme h1` в dashboard.css, и
+ * источников размера было два. Ступени сохранены один в один:
+ *   ≥1024      — text-5xl (3rem, line-height 1);
+ *   641…1023   — clamp(1.75rem, 4.5vw, 3rem): с md сайдбар забирает 256px,
+ *                контент уже, а заголовок иначе рос бы до 3rem и обрезался;
+ *   ≤640       — clamp(1.5rem, 7.5vw, 2.25rem).
+ * Ниже 1024 добавляются line-height 1.1 и `overflow-wrap: anywhere` — страховка
+ * от длинного слова без пробелов. Оба порога — произвольные `max-[…]`, а не
+ * `sm:`/`lg:`: они идут через один вариант Tailwind и гарантированно сортируются
+ * по убыванию, тогда как смесь именованного и произвольного брейкпоинта зависит
+ * от порядка медиазапросов. `length:` — подсказка типа, без неё clamp() можно
+ * принять за цвет.
  */
+const TITLE_ADAPTIVE =
+  "max-[1023px]:text-[length:clamp(1.75rem,4.5vw,3rem)] max-[1023px]:leading-[1.1] " +
+  "max-[1023px]:[overflow-wrap:anywhere] max-[640px]:text-[length:clamp(1.5rem,7.5vw,2.25rem)]"
+
 const TITLE_CLASS = {
   section:
-    "text-balance font-display text-4xl font-bold uppercase tracking-tight text-white md:text-5xl",
-  entity: "text-balance text-4xl font-bold tracking-tight text-white md:text-5xl",
+    "text-balance font-display text-5xl font-bold uppercase tracking-tight text-white " +
+    TITLE_ADAPTIVE,
+  entity: "text-balance text-5xl font-bold tracking-tight text-white " + TITLE_ADAPTIVE,
 } as const
 
 const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(

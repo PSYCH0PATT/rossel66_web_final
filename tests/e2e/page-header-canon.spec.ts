@@ -17,8 +17,9 @@
  * - у самой шапки `padding-bottom: 32px` и `margin-bottom: 0` — отступ до
  *   контента даёт `space-y-8` корня страницы, а не класс на шапке.
  *
- * Вьюпорт — дефолтный Desktop Chrome (1280): ниже 1024 `dashboard.css`
- * клампит все h1 общим `clamp()`, и разницу размеров там не увидеть в принципе.
+ * Вьюпорт — дефолтный Desktop Chrome (1280): ниже 1024 PageHeader сам ужимает
+ * заголовок общим `clamp()` (B-09 — раньше это делал `dashboard.css`), и
+ * разницу размеров там не увидеть в принципе.
  */
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test"
 
