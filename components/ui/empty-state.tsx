@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils"
  * Иконка + читаемый заголовок + ОДНО действие: не дублировать CTA ссылкой и
  * кнопкой одновременно (F-25), не оставлять экран без действия, если оно
  * есть (F-41). Текст — gray-400, а не «призрачный» gray-600 (F-58).
+ *
+ * Атрибут `data-empty-state` — не декорация: по нему `scripts/visual-baseline.ts`
+ * узнаёт, что экран снят пустым, и помечает роут как непроверенный (правило
+ * приёмки волн в docs/ui-audit.md). Не убирайте его при рефакторинге.
  */
 
 export interface EmptyStateProps
@@ -23,6 +27,7 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
   ({ icon, title, description, action, className, ...props }, ref) => (
     <div
       ref={ref}
+      data-empty-state=""
       className={cn(
         "flex flex-col items-center justify-center gap-2 py-16 text-center",
         className

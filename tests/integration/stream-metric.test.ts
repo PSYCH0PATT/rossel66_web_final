@@ -191,3 +191,55 @@ describe("F-05: контракт данных графика стримов", ()
     }
   })
 })
+
+/**
+ * B-12 (docs/backlog.md): стенд обязан попадать в окно графика по умолчанию.
+ *
+ * Окно календарное — «последние 30 дней от now()» — и таким остаётся намеренно:
+ * если считать его от последней имеющейся строки, сломанный импорт flash
+ * выглядел бы здоровым (F-18). Значит, попадать в окно должен сид: даты
+ * каталожных строк скользят вместе с днём сидирования. Этот тест падает, если
+ * их снова прибьют к календарю — иначе через пару недель экраны аналитики
+ * начнут сниматься пустыми, и визуальные прогоны перестанут что-либо
+ * доказывать.
+ */
+describe("B-12: сид попадает в окно графика по умолчанию", () => {
+  it("в окне «30 дней от сегодня» есть данные, а не пустой экран", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    const { getStreamAnalytics } = await import("@/lib/flash-storage")
+    const { dashboardStreamWindow } = await import("@/lib/stream-window")
+
+    const window = dashboardStreamWindow()
+    const data = await getStreamAnalytics(window)
+
+    assert.ok(
+      data.totalStreams > 0,
+      `в окне ${window.startDate}…${window.endDate} нет ни одной строки: ` +
+        "даты в scripts/seed-e2e.ts снова прибиты к календарю"
+    )
+    assert.ok(
+      data.streamsByDay.length >= 7,
+      `в окне только ${data.streamsByDay.length} точек — график выродится в прямую`
+    )
+    assert.ok(
+      data.streamsByTrack.length > 10,
+      `в окне ${data.streamsByTrack.length} треков — «топ-10 + Все треки» показать не на чем`
+    )
+  })
+
+  it("кабинет артиста тоже попадает в окно, а не открывается пустым", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    const { buildCabinetStreamFilters } = await import("@/lib/analytics-request-filters")
+    const { getStreamAnalytics } = await import("@/lib/flash-storage")
+    const { dashboardStreamWindow } = await import("@/lib/stream-window")
+
+    const window = dashboardStreamWindow()
+    const data = await getStreamAnalytics(await buildCabinetStreamFilters(await mainArtist(), window))
+
+    assert.ok(
+      data.totalStreams > 0,
+      `у артиста в окне ${window.startDate}…${window.endDate} нет строк: ` +
+        "его свежий ряд в scripts/seed-e2e.ts (freshMainArtistAnalytics) снова прибит к календарю"
+    )
+  })
+})

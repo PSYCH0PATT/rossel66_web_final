@@ -394,12 +394,75 @@ async function stabilize(page: Page) {
   await page.waitForTimeout(400)
 }
 
+/**
+ * Признаки того, что экран снят ПУСТЫМ: пустые состояния, таблицы без строк,
+ * графики без точек. Такой скрин не годится в доказательство — на нём нечему
+ * разъезжаться, и визуальный дифф по нему ничего не проверяет (правило
+ * приёмки волн, docs/ui-audit.md).
+ *
+ * Считаем только видимое: скрытые вкладки и свёрнутые блоки к состоянию
+ * экрана отношения не имеют.
+ */
+async function emptinessSignals(page: Page): Promise<string[]> {
+  try {
+    return await page.evaluate(() => {
+      // Никаких именованных функций внутри evaluate: tsx компилирует файл с
+      // --keep-names, и такие функции уезжают в браузер обёрнутыми в
+      // esbuild-хелпер `__name`, которого там нет (ReferenceError, а детектор
+      // молча возвращал «пусто»). Только анонимные стрелки в аргументах.
+      const signals: string[] = []
+
+      const empties = Array.from(document.querySelectorAll("[data-empty-state]")).filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      })
+      if (empties.length > 0) {
+        const titles = empties
+          // Заголовок — первый <p>: textContent целиком тянет за собой ещё и
+          // лигатуру иконки («inboxСобытий пока нет»).
+          .map((el) => ((el.querySelector("p") ?? el).textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 40))
+          .filter((t) => t.length > 0)
+        signals.push(`пустых состояний ${empties.length} («${titles.join("», «")}»)`)
+      }
+
+      const emptyTables = Array.from(document.querySelectorAll("table")).filter((t) => {
+        const r = t.getBoundingClientRect()
+        return r.width > 0 && r.height > 0 && t.querySelectorAll("tbody tr").length === 0
+      })
+      if (emptyTables.length > 0) signals.push(`таблиц без строк ${emptyTables.length}`)
+
+      // Точки данных recharts: линия, площадь, столбец, сектор, маркер.
+      const marks =
+        ".recharts-line-curve, .recharts-area-area, .recharts-bar-rectangle, .recharts-sector, .recharts-dot"
+      const emptyCharts = Array.from(document.querySelectorAll(".recharts-surface")).filter((svg) => {
+        // Квадратики легенды — тоже .recharts-surface, но 10×10 и без данных
+        // по определению: без этого отсева экран с полным графиком приезжал
+        // «пустым» четыре раза подряд.
+        if (svg.querySelector(".recharts-legend-icon")) return false
+        const r = svg.getBoundingClientRect()
+        return r.width >= 60 && r.height >= 40 && svg.querySelectorAll(marks).length === 0
+      })
+      if (emptyCharts.length > 0) signals.push(`графиков без точек ${emptyCharts.length}`)
+
+      return signals
+    })
+  } catch (err) {
+    // Детектор, который молча не сработал, — та же ловушка, что и пустой
+    // экран: лучше громкий warn, чем ложное «ok».
+    return [`проверка не сработала: ${(err as Error).message.split("\n")[0]}`]
+  }
+}
+
 type Shot = { file: string; state?: string }
 /**
  * fail — скрина нет или экран не тот (4xx/5xx, редирект, таймаут).
- * warn — скрин снят, но экран нажаловался в консоль или состояние не открылось:
- *        чинить это не задача baseline, но в docs/baseline-issues.md попадает.
+ * warn — скрин снят, но верить ему нельзя: экран нажаловался в консоль,
+ *        состояние не открылось или экран снят ПУСТЫМ (EMPTY_PREFIX).
+ *        Чинить это не задача baseline, но в docs/baseline-issues.md попадает.
  */
+/** Метка причины «экран снят пустым» — по ней же считается итог прогона. */
+const EMPTY_PREFIX = "пустой экран: "
+
 type Status = "ok" | "warn" | "fail"
 type Result = {
   role: Role
@@ -473,6 +536,10 @@ async function captureRoute(
     await page.screenshot({ path: resolve(process.cwd(), file), fullPage: true })
     shots.push({ file })
 
+    for (const signal of await emptinessSignals(page)) {
+      problems.add(`${EMPTY_PREFIX}${signal}`)
+    }
+
     for (const state of route.states ?? []) {
       try {
         const applied = await state.apply(page)
@@ -484,6 +551,10 @@ async function captureRoute(
         const stateFile = `${outDir}/${role}/${slug}/${viewport}--${state.name}.png`
         await page.screenshot({ path: resolve(process.cwd(), stateFile), fullPage: true })
         shots.push({ file: stateFile, state: state.name })
+
+        for (const signal of await emptinessSignals(page)) {
+          problems.add(`${EMPTY_PREFIX}«${state.name}»: ${signal}`)
+        }
       } catch (err) {
         problems.add(`состояние «${state.name}»: ${(err as Error).message.split("\n")[0]}`)
       }
@@ -672,12 +743,23 @@ async function main() {
 
   const failed = results.filter((r) => r.status === "fail")
   const warned = results.filter((r) => r.status === "warn")
+  const empty = results.filter((r) => r.problems.some((p) => p.startsWith(EMPTY_PREFIX)))
   const shots = results.reduce((n, r) => n + r.shots.length, 0)
   console.log(
     `\nСнято ${shots} скринов. Роут-вьюпортов: ok ${results.length - failed.length - warned.length}, ` +
       `warn ${warned.length}, fail ${failed.length} из ${results.length}. ` +
       `Манифест: ${args.outDir}/manifest.json`
   )
+  if (empty.length > 0) {
+    console.log(
+      `Снято ПУСТЫМИ: ${empty.length} роут-вьюпортов — ` +
+        "такой скрин не доказательство, экран считается непроверенным (docs/ui-audit.md, приёмка волн):"
+    )
+    for (const r of empty) {
+      const why = r.problems.filter((p) => p.startsWith(EMPTY_PREFIX)).join("; ")
+      console.log(`  · ${r.role} ${r.path} @${r.viewport} — ${why.slice(EMPTY_PREFIX.length)}`)
+    }
+  }
   if (failed.length + warned.length > 0) {
     console.log("Здесь ничего не чиним — находки уходят в docs/baseline-issues.md")
   }

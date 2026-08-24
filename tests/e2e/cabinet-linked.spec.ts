@@ -206,12 +206,13 @@ test.describe.serial("связанные профили", () => {
       return (await response.json()).data?.totalStreams ?? 0
     }
 
-    // Сид: свои 1500 + привязанного 300 + коллаб 700 ОДИН раз (это один человек
-    // под двумя именами) = 2500. 3200 означало бы двойной счёт.
-    expect(await totalFor("")).toBe(2500)
+    // Сид: свои 1500 + свежий ряд 1400 (B-12) + привязанного 300 + коллаб 700
+    // ОДИН раз (это один человек под двумя именами) = 3900. На 700 больше
+    // означало бы двойной счёт коллаба.
+    expect(await totalFor("")).toBe(3900)
 
-    // Только главный: свои 1500 + коллаб 700.
-    expect(await totalFor(`&profileId=${USERS.main.id}`)).toBe(2200)
+    // Только главный: свои 1500 + свежие 1400 + коллаб 700.
+    expect(await totalFor(`&profileId=${USERS.main.id}`)).toBe(3600)
 
     // Только привязанный: свои 300 + коллаб 700.
     expect(await totalFor(`&profileId=${USERS.linked.id}`)).toBe(1000)

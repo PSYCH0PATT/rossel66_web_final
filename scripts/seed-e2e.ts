@@ -10,6 +10,8 @@ import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
 import { loadTestEnvFiles, requireTestDatabaseUrl } from "../tests/support/env"
+// Чистая функция без импортов — тянуть её сюда безопасно даже до loadTestEnvFiles.
+import { mskDateString } from "../lib/msk-date"
 
 loadTestEnvFiles()
 const url = requireTestDatabaseUrl()
@@ -98,12 +100,59 @@ const analytics = (
   artistId,
 })
 
-/** Дата за N дней до сегодняшнего дня — без времени, как в выгрузках flash. */
+/**
+ * Дата за N дней до сегодняшнего МОСКОВСКОГО дня, в UTC-полночь.
+ *
+ * Почему скользящая, а не прибитая к календарю (B-12, docs/backlog.md): окно
+ * графика — календарное, «последние 30 дней от now()», и таким оно и должно
+ * остаться. Считать окно от последней имеющейся строки было бы удобнее для
+ * стенда и вредно для боя: при сломанном импорте flash график всё равно
+ * выглядел бы полным, и лаг данных (F-18: «обновлено 19 авг», график кончается
+ * 13.08) стало бы не видно вовсе. Пустое окно — честный сигнал, что данные не
+ * приехали. Поэтому подстраивается сид, а не продукт: даты считаются от дня
+ * сидирования, и стенд попадает в окно, когда бы его ни подняли.
+ *
+ * UTC-полночь именно того же московского дня, потому что границы окна
+ * приходят строками «YYYY-MM-DD» и парсятся как UTC-полночь
+ * (lib/flash-storage.ts): так строка за сегодня попадает в `lte endDate` при
+ * любом часовом поясе машины.
+ *
+ * Контрактные строки (e2e-sa-*) остаются прибитыми к 2026-06-15: на них
+ * завязаны точные агрегаты в тестах с фиксированным окном 2026-06-01…30,
+ * скользящие даты сделали бы эти проверки зависимыми от дня прогона.
+ */
 const daysAgo = (n: number) => {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - n)
-  return d
+  const shifted = new Date(Date.now() - n * 24 * 60 * 60 * 1000)
+  return new Date(`${mskDateString(shifted)}T00:00:00.000Z`)
+}
+
+/**
+ * Свежий ряд самого E2E Main: 4 трека × 14 дней × 25 стримов = ровно 1400.
+ *
+ * Без него кабинет артиста снимался пустым («Нет данных аналитики», «Нет
+ * данных») — его контрактные строки прибиты к 2026-06-15 и в окно «последние
+ * 30 дней» не попадают. Прибитые строки трогать нельзя: на них завязаны точные
+ * агрегаты с фиксированным окном 2026-06-01…30. Поэтому свежесть добавляется
+ * отдельным рядом, а контрактные суммы БЕЗ окна выросли ровно на 1400 —
+ * см. tests/integration/reports-money.test.ts и tests/e2e/cabinet-linked.spec.ts.
+ *
+ * Половина треков платные, половина бесплатные: иначе на экране артиста
+ * пустует блок «Платные / Бесплатные».
+ */
+function freshMainArtistAnalytics() {
+  const rows = []
+  for (let track = 0; track < 4; track++) {
+    const n = String(track + 1).padStart(2, "0")
+    for (let day = 0; day < 14; day++) {
+      rows.push({
+        ...analytics(`e2e-sa-main-fresh-${n}-${day}`, "E2E Main", "e2e-main-id", 25, `E2EFRSH00${n}`),
+        date: daysAgo(day),
+        dsp: CATALOG_DSPS[(track + day) % CATALOG_DSPS.length],
+        length: track % 2 === 0 ? CATALOG_LENGTHS[0] : CATALOG_LENGTHS[1],
+      })
+    }
+  }
+  return rows
 }
 
 const CATALOG_DSPS = ["Spotify", "Яндекс Музыка", "ВК Музыка", "МТС Музыка"] as const
@@ -240,6 +289,7 @@ async function main() {
       // Имя намеренно вне групп E2E Main/Linked, artistId пустой: контрактные
       // агрегаты 1500 / 2200 / 2500 считаются по артисту и сюда не заглядывают.
       ...catalogAnalytics(),
+      ...freshMainArtistAnalytics(),
     ],
   })
 
@@ -317,6 +367,65 @@ async function main() {
     ],
   })
 
+  // Лента событий: B-12 — сид чистил Activity и ничего не заводил, поэтому
+  // и дашборд, и журнал снимались с «Событий пока нет». Типы взяты те же, что
+  // показывает вид «Главное» (0-б): плейлисты, подписания, поломки.
+  // activity-feed.test.ts чистит таблицу сам, так что этим строкам он не мешает.
+  await prisma.activity.createMany({
+    data: [
+      {
+        id: "e2e-act-playlist-1",
+        type: "playlist_found",
+        userId: "e2e-main-id",
+        userRole: "artist",
+        title: "Добавлен плейлист",
+        description: "«E2E Main Playlist One» · Spotify",
+        metadata: { artistId: "e2e-main-id", playlistName: "E2E Main Playlist One" },
+        createdAt: daysAgo(0),
+      },
+      {
+        id: "e2e-act-playlist-2",
+        type: "parser_playlist_found",
+        userId: "system",
+        userRole: "admin",
+        title: "Добавлен плейлист",
+        description: "«E2E Linked Playlist» · Spotify",
+        metadata: { artistId: "e2e-linked-id", playlistName: "E2E Linked Playlist" },
+        createdAt: daysAgo(1),
+      },
+      {
+        id: "e2e-act-report-1",
+        type: "report_status_changed",
+        userId: "e2e-main-id",
+        userRole: "artist",
+        title: "Отчёт подписан",
+        description: "Q1 2026 · E2E Main",
+        metadata: { artistId: "e2e-main-id", quarter: "Q1 2026" },
+        createdAt: daysAgo(2),
+      },
+      {
+        id: "e2e-act-report-2",
+        type: "report_status_changed",
+        userId: "e2e-linked-id",
+        userRole: "artist",
+        title: "Артист ознакомился с отчётом",
+        description: "Q4 2025 · E2E Linked",
+        metadata: { artistId: "e2e-linked-id", quarter: "Q4 2025" },
+        createdAt: daysAgo(3),
+      },
+      {
+        id: "e2e-act-error-1",
+        type: "parser_error",
+        userId: "system",
+        userRole: "admin",
+        title: "Парсинг не прошёл",
+        description: "Zvonko Parser: страница 3 не ответила",
+        metadata: { parser: "zvonko" },
+        createdAt: daysAgo(4),
+      },
+    ],
+  })
+
   // История плейлистов: B-12 — без записей экран /playlists/history всегда
   // показывал пустое состояние, и проверить его фильтры было нечем.
   await prisma.playlistHistory.deleteMany({})
@@ -381,6 +490,7 @@ async function main() {
     релизов: await prisma.release.count(),
     плейлистов: await prisma.playlist.count(),
     "записей истории плейлистов": await prisma.playlistHistory.count(),
+    "событий в журнале": await prisma.activity.count(),
   }
   console.log("Готово:", counts)
   await prisma.$disconnect()
