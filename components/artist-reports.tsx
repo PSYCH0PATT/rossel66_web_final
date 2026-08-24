@@ -8,7 +8,6 @@ import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
 import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -296,7 +295,6 @@ export default function ArtistReports({
         </div>
       )}
 
-      <DashboardFooter role="artist" />
       </div>
 
       <Dialog open={previewReportId !== null} onOpenChange={(open) => !open && handleClosePreview()}>

@@ -244,8 +244,9 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
       // стали видами объединённого экрана «Отчёты» — отдельных пунктов у них
       // больше нет, роуты остались редиректами ради закладок.
       { href: "/dashboard/admin/reports", label: "Отчёты" },
+      // 0-в п.3: у сервисных экранов нет самостоятельных входов — «История
+      // плейлистов» достижима ghost-ссылкой из тулбара самих плейлистов.
       { href: "/dashboard/admin/playlists", label: "Плейлисты" },
-      { href: "/dashboard/admin/playlists/history", label: "История плейлистов" },
       { href: "/dashboard/admin/analytics", label: "Аналитика" },
       { href: "/dashboard/admin/activity", label: "Активность" },
     ],

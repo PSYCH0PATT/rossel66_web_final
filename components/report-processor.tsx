@@ -359,10 +359,13 @@ export default function ReportProcessor() {
             </div>
 
             {/* Кнопка обработки */}
-            <Button 
-              type="submit" 
+            {/* C-02/F-28: единственная filled экрана и честный disabled из кита —
+                полупрозрачный ярко-зелёный раньше читался как активная кнопка. */}
+            <Button
+              type="submit"
+              variant="cta"
               disabled={processing || !file || !quarter}
-              className="w-full"
+              className="w-full rounded-lg"
             >
               {processing ? (
                 <>

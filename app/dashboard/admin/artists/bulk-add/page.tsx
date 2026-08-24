@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/data-table"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 import { DEFAULT_BULK_ARTIST_NAMES, planBulkArtistAdd } from "@/lib/bulk-artist-add"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 export default function BulkAddArtistsPage() {
   const router = useRouter()
@@ -165,15 +164,9 @@ export default function BulkAddArtistsPage() {
     <>
     <div className="space-y-8">
         <PageHeader
-          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
           backHref="/dashboard/admin/artists"
           title="Массовое добавление"
           subtitle="Создание нескольких артистов по списку имён"
-          actions={
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary" aria-hidden>groups</span>
-            </div>
-          }
         />
 
         {error && <Banner variant="danger">{error}</Banner>}
@@ -326,7 +319,7 @@ export default function BulkAddArtistsPage() {
                 variant="cta"
                 onClick={addAllArtists}
                 className="rounded-lg"
-                disabled={isAdding}
+                disabled={isAdding || artistNames.length === 0}
               >
                 {isAdding ? (
                   <>
@@ -344,7 +337,6 @@ export default function BulkAddArtistsPage() {
           </div>
         </div>
 
-        <DashboardFooter />
       </div>
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

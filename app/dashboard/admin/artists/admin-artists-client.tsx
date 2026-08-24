@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
 import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -9,11 +10,10 @@ import { FilterChip } from "@/components/ui/filter-chip"
 import { PageHeader } from "@/components/ui/page-header"
 import { Pagination } from "@/components/ui/pagination"
 import { SearchInput } from "@/components/ui/search-input"
+import { Toolbar } from "@/components/ui/toolbar"
 import { Spinner } from "@/components/ui/spinner"
-import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge } from "@/components/ui/status-badge"
 import type { AdminArtistItem } from "@/lib/cached-dashboard"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import {
   ARTIST_REPORT_FIELD_LABELS,
   getArtistReportMissingFields,
@@ -153,74 +153,35 @@ export default function AdminArtistsClient() {
                 : `Неподтверждённые: ${stats.unverified} из ${stats.all}`
         }
         actions={
-          <>
-            <Button
-              asChild
-              variant="outline"
-              className="gap-2 rounded-lg border-white/10 bg-transparent px-3 py-2 font-mono text-xs uppercase tracking-widest text-gray-500 hover:bg-transparent hover:text-primary"
-            >
-              <Link href="/dashboard/admin/artists/bulk-add">
-                <span className="material-symbols-outlined text-lg" aria-hidden>group_add</span>
-                <span className="hidden sm:inline">Массовое добавление</span>
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="cta"
-              className="gap-2 rounded-lg px-4 py-2.5 text-xs uppercase tracking-wider"
-            >
-              <Link href="/dashboard/admin/artists/add">
-                <span className="material-symbols-outlined text-lg" aria-hidden>person_add</span>
-                <span className="hidden sm:inline">Добавить артиста</span>
-              </Link>
-            </Button>
-          </>
+          /* 0-в/0-г: обоими входами не пользуются (владелец, п.11) — уходят в
+             «Ещё», filled снят. На экране не остаётся ни одной filled-кнопки,
+             и это норма: primary здесь — поиск и карточки. */
+          <ActionMenu kind="more">
+            <ActionMenuItem asChild icon="person_add" description="Аккаунт и профиль вручную">
+              <Link href="/dashboard/admin/artists/add">Добавить артиста</Link>
+            </ActionMenuItem>
+            <ActionMenuItem asChild icon="group_add" description="Пачкой, по списку имён">
+              <Link href="/dashboard/admin/artists/bulk-add">Массовое добавление</Link>
+            </ActionMenuItem>
+          </ActionMenu>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <StatCard
-          className="border border-white/5 p-6"
-          label="Всего"
-          value={stats.all}
-        />
-        {/* Значение белое: в прежней разметке text-primary перебивался
-            text-white, и карточка рендерилась белой — сохраняем как было. */}
-        <StatCard
-          className="border border-white/5 p-6"
-          label="Подтверждены"
-          value={stats.verified}
-        />
-        <StatCard
-          className="border border-white/5 p-6"
-          label="Новые"
-          value={<span className="text-yellow-400">{stats.unverified}</span>}
-        />
-      </div>
+      {/* 1.6: три StatCard «Всего / Подтверждены / Новые» удалены — они
+          повторяли числа фильтр-чипов один в один (вопрос №4 закрыт владельцем);
+          сами числа остались в чипах ниже. */}
 
-      <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6 items-stretch sm:items-end justify-between">
+      {/* 0-г: primary экрана — поиск, поэтому он первый и широкий. */}
+      <Toolbar className="mb-6 items-stretch gap-4 sm:flex-wrap sm:items-end sm:overflow-x-visible">
         <SearchInput
           value={q}
           onValueChange={setQ}
           placeholder="Поиск по имени или username…"
-          containerClassName="max-w-md w-full"
+          containerClassName="w-full min-w-0 flex-1 sm:max-w-xl"
           spellCheck={false}
           autoComplete="off"
         />
-        <Pagination
-          className="justify-end gap-2"
-          page={page}
-          total={total}
-          pageSize={pageSize}
-          loading={loading}
-          itemForms={["артист", "артиста", "артистов"]}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size as 20 | 50 | 100)
-            setPage(1)
-          }}
-        />
-      </div>
+      </Toolbar>
 
       <div className="flex flex-wrap gap-2 mb-8">
         {(
@@ -400,8 +361,9 @@ export default function AdminArtistsClient() {
             />
           )}
 
-          {/* Навигация и счётчик — один Pagination на экран (C-06, F-27):
-              верхний блок задаёт размер страницы, нижний листает. */}
+          {/* C-06/F-27: счётчик, «на странице» и навигация — ОДИН Pagination
+              на экран. Верхний блок с тем же счётчиком убран вместе с
+              переездом поиска в Toolbar. */}
           <Pagination
             className="pt-4"
             page={page}
@@ -410,11 +372,14 @@ export default function AdminArtistsClient() {
             loading={loading}
             itemForms={["артист", "артиста", "артистов"]}
             onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size as 20 | 50 | 100)
+              setPage(1)
+            }}
           />
         </>
       )}
 
-      <DashboardFooter />
     </div>
   )
 }

@@ -21,7 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge"
 import { formatDateRu } from "@/lib/format-date"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface HistoryRecord {
   id: string
@@ -164,10 +163,21 @@ export default function PlaylistHistoryPage() {
     })
   }
 
+  /** Фильтры «тронуты» — значит пустой список это результат поиска, а не пустой экран. */
+  const hasActiveFilters =
+    filters.startDate !== "" ||
+    filters.endDate !== "" ||
+    filters.changeType !== "all" ||
+    filters.artistName !== "" ||
+    filters.playlistUrl !== ""
+
   return (
     <div className="space-y-8">
         <PageHeader title="История плейлистов" subtitle="Изменения из SFTP и синхронизаций" />
 
+        {/* C-14/F-41: пока записей нет и фильтры не тронуты, показывать блок из
+            пяти полей незачем — экран открывается пустым состоянием. */}
+        {(history.length > 0 || hasActiveFilters || loading) && (
         <div className="card-glass rounded-2xl border border-white/5 p-6">
           <SectionHeader
             className="mb-6"
@@ -235,13 +245,13 @@ export default function PlaylistHistoryPage() {
             </FormField>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            {/* F-20: «Обновить» одного вида на всех экранах админки */}
+            {/* F-20: «Обновить» одного вида на всех экранах админки — ghost. */}
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => void loadHistory()}
               disabled={loading}
-              className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
+              className="rounded-lg text-gray-400 hover:text-white"
             >
               <span className={`material-symbols-outlined text-lg mr-1 ${loading ? "motion-safe:animate-spin" : ""}`}>
                 refresh
@@ -253,6 +263,7 @@ export default function PlaylistHistoryPage() {
             </Button>
           </div>
         </div>
+        )}
 
         <div className="card-glass rounded-2xl border border-white/5 p-6">
           {/* F-59: полосы секций экрана одного цвета */}
@@ -345,7 +356,6 @@ export default function PlaylistHistoryPage() {
           )}
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

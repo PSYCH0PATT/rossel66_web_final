@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface Track {
   title: string
@@ -185,18 +184,46 @@ export default function AddReleasePage() {
 
   return (
     <div className="space-y-8">
+        {/* F-32: primary экрана — в слоте actions шапки, как в карточке релиза;
+            «Отмена» рядом ghost-ом. Кнопка вне формы связана с ней по id. */}
         <PageHeader
           backHref="/dashboard/admin/releases"
           title="Добавить релиз"
           subtitle="Заполните карточку релиза, обложку и треклист. UPC — 12 цифр."
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => router.push("/dashboard/admin/releases")}
+                className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                disabled={isSubmitting}
+              >
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                form="release-add-form"
+                variant="cta"
+                className="rounded-lg"
+                disabled={isSubmitting}
+              >
+                <span className="material-symbols-outlined text-lg" aria-hidden>add</span>
+                {isSubmitting ? "Создание..." : "Создать релиз"}
+              </Button>
+            </>
+          }
         />
 
         {error && <Banner variant="danger">{error}</Banner>}
 
         {success && <Banner variant="success">Релиз успешно создан. Перенаправление...</Banner>}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* C-18: одна колонка читаемой ширины — поля во всю ширину экрана
+            читаются хуже, чем прежняя сетка. */}
+        <form id="release-add-form" onSubmit={handleSubmit} className="max-w-3xl space-y-8">
+          {/* C-18/F-10: одна колонка — вторая половина сетки пустовала. */}
+          <div className="grid grid-cols-1 gap-6">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
               <SectionHeader
@@ -311,7 +338,7 @@ export default function AddReleasePage() {
                   accept="image/*"
                   onChange={handleCoverChange}
                   buttonLabel="Загрузить обложку"
-                  buttonVariant="cta"
+                  buttonVariant="outline"
                   icon="upload"
                   showFileName={false}
                 />
@@ -334,7 +361,7 @@ export default function AddReleasePage() {
                   </>
                 }
               />
-              <Button type="button" onClick={addTrack} variant="cta" size="sm" className="rounded-lg">
+              <Button type="button" onClick={addTrack} variant="outline" size="sm" className="rounded-lg border-white/15 text-gray-200 hover:bg-white/5">
                 <span className="material-symbols-outlined text-lg">add</span>
                 Добавить трек
               </Button>
@@ -394,23 +421,8 @@ export default function AddReleasePage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 flex-wrap">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/dashboard/admin/releases")}
-              className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary"
-              disabled={isSubmitting}
-            >
-              Отмена
-            </Button>
-            <Button type="submit" variant="cta" className="rounded-lg" disabled={isSubmitting}>
-              {isSubmitting ? "Создание..." : "Создать релиз"}
-            </Button>
-          </div>
         </form>
 
-        <DashboardFooter />
       </div>
     )
 }

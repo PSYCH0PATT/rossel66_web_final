@@ -13,7 +13,6 @@ import { Banner } from "@/components/ui/banner"
 import { FileInput } from "@/components/ui/file-input"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { PLATFORM_ICONS } from "@/lib/platform-icon"
 
 const inputClass =
@@ -151,15 +150,9 @@ export default function AddArtistPage() {
   return (
     <div className="space-y-8">
         <PageHeader
-          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
           backHref="/dashboard/admin/artists"
           title="Добавить артиста"
           subtitle="Создание аккаунта и профиля в системе"
-          actions={
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary" aria-hidden>person_add</span>
-            </div>
-          }
         />
 
         {error && <Banner variant="danger">{error}</Banner>}
@@ -170,8 +163,10 @@ export default function AddArtistPage() {
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
           <SectionHeader className="mb-6" size="sm" title="Информация об артисте" />
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* C-18/F-10: одна колонка читаемой ширины. Раньше правая половина
+              сетки держала только аватар и пустела на пол-экрана. */}
+          <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+            <div className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-xs font-mono uppercase text-gray-400">
@@ -305,14 +300,14 @@ export default function AddArtistPage() {
                   <Label htmlFor="avatar-upload" className="text-xs font-mono uppercase text-gray-400">
                     Аватар
                   </Label>
-                  <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02] hover:border-primary/30 motion-safe:transition-colors">
+                  <div className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-4 hover:border-primary/30 motion-safe:transition-colors">
                     {avatarPreview ? (
-                      <div className="relative w-32 h-32 mb-4 rounded-full border border-primary/50 overflow-hidden">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-primary/50">
                         <Image src={avatarPreview || "/placeholder.svg"} alt="" fill className="object-cover" />
                       </div>
                     ) : (
-                      <div className="w-32 h-32 mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-6xl text-gray-500">person</span>
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                        <span className="material-symbols-outlined text-4xl text-gray-500">person</span>
                       </div>
                     )}
                     <FileInput
@@ -321,67 +316,28 @@ export default function AddArtistPage() {
                       onChange={handleAvatarChange}
                       icon="upload"
                       buttonLabel="Загрузить аватар"
-                      buttonClassName="gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-black hover:bg-primary/90"
+                      buttonVariant="outline"
+                      buttonClassName="gap-2 rounded-lg border-white/15 px-4 py-2 text-gray-200 hover:bg-white/5"
                       showFileName={false}
                     />
-                    <p className="text-xs text-gray-500 mt-2">Рекомендуемый размер: 256×256 px</p>
+                    <p className="text-xs text-gray-500">Рекомендуемый размер: 256×256 px</p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <h3 className="text-sm font-medium text-white mb-2">Что будет создано</h3>
-                  <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
-                    <li>Аккаунт артиста с доступом в личный кабинет</li>
-                    <li>Папка для хранения обложек релизов и плейлистов</li>
-                    <li>Excel-таблица для отслеживания релизов и треков</li>
-                    <li>Структура данных для отчётов и выплат</li>
-                    <li>Профили в музыкальных сервисах (если указаны)</li>
-                  </ul>
-                </div>
 
-                <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <h3 className="text-sm font-medium text-white mb-2">Профили в сервисах</h3>
-                  <p className="text-xs text-gray-500 mb-3">Ссылки отображаются на странице артиста.</p>
-                  <div className="space-y-2">
-                    {vkMusicUrl && (
-                      <a
-                        href={vkMusicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        ВК Музыка
-                      </a>
-                    )}
-                    {yandexMusicUrl && (
-                      <a
-                        href={yandexMusicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        Яндекс Музыка
-                      </a>
-                    )}
-                    {spotifyUrl && (
-                      <a
-                        href={spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        Spotify
-                      </a>
-                    )}
-                    {!vkMusicUrl && !yandexMusicUrl && !spotifyUrl && (
-                      <p className="text-xs text-gray-500 font-mono">Нет добавленных профилей</p>
-                    )}
-                  </div>
-                </div>
               </div>
+            </div>
+
+            {/* 2.9: справка — ниже формы, а не рядом с полями (C-18). */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <h3 className="mb-2 text-sm font-medium text-white">Что будет создано</h3>
+              <ul className="list-inside list-disc space-y-1 text-xs text-gray-500">
+                <li>Аккаунт артиста с доступом в личный кабинет</li>
+                <li>Папка для хранения обложек релизов и плейлистов</li>
+                <li>Excel-таблица для отслеживания релизов и треков</li>
+                <li>Структура данных для отчётов и выплат</li>
+                <li>Профили в музыкальных сервисах (если указаны)</li>
+              </ul>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -406,7 +362,6 @@ export default function AddArtistPage() {
           </form>
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

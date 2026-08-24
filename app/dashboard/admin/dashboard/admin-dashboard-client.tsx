@@ -2,15 +2,13 @@
 
 import Link from "next/link"
 import { useMemo } from "react"
-import { useRouter } from "next/navigation"
 import { ActivityFeed } from "@/components/activity-feed"
 import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
 import type { AdminDashboardPayload } from "@/lib/cached-dashboard"
-import { formatRubExact, formatRubKpiShort } from "@/lib/format-dashboard-rub"
+// C-16/F-16: суммы кабинета — через formatMoney, всегда с «₽» (вердикт 1.1).
+import { formatMoney, formatMoneyShort } from "@/lib/format-money"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DashboardFooter } from "@/components/dashboard-footer"
-import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader, SectionHeaderLink } from "@/components/ui/section-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -43,8 +41,6 @@ export default function AdminDashboardClient({
   streamWindowDays,
   initialActivities,
 }: Props) {
-  const router = useRouter()
-
   const metrics = useMemo(() => {
     const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
     const pendingPayments = payments.filter((p) => !p.isPaid).length
@@ -60,38 +56,20 @@ export default function AdminDashboardClient({
   }, [artistCount, releaseCount, reportCount, pendingReleases, payments])
 
   return (
-    <div className="space-y-8">
+    /* 0-д п.3: на desktop дашборд помещается в один экран — высота страницы
+       равна вьюпорту за вычетом полей шелла, а лента и график делят остаток
+       (Friction 1.1: «график ниже фолда», C-18). Ниже xl — обычный поток. */
+    <div className="flex flex-col gap-8 xl:h-[calc(100vh-5.5rem)]">
+      {/* 0-д п.2: «Обновить данные» и метка «Обновлено …» убраны — на read-only
+          обзоре действий нет вовсе (0-г), а страница и так перезапрашивается. */}
       <PageHeader
         title="ГЛАВНАЯ"
         subtitle="Панель управления лейблом. Обзор текущих метрик и недавней активности."
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.refresh()}
-              className="h-11 rounded-lg border-white/10 bg-transparent px-3 font-mono text-xs uppercase tracking-widest text-gray-500 hover:bg-transparent hover:text-primary"
-            >
-              Обновить данные
-            </Button>
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-500 font-mono uppercase">Обновлено</p>
-              <p className="text-white font-mono text-sm">
-                {new Date().toLocaleString("ru-RU", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-          </>
-        }
       />
 
       <TooltipProvider delayDuration={200}>
       {/* DS10/DS2: та же сетка и плотность, что у артиста — было grid-cols-1 и gap-6 на мобильном */}
-      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-12">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           label="Артисты"
           value={metrics.artistCount}
@@ -126,14 +104,14 @@ export default function AdminDashboardClient({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default whitespace-nowrap">
-                  {formatRubKpiShort(metrics.totalPayments)}
+                  {formatMoneyShort(metrics.totalPayments)}
                 </span>
               </TooltipTrigger>
               <TooltipContent
                 side="top"
                 className="z-[250] max-w-xs border border-white/10 bg-surface-dialog/[0.96] px-3 py-2 text-xs font-mono text-white shadow-lg"
               >
-                {formatRubExact(metrics.totalPayments)}
+                {formatMoney(metrics.totalPayments)}
               </TooltipContent>
             </Tooltip>
           }
@@ -141,8 +119,8 @@ export default function AdminDashboardClient({
       </div>
       </TooltipProvider>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
-        <div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-8 xl:grid-cols-2">
+        <div className="flex min-h-0 flex-col">
           <SectionHeader
             className="mb-6"
             title="ПОСЛЕДНЯЯ АКТИВНОСТЬ"
@@ -152,7 +130,7 @@ export default function AdminDashboardClient({
               </SectionHeaderLink>
             }
           />
-          <div className="card-glass rounded-2xl overflow-hidden border border-white/5">
+          <div className="card-glass min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/5">
             <ActivityFeed role="admin" limit={5} initialActivities={initialActivities} />
           </div>
         </div>
@@ -176,13 +154,12 @@ export default function AdminDashboardClient({
             }
           />
 
-          <div className="card-glass rounded-2xl flex-1 border border-white/5 p-8 flex flex-col relative min-h-[360px]">
+          <div className="card-glass relative flex min-h-0 flex-1 flex-col rounded-2xl border border-white/5 p-4 xl:p-6">
             <StreamingChart days={streamWindowDays} initialStreamsByDay={initialStreamsByDay} />
           </div>
         </div>
       </div>
 
-      <DashboardFooter />
     </div>
   )
 }

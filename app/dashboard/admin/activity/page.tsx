@@ -34,7 +34,6 @@ import { listSkeletonCount } from "@/lib/list-skeleton"
 import type { ActivityType } from "@/lib/storage"
 import type { ActivityView } from "@/lib/activity-views"
 import { activityActorLabel } from "@/lib/activity-log"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 /**
  * Виды журнала — решение 0-б (docs/ia-decisions.md). Прежние шесть категорий
@@ -548,7 +547,6 @@ export default function AdminActivityPage() {
           )}
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

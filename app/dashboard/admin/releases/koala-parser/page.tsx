@@ -12,12 +12,12 @@ import {
   DataTableHeadRow,
   DataTableRow,
 } from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
 import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface ParseStats {
   total: number
@@ -150,8 +150,9 @@ export default function KoalaParserPage() {
     
       <div className="space-y-8">
         {/* F-36: шапка парсера — один шаблон с zvonko-parser */}
+        {/* F-60/0-д п.3: имя парсера одно и то же в навигации, меню «Сервис» и H1. */}
         <PageHeader
-          title="Koala Music Parser"
+          title="Koala Parser"
           subtitle="Импорт релизов из Koala Music: статус последнего запуска и таблица последних записей."
           actions={
             <Button onClick={() => void runParser()} disabled={isRunning} variant="cta" className="rounded-lg">
@@ -242,7 +243,19 @@ export default function KoalaParserPage() {
           </Banner>
         )}
 
-        {lastReleases.length > 0 && (
+        {/* F-34/C-14: подзаголовок обещает таблицу последних записей — при нуле
+            вместо неё было пусто, теперь честное пустое состояние. */}
+        {lastReleases.length === 0 ? (
+          <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+            <SectionHeader className="mb-1" title="Последние спарсенные релизы" />
+            <EmptyState
+              className="py-8"
+              icon="database"
+              title="Пока нечего показать"
+              description="Записи появятся после первого запуска парсера"
+            />
+          </div>
+        ) : (
           <div className="card-glass rounded-2xl border border-white/5 p-0 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <div className="p-6 md:p-8 pb-0">
@@ -305,7 +318,6 @@ export default function KoalaParserPage() {
           </div>
         )}
 
-        <DashboardFooter />
       </div>
     )
 }

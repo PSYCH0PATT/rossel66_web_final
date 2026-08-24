@@ -31,7 +31,6 @@ import {
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 import { fetchAllArtistsFromApi } from "@/lib/fetch-all-artists"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface Backup {
   id: string
@@ -334,7 +333,9 @@ export default function AdminSettingsPage() {
           </Banner>
         )}
 
-        <div className="grid grid-cols-1 md:max-w-md gap-6">
+        {/* C-18/F-10: секции идут в один ряд — раньше карточка пароля занимала
+            треть ширины, а справа от неё было пусто. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
           <div className="card-glass rounded-2xl border border-white/5 p-6">
             {/* F-59: полосы секций одного цвета — раньше азур и зелёный без логики */}
             <SectionHeader
@@ -378,12 +379,17 @@ export default function AdminSettingsPage() {
                   autoComplete="new-password"
                 />
               </FormField>
-              <Button type="button" onClick={handlePasswordChange} variant="cta" className="w-full rounded-lg">
+              {/* 0-г/C-03: экран редкий — submit'ы здесь outline, filled нет ни одной. */}
+              <Button
+                type="button"
+                onClick={handlePasswordChange}
+                variant="outline"
+                className="w-full rounded-lg border-white/15 text-gray-200 hover:bg-white/5"
+              >
                 Обновить пароль
               </Button>
             </div>
           </div>
-        </div>
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
           <SectionHeader
@@ -400,7 +406,12 @@ export default function AdminSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-mono uppercase text-gray-500">Резервное копирование</Label>
-                <Button type="button" onClick={handleCreateBackup} variant="cta" className="w-full rounded-lg">
+                <Button
+                  type="button"
+                  onClick={handleCreateBackup}
+                  variant="outline"
+                  className="w-full rounded-lg border-white/15 text-gray-200 hover:bg-white/5"
+                >
                   <span className="material-symbols-outlined text-lg mr-2">save</span>
                   Создать бэкап
                 </Button>
@@ -425,9 +436,9 @@ export default function AdminSettingsPage() {
                 <Button
                   type="button"
                   onClick={loadBackups}
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="rounded-lg border-white/15 text-gray-400 hover:bg-white/5"
+                  className="rounded-lg text-gray-400 hover:text-white"
                 >
                   <span className="material-symbols-outlined text-base mr-1">refresh</span>
                   Обновить
@@ -518,8 +529,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         </div>
-
-        <DashboardFooter />
+        </div>
       </div>
 
       <Dialog open={!!restoreTarget} onOpenChange={(o) => !o && setRestoreTarget(null)}>

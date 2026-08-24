@@ -7,7 +7,6 @@ import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Button } from "@/components/ui/button"
 import {
   DataTable,
@@ -163,7 +162,6 @@ export default async function ArtistPlaylistDetailPage({
         )}
       </div>
 
-      <DashboardFooter role="artist" />
       </div>
     )
 }

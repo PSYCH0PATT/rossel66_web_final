@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Button } from "@/components/ui/button"
 import {
   DataTable,
@@ -297,7 +296,6 @@ export default function ArtistReleaseDetailPage({ params }: { params: { username
         </div>
       </div>
 
-      <DashboardFooter role="artist" />
     </div>
   )
 }

@@ -17,7 +17,6 @@ import { FileInput } from "@/components/ui/file-input"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { ArtistAdvances } from "@/components/artist-advances"
 import { ArtistLinkedProfiles } from "@/components/artist-linked-profiles"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -319,16 +318,12 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   return (
     
       <div className="space-y-8">
+        {/* C-01/F-24: H1 — имя артиста, действие живёт в подзаголовке.
+            F-66: декоративный квадрат в слоте actions был div без действия. */}
         <PageHeader
-          rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
           backHref="/dashboard/admin/artists"
-          title="Редактирование"
-          subtitle={name}
-          actions={
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary" aria-hidden>person</span>
-            </div>
-          }
+          title={name || username || "Артист"}
+          subtitle="Редактирование профиля"
         />
 
         {error && <Banner variant="danger">{error}</Banner>}
@@ -342,28 +337,28 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">settings</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Профиль</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Профиль</span>
             </TabsTrigger>
             <TabsTrigger
               value="releases"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">library_music</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Релизы</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Релизы</span>
             </TabsTrigger>
             <TabsTrigger
               value="reports"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">description</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Отчёты</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Отчёты</span>
             </TabsTrigger>
             <TabsTrigger
               value="payments"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">payments</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Выплаты</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Выплаты</span>
             </TabsTrigger>
           </TabsList>
 
@@ -609,7 +604,9 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                         onChange={handleAvatarChange}
                         icon="upload"
                         buttonLabel="Загрузить аватар"
-                        buttonClassName="gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-black hover:bg-primary/90"
+                        /* C-03: filled на карточке одна — «Сохранить изменения». */
+                        buttonVariant="outline"
+                        buttonClassName="gap-2 rounded-lg border-white/15 px-4 py-2 text-gray-200 hover:bg-white/5"
                         showFileName={false}
                       />
                       <p className="text-xs text-muted-foreground mt-2">Рекомендуемый размер: 256x256 пикселей</p>
@@ -691,25 +688,18 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           <TabsContent value="releases" className="space-y-4">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
               <SectionHeader className="mb-6" size="sm" title="Управление релизами" />
+                {/* F-25/F-66: обе кнопки — «Добавить релиз» и «Создать первый
+                    релиз» — были без onClick и href, то есть неработающими
+                    контролами. Удалены; заведение релиза живёт на /releases
+                    в overflow «Сервис». */}
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <p className="text-gray-400 text-sm">Здесь вы можете управлять релизами артиста</p>
-                    <Button className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg">add</span>
-                      Добавить релиз
-                    </Button>
-                  </div>
-                  
+                  <p className="text-gray-400 text-sm">Здесь вы можете управлять релизами артиста</p>
+
                   <EmptyState
                     className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8"
                     icon="library_music"
                     title="Нет релизов"
                     description="У этого артиста пока нет добавленных релизов"
-                    action={
-                      <Button variant="outline" className="rounded-lg border-primary/40 text-primary hover:bg-primary/10">
-                        Создать первый релиз
-                      </Button>
-                    }
                   />
                 </div>
             </div>
@@ -873,7 +863,6 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           </DialogContent>
         </Dialog>
 
-        <DashboardFooter />
       </div>
     )
 }

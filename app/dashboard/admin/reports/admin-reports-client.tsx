@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
 import {
   Dialog,
   DialogContent,
@@ -9,12 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { FilterChip } from "@/components/ui/filter-chip"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -32,7 +26,6 @@ import UnregisteredReportsList from "@/components/unregistered-reports-list"
 import SimpleReportUploader from "@/components/simple-report-uploader"
 import ReportProcessor from "@/components/report-processor"
 import { MissingContractBanner } from "@/components/missing-contract-banner"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 /** Виды объединённого экрана (решение 0-а + ответ №3 про генератор). */
 export type ReportsView = "all" | "pending" | "unpaid" | "unregistered" | "generator"
@@ -97,31 +90,15 @@ export default function AdminReportsClient({ initialView }: { initialView: Repor
         actions={
           /* 0-в: сервисные операции — в overflow, на поверхности экрана их нет.
              Загрузка отчётов важная, но редкая (владелец, п.11). */
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-11 rounded-lg border-white/10 bg-transparent px-3 font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
-              >
-                <span className="material-symbols-outlined text-base mr-1" aria-hidden>
-                  build
-                </span>
-                Сервис
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-60 border border-white/10 bg-black/90 backdrop-blur-xl"
+          <ActionMenu kind="service">
+            <ActionMenuItem
+              icon="upload"
+              description="Excel готового отчёта за квартал"
+              onSelect={() => setUploaderOpen(true)}
             >
-              <DropdownMenuItem onSelect={() => setUploaderOpen(true)}>
-                <span className="material-symbols-outlined text-base" aria-hidden>
-                  upload
-                </span>
-                Загрузка отчётов
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              Загрузка отчётов
+            </ActionMenuItem>
+          </ActionMenu>
         }
       />
 
@@ -211,7 +188,6 @@ export default function AdminReportsClient({ initialView }: { initialView: Repor
         </DialogContent>
       </Dialog>
 
-      <DashboardFooter />
     </div>
   )
 }

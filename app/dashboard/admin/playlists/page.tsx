@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +14,7 @@ import { FormField } from "@/components/ui/form-field"
 import { PageHeader } from "@/components/ui/page-header"
 import { PlatformBadge, PlatformDot } from "@/components/ui/platform-badge"
 import { SearchInput } from "@/components/ui/search-input"
+import { Toolbar } from "@/components/ui/toolbar"
 import { SectionHeader } from "@/components/ui/section-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
@@ -27,7 +29,6 @@ import {
 } from "@/components/ui/dialog"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 import { formatDateRu } from "@/lib/format-date"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import {
   isMtsMusicPlatform,
   isOdnoklassnikiPlatform,
@@ -674,7 +675,9 @@ export default function PlaylistsPage() {
         )}
         <PageHeader
           title="Плейлисты"
-          subtitle="Управление плейлистами из VK, МТС Музыки, Яндекс Музыки и других площадок (SFTP)."
+          /* C-16/F-45: без техжаргона — админу важно, что это плейлисты площадок,
+             а не по какому протоколу они приезжают. */
+          subtitle="Плейлисты площадок: VK, МТС Музыка, Яндекс Музыка и другие."
         />
 
         <Tabs defaultValue="playlists" className="space-y-8">
@@ -696,31 +699,21 @@ export default function PlaylistsPage() {
           </TabsList>
 
           <TabsContent value="playlists" className="space-y-8">
+            {/* 1.5: поиск, фильтр артиста и сортировки — в Toolbar; счётчик один
+                на экран (C-06/F-27), дубль «Показано: N плейлистов» убран.
+                «История» — ghost-ссылкой отсюда, отдельного пункта навигации у
+                сервисного экрана нет (0-в п.3). */}
             <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="material-symbols-outlined text-primary text-xl">filter_alt</span>
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Фильтр</span>
+              <Toolbar className="gap-3 sm:flex-wrap sm:overflow-x-visible">
                 <SearchInput
                   placeholder="Поиск плейлиста или артиста…"
                   value={playlistQuery}
                   onValueChange={handlePlaylistSearch}
-                  containerClassName="max-w-xs"
+                  containerClassName="w-full shrink-0 sm:w-72"
                 />
-                <p className="text-xs font-mono uppercase tracking-widest text-gray-500 ml-auto">
-                  Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
-                  {/* F-PARS-7: список усечён — фильтр работает поверх загруженного, честно говорим об этом */}
-                  {playlistTotal > PLAYLISTS_PAGE_TAKE && (
-                    <span
-                      className="ml-2 text-amber-400"
-                      title={`Загружены первые ${PLAYLISTS_PAGE_TAKE} записей. Уточните поиск, чтобы фильтр охватил все данные.`}
-                    >
-                      (усечено)
-                    </span>
-                  )}
-                </p>
                 <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
-                  <SelectTrigger className={`w-64 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-56 ${inputCls} h-10`}>
                     <SelectValue placeholder="Все артисты" />
                   </SelectTrigger>
                   <SelectContent>
@@ -733,10 +726,8 @@ export default function PlaylistsPage() {
                   </SelectContent>
                 </Select>
 
-                <span className="material-symbols-outlined text-accent-azure text-xl">sort</span>
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Сортировка</span>
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as "added_at" | "parsed_at")}>
-                  <SelectTrigger className={`w-48 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-48 ${inputCls} h-10`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -746,7 +737,7 @@ export default function PlaylistsPage() {
                 </Select>
 
                 <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
-                  <SelectTrigger className={`w-40 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-40 ${inputCls} h-10`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -755,10 +746,31 @@ export default function PlaylistsPage() {
                   </SelectContent>
                 </Select>
 
-                <div className="text-xs text-gray-500 font-mono ml-auto">
-                  Показано: <span className="text-white font-semibold">{totalPlaylistsCount}</span> плейлистов
-                </div>
-              </div>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                >
+                  <Link href="/dashboard/admin/playlists/history">
+                    <span className="material-symbols-outlined text-base" aria-hidden>history</span>
+                    История
+                  </Link>
+                </Button>
+
+                <p className="ml-auto shrink-0 text-xs font-mono uppercase tracking-widest text-gray-500">
+                  Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
+                  {/* F-PARS-7: список усечён — фильтр работает поверх загруженного, честно говорим об этом */}
+                  {playlistTotal > PLAYLISTS_PAGE_TAKE && (
+                    <span
+                      className="ml-2 text-amber-400"
+                      title={`Загружены первые ${PLAYLISTS_PAGE_TAKE} записей. Уточните поиск, чтобы фильтр охватил все данные.`}
+                    >
+                      (усечено)
+                    </span>
+                  )}
+                </p>
+              </Toolbar>
             </div>
 
             {/* F-86: место под карточки, пока идёт запрос */}
@@ -1001,21 +1013,6 @@ export default function PlaylistsPage() {
 
     </Tabs>
 
-        <DashboardFooter>
-          {/* DS8: было «TOTAL FOUND: N PLAYLISTS» */}
-          <div className="uppercase tracking-widest text-gray-400">
-            Найдено:{" "}
-            <span className="font-bold text-white">{vkResults.length + bandlinkResults.length}</span>{" "}
-            {(() => {
-              const n = vkResults.length + bandlinkResults.length
-              const mod10 = n % 10
-              const mod100 = n % 100
-              if (mod10 === 1 && mod100 !== 11) return "плейлист"
-              if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "плейлиста"
-              return "плейлистов"
-            })()}
-          </div>
-        </DashboardFooter>
       </div>
 
       {/* Модальное окно для привязки плейлиста к артисту */}

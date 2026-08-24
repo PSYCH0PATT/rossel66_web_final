@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { Pagination } from "@/components/ui/pagination"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import { FilterChip } from "@/components/ui/filter-chip"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
 import { Toolbar, ToolbarButton } from "@/components/ui/toolbar"
 import { SearchInput } from "@/components/ui/search-input"
 import {
@@ -87,6 +88,7 @@ const SECTIONS = [
   { id: "c-06", title: "C-06 Pagination" },
   { id: "c-07", title: "C-07 SegmentedControl + FilterChip" },
   { id: "c-08", title: "C-08 Toolbar + SearchInput" },
+  { id: "action-menu", title: "0-в ActionMenu («Сервис» / «Ещё»)" },
   { id: "c-09", title: "C-09 ChartTooltip" },
   { id: "c-10", title: "C-10 DataTable" },
   { id: "c-12", title: "C-12 Drawer (Sheet + ScrollArea)" },
@@ -476,6 +478,37 @@ export default function DevUiPage() {
               placeholder="Поиск по названию или UPC..."
               containerClassName="sm:ml-auto sm:w-72 shrink-0"
             />
+          </div>
+        </Demo>
+      </DemoSection>
+
+      {/* ----------------------------------------------------------------- */}
+      <DemoSection
+        id="action-menu"
+        title="0-в ActionMenu («Сервис» / «Ещё»)"
+        note="Все аварийные операции (парсеры, синк, CSV, привязка, bulk) живут одним пунктом меню, а не кнопками на экране. «Сервис» — починка данных, «Ещё» — редкие нейтральные действия; счётчик очереди остаётся бейджем на триггере."
+      >
+        <Demo label="Сервис со счётчиком и «Ещё»">
+          <div className="flex flex-wrap items-center gap-3">
+            <ActionMenu kind="service" count={3} countLabel="Непривязанных артистов">
+              <ActionMenuItem icon="sync" description="Забрать свежие файлы">
+                Синхронизировать
+              </ActionMenuItem>
+              <ActionMenuItem icon="upload_file" description="Ручной импорт, когда синк не прошёл">
+                Загрузить CSV
+              </ActionMenuItem>
+              <ActionMenuItem icon="link" description="Без профиля: 3">
+                Сопоставить артистов
+              </ActionMenuItem>
+            </ActionMenu>
+            <ActionMenu kind="more">
+              <ActionMenuItem icon="person_add" description="Аккаунт и профиль вручную">
+                Добавить артиста
+              </ActionMenuItem>
+              <ActionMenuItem icon="group_add" description="Пачкой, по списку имён">
+                Массовое добавление
+              </ActionMenuItem>
+            </ActionMenu>
           </div>
         </Demo>
       </DemoSection>

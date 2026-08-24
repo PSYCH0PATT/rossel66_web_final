@@ -3,7 +3,14 @@
 import { useState, useMemo, useRef } from "react"
 import { useReleasesList, revalidateReleasesLists } from "@/lib/hooks/use-dashboard-fetch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   DataTable,
   DataTableBody,
@@ -24,8 +31,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
 import { Toolbar, ToolbarButton } from "@/components/ui/toolbar"
-import { DashboardFooter } from "@/components/dashboard-footer"
-import { FOOTER_STRINGS } from "@/lib/ui-strings"
 import Image from "next/image"
 import Link from "next/link"
 import type { ReleaseListItem } from "@/lib/release-list-dto"
@@ -172,31 +177,15 @@ export default function AdminReleasesClient() {
         rowClassName="items-stretch md:items-stretch"
         meta={
           <div className="mt-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-            {/* C-08: тулбар вместо 7 raw-кнопок с цветами через style */}
+            {/* C-08 + 0-г: тулбар начинается с поиска — это primary экрана.
+                Парсеры, привязка и добавление ушли в overflow «Сервис» (0-в). */}
             <Toolbar className="flex-1">
-              <ToolbarButton asChild tone="info">
-                <Link href="/dashboard/admin/releases/zvonko-parser">
-                  <span className="material-symbols-outlined" aria-hidden>download</span>
-                  Zvonko Parser
-                </Link>
-              </ToolbarButton>
-
-              <ToolbarButton asChild tone="success">
-                <Link href="/dashboard/admin/releases/koala-parser">
-                  <span className="material-symbols-outlined" aria-hidden>sync</span>
-                  Koala Parser
-                </Link>
-              </ToolbarButton>
-
-              <ToolbarButton
-                tone="warning"
-                icon={isAssigning ? "sync" : "link"}
-                onClick={handleAssignReleasesToArtists}
-                disabled={isAssigning}
-                className={isAssigning ? "[&_.material-symbols-outlined]:animate-spin" : undefined}
-              >
-                {isAssigning ? "Привязка..." : "Привязать релизы"}
-              </ToolbarButton>
+              <SearchInput
+                value={q}
+                onValueChange={handleSearch}
+                placeholder="Поиск по названию или UPC..."
+                containerClassName="w-full min-w-0 shrink sm:max-w-sm sm:flex-1"
+              />
 
               {/* Filters */}
               <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
@@ -298,22 +287,31 @@ export default function AdminReleasesClient() {
                 </ToolbarButton>
               )}
 
-              {/* C-08: primary на 390 встаёт первым, а не в третий ряд (F-09) */}
-              <ToolbarButton asChild tone="primary" mobileFirst>
-                <Link href="/dashboard/admin/releases/add">
-                  <span className="material-symbols-outlined" aria-hidden>add</span>
-                  Добавить релиз
-                </Link>
-              </ToolbarButton>
+              {/* 0-в п.5: сервисные операции экрана — одним меню, «Привязать
+                  релизы» последним пунктом (владелец о ней не помнит). */}
+              <ActionMenu kind="service" className="ml-auto h-10 max-md:h-11">
+                <ActionMenuItem asChild icon="add" description="Когда автоимпорт не принёс">
+                  <Link href="/dashboard/admin/releases/add">Добавить релиз</Link>
+                </ActionMenuItem>
+                <ActionMenuItem asChild icon="download" description="Импорт из Zvonko Digital">
+                  <Link href="/dashboard/admin/releases/zvonko-parser">Zvonko Parser</Link>
+                </ActionMenuItem>
+                <ActionMenuItem asChild icon="sync" description="Импорт из Koala Music">
+                  <Link href="/dashboard/admin/releases/koala-parser">Koala Parser</Link>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  icon="link"
+                  description="Релизы без артиста — по совпадению имени"
+                  disabled={isAssigning}
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    void handleAssignReleasesToArtists()
+                  }}
+                >
+                  {isAssigning ? "Привязка…" : "Привязать релизы"}
+                </ActionMenuItem>
+              </ActionMenu>
             </Toolbar>
-
-            {/* Поиск — справа, та же высота h-10 */}
-            <SearchInput
-              value={q}
-              onValueChange={handleSearch}
-              placeholder="Поиск по названию или UPC..."
-              containerClassName="w-full shrink-0 sm:ml-auto sm:w-72 sm:max-w-sm"
-            />
           </div>
         }
       />
@@ -426,33 +424,39 @@ export default function AdminReleasesClient() {
                     </span>
                   </DataTableCell>
 
-                  {/* Actions */}
+                  {/* 2.1: edit-иконка убрана — она дублировала клик по строке
+                      (F-31); удаление — в overflow строки, деструктив второго
+                      плана с подтверждением (F-13). */}
                   <DataTableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        asChild
-                        size="icon"
-                        variant="success-outline"
-                        className="h-8 w-8 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 rounded-lg border-brand/30 text-brand hover:bg-brand/15 hover:border-brand/60"
-                      >
-                        <Link
-                          href={`/dashboard/admin/releases/${release.id}`}
-                          aria-label={`Редактировать ${release.title}`}
-                          title="Редактировать"
+                    <div className="flex items-center justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Действия над релизом ${release.title}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-8 w-8 rounded-lg text-gray-400 hover:text-white max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>more_horiz</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-56 border border-white/10 bg-black/90 backdrop-blur-xl"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="material-symbols-outlined" style={{ fontSize: 15 }} aria-hidden>edit</span>
-                        </Link>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="destructive-outline"
-                        onClick={() => handleDeleteRelease(release.id)}
-                        aria-label={`Удалить ${release.title}`}
-                        title="Удалить"
-                        className="h-8 w-8 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 rounded-lg"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 15 }} aria-hidden>delete</span>
-                      </Button>
+                          <DropdownMenuItem
+                            className="text-red-400 focus:bg-red-500/10 focus:text-red-300"
+                            onSelect={() => {
+                              void handleDeleteRelease(release.id)
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-base" aria-hidden>delete</span>
+                            Удалить релиз
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </DataTableCell>
                 </DataTableRow>
@@ -483,13 +487,6 @@ export default function AdminReleasesClient() {
         </div>
       </div>
 
-      <DashboardFooter>
-        {/* F-11: было «TOTAL RELEASES: 445» латиницей рядом с «System Online» */}
-        <div className="uppercase tracking-widest text-gray-400">
-          {FOOTER_STRINGS.totalReleases}:{" "}
-          <span className="font-bold text-white">{loading ? "…" : total}</span>
-        </div>
-      </DashboardFooter>
     </div>
   )
 }

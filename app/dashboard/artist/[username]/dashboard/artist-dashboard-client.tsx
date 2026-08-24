@@ -8,7 +8,6 @@ import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
 import { formatRubKpiShort, formatRubPlain } from "@/lib/format-dashboard-rub"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader, SectionHeaderLink } from "@/components/ui/section-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -142,7 +141,6 @@ export default function ArtistDashboardClient({
         </div>
       </div>
 
-      <DashboardFooter role="artist" />
     </div>
   )
 }

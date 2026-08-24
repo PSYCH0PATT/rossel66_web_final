@@ -14,7 +14,6 @@ import { Spinner } from "@/components/ui/spinner"
 import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
 import Image from "next/image"
 import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { buildReleaseArtistSelect } from "@/lib/release-artist-link"
 import { coverFieldView } from "@/lib/cover-field"
 
@@ -216,11 +215,13 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           title={release.title}
           subtitle={artistName}
           actions={
+            /* F-81: на 390 «Сохранить» из шапки оторван от полей — там его
+               место занимает sticky-бар внизу экрана (см. ниже). */
             <Button
               onClick={() => void save()}
               disabled={saving}
               variant="cta"
-              className="rounded-lg"
+              className="rounded-lg max-md:hidden"
             >
               <span className="material-symbols-outlined text-lg" aria-hidden>save</span>
               {saving ? "Сохранение..." : "Сохранить"}
@@ -228,10 +229,17 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           }
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <div className="card-glass rounded-2xl border border-white/5 overflow-hidden text-white">
-              <div className="aspect-square relative">
+        {/* C-18/F-10: одна колонка, треки под формой — правая колонка пустовала
+            почти на полтора экрана. */}
+        <div className="grid grid-cols-1 gap-6">
+          <div>
+            <div className="card-glass rounded-2xl border border-white/5 text-white">
+              {/* Обложка и поля рядом: страница одноколоночная, но внутри
+                  карточки пустой полосы справа быть не должно (C-18/F-10).
+                  На 390 обложка ограничена по высоте — иначе она съедает
+                  первый экран (F-81-контекст). */}
+              <div className="flex flex-col gap-6 p-4 md:flex-row md:p-6">
+              <div className="relative aspect-square w-full max-w-[240px] shrink-0 overflow-hidden rounded-xl sm:max-w-xs">
                 <Image src={release.coverUrl || "/placeholder.svg"} alt={release.title} fill className="object-cover" />
                 <StatusBadge
                   className="absolute top-3 right-3"
@@ -241,7 +249,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                   {statusLabels[release.status || "Доставлен"] || release.status || "Доставлен"}
                 </StatusBadge>
               </div>
-              <div className="p-4 md:p-6 space-y-3">
+              <div className="min-w-0 max-w-2xl flex-1 space-y-3">
                 <FormField label="Название" htmlFor="release-title">
                   <Input id="release-title" className={inputCls} value={release.title} onChange={(e) => setRelease({ ...release, title: e.target.value })} />
                 </FormField>
@@ -299,11 +307,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                     id="cover-upload"
                     accept="image/*"
                     buttonLabel="Выбрать файл"
-                    buttonVariant="cta"
+                    buttonVariant="outline"
                     icon="upload"
                     showFileName={false}
                     containerClassName="w-full"
-                    buttonClassName="w-full rounded-lg"
+                    buttonClassName="w-full rounded-lg border-white/15 text-gray-200 hover:bg-white/5"
                     onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (!file) return
@@ -343,10 +351,11 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                   </Select>
                 </FormField>
               </div>
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-2">
+          <div>
             <div className="card-glass rounded-2xl border border-white/5 text-white relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
               <div className="p-6 md:p-8">
@@ -372,12 +381,15 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                           </div>
                           <div className="text-sm text-gray-400 font-mono uppercase tracking-widest">Трек</div>
                         </div>
+                        {/* F-13: деструктив второго плана и с подтверждением. */}
                         <Button
                           variant="destructive-outline"
                           size="sm"
-                          onClick={() =>
+                          onClick={() => {
+                            const label = track.title?.trim() || `Трек ${index + 1}`
+                            if (!confirm(`Удалить «${label}» из треклиста?`)) return
                             setRelease({ ...release, tracks: release.tracks.filter((_, i) => i !== index) })
-                          }
+                          }}
                         >
                           Удалить
                         </Button>
@@ -521,7 +533,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                   ))}
                   <div className="pt-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       onClick={() =>
                         setRelease({
                           ...release,
@@ -531,7 +543,7 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
                           ],
                         })
                       }
-                      className="border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold"
+                      className="rounded-lg text-gray-300 hover:text-white"
                     >
                       <span className="material-symbols-outlined text-lg mr-1">add</span>
                       Добавить трек
@@ -543,7 +555,18 @@ export default function AdminReleaseDetailPage({ params }: { params: { id: strin
           </div>
         </div>
 
-        <DashboardFooter />
+        {/* F-81: на 390 «Сохранить» едет вместе с полями, а не остаётся в шапке. */}
+        <div className="sticky bottom-0 z-20 border-t border-white/10 bg-black/80 py-3 backdrop-blur md:hidden">
+          <Button
+            onClick={() => void save()}
+            disabled={saving}
+            variant="cta"
+            className="w-full rounded-lg"
+          >
+            <span className="material-symbols-outlined text-lg" aria-hidden>save</span>
+            {saving ? "Сохранение..." : "Сохранить"}
+          </Button>
+        </div>
       </div>
     )
 }

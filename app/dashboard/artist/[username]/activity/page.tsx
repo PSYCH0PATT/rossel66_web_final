@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getCachedActivitiesForFeed } from "@/lib/cached-dashboard"
 import { ActivityFeed } from "@/components/activity-feed"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { PageHeader } from "@/components/ui/page-header"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
@@ -58,7 +57,6 @@ export default async function ArtistActivityPage({
       </div>
 
       {/* F-30: единственный экран артиста, где футера не было. */}
-      <DashboardFooter role="artist" />
     </div>
   )
 }

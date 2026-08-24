@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
 import { revalidateStreamAnalytics } from "@/lib/hooks/use-dashboard-fetch"
@@ -17,8 +17,9 @@ import {
 import { Loader2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { TrackThinPaidFreeBar } from "@/components/analytics/TrackThinPaidFreeBar"
-import { UnmappedArtistsPanel, UnmappedArtistsTrigger } from "@/components/analytics/unmapped-artists-panel"
+import { UnmappedArtistsPanel } from "@/components/analytics/unmapped-artists-panel"
 import { formatDayMonthUtc } from "@/lib/format-date"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
 import { PageHeader } from "@/components/ui/page-header"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -26,7 +27,6 @@ import { FileInput } from "@/components/ui/file-input"
 import { Banner } from "@/components/ui/banner"
 import { Spinner } from "@/components/ui/spinner"
 import { EmptyState } from "@/components/ui/empty-state"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { SkeletonValue } from "@/components/ui/skeleton-presets"
 import { SeriesBar } from "@/components/charts/series-bar"
 import { mskDateString } from "@/lib/msk-date"
@@ -102,6 +102,70 @@ function toIsoDate(date?: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+/** Сколько треков видно до раскрытия — вердикт 1.2 «top-10 + все треки». */
+const TOP_TRACKS = 10
+
+/**
+ * Строка трека в карточках аналитики. Клик выставляет трек в фильтр экрана —
+ * то есть показывает статистику одного трека (0-д п.5). У строки без ISRC
+ * фильтровать нечего, она остаётся неинтерактивной.
+ */
+function TrackRowButton({
+  isrc,
+  label,
+  onSelect,
+  children,
+}: {
+  isrc?: string | null
+  label: string
+  onSelect: (isrc: string) => void
+  children: React.ReactNode
+}) {
+  if (!isrc) {
+    return (
+      <div className="group border-b border-white/[0.03] last:border-0">{children}</div>
+    )
+  }
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={() => onSelect(isrc)}
+      title={`Показать статистику: ${label}`}
+      className="group h-auto w-full justify-start rounded-none border-b border-white/[0.03] px-0 py-0 text-left last:border-0 hover:bg-white/[0.03] max-md:h-auto"
+    >
+      {children}
+    </Button>
+  )
+}
+
+/** «Все треки (N)» — раскрытие полного списка вместо вложенного скролла (C-11). */
+function AllTracksToggle({
+  total,
+  expanded,
+  onToggle,
+}: {
+  total: number
+  expanded: boolean
+  onToggle: () => void
+}) {
+  if (total <= TOP_TRACKS) return null
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onToggle}
+      className="mt-2 self-start rounded-lg px-2 font-mono text-[10px] uppercase tracking-widest text-gray-400 hover:text-white"
+    >
+      <span className="material-symbols-outlined text-base" aria-hidden>
+        {expanded ? "expand_less" : "expand_more"}
+      </span>
+      {expanded ? `Топ-${TOP_TRACKS}` : `Все треки (${total})`}
+    </Button>
+  )
+}
+
 export default function AdminAnalyticsPage() {
   const router = useRouter()
   const profile = useDashboardProfile()
@@ -115,6 +179,11 @@ export default function AdminAnalyticsPage() {
   const [importResult, setImportResult] = useState<string | null>(null)
   const [unmappedOpen, setUnmappedOpen] = useState(false)
   const [unmappedCount, setUnmappedCount] = useState<number | null>(null)
+  /** Скрытый файловый инпут CSV: его дёргает пункт меню «Сервис» (0-в). */
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  /** C-11: списки треков показывают топ-10, полный набор — по кнопке. */
+  const [showAllPaidFree, setShowAllPaidFree] = useState(false)
+  const [showAllByStreams, setShowAllByStreams] = useState(false)
 
   const [artists, setArtists] = useState<ArtistOption[]>([])
   const [selectedArtist, setSelectedArtist] = useState<string>("all")
@@ -368,6 +437,8 @@ export default function AdminAnalyticsPage() {
   const totalPaid = data?.paidVsFree.find(p => p.name === "Платные")?.value || 0
   const totalFree = data?.paidVsFree.find(p => p.name === "Бесплатные")?.value || 0
   const tracksForChart = (data?.streamsByTrack ?? []).slice()
+  const visiblePaidFree = showAllPaidFree ? tracksForChart : tracksForChart.slice(0, TOP_TRACKS)
+  const visibleByStreams = showAllByStreams ? tracksForChart : tracksForChart.slice(0, TOP_TRACKS)
 
   return (
     
@@ -378,36 +449,64 @@ export default function AdminAnalyticsPage() {
           actionsClassName="w-full min-w-0 shrink lg:w-auto"
           title="АНАЛИТИКА"
           meta={
-            <nav className="flex items-center gap-2 mt-2">
-              <Button
-                variant="ghost"
-                className="text-[10px] text-gray-500 hover:text-white hover:bg-surface-raised uppercase font-bold tracking-wider px-2 h-7"
-                onClick={() => {
-                  setSyncRangeEnd(mskDateString())
-                  setSyncDialogOpen(true)
-                }}
-                disabled={syncing}
+            /* 0-в: синк, CSV и сопоставление — аварийные операции «когда
+               ломается», на поверхности экрана их нет. Счётчик непривязанных
+               не теряется: он бейджем на самом триггере (0-в п.2). */
+            <div className="mt-3 flex items-center gap-2">
+              <ActionMenu
+                kind="service"
+                align="start"
+                count={unmappedCount ?? 0}
+                countLabel="Непривязанных артистов"
               >
-                {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
-                Синхронизировать
-              </Button>
+                <ActionMenuItem
+                  icon="sync"
+                  description="Забрать свежие файлы rossel_flash"
+                  disabled={syncing}
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setSyncRangeEnd(mskDateString())
+                    setSyncDialogOpen(true)
+                  }}
+                >
+                  {syncing ? "Синхронизация…" : "Синхронизировать"}
+                </ActionMenuItem>
+                <ActionMenuItem
+                  icon="upload_file"
+                  description="Ручной импорт, когда синк не прошёл"
+                  disabled={importing}
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    csvInputRef.current?.click()
+                  }}
+                >
+                  {importing ? "Импорт…" : "Загрузить CSV"}
+                </ActionMenuItem>
+                <ActionMenuItem
+                  icon="link"
+                  description={
+                    unmappedCount && unmappedCount > 0
+                      ? `Без профиля: ${unmappedCount}`
+                      : "Все имена из отчётов привязаны"
+                  }
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setUnmappedOpen(true)
+                  }}
+                >
+                  Сопоставить артистов
+                </ActionMenuItem>
+              </ActionMenu>
+              {/* Сам input остаётся в DOM: пункт меню дёргает его по ref. */}
               <FileInput
+                ref={csvInputRef}
                 accept=".csv"
                 onChange={handleImport}
                 disabled={importing}
-                buttonLabel={
-                  <>
-                    {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin inline" /> : null}
-                    Загрузить CSV
-                  </>
-                }
-                buttonVariant="ghost"
-                buttonClassName="text-[10px] text-gray-500 hover:text-white hover:bg-surface-raised uppercase font-bold tracking-wider px-2 h-7"
-                icon={null}
+                containerClassName="hidden"
                 showFileName={false}
               />
-              <UnmappedArtistsTrigger count={unmappedCount} onOpen={() => setUnmappedOpen(true)} />
-            </nav>
+            </div>
           }
           actions={
           /* фильтры — на мобилке сетка 50/50 + период на всю ширину; с md — ряд */
@@ -483,7 +582,7 @@ export default function AdminAnalyticsPage() {
                     { value: "90d", label: "90 дней" },
                     { value: "180d", label: "180 дней" },
                     { value: "365d", label: "Год" },
-                    { value: "custom", label: "Свой период" },
+                    { value: "custom", label: "Период" },
                   ].map((p) => (
                     <SelectItem
                       key={p.value}
@@ -510,7 +609,7 @@ export default function AdminAnalyticsPage() {
                 { value: "90d", label: "90Д" },
                 { value: "180d", label: "180Д" },
                 { value: "365d", label: "Год" },
-                { value: "custom", label: "Custom" },
+                { value: "custom", label: "Период" },
               ]}
             />
 
@@ -738,35 +837,40 @@ export default function AdminAnalyticsPage() {
                 <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">По трекам</p>
               </CardHeader>
               <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-                {/* F-38/F-39: скролл с видимым скроллбаром и фейдом вместо «обрыва» списка. */}
-                <ScrollArea
-                  className="h-[290px]"
-                  viewportClassName="flex flex-col gap-1.5 pr-1"
-                  fadeClassName="from-surface-raised"
-                >
+                {/* C-11 (F-38/F-39): вместо вложенного скролла на 179 строк —
+                    топ-10 и раскрытие по кнопке. Клик по треку показывает
+                    статистику одного трека (0-д п.5). */}
+                <div className="flex flex-col gap-1.5">
                   {tracksForChart.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                   ) : (
-                    tracksForChart.map((item, idx) => {
+                    visiblePaidFree.map((item, idx) => {
                       const total = item.paid + item.free
                       const pctPaid = total > 0 ? (item.paid / total) * 100 : 0
                       const pctFree = total > 0 ? (item.free / total) * 100 : 0
                       const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
                       return (
-                        <div key={`pf-${item.isrc || idx}`} className="flex flex-col flex-shrink-0 gap-1 group py-1 border-b border-white/[0.03] last:border-0">
-                          <div className="flex justify-between items-center w-full">
-                            <span className="text-[11px] font-card-heading font-semibold text-gray-300 truncate max-w-[55%] group-hover:text-white transition-colors" title={label}>{label}</span>
-                            <div className="flex gap-2 shrink-0">
-                              <span className="text-[11px] text-emerald-400 font-card-heading font-bold tabular-nums">{item.paid > 0 ? `${pctPaid.toFixed(0)}%` : ''}</span>
-                              <span className="text-[11px] text-gray-500 font-card-heading font-bold tabular-nums">{item.free > 0 ? `${pctFree.toFixed(0)}%` : ''}</span>
-                            </div>
-                          </div>
-                          <TrackThinPaidFreeBar paid={item.paid} free={item.free} heightClass="h-[4px]" />
-                        </div>
+                        <TrackRowButton key={`pf-${item.isrc || idx}`} isrc={item.isrc} label={label} onSelect={setSelectedTrack}>
+                          <span className="flex w-full flex-col gap-1 py-1">
+                            <span className="flex w-full items-center justify-between">
+                              <span className="max-w-[55%] truncate font-card-heading text-[11px] font-semibold text-gray-300 group-hover:text-white" title={label}>{label}</span>
+                              <span className="flex shrink-0 gap-2">
+                                <span className="font-card-heading text-[11px] font-bold tabular-nums text-emerald-400">{item.paid > 0 ? `${pctPaid.toFixed(0)}%` : ''}</span>
+                                <span className="font-card-heading text-[11px] font-bold tabular-nums text-gray-500">{item.free > 0 ? `${pctFree.toFixed(0)}%` : ''}</span>
+                              </span>
+                            </span>
+                            <TrackThinPaidFreeBar paid={item.paid} free={item.free} heightClass="h-[4px]" />
+                          </span>
+                        </TrackRowButton>
                       )
                     })
                   )}
-                </ScrollArea>
+                </div>
+                <AllTracksToggle
+                  total={tracksForChart.length}
+                  expanded={showAllPaidFree}
+                  onToggle={() => setShowAllPaidFree((v) => !v)}
+                />
               </CardContent>
             </Card>
 
@@ -777,31 +881,32 @@ export default function AdminAnalyticsPage() {
                 <p className="text-[10px] uppercase font-card-heading text-gray-500 tracking-widest mt-0.5">Всего: {tracksForChart.length} треков</p>
               </CardHeader>
               <CardContent className="p-0 flex-1 min-h-0 flex flex-col mt-3">
-                {/* F-38/F-39: второй scroll-trap — тот же ScrollArea с аффордансом. */}
-                <ScrollArea
-                  className="h-[290px]"
-                  viewportClassName="flex flex-col gap-0 pr-1"
-                  fadeClassName="from-surface-raised"
-                >
+                {/* C-11 (F-38/F-39): второй scroll-trap — тот же топ-10 с раскрытием. */}
+                <div className="flex flex-col">
                   {tracksForChart.length === 0 ? (
                     <p className="text-sm text-gray-500 py-4 font-card-heading text-center">Нет данных по трекам</p>
                   ) : (
-                    tracksForChart.map((item, idx) => {
+                    visibleByStreams.map((item, idx) => {
                       const maxVal = tracksForChart[0]?.value || 1
                       const pct = (item.value / maxVal) * 100
                       const label = `${item.trackName}${item.trackArtist ? ` — ${item.trackArtist}` : ''}`
                       return (
-                        <div key={item.isrc || idx} className="flex flex-col flex-shrink-0 group py-1.5 border-b border-white/[0.03] last:border-0">
-                          <div className="flex items-center gap-3 w-full">
-                            <span className="text-[11px] font-card-heading font-medium text-gray-400 truncate shrink-0 w-[130px] group-hover:text-gray-200 transition-colors" title={label}>{label}</span>
+                        <TrackRowButton key={item.isrc || idx} isrc={item.isrc} label={label} onSelect={setSelectedTrack}>
+                          <span className="flex w-full items-center gap-3 py-1.5">
+                            <span className="w-[130px] shrink-0 truncate font-card-heading text-[11px] font-medium text-gray-400 group-hover:text-gray-200" title={label}>{label}</span>
                             <SeriesBar percent={pct} index={idx} className="min-w-0 flex-1 self-center" />
-                            <span className="text-[11px] text-white font-card-heading font-semibold shrink-0 w-[66px] text-right tabular-nums">{item.value.toLocaleString('ru-RU')}</span>
-                          </div>
-                        </div>
+                            <span className="w-[66px] shrink-0 text-right font-card-heading text-[11px] font-semibold tabular-nums text-white">{item.value.toLocaleString('ru-RU')}</span>
+                          </span>
+                        </TrackRowButton>
                       )
                     })
                   )}
-                </ScrollArea>
+                </div>
+                <AllTracksToggle
+                  total={tracksForChart.length}
+                  expanded={showAllByStreams}
+                  onToggle={() => setShowAllByStreams((v) => !v)}
+                />
               </CardContent>
             </Card>
             

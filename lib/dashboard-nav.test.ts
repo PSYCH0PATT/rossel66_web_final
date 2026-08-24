@@ -38,14 +38,14 @@ const ARTIST_HREFS = [
 ]
 
 /** Состав пунктов админ-сайдбара (components/sidebar.tsx). «Выплаты» и
- *  «Генератор отчётов» стали видами объединённых «Отчётов» — решение 0-а. */
+ *  «Генератор отчётов» стали видами объединённых «Отчётов» (0-а), «История
+ *  плейлистов» — сервисный экран без своего пункта (0-в п.3). */
 const ADMIN_HREFS = [
   '/dashboard/admin/dashboard',
   '/dashboard/admin/artists',
   '/dashboard/admin/releases',
   '/dashboard/admin/reports',
   '/dashboard/admin/playlists',
-  '/dashboard/admin/playlists/history',
   '/dashboard/admin/analytics',
   '/dashboard/admin/activity',
 ]
@@ -57,11 +57,13 @@ test('F-56: раздел подсвечен и на вложенной стра�
   assert.deepEqual(active, ['/dashboard/artist/rompy/releases'])
 })
 
-test('F-56: вложенный раздел не подсвечивает родителя — подсвечен ровно один пункт', () => {
+test('F-56: у сервисного экрана без своего пункта подсвечен родитель', () => {
+  // 0-в п.3: «История плейлистов» перестала быть пунктом навигации — вход
+  // ghost-ссылкой из тулбара. Раздел «Плейлисты» при этом остаётся активным.
   const active = ADMIN_HREFS.filter((href) =>
     isNavItemActive('/dashboard/admin/playlists/history', href, ADMIN_HREFS)
   )
-  assert.deepEqual(active, ['/dashboard/admin/playlists/history'])
+  assert.deepEqual(active, ['/dashboard/admin/playlists'])
 })
 
 test('F-56: соседний раздел с общим префиксом не подсвечивается', () => {

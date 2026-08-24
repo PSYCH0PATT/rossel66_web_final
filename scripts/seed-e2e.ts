@@ -98,6 +98,45 @@ const analytics = (
   artistId,
 })
 
+/** Дата за N дней до сегодняшнего дня — без времени, как в выгрузках flash. */
+const daysAgo = (n: number) => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - n)
+  return d
+}
+
+const CATALOG_DSPS = ["Spotify", "Яндекс Музыка", "ВК Музыка", "МТС Музыка"] as const
+/** Платные/бесплатные — по словарю lib/stream-length.ts. */
+const CATALOG_LENGTHS = ["Полный стрим", "6-29 сек"] as const
+
+/** Строки каталога: 16 треков × 14 дней, 4 площадки, платные и бесплатные. */
+function catalogAnalytics() {
+  const rows = []
+  for (let track = 0; track < 16; track++) {
+    const n = String(track + 1).padStart(2, "0")
+    for (let day = 0; day < 14; day++) {
+      for (const [li, length] of CATALOG_LENGTHS.entries()) {
+        rows.push({
+          ...analytics(
+            `e2e-sa-catalog-${n}-${day}-${li}`,
+            "E2E Каталог",
+            null,
+            // Убывающий по треку ряд с дневной волной: видно, что «топ-10»
+            // отрезает именно хвост, а график не превращается в прямую.
+            Math.max(1, (320 - track * 17) * (li === 0 ? 1 : 0.35) * (1 + ((day % 5) - 2) * 0.15)),
+            `E2ECAT00${n}`
+          ),
+          date: daysAgo(day),
+          dsp: CATALOG_DSPS[(track + day) % CATALOG_DSPS.length],
+          length,
+        })
+      }
+    }
+  }
+  return rows.map((r) => ({ ...r, streams: Math.round(r.streams) }))
+}
+
 async function main() {
   console.log(`Сидирую ${url.replace(/:[^:@/]+@/, ":***@")}`)
 
@@ -193,6 +232,14 @@ async function main() {
       analytics("e2e-sa-linked-1", "E2E Linked", "e2e-linked-id", 300, "E2ELINK0001"),
       analytics("e2e-sa-collab", "E2E Main & E2E Linked", null, 700, "E2ECOLL0001"),
       analytics("e2e-sa-outsider", "Совсем Чужой Артист", null, 42, "E2EOUTS0001"),
+      // B-12 (docs/backlog.md): каталог чужого артиста. Даёт стенду то, чего у
+      // него не было: больше десяти треков (работают «топ-10 / Все треки» из
+      // вердикта 1.2), несколько площадок и разброс по дням — иначе график
+      // собирался из одной точки, а экран аналитики открывался пустым, потому
+      // что единственная дата сида (2026-06-15) не попадает в окно «30 дней».
+      // Имя намеренно вне групп E2E Main/Linked, artistId пустой: контрактные
+      // агрегаты 1500 / 2200 / 2500 считаются по артисту и сюда не заглядывают.
+      ...catalogAnalytics(),
     ],
   })
 
@@ -270,12 +317,70 @@ async function main() {
     ],
   })
 
+  // История плейлистов: B-12 — без записей экран /playlists/history всегда
+  // показывал пустое состояние, и проверить его фильтры было нечем.
+  await prisma.playlistHistory.deleteMany({})
+  await prisma.playlistHistory.createMany({
+    data: [
+      {
+        id: "e2e-plh-1",
+        playlistUrl: "https://example.test/pl/main-1",
+        playlistName: "E2E Main Playlist One",
+        platform: "Spotify",
+        changeType: "added",
+        changeDate: "2026-06-15",
+        artistName: "E2E Main",
+        artistId: "e2e-main-id",
+        trackTitle: "E2E Main Track One",
+        newPosition: 12,
+      },
+      {
+        id: "e2e-plh-2",
+        playlistUrl: "https://example.test/pl/main-1",
+        playlistName: "E2E Main Playlist One",
+        platform: "Spotify",
+        changeType: "position_changed",
+        changeDate: "2026-06-16",
+        artistName: "E2E Main",
+        artistId: "e2e-main-id",
+        trackTitle: "E2E Main Track One",
+        oldPosition: 12,
+        newPosition: 7,
+      },
+      {
+        id: "e2e-plh-3",
+        playlistUrl: "https://example.test/pl/main-2",
+        playlistName: "E2E Main Playlist Two",
+        platform: "Spotify",
+        changeType: "added",
+        changeDate: "2026-06-17",
+        artistName: "E2E Main",
+        artistId: "e2e-main-id",
+        trackTitle: "E2E Main Track Two",
+        newPosition: 3,
+      },
+      {
+        id: "e2e-plh-4",
+        playlistUrl: "https://example.test/pl/linked-1",
+        playlistName: "E2E Linked Playlist",
+        platform: "Spotify",
+        changeType: "removed",
+        changeDate: "2026-06-18",
+        artistName: "E2E Linked",
+        artistId: "e2e-linked-id",
+        trackTitle: "E2E Linked Track One",
+        oldPosition: 21,
+      },
+    ],
+  })
+
   const counts = {
     пользователей: await prisma.user.count(),
     отчётов: await prisma.report.count(),
     "строк аналитики": await prisma.streamAnalytics.count(),
     релизов: await prisma.release.count(),
     плейлистов: await prisma.playlist.count(),
+    "записей истории плейлистов": await prisma.playlistHistory.count(),
   }
   console.log("Готово:", counts)
   await prisma.$disconnect()

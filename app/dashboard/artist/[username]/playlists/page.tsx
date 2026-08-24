@@ -6,11 +6,9 @@ import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { ProfileFilterUrl } from "@/components/profile-filter"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
-import { plural } from "@/lib/plural"
 function firstTrackLabel(trackDataJson: string): string {
   try {
     const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
@@ -152,13 +150,6 @@ export default async function PlaylistsPage({
           </div>
         )}
 
-        <DashboardFooter role="artist">
-          {/* DS8: было «TOTAL FOUND: N PLAYLISTS». Склонение — через plural() (C-16). */}
-          <div className="uppercase tracking-widest text-gray-400">
-            Найдено: <span className="font-bold text-white">{total}</span>{" "}
-            {plural(total, ["плейлист", "плейлиста", "плейлистов"])}
-          </div>
-        </DashboardFooter>
       </div>
     )
 }

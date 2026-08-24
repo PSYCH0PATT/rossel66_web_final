@@ -20,7 +20,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface ParseStats {
   total: number
@@ -77,6 +76,9 @@ function statusVariant(raw: string): ReleaseStatusVariant {
 export default function ZvonkoParserPage() {
   const [status, setStatus] = useState<ParserStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  /** F-36: параметры запуска и справка по режимам — по требованию. */
+  const [paramsOpen, setParamsOpen] = useState(false)
+  const [modesOpen, setModesOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [lastReleases, setLastReleases] = useState<ZvonkoRelease[]>([])
   const [pagesToParse, setPagesToParse] = useState<number>(1)
@@ -182,45 +184,64 @@ export default function ZvonkoParserPage() {
   return (
     
       <div className="space-y-8">
-        {/* F-36: шапка парсера — один шаблон с koala-parser; параметры запуска
-            остаются здесь же, в слоте meta. F-35: CTA того же цвета, что там. */}
+        {/* F-36: шапка парсера — один шаблон с koala-parser; «Страниц» и
+            «Действие» свёрнуты в «Параметры запуска» у самой кнопки — в
+            обычный день их не трогают. F-35: CTA того же цвета, что там.
+            F-60/0-д п.3: имя парсера одно и то же в навигации, меню и H1. */}
         <PageHeader
-          title="Zvonko Digital Parser"
+          title="Zvonko Parser"
           subtitle="Парсинг, сравнение и добавление релизов из Zvonko Digital."
           meta={
-            <div className="mt-6 flex flex-wrap items-end gap-3">
-              <FormField label="Страниц" htmlFor="pages" className="space-y-1">
-                <Input
-                  id="pages"
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={pagesToParse}
-                  onChange={(e) => setPagesToParse(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
-                  className={`${inputCls} w-20 text-center`}
-                  disabled={isRunning}
-                />
-              </FormField>
-              {/* F-12: нативный select с системной стрелкой в тёмной форме */}
-              <FormField label="Действие" htmlFor="action" className="space-y-1">
-                <Select
-                  value={selectedAction}
-                  onValueChange={(v) => setSelectedAction(v as "parse" | "compare" | "add")}
-                  disabled={isRunning}
-                >
-                  <SelectTrigger id="action" className={`${inputCls} min-w-[180px]`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="parse">Парсинг</SelectItem>
-                    <SelectItem value="compare">Сравнение</SelectItem>
-                    <SelectItem value="add">Добавление</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </div>
+            paramsOpen && (
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <FormField label="Страниц" htmlFor="pages" className="space-y-1">
+                  <Input
+                    id="pages"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={pagesToParse}
+                    onChange={(e) => setPagesToParse(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
+                    className={`${inputCls} w-20 text-center`}
+                    disabled={isRunning}
+                  />
+                </FormField>
+                {/* F-12: нативный select с системной стрелкой в тёмной форме */}
+                <FormField label="Действие" htmlFor="action" className="space-y-1">
+                  <Select
+                    value={selectedAction}
+                    onValueChange={(v) => setSelectedAction(v as "parse" | "compare" | "add")}
+                    disabled={isRunning}
+                  >
+                    <SelectTrigger id="action" className={`${inputCls} min-w-[180px]`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parse">Парсинг</SelectItem>
+                      <SelectItem value="compare">Сравнение</SelectItem>
+                      <SelectItem value="add">Добавление</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </div>
+            )
           }
           actions={
+            <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={paramsOpen}
+              onClick={() => setParamsOpen((open) => !open)}
+              className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden>tune</span>
+              Параметры запуска
+              <span className="material-symbols-outlined text-base" aria-hidden>
+                {paramsOpen ? "expand_less" : "expand_more"}
+              </span>
+            </Button>
             <Button onClick={() => void runParser()} disabled={isRunning} variant="cta" className="rounded-lg">
               {isRunning ? (
                 <>
@@ -240,6 +261,7 @@ export default function ZvonkoParserPage() {
                 </>
               )}
             </Button>
+            </>
           }
         />
 
@@ -284,46 +306,6 @@ export default function ZvonkoParserPage() {
           />
         </div>
 
-        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-          <SectionHeader
-            className="mb-4"
-            title={
-              <>
-                <span className="material-symbols-outlined text-primary text-2xl" aria-hidden>tune</span>
-                Режимы работы
-              </>
-            }
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-400">
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Парсинг</h4>
-              <p>Извлечение данных о релизах из Zvonko Digital.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">download</span>
-                Название, артист, UPC, обложка, даты
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Сравнение</h4>
-              <p>Сопоставление с существующими релизами в системе.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">sync</span>
-                Дубликаты по UPC и названиям
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Добавление</h4>
-              <p>Добавление новых релизов в систему.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">play_arrow</span>
-                Треки и ISRC
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* F-59: полоса секции того же цвета, что у секции-близнеца на koala */}
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
           <SectionHeader className="mb-2" title="Расписание автоматического парсинга" />
@@ -446,7 +428,54 @@ export default function ZvonkoParserPage() {
           </div>
         )}
 
-        <DashboardFooter />
+        {/* 2.4: справка «Режимы работы» — редкая, поэтому свёрнута и внизу. */}
+        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={modesOpen}
+            onClick={() => setModesOpen((open) => !open)}
+            className="rounded-lg px-0 font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden>tune</span>
+            Режимы работы
+            <span className="material-symbols-outlined text-base" aria-hidden>
+              {modesOpen ? "expand_less" : "expand_more"}
+            </span>
+          </Button>
+          {modesOpen && (
+            <div className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-400">
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Парсинг</h4>
+                <p>Извлечение данных о релизах из Zvonko Digital.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">download</span>
+                  Название, артист, UPC, обложка, даты
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Сравнение</h4>
+                <p>Сопоставление с существующими релизами в системе.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">sync</span>
+                  Дубликаты по UPC и названиям
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Добавление</h4>
+                <p>Добавление новых релизов в систему.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">play_arrow</span>
+                  Треки и ISRC
+                </p>
+              </div>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     )
 }

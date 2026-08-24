@@ -4,7 +4,6 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { FileInput } from "@/components/ui/file-input"
@@ -319,7 +318,6 @@ export default function ArtistSettingsClient({
         </Banner>
       )}
 
-      <DashboardFooter role="artist" />
       </div>
     </>
   )

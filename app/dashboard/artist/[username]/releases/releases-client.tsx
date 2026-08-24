@@ -6,7 +6,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { ProfileFilter } from "@/components/profile-filter"
 import { useReleasesList } from "@/lib/hooks/use-dashboard-fetch"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Button } from "@/components/ui/button"
 import {
   DataTable,
@@ -25,7 +24,6 @@ import { SearchInput } from "@/components/ui/search-input"
 import { Spinner } from "@/components/ui/spinner"
 import { ReleaseStatusBadge } from "@/components/ui/status-badge"
 import { releaseTrackCount } from "@/lib/release-status"
-import { FOOTER_STRINGS } from "@/lib/ui-strings"
 
 interface Release {
   id: string
@@ -368,12 +366,6 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
         </div>
       </div>
 
-      <DashboardFooter role="artist">
-        {/* F-11: было «TOTAL RELEASES: 5» латиницей рядом с «System Online». */}
-        <div className="uppercase tracking-widest text-gray-400">
-          {FOOTER_STRINGS.totalReleases}: <span className="font-bold text-white">{total}</span>
-        </div>
-      </DashboardFooter>
     </div>
   )
 }

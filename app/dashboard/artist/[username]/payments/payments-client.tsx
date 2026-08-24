@@ -1,6 +1,5 @@
 "use client"
 
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { Banner } from "@/components/ui/banner"
 import { EmptyState } from "@/components/ui/empty-state"
 import { PageHeader } from "@/components/ui/page-header"
@@ -255,7 +254,6 @@ export default function PaymentsClient({ username, reports, balance }: Props) {
         </div>
       )}
 
-      <DashboardFooter role="artist" />
       </div>
     </>
   )
