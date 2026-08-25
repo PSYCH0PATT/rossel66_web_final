@@ -46,7 +46,7 @@
     "test:catalog": "npx tsx --test lib/pyrus-catalog/*.test.ts",
     "test:buildin": "npx tsx --test lib/buildin/*.test.ts lib/playlist-placements.test.ts",
     "test:db:migrate": "npx tsx scripts/test-db-migrate.ts",
-    "test:integration": "npx tsx --test tests/integration/*.test.ts",
+    "test:integration": "npx tsx --test tests/integration/activity-feed.test.ts tests/integration/forms-session.test.ts tests/integration/forms-simple.test.ts && npx tsx --test --test-concurrency=1 tests/integration/reports-money.test.ts tests/integration/stream-metric.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:local": "env -u E2E_BASE_URL E2E_VERIFY_BUILDIN=1 playwright test",
     "test:forms": "pnpm test && pnpm test:integration",

@@ -11,7 +11,7 @@
  *   pnpm test:integration
  */
 import assert from "node:assert/strict"
-import { before, describe, it } from "node:test"
+import { after, before, describe, it } from "node:test"
 import { loadTestEnvFiles, requireTestDatabaseUrl } from "../support/env"
 
 loadTestEnvFiles()
@@ -63,6 +63,18 @@ async function resetState() {
     data: { isRegistered: true, isPaid: false },
   })
 }
+
+// Сюит — единственный во всём `tests/integration`, кто ставит AKA-связку
+// `e2e-linked-id → e2e-main-id`, а stream-metric.test.ts требует обратного:
+// getArtistGroupIds(MAIN) === [MAIN]. От гонки между файлами защищает не этот хук, а
+// порядок запуска (`test:integration` гоняет эту пару последовательно) — сегодня
+// последний тест сюита и так оставляет связки снятыми. Хук держит это свойство явным:
+// resetState() зовётся ПЕРЕД каждым тестом, и без него «база чиста на выходе» было бы
+// случайным свойством последнего теста, а не правилом файла.
+after(async () => {
+  if (skipSuite) return
+  await resetState()
+})
 
 describe("баланс артиста и авансы", () => {
   it("считает начисленное по всем кварталам", async (t) => {
