@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito_Sans } from "next/font/google";
+import { Mulish, Nunito_Sans } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+// Б-13: иконочный шрифт раздаётся со своего домена, а не с fonts.googleapis.com.
+import "./material-symbols.css";
 import { ParticlesBackground } from "@/components/particles-background";
 
 const syncopate = localFont({
@@ -30,6 +32,22 @@ const nunitoSans = Nunito_Sans({
   adjustFontFallback: false,
 });
 
+/**
+ * Б-13, вторая половина: Mulish лежал в globals.css строкой
+ * `@import url('https://fonts.googleapis.com/css2?family=Mulish…')` — то есть
+ * лендинг и формы тоже зависели от домена в рантайме. next/font забирает шрифт
+ * на СБОРКЕ и раздаёт со своего домена, как это уже сделано для Nunito Sans.
+ * Имя семейства при этом генерируется, поэтому в разметке оно берётся
+ * переменной `--font-mulish`, а не литералом 'Mulish'.
+ */
+const mulish = Mulish({
+  subsets: ["latin", "latin-ext", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-mulish",
+  display: "swap",
+  adjustFontFallback: false,
+});
+
 export const metadata: Metadata = {
   title: "ROSSEL 66 MUSIC",
   description: "ROSSEL 66 MUSIC - Музыкальный лейбл",
@@ -55,10 +73,7 @@ export default function RootLayout({
     // A11y-1: lang="ru" — контент русский, иначе скринридер читает его
     // английской фонетикой (было lang="en").
     <html lang="ru" className="bg-[#0a0a0a]">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-      </head>
-      <body className={`${nunitoSans.variable} ${syncopate.variable} font-body bg-[#0a0a0a] text-gray-100 min-h-screen relative overflow-x-hidden transition-colors duration-300 antialiased`}>
+      <body className={`${nunitoSans.variable} ${syncopate.variable} ${mulish.variable} font-body bg-[#0a0a0a] text-gray-100 min-h-screen relative overflow-x-hidden transition-colors duration-300 antialiased`}>
         <ParticlesBackground />
         {children}
       </body>

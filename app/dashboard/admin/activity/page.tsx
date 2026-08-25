@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -366,7 +365,10 @@ export default function AdminActivityPage() {
                     className={`${filterInput} justify-between font-normal`}
                   >
                     <span className="truncate">{selectedUserLabel}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    {/* Б-21 (F-68): одна иконная система — material-symbols. */}
+                    <span className="material-symbols-outlined ml-2 shrink-0 text-base opacity-50" aria-hidden>
+                      unfold_more
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-[min(20rem,var(--radix-popover-trigger-width))] p-0">

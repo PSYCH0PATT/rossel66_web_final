@@ -1,4 +1,18 @@
-<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Изображения нет">
+  <!--
+    Б-15 (хвост F-11). Было: серый квадрат с английским «No Image» шрифтом Arial —
+    единственная английская надпись на видном месте в русскоязычном кабинете:
+    обложки релизов, карточки плейлистов, карточка артиста.
+
+    Текст не переведён, а убран: этот же файл подставляется на лендинге под
+    логотипы партнёров и фото артистов, где «Нет обложки» было бы неправдой.
+    Остаётся нейтральный знак «изображения нет» — и никакой зависимости от
+    шрифта в самом SVG.
+  -->
   <rect width="400" height="400" fill="#1a1a1a"/>
-  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="24" fill="#666" text-anchor="middle" dominant-baseline="middle">No Image</text>
+  <g fill="none" stroke="#666" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="118" y="132" width="164" height="136" rx="16"/>
+    <circle cx="163" cy="177" r="14"/>
+    <path d="M126 240l43-43 34 34 27-27 44 44"/>
+  </g>
 </svg>

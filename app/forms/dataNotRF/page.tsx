@@ -255,7 +255,7 @@ export default function DataNotRFFormPage() {
   return (
     <main 
       className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden antialiased bg-grid-white/[0.02] relative"
-      style={{ fontFamily: "'Mulish', sans-serif", zIndex: 10 }}
+      style={{ fontFamily: "var(--font-mulish), sans-serif", zIndex: 10 }}
     >
       <Navbar />
       <div className="flex-grow pt-20 pb-12 md:pt-24 md:pb-16 relative">

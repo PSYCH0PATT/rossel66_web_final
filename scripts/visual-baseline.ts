@@ -363,11 +363,12 @@ const FREEZE_CSS = `
 `
 
 /**
- * Иконочный шрифт приезжает с fonts.googleapis.com и подключён с `display=swap`
- * (app/layout.tsx:59), поэтому до его загрузки на месте иконок стоит текст
- * лигатуры — «currency_rubl», «done_all», «menu». `document.fonts.ready` этого
- * не ловит: он резолвится до того, как шрифт реально дошёл, и один и тот же
- * экран давал то иконки, то слова — расхождение до 2 % между прогонами.
+ * До Б-13 иконочный шрифт приезжал с fonts.googleapis.com с `display=swap`, и
+ * до его загрузки на месте иконок стоял текст лигатуры — «currency_rubl»,
+ * «done_all», «menu». Теперь файл лежит в `public/fonts` и раздаётся со своего
+ * домена (`app/material-symbols.css`), но ожидание нужно по-прежнему:
+ * `document.fonts.ready` резолвится до того, как шрифт реально дошёл, и один и
+ * тот же экран давал то иконки, то слова — расхождение до 2 % между прогонами.
  */
 const ICON_FONT = '24px "Material Symbols Outlined"'
 
@@ -377,6 +378,9 @@ const ICON_FONT = '24px "Material Symbols Outlined"'
  * с лигатурами-словами вместо иконок («dashboard», «person», «logout»),
  * роут получал статус ok, и такой скрин уходил в эталон. Теперь неудача
  * возвращается наверх и попадает в проблемы прогона.
+ *
+ * Проверка живая и после Б-13: файл локальный, но 404 на нём, сломанный
+ * @font-face или чужая правка имени семейства дадут ровно ту же картину.
  */
 async function iconFontReady(page: Page): Promise<boolean> {
   return page
@@ -385,9 +389,9 @@ async function iconFontReady(page: Page): Promise<boolean> {
         if (!document.querySelector(".material-symbols-outlined")) return true
         document.fonts.load(font)
         // `document.fonts.check()` недостаточно: он отвечает true и тогда, когда
-        // запрос к fonts.googleapis.com сорвался, — «шрифт доступен» для него
-        // значит «есть чем нарисовать», а фолбэк есть всегда. Спрашиваем сам
-        // FontFace: пока лигатуры рисуются словами, его статус не `loaded`.
+        // запрос за файлом сорвался, — «шрифт доступен» для него значит «есть
+        // чем нарисовать», а фолбэк есть всегда. Спрашиваем сам FontFace: пока
+        // лигатуры рисуются словами, его статус не `loaded`.
         for (const face of document.fonts) {
           if (face.family.includes("Material Symbols") && face.status === "loaded") return true
         }

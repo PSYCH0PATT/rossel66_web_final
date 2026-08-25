@@ -36,6 +36,7 @@ import { SectionHeader } from "@/components/ui/section-header"
 import { Spinner } from "@/components/ui/spinner"
 import { formatMoney } from "@/lib/format-money"
 import { reportFolderActions } from "@/lib/report-folder"
+import { pluralize } from "@/lib/plural"
 
 interface Report {
   id: string
@@ -406,7 +407,7 @@ export default function ReportsList({ filter, sort, onDataChange }: Props) {
                   <div className="min-w-0">
                     <h4 className="text-lg font-semibold text-white">{key}</h4>
                     <p className="text-sm text-slate-400">
-                      {block?.loading ? "Загрузка…" : `${total} отчётов`}
+                      {block?.loading ? "Загрузка…" : pluralize(total, ["отчёт", "отчёта", "отчётов"])}
                     </p>
                   </div>
                 </div>

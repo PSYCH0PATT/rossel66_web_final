@@ -447,7 +447,11 @@ export default function ArtistAnalyticsPage() {
                     return (
                       <TrackRowButton key={item.isrc || idx} isrc={item.isrc} label={label} onSelect={setSelectedTrack}>
                         <span className="flex w-full items-center gap-3 py-1.5">
-                          <span className="w-[130px] shrink-0 truncate font-card-heading text-[11px] font-medium text-gray-400 group-hover:text-gray-200" title={label}>{label}</span>
+                          {/* Б-18 (вердикт 3.5): не усекать при свободном месте. Замер: подпись
+                            просит 165–175px, а колонка держала 130 — на 1440 справа
+                            оставалось 275px дорожки бара. На узких ширинах места
+                            действительно нет, там колонка прежняя. */}
+                          <span className="w-[130px] shrink-0 truncate font-card-heading text-[11px] font-medium text-gray-400 group-hover:text-gray-200 xl:w-[190px]" title={label}>{label}</span>
                           <SeriesBar percent={pct} index={idx} className="min-w-0 flex-1 self-center" />
                           <span className="w-[66px] shrink-0 text-right font-card-heading text-[11px] font-semibold tabular-nums text-white">{item.value.toLocaleString('ru-RU')}</span>
                         </span>

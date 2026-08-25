@@ -151,7 +151,7 @@ export default function AdminReleasesClient() {
 
   const formatDate = (dateStr: string) => {
     try {
-      if (!dateStr) return "--"
+      if (!dateStr) return "—"
       if (dateStr.includes('.')) {
         const parts = dateStr.split('.')
         if (parts.length === 3) {
@@ -162,10 +162,10 @@ export default function AdminReleasesClient() {
         }
       }
       const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return dateStr || "--"
+      if (isNaN(d.getTime())) return dateStr || "—"
       return d.toLocaleDateString("ru-RU")
     } catch {
-      return dateStr || "--"
+      return dateStr || "—"
     }
   }
 
@@ -180,11 +180,18 @@ export default function AdminReleasesClient() {
             {/* C-08 + 0-г: тулбар начинается с поиска — это primary экрана.
                 Парсеры, привязка и добавление ушли в overflow «Сервис» (0-в). */}
             <Toolbar className="flex-1">
+              {/* Б-19: подпись обрывалась на «Поиск по названию или». Причин
+                  было две, и правки тоже две. Первая: колонка шапки под meta
+                  меряется по содержимому, а вклад поля туда шёл не от
+                  `max-w-sm`, а от собственной ширины <input> (~233px) — отсюда
+                  явная база `flex-[1_1_20rem]` и потолок `max-w-md`. Вторая:
+                  сама подпись была длиннее поля даже так; лупа слева и без
+                  слова «Поиск» говорит, что это поиск. */}
               <SearchInput
                 value={q}
                 onValueChange={handleSearch}
-                placeholder="Поиск по названию или UPC..."
-                containerClassName="w-full min-w-0 shrink sm:max-w-sm sm:flex-1"
+                placeholder="Название или UPC"
+                containerClassName="w-full min-w-0 sm:max-w-md sm:flex-[1_1_20rem]"
               />
 
               {/* Filters */}
@@ -403,12 +410,13 @@ export default function AdminReleasesClient() {
 
                   {/* UPC */}
                   <DataTableCell className="font-mono text-xs text-gray-400 tracking-wider">
-                    {release.upc || "--"}
+                    {/* Б-17 / F-93: одно тире «—» на весь кабинет; здесь печаталось «--». */}
+                    {release.upc || "—"}
                   </DataTableCell>
 
                   {/* Date */}
                   <DataTableCell className="text-gray-400 font-mono text-xs whitespace-nowrap">
-                    {release.releaseDate ? formatDate(release.releaseDate) : "--"}
+                    {release.releaseDate ? formatDate(release.releaseDate) : "—"}
                   </DataTableCell>
 
                   {/* Status */}

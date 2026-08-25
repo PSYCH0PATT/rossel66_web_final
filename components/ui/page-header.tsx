@@ -184,7 +184,17 @@ const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
           rowClassName
         )}
       >
-        <div className="min-w-0">
+        {/*
+          Б-19: колонка заголовка мерялась по содержимому, и слот meta получал
+          ровно столько, сколько просил самый широкий его потомок. У тулбара
+          /admin/releases это давало 472px при ряде шириной 1098 — поиск ужимался
+          до 233px и обрезал свою же подпись, при пустой правой половине ряда.
+          `flex-1` отдаёт колонке свободное место ряда. H1 при этом не двигается
+          (он и так прижат влево), а слот actions по-прежнему держит свою ширину
+          через `shrink-0` — сторож канона `page-header-canon.spec.ts` меряет
+          именно координаты и кегль H1.
+        */}
+        <div className="min-w-0 flex-1">
           {titleBadge ? (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <h1 className={TITLE_CLASS[titleStyle]}>{title}</h1>

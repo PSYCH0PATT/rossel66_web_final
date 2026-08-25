@@ -19,6 +19,7 @@ import { Download, FileText, Trash2, Play, DollarSign, Calendar, ChevronDown, Ch
 import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Spinner } from "@/components/ui/spinner"
+import { pluralize } from "@/lib/plural"
 
 interface UnregisteredReport {
   id: string
@@ -231,7 +232,7 @@ export default function UnregisteredReportsList({
           <p className="text-sm text-slate-400">Отчёты артистов, у которых нет кабинета</p>
         </div>
         <div className="text-sm text-slate-400">
-          Всего: {reports.length} отчётов
+          Всего: {pluralize(reports.length, ["отчёт", "отчёта", "отчётов"])}
         </div>
       </div>
 
@@ -250,7 +251,7 @@ export default function UnregisteredReportsList({
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold text-white">{quarter}</h4>
-                    <p className="text-sm text-slate-400">{quarterReports.length} отчётов</p>
+                    <p className="text-sm text-slate-400">{pluralize(quarterReports.length, ["отчёт", "отчёта", "отчётов"])}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

@@ -130,7 +130,7 @@ export default function ReleasesClient({ artistId, username }: Props) {
             <SearchInput
               value={q}
               onValueChange={handleSearch}
-              placeholder="Поиск по названию или UPC..."
+              placeholder="Название или UPC"
               containerClassName="w-full md:w-64"
             />
           </>

@@ -475,7 +475,7 @@ export default function DevUiPage() {
             <SearchInput
               value={search}
               onValueChange={setSearch}
-              placeholder="Поиск по названию или UPC..."
+              placeholder="Название или UPC"
               containerClassName="sm:ml-auto sm:w-72 shrink-0"
             />
           </div>

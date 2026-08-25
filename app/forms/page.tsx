@@ -231,7 +231,7 @@ export default function FormsPage() {
   return (
     <main
       className="min-h-screen flex flex-col overflow-y-auto overflow-x-hidden antialiased bg-grid-white/[0.02] relative"
-      style={{ fontFamily: "'Mulish', sans-serif", zIndex: 10 }}
+      style={{ fontFamily: "var(--font-mulish), sans-serif", zIndex: 10 }}
     >
       <CustomCursor />
       <Navbar />

@@ -508,7 +508,7 @@ export default function Home() {
         WebkitOverflowScrolling: "touch",
         display: "flex",
         flexDirection: "column",
-        fontFamily: "'Mulish', sans-serif",
+        fontFamily: "var(--font-mulish), sans-serif",
         zIndex: 10
       }}
     >

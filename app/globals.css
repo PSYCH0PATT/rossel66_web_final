@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700&display=swap');
+/* Б-13: Mulish переехал в next/font (app/layout.tsx) — внешней загрузки нет. */
 /* Цветовые токены ЛК (этап 2.1). @import обязан идти до @tailwind. */
 @import './tokens.css';
 

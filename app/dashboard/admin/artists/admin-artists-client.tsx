@@ -276,11 +276,19 @@ export default function AdminArtistsClient() {
                         className="artist-card-meta mt-0.5 flex min-w-0 items-center gap-1.5 text-gray-500"
                         style={{ paddingRight: showMissing ? 24 : 0 }}
                       >
+                        {/* Б-20 (хвост F-85): голое «100%» ничего не говорило —
+                            это процент отчислений артисту, на него умножается
+                            сумма отчёта (lib/report-processing/index.ts). Слово
+                            видно там, где под него есть место: замер мета-строки
+                            даёт 192px на 1440 и 80px на 768, поэтому ниже xl
+                            остаётся только title — иначе подпись выдавила бы ФИО. */}
                         <span
                           className={`shrink-0 font-mono tabular-nums ${
                             missing.includes("percentage") ? "text-amber-300" : "text-primary"
                           }`}
+                          title="Процент отчислений артисту"
                         >
+                          <span className="hidden xl:inline">Процент </span>
                           {artist.percentage ?? 0}%
                         </span>
                         {artist.fioShort && (
