@@ -157,7 +157,17 @@ export function StreamingChart({ artistId, days = 30, initialStreamsByDay }: Str
       {/* Recharts Area Chart - matches HTML prototype design */}
       <div className="flex-1 min-h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={points} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+          {/*
+            left: 0, а не -20. Отрицательный левый отступ задвигал полосу
+            подписей оси (chartYAxisProps даёт width 40) за левый край SVG, и
+            подпись обрезалась слева на два символа: «100» превращалась в «00»,
+            «1.5K» и «4.5K» — в одинаковые «5K». Шкала читалась немонотонной
+            («6K, 5K, 3K, 5K, 0») на главной метрике обоих кабинетов — тот самый
+            симптом, который docs/ui-audit.md записал как невоспроизводимый.
+            Дело было не в данных и не в форматтере: formatAxisNumber(1500)
+            возвращает «1.5K», обрезал кадр.
+          */}
+          <AreaChart data={points} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="streamGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={STREAM_CHART_COLORS.line} stopOpacity={0.25} />

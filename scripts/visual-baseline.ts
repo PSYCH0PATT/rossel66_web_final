@@ -371,27 +371,60 @@ const FREEZE_CSS = `
  */
 const ICON_FONT = '24px "Material Symbols Outlined"'
 
-async function stabilize(page: Page) {
-  await page.addStyleTag({ content: FREEZE_CSS }).catch(() => {})
-  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {})
-  await page.evaluate(() => document.fonts?.ready).catch(() => {})
-  await page
+/**
+ * Дошёл ли иконочный шрифт. Раньше ожидание было с `.catch(() => {})` и
+ * молчало: при сорвавшемся запросе к fonts.googleapis.com кадр снимался
+ * с лигатурами-словами вместо иконок («dashboard», «person», «logout»),
+ * роут получал статус ok, и такой скрин уходил в эталон. Теперь неудача
+ * возвращается наверх и попадает в проблемы прогона.
+ */
+async function iconFontReady(page: Page): Promise<boolean> {
+  return page
     .waitForFunction(
       (font) => {
         if (!document.querySelector(".material-symbols-outlined")) return true
         document.fonts.load(font)
-        return document.fonts.check(font)
+        // `document.fonts.check()` недостаточно: он отвечает true и тогда, когда
+        // запрос к fonts.googleapis.com сорвался, — «шрифт доступен» для него
+        // значит «есть чем нарисовать», а фолбэк есть всегда. Спрашиваем сам
+        // FontFace: пока лигатуры рисуются словами, его статус не `loaded`.
+        for (const face of document.fonts) {
+          if (face.family.includes("Material Symbols") && face.status === "loaded") return true
+        }
+        return false
       },
       ICON_FONT,
       { timeout: 20_000 }
     )
-    .catch(() => {})
+    .then(() => true)
+    .catch(() => false)
+}
+
+/**
+ * @param reloadOnFontMiss перезагрузить страницу, если шрифт не приехал.
+ *   Только для первого захода на роут: внутри `RouteState.apply` перезагрузка
+ *   стёрла бы уже применённое состояние (открытый чип, раскрытую папку).
+ * @returns false, если иконочный шрифт так и не приехал — кадр негоден.
+ */
+async function stabilize(page: Page, reloadOnFontMiss = false): Promise<boolean> {
+  await page.addStyleTag({ content: FREEZE_CSS }).catch(() => {})
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {})
+  await page.evaluate(() => document.fonts?.ready).catch(() => {})
+  let fontOk = await iconFontReady(page)
+  if (!fontOk && reloadOnFontMiss) {
+    // Одна повторная попытка: срыв обычно сетевой и одноразовый.
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {})
+    await page.addStyleTag({ content: FREEZE_CSS }).catch(() => {})
+    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {})
+    fontOk = await iconFontReady(page)
+  }
   // Спиннеры остаются в DOM с классом animate-spin даже с погашенной анимацией,
   // так что ждём именно их исчезновения, а не «конца анимации».
   await page
     .waitForFunction(() => !document.querySelector(".animate-spin"), null, { timeout: 20_000 })
     .catch(() => {})
   await page.waitForTimeout(400)
+  return fontOk
 }
 
 /**
@@ -522,7 +555,9 @@ async function captureRoute(
     const status = response?.status()
     if (status && status >= 400) problems.add(`HTTP ${status}`)
 
-    await stabilize(page)
+    if (!(await stabilize(page, true))) {
+      problems.add("иконочный шрифт не загрузился — на месте иконок лигатуры-слова, кадр в эталон не годится")
+    }
 
     const landed = new URL(page.url()).pathname
     // Сам экран логина — легальная цель (роль public), а не выброшенная сессия.

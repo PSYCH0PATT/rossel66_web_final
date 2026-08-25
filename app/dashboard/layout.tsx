@@ -27,7 +27,16 @@ export default function DashboardLayout({
         в резкое цветное пятно.
       */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-accent-azure blur-[150px] motion-safe:animate-pulse-slow-azure-blob"></div>
+        {/*
+          opacity-[0.55] — базовая прозрачность под `prefers-reduced-motion`.
+          У блоба её не было, и без анимации он вставал на opacity: 1, тогда
+          как кейфреймы гоняют его между 0.4 и 0.7 (tailwind.config.js). То
+          есть пользователь, попросивший уменьшить движение, получал верхний
+          левый угол вдвое ярче задуманного, а серые подписи поверх него
+          («Общее число стримов», subtitle шапки) переставали читаться.
+          Анимация перебивает это значение, когда движение разрешено.
+        */}
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-accent-azure blur-[150px] opacity-[0.55] motion-safe:animate-pulse-slow-azure-blob"></div>
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-accent-emerald blur-[150px] opacity-[0.1]"></div>
         <div className="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-purple-900 blur-[150px] opacity-[0.05]"></div>
       </div>

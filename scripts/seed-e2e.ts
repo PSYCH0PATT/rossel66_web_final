@@ -243,6 +243,13 @@ async function main() {
       report("e2e-report-linked-q3", "e2e-linked-id", "E2E Linked", "Q3", 2026, 800, "2026-10-05T10:00:00.000Z"),
       // Отчёт солиста: не должен попадать ни в чей чужой кабинет.
       report("e2e-report-solo-q1", "e2e-solo-id", "E2E Solo", "Q1", 2026, 1500, "2026-04-11T10:00:00.000Z"),
+      // Ничейный отчёт: вид «Без кабинета» объединённого экрана «Отчёты»
+      // (вопрос №1) без него всегда снимался пустым, и «Назначить» с диалогом
+      // назначения ни разу не попали в эталон. Артиста с таким именем в базе
+      // нет — строка и должна оставаться ничьей.
+      report("e2e-report-orphan-q3", null, "E2E Без Кабинета", "Q3", 2026, 1200, "2026-10-06T10:00:00.000Z", {
+        isRegistered: false,
+      }),
     ],
   })
 
@@ -374,6 +381,35 @@ async function main() {
         platform: "Spotify",
         artistName: "E2E Main",
         artistId: "e2e-main-id",
+        // Карточка плейлиста снималась пустой («Нет данных по трекам») — таблица
+        // треков ни разу не попала в эталон. Треки живут в `trackData` (JSON от
+        // SFTP-парсера), контрактных чисел на них нет.
+        trackData: [
+          {
+            titleArtist: "E2E Main - E2E Main Track One",
+            trackTitle: "E2E Main Track One",
+            artistName: "E2E Main",
+            artistId: "e2e-main-id",
+            position: 3,
+            isrc: "E2EMAIN0001",
+            releaseDate: "2026-02-10",
+            parsedDate: "2026-02-14",
+            albumTitle: "E2E Main Release One",
+            label: "ROSSEL",
+          },
+          {
+            titleArtist: "E2E Main - E2E Main Track Two",
+            trackTitle: "E2E Main Track Two",
+            artistName: "E2E Main",
+            artistId: "e2e-main-id",
+            position: 11,
+            isrc: "E2EMAIN0002",
+            releaseDate: "2026-03-10",
+            parsedDate: "2026-03-14",
+            albumTitle: "E2E Main Release Two",
+            label: "ROSSEL",
+          },
+        ],
       },
       {
         id: "e2e-pl-main-2",

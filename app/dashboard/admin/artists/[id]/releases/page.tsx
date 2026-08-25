@@ -94,12 +94,13 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
           backLabel="Назад к списку артистов"
           title={`Релизы артиста: ${artist?.name ?? ""}`}
           rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
-          actions={
-            <Button>
-              <span className="material-symbols-outlined text-lg mr-2" aria-hidden>add</span>
-              Добавить релиз
-            </Button>
-          }
+          /*
+            Кнопки «Добавить релиз» здесь больше нет. Она была filled-CTA без
+            onClick и без href — то есть не работала вообще (случай F-66:
+            декоративный контрол без действия). Заводить релиз положено с
+            /dashboard/admin/releases, из overflow «Сервис» (решение 0-в п.3):
+            у сервисных экранов нет самостоятельных входов.
+          */
         />
 
         {artistReleases.length === 0 ? (
@@ -150,21 +151,24 @@ export default function ArtistReleasesPage({ params }: { params: { id: string } 
                     </div>
                   </div>
 
+                  {/*
+                    Карточка релиза живёт по адресу /dashboard/admin/releases/{id}.
+                    Ссылка вела на /dashboard/admin/artists/{id}/releases/{id} —
+                    роута с таким путём в проекте нет, и «Редактировать» отдавала
+                    404 (B-02 в docs/baseline-issues.md; Next префетчил её и
+                    получал 404 на каждый видимый релиз).
+
+                    Иконка «Удалить» убрана: у неё не было ни onClick, ни
+                    подтверждения — красная деструктивная кнопка, которая ничего
+                    не делает (F-66). Удаление релиза живёт в row-overflow на
+                    /dashboard/admin/releases, с confirm (вердикт 2.1).
+                  */}
                   <div className="flex items-center justify-end gap-2 mt-4">
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/dashboard/admin/artists/${artistId}/releases/${release.id}`}>
+                      <Link href={`/dashboard/admin/releases/${release.id}`}>
                         <span className="material-symbols-outlined text-base mr-2" aria-hidden>edit</span>
                         Редактировать
                       </Link>
-                    </Button>
-
-                    <Button
-                      variant="destructive-outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      aria-label={`Удалить ${release.title}`}
-                    >
-                      <span className="material-symbols-outlined text-base" aria-hidden>delete</span>
                     </Button>
                   </div>
                 </div>

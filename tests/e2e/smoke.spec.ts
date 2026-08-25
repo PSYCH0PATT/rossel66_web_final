@@ -89,31 +89,15 @@ test("визитка артиста ведёт на его главную @smoke
   await expect(page.getByRole("heading", { name: "ГЛАВНАЯ", exact: true })).toBeVisible()
 })
 
-test.fixme(
-  "артист: dashboard открывается с графиком @smoke",
-  // Окно графика на дашборде артиста жёстко зашито как «последние 30 дней от
-  // реального now()» на сервере и не регулируется из UI (в отличие от
-  // /analytics, где есть пилюли периода). Сидовые StreamAnalytics стоят датой
-  // 2026-06-15 и с каждым днём прогона всё дальше выпадают из окна — сейчас
-  // виджет стабильно показывает пустое состояние «Нет данных аналитики»,
-  // а не график. Подробности и почему это не чинится ни правкой теста, ни
-  // подбором даты «на будущее» — docs/baseline-issues.md, пункт B-05.
-  async ({ page, context }) => {
-    await loginAs(context, USERS.main, BASE)
-    await page.goto(`/dashboard/artist/${USERS.main.username}/dashboard`)
-    await expect(page.locator("svg.recharts-surface").first()).toBeVisible()
-  }
-)
-
-test("артист: dashboard открывается, виджет статистики стримов присутствует @smoke", async ({
-  page,
-  context,
-}) => {
-  // Запасная проверка на тот же экран, что и test.fixme выше (см. B-05):
-  // сама секция обязана открыться и не упасть, даже раз график сейчас не
-  // рисуется из-за устаревшего окна дат у сидовых данных.
+// Сценарий стоял под `test.fixme` с 19.08: окно графика на дашборде артиста —
+// календарное («последние 30 дней от now()»), а сидовые StreamAnalytics были
+// прибиты к 2026-06-15 и с каждым днём уходили из окна дальше. Продукт остался
+// как был — намеренно (иначе сломанный импорт flash выглядел бы здоровым, F-18);
+// подстроился стенд: даты сида скользящие (B-12, docs/backlog.md). График
+// рисуется, причина fixme отпала — сценарий снова живой.
+test("артист: dashboard открывается с графиком @smoke", async ({ page, context }) => {
   await loginAs(context, USERS.main, BASE)
   await page.goto(`/dashboard/artist/${USERS.main.username}/dashboard`)
-  await expect(page.getByRole("heading", { name: "ГЛАВНАЯ", exact: true })).toBeVisible()
+  await expect(page.locator("svg.recharts-surface").first()).toBeVisible()
   await expect(page.getByText("СТАТИСТИКА СТРИМОВ")).toBeVisible()
 })

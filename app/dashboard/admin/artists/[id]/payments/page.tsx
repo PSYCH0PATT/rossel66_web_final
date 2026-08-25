@@ -134,10 +134,19 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
           backLabel="Назад к списку артистов"
           title={`Выплаты артиста: ${artist?.name ?? ""}`}
           rowClassName="sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:items-center"
+          /*
+            Было «Добавить выплату» — filled-CTA без onClick и без href, то есть
+            неработающий контрол (F-66). Выплатами управляет объединённый экран
+            «Отчёты» (решение 0-а): там и тумблеры подписи/выплаты, и confirm.
+            Вместо мёртвой кнопки — тихая ссылка туда, иначе вкладка обещает
+            действие, которого на ней нет.
+          */
           actions={
-            <Button>
-              <span className="material-symbols-outlined text-lg mr-2" aria-hidden>add</span>
-              Добавить выплату
+            <Button asChild variant="ghost">
+              <Link href="/dashboard/admin/reports?filter=unpaid">
+                <span className="material-symbols-outlined text-lg mr-2" aria-hidden>open_in_new</span>
+                Открыть в отчётах
+              </Link>
             </Button>
           }
         />
@@ -194,21 +203,16 @@ export default function ArtistPaymentsPage({ params }: { params: { id: string } 
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-end gap-2 mt-4">
-                            <Button asChild variant="outline" size="sm">
-                              <Link href={`/dashboard/admin/payments/${payment.id}`}>
-                                <span className="material-symbols-outlined text-base mr-2" aria-hidden>edit</span>
-                                Редактировать
-                              </Link>
-                            </Button>
-
-                            {payment.status === "pending" && (
-                              <Button variant="success-outline" size="sm">
-                                <span className="material-symbols-outlined text-base mr-2" aria-hidden>currency_ruble</span>
-                                Подтвердить выплату
-                              </Button>
-                            )}
-                          </div>
+                          {/*
+                            Обе кнопки строки были нерабочими: «Редактировать»
+                            вела на /dashboard/admin/payments/{id} — роута с
+                            карточкой выплаты в проекте нет и не было (B-02 в
+                            docs/baseline-issues.md), а «Подтвердить выплату» не
+                            имела ни onClick, ни формы (F-66). Настоящий тумблер
+                            выплаты живёт на объединённом экране «Отчёты»
+                            (решение 0-а) — ссылка на него в шапке экрана.
+                            Вкладка остаётся тем, чем была по факту: сводкой.
+                          */}
                         </div>
                     ))}
                 </div>

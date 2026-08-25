@@ -5,6 +5,7 @@ import { canViewArtistCabinet } from "@/lib/artist-links"
 import { prisma } from "@/lib/prisma"
 import { playlistRowVisibleToCabinetUser } from "@/lib/playlist-artist-match"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { formatDateRu } from "@/lib/format-date"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import type { ParsedTrack } from "@/lib/sftp-playlist-parser"
 import { Button } from "@/components/ui/button"
@@ -67,16 +68,26 @@ export default async function ArtistPlaylistDetailPage({
   const tracks = (playlist.trackData as unknown as ParsedTrack[]) || []
   const cover = getPlaylistCoverUrl(playlist.platform, playlist.coverUrl)
   const listHref = `/dashboard/artist/${params.username}/playlists`
-  const nameShort =
-    playlist.playlistName.length > 40 ? `${playlist.playlistName.slice(0, 40)}…` : playlist.playlistName
   const badgeClass = platformBadgeClass(playlist.platform)
-  const added = playlist.firstSeenDate || playlist.createdAt.toISOString().split("T")[0]
+  // C-16/F-74: дата в интерфейсе всегда dd.mm.yyyy. В базе тут ISO-строка
+  // («2026-08-25»), и она уходила на экран как есть — единственное место
+  // кабинета, где формат остался машинным.
+  const added = formatDateRu(playlist.firstSeenDate || playlist.createdAt)
 
   return (
     <div className="space-y-8">
+      {/*
+        C-01/F-24: H1 — имя сущности, а не тип экрана. До этого шапка держала
+        генерик «ПЛЕЙЛИСТ», а настоящее название висело <h2> в карточке ниже —
+        ровно тот случай, который канон закрыл на карте релиза (вердикт 3.4).
+        Экран каждый раз снимался пустым («Нет данных по трекам»), поэтому в
+        приёмку волн не попадал и остался последним генерик-заголовком кабинета.
+      */}
       <PageHeader
-        title="ПЛЕЙЛИСТ"
-        subtitle="Карточка плейлиста и треки из отчёта площадки."
+        backHref={listHref}
+        title={playlist.playlistName}
+        titleStyle="entity"
+        subtitle={`Плейлист ${playlist.platform} · треки из отчёта площадки`}
         actions={
           <span
             className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border flex-shrink-0 ${badgeClass}`}
@@ -100,12 +111,9 @@ export default async function ArtistPlaylistDetailPage({
           </div>
           <div className="flex-1 min-w-0 space-y-4">
             {/*
-              Тот же дефект, что F-52 на карточке релиза: Syncopate — капс-шрифт
-              без строчных и без «ё», а это пользовательская строка.
+              Название переехало в H1 шапки (см. выше) и здесь больше не
+              повторяется — F-53: каждый факт на экране ровно один раз.
             */}
-            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight break-words">
-              {playlist.playlistName}
-            </h2>
             <p className="text-sm text-gray-400 font-mono">
               Артист в отчёте: <span className="text-gray-300">{playlist.artistName}</span>
             </p>
