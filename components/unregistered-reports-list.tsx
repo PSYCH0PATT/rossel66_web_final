@@ -2,9 +2,24 @@
 
 import { useState, useEffect } from "react"
 import { formatDateRu } from "@/lib/format-date"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, FileText, Loader2, Users, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight } from "lucide-react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { FormField } from "@/components/ui/form-field"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Download, FileText, Trash2, Play, DollarSign, Calendar, ChevronDown, ChevronRight, UserPlus } from "lucide-react"
+import { downloadFileFromApi, quarterArchiveName } from "@/lib/download-file"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Spinner } from "@/components/ui/spinner"
+import { pluralize } from "@/lib/plural"
 
 interface UnregisteredReport {
   id: string
@@ -18,10 +33,33 @@ interface UnregisteredReport {
   totalAmount: number
 }
 
-export default function UnregisteredReportsList() {
+interface Artist {
+  id: string
+  name: string
+  username: string
+}
+
+/**
+ * Вид «Без кабинета» экрана «Отчёты».
+ *
+ * Вопрос №1 (docs/ia-decisions.md, ответ владельца — вариант «а»): назначение
+ * отчёта артисту жило только на роуте-сироте /dashboard/admin/unregistered-reports,
+ * доступном по прямому URL, а в этом компоненте его не было вовсе. Теперь
+ * «Назначить» и диалог назначения здесь, роут-сирота удалён (redirect).
+ */
+export default function UnregisteredReportsList({
+  /** Отчёт назначен — счётчики шапки экрана пора пересчитать. */
+  onAssigned,
+}: {
+  onAssigned?: () => void
+}) {
   const [reports, setReports] = useState<UnregisteredReport[]>([])
+  const [artists, setArtists] = useState<Artist[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [collapsedQuarters, setCollapsedQuarters] = useState<Set<string>>(new Set())
+  const [assignFor, setAssignFor] = useState<UnregisteredReport | null>(null)
+  const [selectedArtist, setSelectedArtist] = useState<string>("")
+  const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null)
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -40,29 +78,55 @@ export default function UnregisteredReportsList() {
       }
     }
 
+    const loadArtists = async () => {
+      try {
+        // forPicker=1 возвращает всех артистов (до 500), а не первую страницу из 20
+        const response = await fetch("/api/artists?forPicker=1")
+        const data = await response.json()
+        if (data.success) {
+          setArtists(data.artists)
+        }
+      } catch (error) {
+        console.error("Ошибка при загрузке артистов:", error)
+      }
+    }
+
     fetchReports()
+    loadArtists()
   }, [])
 
-  const handleDownload = async (reportId: string, fileName: string) => {
-    try {
-      const response = await fetch(`/api/reports/download/${reportId}`)
-      
-      if (!response.ok) {
-        throw new Error('Ошибка при скачивании файла')
-      }
+  const handleDownload = (reportId: string, fileName: string) => {
+    void downloadFileFromApi(`/api/reports/download/${reportId}`, fileName)
+  }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.style.display = 'none'
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+  const handleAssignReport = async () => {
+    if (!assignFor || !selectedArtist) return
+
+    try {
+      const response = await fetch("/api/reports/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reportId: assignFor.id,
+          artistId: selectedArtist,
+        }),
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setReports((prev) => prev.filter((report) => report.id !== assignFor.id))
+        setAssignFor(null)
+        setSelectedArtist("")
+        setBanner({ type: "ok", text: "Отчёт назначен артисту" })
+        onAssigned?.()
+      } else {
+        setBanner({ type: "err", text: "Ошибка: " + (data.error || "") })
+      }
     } catch (error) {
-      console.error('Ошибка при скачивании:', error)
+      console.error("Ошибка при назначении отчёта:", error)
+      setBanner({ type: "err", text: "Ошибка при назначении отчёта" })
     }
   }
 
@@ -88,8 +152,14 @@ export default function UnregisteredReportsList() {
     }
   }
 
-  const handleDownloadAll = (quarter: string) => {
-    window.open(`/api/reports/download-all/${quarter}`, "_blank")
+  /** Метка квартала приходит как «Q1 2026» — год нужен роуту и имени архива. */
+  const handleDownloadAll = (quarterLabel: string) => {
+    const [quarter, year] = quarterLabel.split(" ")
+    const suffix = year ? `?${new URLSearchParams({ year })}` : ""
+    void downloadFileFromApi(
+      `/api/reports/download-all/${encodeURIComponent(quarter)}${suffix}`,
+      quarterArchiveName(quarter, year)
+    )
   }
 
   const toggleQuarter = (quarter: string) => {
@@ -105,29 +175,32 @@ export default function UnregisteredReportsList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-400">Загрузка отчётов...</span>
+        <Spinner label="Загрузка отчётов..." />
       </div>
     )
   }
 
   if (reports.length === 0) {
+    /* F-47: было три статус-сообщения на экране. Пилюля «Система работает
+       корректно» дублировала заголовок и спорила с баннером о неполных
+       данных — остаётся одно состояние экрана. */
     return (
-      <div className="text-center py-16">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-500/30 mb-6">
-          <Users className="h-10 w-10 text-emerald-400" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-3">
-          Отлично! Нет незарегистрированных отчётов
-        </h3>
-        <p className="text-slate-400 text-lg max-w-md mx-auto">
-          Все отчёты успешно назначены зарегистрированным артистам
-        </p>
-        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-          <span className="text-emerald-300 font-medium">Система работает корректно</span>
-        </div>
-      </div>
+      <>
+        {banner && (
+          <Banner
+            className="mb-4"
+            variant={banner.type === "ok" ? "success" : "danger"}
+            onClose={() => setBanner(null)}
+          >
+            {banner.text}
+          </Banner>
+        )}
+        <EmptyState
+          icon="how_to_reg"
+          title="Нет отчётов без кабинета"
+          description="Все отчёты назначены зарегистрированным артистам"
+        />
+      </>
     )
   }
 
@@ -143,13 +216,23 @@ export default function UnregisteredReportsList() {
 
   return (
     <div className="space-y-4">
+      {banner && (
+        <Banner
+          variant={banner.type === "ok" ? "success" : "danger"}
+          onClose={() => setBanner(null)}
+        >
+          {banner.text}
+        </Banner>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Незарегистрированные отчёты</h3>
-          <p className="text-sm text-slate-400">Отчёты артистов без кабинета</p>
+          {/* F-60: одна сущность — одно имя, «Отчёты без кабинета» */}
+          <h3 className="text-lg font-semibold text-white">Отчёты без кабинета</h3>
+          <p className="text-sm text-slate-400">Отчёты артистов, у которых нет кабинета</p>
         </div>
         <div className="text-sm text-slate-400">
-          Всего: {reports.length} отчётов
+          Всего: {pluralize(reports.length, ["отчёт", "отчёта", "отчётов"])}
         </div>
       </div>
 
@@ -168,18 +251,17 @@ export default function UnregisteredReportsList() {
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold text-white">{quarter}</h4>
-                    <p className="text-sm text-slate-400">{quarterReports.length} отчётов</p>
+                    <p className="text-sm text-slate-400">{pluralize(quarterReports.length, ["отчёт", "отчёта", "отчётов"])}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="success-outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDownloadAll(quarter.split(' ')[0])
+                      handleDownloadAll(quarter)
                     }}
-                    className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300"
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Скачать все
@@ -200,7 +282,7 @@ export default function UnregisteredReportsList() {
               {quarterReports.map((report) => (
                 <div
                   key={report.id}
-                  className="flex items-center p-4 rounded-lg bg-transparent border border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700/20 transition-all duration-200"
+                  className="flex flex-col gap-3 rounded-lg border border-slate-600/30 bg-transparent p-4 transition-all duration-200 hover:border-slate-500/50 hover:bg-slate-700/20 sm:flex-row sm:items-center"
                 >
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-white text-lg mb-2 truncate">
@@ -226,21 +308,34 @@ export default function UnregisteredReportsList() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:flex-shrink-0">
                     <Button
-                      variant="outline"
+                      variant="success-outline"
                       size="sm"
                       onClick={() => handleDownload(report.id, report.fileName)}
-                      className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-300 whitespace-nowrap"
+                      className="whitespace-nowrap"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Скачать
                     </Button>
+                    {/* Главное действие вида — перенесено с роута-сироты (вопрос №1) */}
                     <Button
-                      variant="outline"
+                      variant="cta"
                       size="sm"
+                      className="whitespace-nowrap"
+                      onClick={() => {
+                        setAssignFor(report)
+                        setSelectedArtist("")
+                      }}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Назначить
+                    </Button>
+                    <Button
+                      variant="destructive-outline"
+                      size="sm"
+                      aria-label={`Удалить отчёт ${report.artistName}`}
                       onClick={() => handleDelete(report.id, report.artistName)}
-                      className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -253,6 +348,46 @@ export default function UnregisteredReportsList() {
           </Card>
         )
       })}
+
+      <Dialog open={!!assignFor} onOpenChange={(o) => !o && setAssignFor(null)}>
+        <DialogContent className="bg-surface-dialog border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl uppercase">Назначить отчёт</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {assignFor ? `Отчёт: ${assignFor.artistName} — ${assignFor.quarter} ${assignFor.year}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <FormField label="Артист" htmlFor="assign-artist">
+              <Select value={selectedArtist} onValueChange={setSelectedArtist}>
+                <SelectTrigger id="assign-artist" className="rounded-lg border-white/10 bg-white/5 text-white">
+                  <SelectValue placeholder="Выберите артиста" />
+                </SelectTrigger>
+                <SelectContent>
+                  {artists.map((artist) => (
+                    <SelectItem key={artist.id} value={artist.id}>
+                      {artist.name} (@{artist.username})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" className="border-white/20" onClick={() => setAssignFor(null)}>
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              variant="cta"
+              onClick={() => void handleAssignReport()}
+              disabled={!selectedArtist}
+            >
+              Назначить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

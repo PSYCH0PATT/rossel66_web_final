@@ -1,3 +1,5 @@
+import { isNextImageRemoteHostAllowed } from '@/lib/next-image-hosts'
+
 /**
  * Плейсхолдер обложки по платформе — фоллбэк, когда coverUrl не распарсен.
  * I4: матчим по ключевым словам без учёта регистра/написания, иначе «VK Music»,
@@ -16,12 +18,43 @@ function placeholderForPlatform(platform: string): string {
 const DISPLAY_COVER_MAX = 400
 
 /**
+ * F-06: часть строк в cover_url приехала из API как есть — без схемы
+ * («avatars.yandex.net/get-music-content/…»). В src такой адрес уходит
+ * относительным путём и даёт битую картинку.
+ */
+function withScheme(url: string): string {
+  if (url.startsWith('/') || url.startsWith('//')) return url
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url
+  return `https://${url}`
+}
+
+/**
+ * F-06: отрисует ли это браузер через next/image. Битая обложка — это всегда
+ * одно из трёх: не абсолютный https, хост вне remotePatterns (оптимизатор
+ * отвечает 400) или неразрешённый плейсхолдер размера `%%` в пути.
+ */
+export function isRenderableCoverUrl(url: string): boolean {
+  if (!url) return false
+  if (url.includes('%%')) return false
+  if (url.startsWith('/')) return true
+
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'https:') return false
+  return isNextImageRemoteHostAllowed(parsed.hostname)
+}
+
+/**
  * Ужимает известные URL обложек Яндекс/CDN для сетки и next/image:
  * в БД часто лежит m1000x1000 — тянуть её для карточки не нужно.
  * Локальные пути и неизвестные URL не трогаем.
  */
 export function optimizePlaylistCoverForDisplay(url: string): string {
-  const u = url.trim()
+  const u = withScheme(url.trim())
   if (!u.startsWith("http")) return u
 
   try {
@@ -65,13 +98,18 @@ export function optimizePlaylistCoverForDisplay(url: string): string {
  *   1. coverUrl из БД (реальная обложка, распарсенная скрапером) — для UI ужимается до ~400px, если это Яндекс CDN
  *   2. Статический плейсхолдер по платформе
  *   3. /placeholder.svg
+ *
+ * F-06: нерисуемый coverUrl (не https, чужой хост, `%%` в пути) — это не «почти
+ * обложка», а гарантированно битая картинка на экране. Такой URL не отдаём:
+ * лучше честная заглушка платформы.
  */
 export function getPlaylistCoverUrl(
   platform: string | null | undefined,
   coverUrl?: string | null
 ): string {
   if (coverUrl && coverUrl.trim()) {
-    return optimizePlaylistCoverForDisplay(coverUrl.trim())
+    const display = optimizePlaylistCoverForDisplay(coverUrl.trim())
+    if (isRenderableCoverUrl(display)) return display
   }
   if (!platform || !platform.trim()) return '/placeholder.svg'
   return placeholderForPlatform(platform)

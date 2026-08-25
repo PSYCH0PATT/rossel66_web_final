@@ -2,23 +2,50 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FilterChip } from "@/components/ui/filter-chip"
+import { FormField } from "@/components/ui/form-field"
+import { PageHeader } from "@/components/ui/page-header"
+import { Pagination } from "@/components/ui/pagination"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
+import { SkeletonRows } from "@/components/ui/skeleton-presets"
+import { listSkeletonCount } from "@/lib/list-skeleton"
 import type { ActivityType } from "@/lib/storage"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import type { ActivityView } from "@/lib/activity-views"
+import { activityActorLabel } from "@/lib/activity-log"
 
-const CATEGORIES = [
-  { id: "all", label: "Общее", types: undefined },
-  { id: "releases", label: "Релизы", types: ["release_added", "release_status_updated"] as ActivityType[] },
-  { id: "playlists", label: "Плейлисты", types: ["playlist_found"] as ActivityType[] },
-  { id: "reports", label: "Отчёты", types: ["report_received", "reports_generated"] as ActivityType[] },
-  { id: "payments", label: "Выплаты", types: ["payment_sent"] as ActivityType[] },
-  {
-    id: "artists",
-    label: "Артисты",
-    types: ["artist_added", "artist_removed", "user_data_updated"] as ActivityType[],
-  },
+/**
+ * Виды журнала — решение 0-б (docs/ia-decisions.md). Прежние шесть категорий
+ * («Общее / Релизы / Плейлисты / Отчёты / Выплаты / Артисты») пересобраны под
+ * задачи владельца: дефолт «Главное» — плейлисты, подписания и поломки плюс
+ * самостоятельные действия артиста; всё остальное живёт под «Все события».
+ */
+const VIEWS: { id: ActivityView; label: string }[] = [
+  { id: "main", label: "Главное" },
+  { id: "playlists", label: "Плейлисты" },
+  { id: "signatures", label: "Подписания" },
+  { id: "errors", label: "Ошибки" },
+  { id: "all", label: "Все события" },
 ]
 
 const TYPE_LABELS: Record<ActivityType, string> = {
@@ -44,6 +71,10 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   advance_issued: "Аванс выдан",
   advance_removed: "Аванс удалён",
 }
+
+/** Вид чипов-фильтров админки — один на /artists, /payments и /activity (F-22). */
+const CHIP_CLASS =
+  "rounded-lg border-white/10 bg-white/5 px-3 font-mono text-xs uppercase text-gray-400 hover:bg-white/[0.08] hover:text-white data-[active=true]:border-primary/40 data-[active=true]:bg-primary/20 data-[active=true]:text-primary"
 
 function activityIcon(type: ActivityType): { name: string; className: string } {
   switch (type) {
@@ -90,6 +121,8 @@ interface ActivityItem {
   description: string
   metadata?: Record<string, unknown>
   createdAt: string
+  /** F-03: подпись актора, посчитанная на сервере. */
+  userName?: string
 }
 
 interface UserOption {
@@ -99,11 +132,26 @@ interface UserOption {
   role?: string
 }
 
+/** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт /api/activities. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 export default function AdminActivityPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [categoryId, setCategoryId] = useState("all")
+  const [view, setView] = useState<ActivityView>("main")
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [role, setRole] = useState<string>("all")
   const [userId, setUserId] = useState<string>("")
   const [dateFrom, setDateFrom] = useState("")
@@ -113,6 +161,7 @@ export default function AdminActivityPage() {
   const [users, setUsers] = useState<UserOption[]>([])
   const [userSearch, setUserSearch] = useState("")
   const [debouncedUserSearch, setDebouncedUserSearch] = useState("")
+  const [userPickerOpen, setUserPickerOpen] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedUserSearch(userSearch), 300)
@@ -165,10 +214,8 @@ export default function AdminActivityPage() {
       if (dateFrom) params.set("dateFrom", dateFrom)
       if (dateTo) params.set("dateTo", dateTo)
 
-      const cat = CATEGORIES.find((c) => c.id === categoryId)
-      if (cat?.types?.length) {
-        cat.types.forEach((t) => params.append("type", t))
-      }
+      // «Все события» — это отсутствие вида: полный журнал как раньше.
+      if (view !== "all") params.set("view", view)
 
       const res = await fetch(`/api/activities?${params.toString()}`)
       const data = await res.json()
@@ -181,17 +228,13 @@ export default function AdminActivityPage() {
     } finally {
       setLoading(false)
     }
-  }, [categoryId, role, userId, dateFrom, dateTo, offset, pageSize])
+  }, [view, role, userId, dateFrom, dateTo, offset, pageSize])
 
   useEffect(() => {
     loadActivities()
   }, [loadActivities])
 
   const resetOffset = () => setOffset(0)
-  const prevPage = () => setOffset((o) => Math.max(0, o - pageSize))
-  const nextPage = () => setOffset((o) => o + pageSize)
-  const hasPrev = offset > 0
-  const hasNext = offset + activities.length < total
 
   const formatDateTime = (dateString: string) =>
     new Date(dateString).toLocaleString("ru-RU", {
@@ -203,61 +246,93 @@ export default function AdminActivityPage() {
     })
 
   const whoLabel = (item: ActivityItem) => {
-    if (item.userId === "system") return "Система"
+    // F-03: имя резолвит сервер (lib/storage.ts) — в подгруженной странице
+    // списка пользователей его почти никогда не было, и в колонку падал
+    // сырой числовой id.
+    if (item.userName) return item.userName
     const u = users.find((x) => x.id === item.userId)
-    return u ? u.name || u.username || item.userId : item.userId
+    const fallback = new Map<string, string>()
+    if (u) fallback.set(u.id, u.name || u.username || "")
+    return activityActorLabel(item, fallback)
   }
+
+  /** Сколько инцидент-фильтров включено — подпись на свёрнутом блоке. */
+  const activeFilterCount =
+    (role !== "all" ? 1 : 0) + (userId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+
+  const selectedUser = users.find((u) => u.id === userId)
+  const selectedUserLabel = userId ? selectedUser?.name || selectedUser?.username || userId : "Все"
 
   const filterInput =
     "h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
   return (
     <div className="space-y-8">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Активность</span>
-          </div>
-          <div className="border-b border-white/5 pb-8">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Активность</h1>
-            <p className="text-sm text-gray-400 font-light mt-2">Журнал событий платформы</p>
-          </div>
-        </div>
+        <PageHeader title="Активность" subtitle="Журнал событий платформы" />
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 space-y-6">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            Фильтры и лента
-          </h2>
+          <SectionHeader className="mb-0" size="sm" title="Фильтры и лента" />
 
           <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={`rounded-lg border text-xs font-mono uppercase ${
-                  categoryId === cat.id
-                    ? "bg-primary/20 border-primary/40 text-primary"
-                    : "border-white/10 bg-white/5 text-gray-400 hover:bg-white/[0.08]"
-                }`}
+            {VIEWS.map((item) => (
+              <FilterChip
+                key={item.id}
+                tone="success"
+                active={view === item.id}
+                className={CHIP_CLASS}
                 onClick={() => {
-                  setCategoryId(cat.id)
+                  setView(item.id)
                   resetOffset()
                 }}
               >
-                {cat.label}
-              </Button>
+                {item.label}
+              </FilterChip>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Роль</label>
+          {/* 0-б: блок инцидент-фильтров — инструмент разбора, а не ежедневный
+              контрол: свёрнут по умолчанию, счётчик показывает, что фильтр
+              включён и лента поэтому короче (C-11). «Обновить» остаётся у
+              ленты и приглушён до ghost (F-20). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={filtersOpen}
+              aria-controls="activity-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base mr-1" aria-hidden>tune</span>
+              Фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              <span className="material-symbols-outlined text-base ml-1" aria-hidden>
+                {filtersOpen ? "expand_less" : "expand_more"}
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setOffset(0)
+                loadActivities()
+              }}
+              className="ml-auto rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base mr-1" aria-hidden>refresh</span>
+              Обновить
+            </Button>
+          </div>
+
+          {/* Свёрнут — значит не отрисован: у div с классом `grid` атрибут
+              hidden ничего не скрывает, display из класса сильнее. */}
+          {filtersOpen && (
+          <div
+            id="activity-filters"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3"
+          >
+            <FormField label="Роль" htmlFor="filter-role" className="space-y-1.5">
               <Select
                 value={role}
                 onValueChange={(v) => {
@@ -265,7 +340,7 @@ export default function AdminActivityPage() {
                   resetOffset()
                 }}
               >
-                <SelectTrigger className={filterInput}>
+                <SelectTrigger id="filter-role" className={filterInput}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,66 +349,100 @@ export default function AdminActivityPage() {
                   <SelectItem value="admin">Админ</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Поиск пользователя</label>
-              <Input
-                value={userSearch}
-                onChange={(e) => {
-                  setUserSearch(e.target.value)
+            </FormField>
+            {/* F-50: было два контрола одного измерения — инпут «Поиск
+                пользователя» и селект «Пользователь». Теперь один combobox:
+                поиск живёт внутри списка. */}
+            <FormField label="Пользователь" htmlFor="filter-user" className="space-y-1.5">
+              <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="filter-user"
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={userPickerOpen}
+                    className={`${filterInput} justify-between font-normal`}
+                  >
+                    <span className="truncate">{selectedUserLabel}</span>
+                    {/* Б-21 (F-68): одна иконная система — material-symbols. */}
+                    <span className="material-symbols-outlined ml-2 shrink-0 text-base opacity-50" aria-hidden>
+                      unfold_more
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(20rem,var(--radix-popover-trigger-width))] p-0">
+                  {/* Фильтрация серверная (запрос по q), поэтому cmdk своим
+                      фильтром список не режет. */}
+                  <Command shouldFilter={false} className="bg-transparent text-white">
+                    <CommandInput
+                      value={userSearch}
+                      onValueChange={(v) => {
+                        setUserSearch(v)
+                        resetOffset()
+                      }}
+                      placeholder="Имя или username..."
+                    />
+                    <CommandList className="max-h-60">
+                      <CommandEmpty className="py-4 text-center text-xs font-mono uppercase tracking-widest text-gray-500">
+                        Никого не нашлось
+                      </CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            setUserId("")
+                            setUserPickerOpen(false)
+                            resetOffset()
+                          }}
+                        >
+                          Все
+                        </CommandItem>
+                        {users.map((u) => (
+                          <CommandItem
+                            key={u.id}
+                            value={u.id}
+                            onSelect={() => {
+                              setUserId(u.id)
+                              setUserPickerOpen(false)
+                              resetOffset()
+                            }}
+                          >
+                            {u.name || u.username || u.id}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </FormField>
+            {/* F-12: нативные date-инпуты выпадали из тёмной темы */}
+            <FormField label="Дата от" htmlFor="filter-date-from" className="space-y-1.5">
+              <DatePicker
+                id="filter-date-from"
+                value={parseIsoDate(dateFrom)}
+                onChange={(date) => {
+                  setDateFrom(toIsoDate(date))
                   resetOffset()
                 }}
-                placeholder="Имя или username..."
-                className={`${filterInput} mb-2`}
-                spellCheck={false}
+                placeholder="дд.мм.гггг"
+                className={`${filterInput} justify-start normal-case`}
               />
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Пользователь</label>
-              <Select
-                value={userId || "all"}
-                onValueChange={(v) => {
-                  setUserId(v === "all" ? "" : v)
+            </FormField>
+            <FormField label="Дата до" htmlFor="filter-date-to" className="space-y-1.5">
+              <DatePicker
+                id="filter-date-to"
+                value={parseIsoDate(dateTo)}
+                onChange={(date) => {
+                  setDateTo(toIsoDate(date))
                   resetOffset()
                 }}
-              >
-                <SelectTrigger className={filterInput}>
-                  <SelectValue placeholder="Все" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name || u.username || u.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Дата от</label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value)
-                  resetOffset()
-                }}
-                className={filterInput}
+                placeholder="дд.мм.гггг"
+                className={`${filterInput} justify-start normal-case`}
               />
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">Дата до</label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value)
-                  resetOffset()
-                }}
-                className={filterInput}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 block mb-1.5">На странице</label>
+            </FormField>
+            <FormField label="На странице" htmlFor="filter-page-size" className="space-y-1.5">
               <Select
                 value={String(pageSize)}
                 onValueChange={(v) => {
@@ -341,7 +450,7 @@ export default function AdminActivityPage() {
                   setOffset(0)
                 }}
               >
-                <SelectTrigger className={filterInput}>
+                <SelectTrigger id="filter-page-size" className={filterInput}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -350,111 +459,96 @@ export default function AdminActivityPage() {
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setOffset(0)
-                  loadActivities()
-                }}
-                className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5 w-full md:w-auto"
-              >
-                <span className="material-symbols-outlined text-base mr-1">refresh</span>
-                Обновить
-              </Button>
-            </div>
+            </FormField>
           </div>
+          )}
 
           {loading ? (
-            <div className="space-y-2 py-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-12 rounded-lg bg-white/[0.04] motion-safe:animate-pulse" aria-hidden />
-              ))}
-            </div>
+            /* F-86: строк-заглушек столько, сколько придёт записей, — страница
+               не прыгает после ответа и при листании */
+            <SkeletonRows
+              className="py-6"
+              rows={listSkeletonCount({
+                pageSize,
+                total: activities.length > 0 ? total : null,
+                page: Math.floor(offset / pageSize) + 1,
+                previousCount: activities.length || null,
+              })}
+            />
           ) : activities.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 font-mono text-sm">Нет записей</div>
+            <EmptyState className="py-12" title="Нет записей" />
           ) : (
             <>
-              <div className="rounded-2xl border border-white/10 overflow-x-auto table-glass">
-                <table className="w-full text-sm min-w-[800px]">
-                  <thead>
-                    <tr className="text-left text-xs font-mono uppercase text-gray-500 border-b border-white/10">
-                      <th className="p-3 sm:p-4 whitespace-nowrap">Дата / время</th>
-                      <th className="p-3 sm:p-4 whitespace-nowrap">Тип</th>
-                      <th className="p-3 sm:p-4">Заголовок</th>
-                      <th className="p-3 sm:p-4">Описание</th>
-                      <th className="p-3 sm:p-4 whitespace-nowrap">Кто</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              {/* C-10/F-77: скролл с видимым индикатором — «Описание» и «Кто»
+                  на 390 больше не пропадают за краем без аффорданса */}
+              <div className="rounded-2xl border border-white/10 overflow-hidden table-glass">
+                <DataTable tableClassName="min-w-[700px]">
+                  <DataTableHeader>
+                    <DataTableHeadRow>
+                      <DataTableHeadCell>Дата / время</DataTableHeadCell>
+                      <DataTableHeadCell>Событие</DataTableHeadCell>
+                      <DataTableHeadCell>Описание</DataTableHeadCell>
+                      <DataTableHeadCell>Кто</DataTableHeadCell>
+                    </DataTableHeadRow>
+                  </DataTableHeader>
+                  <DataTableBody>
                     {activities.map((item) => {
                       const ic = activityIcon(item.type)
+                      const typeLabel = TYPE_LABELS[item.type] || item.type
                       return (
-                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/[0.04] table-row-hover">
-                          <td className="p-3 sm:p-4 text-gray-300 whitespace-nowrap text-xs sm:text-sm [font-variant-numeric:tabular-nums]">
+                        <DataTableRow key={item.id} className="table-row-hover">
+                          <DataTableCell className="text-gray-300 whitespace-nowrap text-xs sm:text-sm [font-variant-numeric:tabular-nums]">
                             {formatDateTime(item.createdAt)}
-                          </td>
-                          <td className="p-3 sm:p-4">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={`material-symbols-outlined text-lg flex-shrink-0 ${ic.className}`}>
+                          </DataTableCell>
+                          {/* F-49: «Тип» и «Заголовок» были одной и той же
+                              строкой в двух колонках — теперь одна колонка,
+                              тип несёт иконка, подпись остаётся только когда
+                              она добавляет что-то к заголовку. */}
+                          <DataTableCell className="min-w-0 max-w-[260px]">
+                            <div className="flex items-start gap-2 min-w-0">
+                              <span
+                                className={`material-symbols-outlined text-lg flex-shrink-0 ${ic.className}`}
+                                title={typeLabel}
+                                aria-hidden
+                              >
                                 {ic.name}
                               </span>
-                              <span className="text-gray-300 text-xs sm:text-sm whitespace-nowrap truncate">
-                                {TYPE_LABELS[item.type] || item.type}
-                              </span>
+                              <div className="min-w-0">
+                                <span className="line-clamp-2 font-medium text-white text-xs sm:text-sm">
+                                  {item.title}
+                                </span>
+                                {typeLabel !== item.title && (
+                                  <span className="block truncate text-xs text-gray-500">{typeLabel}</span>
+                                )}
+                              </div>
                             </div>
-                          </td>
-                          <td className="p-3 sm:p-4 font-medium text-white text-xs sm:text-sm min-w-0 max-w-[220px]">
-                            <span className="line-clamp-2">{item.title}</span>
-                          </td>
-                          <td className="p-3 sm:p-4 text-gray-400 text-xs sm:text-sm min-w-[200px] max-w-md">
+                          </DataTableCell>
+                          <DataTableCell className="text-gray-400 text-xs sm:text-sm min-w-[200px] max-w-md">
                             <div className="whitespace-normal break-words line-clamp-3">{item.description}</div>
-                          </td>
-                          <td className="p-3 sm:p-4 text-gray-300 text-xs sm:text-sm whitespace-nowrap">{whoLabel(item)}</td>
-                        </tr>
+                          </DataTableCell>
+                          <DataTableCell className="text-gray-300 text-xs sm:text-sm whitespace-nowrap">
+                            {whoLabel(item)}
+                          </DataTableCell>
+                        </DataTableRow>
                       )
                     })}
-                  </tbody>
-                </table>
+                  </DataTableBody>
+                </DataTable>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono text-gray-500">
-                <span className="[font-variant-numeric:tabular-nums]">
-                  {offset + 1}–{Math.min(offset + pageSize, total)} из {total}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!hasPrev}
-                    onClick={prevPage}
-                    className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
-                  >
-                    <span className="material-symbols-outlined text-base mr-1">chevron_left</span>
-                    Назад
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!hasNext}
-                    onClick={nextPage}
-                    className="rounded-lg border-white/15 text-gray-300 hover:bg-white/5"
-                  >
-                    Далее
-                    <span className="material-symbols-outlined text-base ml-1">chevron_right</span>
-                  </Button>
-                </div>
-              </div>
+              {/* C-06: счётчик и навигация — один компонент, строки русские */}
+              <Pagination
+                page={Math.floor(offset / pageSize) + 1}
+                total={total}
+                pageSize={pageSize}
+                loading={loading}
+                itemForms={["событие", "события", "событий"]}
+                onPageChange={(p) => setOffset((p - 1) * pageSize)}
+              />
             </>
           )}
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

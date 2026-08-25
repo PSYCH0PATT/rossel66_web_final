@@ -9,7 +9,11 @@ import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { Banner } from "@/components/ui/banner"
+import { FileInput } from "@/components/ui/file-input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { PLATFORM_ICONS } from "@/lib/platform-icon"
 
 const inputClass =
   "h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -144,60 +148,25 @@ export default function AddArtistPage() {
   }
 
   return (
-    <div className="space-y-6">
-        <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Добавить</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
-            <div className="min-w-0">
-              <Link
-                href="/dashboard/admin/artists"
-                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                К списку
-              </Link>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                Добавить артиста
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">Создание аккаунта и профиля в системе</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary">person_add</span>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-8">
+        <PageHeader
+          backHref="/dashboard/admin/artists"
+          title="Добавить артиста"
+          subtitle="Создание аккаунта и профиля в системе"
+        />
 
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
-            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
-            {error}
-          </div>
-        )}
+        {error && <Banner variant="danger">{error}</Banner>}
 
         {success && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
-            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
-            Артист успешно создан! Перенаправление...
-          </div>
+          <Banner variant="success">Артист успешно создан! Перенаправление...</Banner>
         )}
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            Информация об артисте
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <SectionHeader className="mb-6" size="sm" title="Информация об артисте" />
+          {/* C-18/F-10: одна колонка читаемой ширины. Раньше правая половина
+              сетки держала только аватар и пустела на пол-экрана. */}
+          <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+            <div className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-xs font-mono uppercase text-gray-400">
@@ -264,7 +233,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="vkMusicUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="https://cdn.simpleicons.org/vk/0077FF" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.vk} alt="" className="h-4 w-4" />
                     ВК Музыка
                   </Label>
                   <div className="relative">
@@ -285,7 +254,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="yandexMusicUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="https://cdn.simpleicons.org/yandexmusic/FFCC00" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.yandex} alt="" className="h-4 w-4" />
                     Яндекс Музыка
                   </Label>
                   <div className="relative">
@@ -306,7 +275,7 @@ export default function AddArtistPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="spotifyUrl" className="text-white flex items-center gap-1 text-sm">
-                    <img src="/spotify-logo.png" alt="" className="h-4 w-4" />
+                    <img src={PLATFORM_ICONS.spotify} alt="" className="h-4 w-4" />
                     Spotify
                   </Label>
                   <div className="relative">
@@ -331,88 +300,44 @@ export default function AddArtistPage() {
                   <Label htmlFor="avatar-upload" className="text-xs font-mono uppercase text-gray-400">
                     Аватар
                   </Label>
-                  <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02] hover:border-primary/30 motion-safe:transition-colors">
+                  <div className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-4 hover:border-primary/30 motion-safe:transition-colors">
                     {avatarPreview ? (
-                      <div className="relative w-32 h-32 mb-4 rounded-full border border-primary/50 overflow-hidden">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-primary/50">
                         <Image src={avatarPreview || "/placeholder.svg"} alt="" fill className="object-cover" />
                       </div>
                     ) : (
-                      <div className="w-32 h-32 mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-6xl text-gray-500">person</span>
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
+                        <span className="material-symbols-outlined text-4xl text-gray-500">person</span>
                       </div>
                     )}
-                    <label
-                      htmlFor="avatar-upload"
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      <span className="material-symbols-outlined text-lg">upload</span>
-                      <span>Загрузить аватар</span>
-                    </label>
-                    <input
+                    <FileInput
                       id="avatar-upload"
-                      type="file"
                       accept="image/*"
                       onChange={handleAvatarChange}
-                      className="hidden"
+                      icon="upload"
+                      buttonLabel="Загрузить аватар"
+                      buttonVariant="outline"
+                      buttonClassName="gap-2 rounded-lg border-white/15 px-4 py-2 text-gray-200 hover:bg-white/5"
+                      showFileName={false}
                     />
-                    <p className="text-xs text-gray-500 mt-2">Рекомендуемый размер: 256×256 px</p>
+                    <p className="text-xs text-gray-500">Рекомендуемый размер: 256×256 px</p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <h3 className="text-sm font-medium text-white mb-2">Что будет создано</h3>
-                  <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
-                    <li>Аккаунт артиста с доступом в личный кабинет</li>
-                    <li>Папка для хранения обложек релизов и плейлистов</li>
-                    <li>Excel-таблица для отслеживания релизов и треков</li>
-                    <li>Структура данных для отчётов и выплат</li>
-                    <li>Профили в музыкальных сервисах (если указаны)</li>
-                  </ul>
-                </div>
 
-                <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <h3 className="text-sm font-medium text-white mb-2">Профили в сервисах</h3>
-                  <p className="text-xs text-gray-500 mb-3">Ссылки отображаются на странице артиста.</p>
-                  <div className="space-y-2">
-                    {vkMusicUrl && (
-                      <a
-                        href={vkMusicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        ВК Музыка
-                      </a>
-                    )}
-                    {yandexMusicUrl && (
-                      <a
-                        href={yandexMusicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        Яндекс Музыка
-                      </a>
-                    )}
-                    {spotifyUrl && (
-                      <a
-                        href={spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300"
-                      >
-                        <span className="material-symbols-outlined text-base">library_music</span>
-                        Spotify
-                      </a>
-                    )}
-                    {!vkMusicUrl && !yandexMusicUrl && !spotifyUrl && (
-                      <p className="text-xs text-gray-500 font-mono">Нет добавленных профилей</p>
-                    )}
-                  </div>
-                </div>
               </div>
+            </div>
+
+            {/* 2.9: справка — ниже формы, а не рядом с полями (C-18). */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <h3 className="mb-2 text-sm font-medium text-white">Что будет создано</h3>
+              <ul className="list-inside list-disc space-y-1 text-xs text-gray-500">
+                <li>Аккаунт артиста с доступом в личный кабинет</li>
+                <li>Папка для хранения обложек релизов и плейлистов</li>
+                <li>Excel-таблица для отслеживания релизов и треков</li>
+                <li>Структура данных для отчётов и выплат</li>
+                <li>Профили в музыкальных сервисах (если указаны)</li>
+              </ul>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -427,7 +352,8 @@ export default function AddArtistPage() {
               </Button>
               <Button
                 type="submit"
-                className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
+                variant="cta"
+                className="rounded-lg"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Создание..." : "Создать артиста"}
@@ -436,7 +362,6 @@ export default function AddArtistPage() {
           </form>
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

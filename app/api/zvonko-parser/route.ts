@@ -106,23 +106,20 @@ async function markModerationDeliveredAfterParse(parsersDir: string): Promise<nu
     for (const release of markedReleases) {
       const artist = release.artistId ? userById.get(release.artistId) : undefined
 
+      // F-03: одна запись на событие — «дубликат для админа» задваивал журнал
+      // одним таймстампом, причём без имени актора.
       await addActivity({
         type: 'release_status_updated',
         userId: release.artistId,
         userRole: 'artist',
         title: 'Статус релиза обновлён',
         description: `Релиз "${release.title}" переведён в «Доставлен»`,
-        metadata: { releaseId: release.id, artistId: release.artistId, status: 'Доставлен' }
-      })
-
-      // Дубликат для админа
-      await addActivity({
-        type: 'release_status_updated',
-        userId: 'system',
-        userRole: 'admin',
-        title: 'Статус релиза обновлён',
-        description: `Релиз "${release.title}" переведён в «Доставлен» (артист: ${artist?.name || artist?.username || release.artistId})`,
-        metadata: { releaseId: release.id, artistId: release.artistId, artistName: artist?.name, status: 'Доставлен' }
+        metadata: {
+          releaseId: release.id,
+          artistId: release.artistId,
+          artistName: artist?.name,
+          status: 'Доставлен',
+        }
       })
     }
 

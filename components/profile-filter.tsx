@@ -2,6 +2,15 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 /**
  * Фильтр по профилю внутри группы связанных профилей (AKA).
@@ -9,6 +18,11 @@ import { useDashboardProfile } from "@/components/dashboard-user-context"
  * У группы один кабинет, и все вкладки по умолчанию показывают данные всех её
  * профилей. Этот селект позволяет сузить их до одного. Если профиль один
  * (обычный артист без привязок) — не рендерится вовсе.
+ *
+ * Волна 4.2: нативный `<select>` заменён на ui/select (C-17) — выпадашку рисует
+ * не ОС, а тёмный SelectContent на токенах; хекс `focus:border-[#10b981]` уехал
+ * на `brand` (C-04). Стрелку теперь рисует сам триггер, отдельная иконка
+ * `unfold_more` не нужна.
  */
 export function ProfileFilter({
   value,
@@ -25,39 +39,32 @@ export function ProfileFilter({
   if (profiles.length < 2) return null
 
   return (
-    <div className={`relative ${className}`}>
-      <label htmlFor="profile-filter" className="sr-only">
+    <div className={cn("relative", className)}>
+      <Label htmlFor="profile-filter" className="sr-only">
         Профиль
-      </label>
-      <select
-        id="profile-filter"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-black/40 pl-10 pr-9 font-mono text-sm text-white outline-none transition-all focus:border-[#10b981] hover:border-white/20"
-      >
-        <option value="all" className="bg-black">
-          Все профили
-        </option>
-        {profiles.map((p) => (
-          <option key={p.id} value={p.id} className="bg-black">
-            {p.name}
-            {p.isMain ? " · основной" : ""}
-          </option>
-        ))}
-      </select>
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger
+          id="profile-filter"
+          className="h-11 w-full rounded-lg border-white/10 bg-black/40 pl-10 pr-3 font-mono text-sm text-white transition-all hover:border-white/20 focus:border-brand"
+        >
+          <SelectValue placeholder="Все профили" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Все профили</SelectItem>
+          {profiles.map((p) => (
+            <SelectItem key={p.id} value={p.id}>
+              {p.name}
+              {p.isMain ? " · основной" : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <span
-        className="material-symbols-outlined pointer-events-none absolute left-3 top-2.5 text-gray-600"
-        style={{ fontSize: 18 }}
+        className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] leading-none text-gray-600"
         aria-hidden
       >
         group
-      </span>
-      <span
-        className="material-symbols-outlined pointer-events-none absolute right-2 top-2.5 text-gray-400"
-        style={{ fontSize: 18 }}
-        aria-hidden
-      >
-        unfold_more
       </span>
     </div>
   )

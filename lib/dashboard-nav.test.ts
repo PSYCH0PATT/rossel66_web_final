@@ -1,0 +1,105 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { dashboardNavRole, isNavItemActive } from './dashboard-nav'
+
+/**
+ * F-56 — из админ-сессии кабинет артиста открывался с админским сайдбаром
+ * («Панель управления», пункты админки), а активный пункт не подсвечивался.
+ * Набор пунктов задаёт кабинет, в котором ты находишься, а не роль сессии.
+ */
+test('F-56: в кабинете артиста сайдбар артистский даже для админ-сессии', () => {
+  assert.equal(
+    dashboardNavRole({ sessionRole: 'admin', pathname: '/dashboard/artist/rompy/dashboard' }),
+    'artist'
+  )
+  assert.equal(
+    dashboardNavRole({ sessionRole: 'admin', pathname: '/dashboard/artist/rompy/playlists/12' }),
+    'artist'
+  )
+})
+
+test('F-56: на админских роутах сайдбар остаётся админским', () => {
+  assert.equal(
+    dashboardNavRole({ sessionRole: 'admin', pathname: '/dashboard/admin/playlists' }),
+    'admin'
+  )
+  // Вне обоих кабинетов (логин, редиректы) отталкиваемся от роли сессии.
+  assert.equal(dashboardNavRole({ sessionRole: 'artist', pathname: '/dashboard' }), 'artist')
+  assert.equal(dashboardNavRole({ sessionRole: 'admin', pathname: '/dashboard' }), 'admin')
+})
+
+const ARTIST_HREFS = [
+  '/dashboard/artist/rompy/dashboard',
+  '/dashboard/artist/rompy/analytics',
+  '/dashboard/artist/rompy/releases',
+  '/dashboard/artist/rompy/reports',
+  '/dashboard/artist/rompy/payments',
+  '/dashboard/artist/rompy/playlists',
+]
+
+/** Состав пунктов админ-сайдбара (components/sidebar.tsx). «Выплаты» и
+ *  «Генератор отчётов» стали видами объединённых «Отчётов» (0-а), «История
+ *  плейлистов» — сервисный экран без своего пункта (0-в п.3). */
+const ADMIN_HREFS = [
+  '/dashboard/admin/dashboard',
+  '/dashboard/admin/artists',
+  '/dashboard/admin/releases',
+  '/dashboard/admin/reports',
+  '/dashboard/admin/playlists',
+  '/dashboard/admin/analytics',
+  '/dashboard/admin/activity',
+]
+
+test('F-56: раздел подсвечен и на вложенной странице', () => {
+  const active = ARTIST_HREFS.filter((href) =>
+    isNavItemActive('/dashboard/artist/rompy/releases/42', href, ARTIST_HREFS)
+  )
+  assert.deepEqual(active, ['/dashboard/artist/rompy/releases'])
+})
+
+test('F-56: у сервисного экрана без своего пункта подсвечен родитель', () => {
+  // 0-в п.3: «История плейлистов» перестала быть пунктом навигации — вход
+  // ghost-ссылкой из тулбара. Раздел «Плейлисты» при этом остаётся активным.
+  const active = ADMIN_HREFS.filter((href) =>
+    isNavItemActive('/dashboard/admin/playlists/history', href, ADMIN_HREFS)
+  )
+  assert.deepEqual(active, ['/dashboard/admin/playlists'])
+})
+
+test('F-56: соседний раздел с общим префиксом не подсвечивается', () => {
+  // /reports-generator теперь редирект на вид объединённых «Отчётов», но по
+  // самому адресу «Отчёты» подсвечиваться не должны: правило сравнивает
+  // разделы целиком, а не по префиксу строки.
+  const active = ADMIN_HREFS.filter((href) =>
+    isNavItemActive('/dashboard/admin/reports-generator', href, ADMIN_HREFS)
+  )
+  assert.deepEqual(active, [])
+})
+
+test('F-56: на странице вне навигации не подсвечен никто', () => {
+  const active = ARTIST_HREFS.filter((href) =>
+    isNavItemActive('/dashboard/artist/rompy/settings', href, ARTIST_HREFS)
+  )
+  assert.deepEqual(active, [])
+})
+
+/**
+ * F-90 — «Активность» артиста пункта в меню не имеет по решению владельца
+ * (вход только по «Все события»), и при её открытии не подсвечивался ни один
+ * пункт: кабинет выглядел «нигде». Родителем считаем «Главную» — оттуда
+ * единственный вход.
+ */
+test('F-90: на /activity подсвечена «Главная», и только она', () => {
+  const path = '/dashboard/artist/rompy/activity'
+  assert.equal(isNavItemActive(path, '/dashboard/artist/rompy/dashboard', ARTIST_HREFS), true)
+  const others = ARTIST_HREFS.filter((href) => !href.endsWith('/dashboard'))
+  for (const href of others) {
+    assert.equal(isNavItemActive(path, href, ARTIST_HREFS), false, href)
+  }
+})
+
+test('F-90: у админской активности свой пункт — родитель ей не нужен', () => {
+  const path = '/dashboard/admin/activity'
+  assert.equal(isNavItemActive(path, '/dashboard/admin/activity', ADMIN_HREFS), true)
+  assert.equal(isNavItemActive(path, '/dashboard/admin/dashboard', ADMIN_HREFS), false)
+})

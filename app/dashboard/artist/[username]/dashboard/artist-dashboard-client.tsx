@@ -3,12 +3,15 @@
 import { useMemo } from "react"
 import Link from "next/link"
 import { ActivityFeed } from "@/components/activity-feed"
+import { ARTIST_FEED_VIEW } from "@/lib/activity-views"
 import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
-import { formatRubKpiShort, formatRubPlain } from "@/lib/format-dashboard-rub"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { formatMoney } from "@/lib/format-money"
+import { formatDateRu } from "@/lib/format-date"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader, SectionHeaderLink } from "@/components/ui/section-header"
+import { StatCard } from "@/components/ui/stat-card"
 
 type StreamDay = { date: string; streams: number }
 
@@ -20,6 +23,13 @@ type Props = {
   reports: ArtistDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
   initialActivities: Activity[]
+  /** F-18: окно метрики — то же, что просит страница аналитики. */
+  streamWindowDays: number
+  /**
+   * Когда собраны данные экрана. Считает сервер: `new Date()` в рендере
+   * клиента давал hydration-mismatch (тот же баг чинили на админ-дашборде).
+   */
+  generatedAt: string
 }
 
 export default function ArtistDashboardClient({
@@ -30,179 +40,115 @@ export default function ArtistDashboardClient({
   reports,
   initialStreamsByDay,
   initialActivities,
+  streamWindowDays,
+  generatedAt,
 }: Props) {
   const totalEarnings = useMemo(
     () => reports.reduce((sum, report) => sum + (report.totalAmount || 0), 0),
     [reports]
   )
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
-      <div className="mb-6 flex flex-col gap-3 md:mb-8 md:gap-6">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">ГЛАВНАЯ</span>
-        </div>
-        <div className="flex flex-col items-start gap-4 border-b border-white/5 pb-4 md:flex-row md:items-end md:justify-between md:gap-6 md:pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
-              ДАШБОРД
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              С возвращением, {artist.name || artist.username}. Кратко, что происходит с вашей музыкой сегодня.
-            </p>
-          </div>
-          <div className="flex gap-3 items-center">
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-500 font-mono uppercase">Обновлено</p>
-              <p className="text-white font-mono text-sm">
-                {new Date().toLocaleString("ru-RU", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8">
+      {/*
+        Метка свежести данных живёт в подписи шапки, а не отдельным блоком
+        справа (вердикт 3.2): это уточнение к заголовку, а не действие.
+      */}
+      <PageHeader
+        title="ГЛАВНАЯ"
+        subtitle={
+          <>
+            С возвращением, {artist.name || artist.username}. Кратко, что происходит с вашей
+            музыкой сегодня.{" "}
+            <span className="whitespace-nowrap text-gray-500">
+              Обновлено {formatDateRu(generatedAt)}
+            </span>
+          </>
+        }
+      />
 
-      <TooltipProvider delayDuration={200}>
+      {/* Цифра раздела — вход в этот раздел (вердикт 3.2): «Релизы 5» это
+          ссылка, а не подпись. «Заработок» ссылкой не делаем — вердикт
+          перечисляет три карточки, и деньгам нужен свой экран-разбор. */}
       <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-12">
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-white">album</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-white/5 text-white mb-3 border border-white/10">
-                <span className="material-symbols-outlined text-xl">library_music</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Релизы</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{releaseCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#0ea5e9]">bar_chart</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-accent-azure/10 text-accent-azure mb-3 border border-accent-azure/20">
-                <span className="material-symbols-outlined text-xl">analytics</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Отчёты</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{reports.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#10b981]">currency_ruble</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary mb-3 border border-primary/20">
-                <span className="material-symbols-outlined text-xl">currency_ruble</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Заработок</h3>
-            </div>
-            <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="cursor-default whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
-                    {formatRubKpiShort(totalEarnings)}
-                  </p>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="z-[250] max-w-xs border border-white/10 bg-[rgba(15,15,15,0.96)] px-3 py-2 text-xs font-mono text-white shadow-lg"
-                >
-                  {formatRubPlain(totalEarnings)}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">playlist_play</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 border border-purple-500/20">
-                <span className="material-symbols-outlined text-xl">queue_music</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Плейлисты</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{playlistCount}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Релизы"
+          value={releaseCount}
+          icon="library_music"
+          bgIcon="album"
+          href={`/dashboard/artist/${username}/releases`}
+        />
+        <StatCard
+          label="Отчёты"
+          value={reports.length}
+          icon="analytics"
+          tone="azure"
+          bgIcon="bar_chart"
+          href={`/dashboard/artist/${username}/reports`}
+        />
+        {/* F-16: было «221» без валюты при 220,78 ₽ — точная сумма и знак. */}
+        <StatCard
+          label="Заработок"
+          icon="currency_ruble"
+          tone="primary"
+          bgIcon="currency_ruble"
+          value={<span className="whitespace-nowrap">{formatMoney(totalEarnings)}</span>}
+        />
+        <StatCard
+          label="Плейлисты"
+          value={playlistCount}
+          icon="queue_music"
+          tone="purple"
+          bgIcon="playlist_play"
+          href={`/dashboard/artist/${username}/playlists`}
+        />
       </div>
-      </TooltipProvider>
 
+      {/*
+        Главная цифра экрана — стримы, и она стояла справа вторым блоком, а
+        первым шла лента событий (вердикт 3.2: «график — первый блок после
+        ряда StatCard»). Порядок в разметке = порядок чтения и на 390.
+      */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-primary rounded-full"></span>
-              ПОСЛЕДНЯЯ АКТИВНОСТЬ
-            </h2>
-            {/* G9: раньше href="#" — ссылка вела в никуда, страницы активности у артиста не было */}
-            <Link
-              className="inline-flex min-h-11 items-center text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 hover:border-primary transition-all"
-              href={`/dashboard/artist/${artist.username}/activity`}
-            >
-              Все события
-            </Link>
+        <div className="flex flex-col h-full">
+          <SectionHeader className="mb-6" title="СТАТИСТИКА СТРИМОВ" accent="azure" />
+
+          <div className="card-glass rounded-2xl flex-1 border border-white/5 p-6 flex flex-col relative min-h-[320px]">
+            <StreamingChart
+              artistId={artist.id}
+              days={streamWindowDays}
+              initialStreamsByDay={initialStreamsByDay}
+            />
           </div>
+        </div>
+
+        <div>
+          <SectionHeader
+            className="mb-6"
+            title="ПОСЛЕДНЯЯ АКТИВНОСТЬ"
+            action={
+              /* G9: раньше href="#" — ссылка вела в никуда, страницы активности у артиста не было */
+              <SectionHeaderLink asChild>
+                <Link
+                  className="inline-flex min-h-11 items-center"
+                  href={`/dashboard/artist/${artist.username}/activity`}
+                >
+                  Все события
+                </Link>
+              </SectionHeaderLink>
+            }
+          />
           <div className="card-glass rounded-2xl overflow-hidden border border-white/5">
             <ActivityFeed
               userId={artist.id}
               role="artist"
               limit={5}
+              view={ARTIST_FEED_VIEW}
               initialActivities={initialActivities}
             />
           </div>
         </div>
-
-        <div className="flex flex-col h-full">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-accent-azure rounded-full"></span>
-              СТАТИСТИКА СТРИМОВ
-            </h2>
-          </div>
-
-          <div className="card-glass rounded-2xl flex-1 border border-white/5 p-6 flex flex-col relative min-h-[320px]">
-            <StreamingChart
-              artistId={artist.id}
-              days={30}
-              initialStreamsByDay={initialStreamsByDay}
-            />
-          </div>
-        </div>
       </div>
 
-      <DashboardFooter role="artist" />
-      </div>
-    )
+    </div>
+  )
 }

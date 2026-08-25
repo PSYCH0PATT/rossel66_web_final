@@ -1,14 +1,24 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Image from "next/image"
-import { Textarea } from "@/components/ui/textarea"
+import { PlaylistCoverImage } from "@/components/playlist-cover-image"
+import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FormField } from "@/components/ui/form-field"
+import { PageHeader } from "@/components/ui/page-header"
+import { PlatformBadge, PlatformDot } from "@/components/ui/platform-badge"
+import { SearchInput } from "@/components/ui/search-input"
+import { Toolbar } from "@/components/ui/toolbar"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { listSkeletonCount } from "@/lib/list-skeleton"
 import {
   Dialog,
   DialogContent,
@@ -17,11 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import Link from "next/link"
 import { splitCollaboratingArtistDisplayNames } from "@/lib/split-artist-names"
 import { formatDateRu } from "@/lib/format-date"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import {
   isMtsMusicPlatform,
   isOdnoklassnikiPlatform,
@@ -37,19 +44,43 @@ import {
  */
 /** G4: как часто перепроверять системное предупреждение о cookies */
 
-/** Единый маппинг платформы -> цвет бейджа (VK, Яндекс, МТС, Сбер и т.д.) */
-function getPlatformBadgeStyle(platform: string) {
-  const n = normalizePlatform(platform)
-  if (n.includes("vk") || n.includes("вк")) return { bg: "#0077FF", color: "#FFFFFF" }
-  if (n.includes("yandex") || n.includes("яндекс")) return { bg: "#FFCC00", color: "#000000" }
-  if (n.includes("mts") || n.includes("мтс")) return { bg: "#E30611", color: "#FFFFFF" }
-  if (n.includes("sber") || n.includes("сбер")) return { bg: "#21A038", color: "#FFFFFF" }
-  if (n.includes("одноклассник") || n.includes("odnoklassniki")) return { bg: "#EE8208", color: "#FFFFFF" }
-  return { bg: "#6b7280", color: "#FFFFFF" }
-}
-
 /** F-PARS-7: сколько плейлистов тянем за раз (максимум /api/playlists/sftp) */
 const PLAYLISTS_PAGE_TAKE = 500
+
+/**
+ * Заголовок секции площадки: иконка, название и счётчик в фирменных цветах.
+ * Шесть таких блоков были выписаны подряд, каждый со своим inline-хексом.
+ */
+function PlatformSectionHeader({
+  icon,
+  title,
+  count,
+  platform,
+}: {
+  icon: React.ReactNode
+  title: string
+  count: number
+  /** Название площадки для палитры; без него — нейтральный счётчик. */
+  platform?: string
+}) {
+  return (
+    <SectionHeader
+      className="mb-0 rounded-lg px-4 py-3"
+      accent="none"
+      title={
+        <span className="flex items-center gap-3">
+          <span className="rounded-lg p-2">{icon}</span>
+          <span className="text-xl font-semibold text-white">{title}</span>
+          {platform ? (
+            <PlatformBadge platform={platform}>{count}</PlatformBadge>
+          ) : (
+            <Badge className="border-0 bg-white/15 text-gray-200">{count}</Badge>
+          )}
+        </span>
+      }
+    />
+  )
+}
 
 function primaryArtistName(name?: string | null): string {
   if (!name) return ""
@@ -75,9 +106,16 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
   const vkPlaylist = playlist as VKPlaylist
   const bandlinkPlaylist = playlist as BandlinkPlaylist
   const platformName = isVK ? vkPlaylist.platform || "VK Музыка" : bandlinkPlaylist.platform
-  const dotColor = getPlatformBadgeStyle(platformName).bg
   const playlistUrl = isVK ? vkPlaylist.playlist_url : bandlinkPlaylist.playlist_url
-  const coverUrl = isVK ? vkPlaylist.playlist_cover_url || "/placeholder.svg" : bandlinkPlaylist.playlist_cover_url || "/placeholder.svg"
+  /**
+   * F-06: битая обложка на экране — это alt-текст поверх карточки, а не «пусто».
+   * Нерисуемый адрес отсекается правилом getPlaylistCoverUrl ещё до src, а если
+   * рисуемый URL всё-таки отдаст 404 — PlaylistCoverImage подменит его заглушкой
+   * платформы (как в кабинете артиста).
+   */
+  const rawCoverUrl = isVK ? vkPlaylist.playlist_cover_url : bandlinkPlaylist.playlist_cover_url
+  const coverUrl = getPlaylistCoverUrl(platformName, rawCoverUrl)
+  const coverFallback = getPlaylistCoverUrl(platformName, null)
   const title = isVK ? vkPlaylist.playlist_name : bandlinkPlaylist.playlist_name
   const artistName = isVK ? vkPlaylist.artist_name : bandlinkPlaylist.artist_name
 
@@ -134,8 +172,9 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
   return (
     <div className="playlist-card group relative aspect-square rounded-2xl overflow-hidden card-glass">
       <div className="absolute inset-0 z-0">
-        <Image
+        <PlaylistCoverImage
           src={coverUrl}
+          fallbackSrc={coverFallback}
           alt={title}
           fill
           className="object-cover transition-transform duration-700 ease-out filter brightness-[0.8] grayscale-[20%] playlist-cover-img"
@@ -153,34 +192,37 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
       <div className="playlist-overlay absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 flex flex-col justify-between p-5 z-10 pointer-events-none">
         <div className="flex justify-between items-start gap-2 pointer-events-auto">
           <span className="platform-badge rounded px-2 py-1 text-[10px] uppercase font-bold text-white tracking-wider flex items-center gap-1 max-w-[70%]">
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+            <PlatformDot platform={platformName} />
             <span className="truncate">{platformName}</span>
           </span>
           <div className="flex gap-1 shrink-0">
-            <button
-              type="button"
+            <Button
+              size="icon"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 onAssign(playlist.id, title, type)
               }}
-              className="p-1.5 rounded-full bg-primary/90 hover:bg-primary text-black transition-colors"
+              className="h-8 w-8 rounded-full bg-primary/90 text-black hover:bg-primary max-md:h-11 max-md:w-11"
               title="Привязать к артисту"
+              aria-label="Привязать к артисту"
             >
-              <span className="material-symbols-outlined text-lg leading-none">person_add</span>
-            </button>
-            <button
-              type="button"
+              <span className="material-symbols-outlined text-lg leading-none" aria-hidden>person_add</span>
+            </Button>
+            <Button
+              size="icon"
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 onDelete({ id: playlist.id, type })
               }}
-              className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition-colors"
+              className="h-8 w-8 rounded-full bg-destructive/90 hover:bg-destructive max-md:h-11 max-md:w-11"
               title="Удалить плейлист"
+              aria-label="Удалить плейлист"
             >
-              <span className="material-symbols-outlined text-lg leading-none">delete</span>
-            </button>
+              <span className="material-symbols-outlined text-lg leading-none" aria-hidden>delete</span>
+            </Button>
           </div>
         </div>
 
@@ -199,8 +241,12 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
           </a>
         </div>
 
+        {/*
+          F-87: название печаталось дважды — крупным заголовком поверх обложки
+          и подписью в футере карточки. Заголовок с обложки убран, подпись
+          осталась одна (в футере), её градиент усилен.
+        */}
         <div className="pointer-events-none">
-          <h3 className="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">{title}</h3>
           <p className="text-xs text-gray-400 font-mono line-clamp-1">{artistName}</p>
           <p className="text-xs text-gray-500 font-mono mt-1 line-clamp-1">
             {trackLine} {metaLine ? `· ${metaLine}` : ""}
@@ -211,7 +257,7 @@ const PlaylistCard = memo(function PlaylistCard({ playlist, type, onAssign, onDe
         </div>
       </div>
 
-      <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
+      <div className="playlist-default-footer absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent z-[5] pointer-events-none transition-opacity duration-300">
         <h3 className="font-bold text-white text-lg truncate">{title}</h3>
         <p className="text-xs text-gray-400 font-mono mt-1 line-clamp-2 min-h-[2.5rem]">
           {platformName} · {releaseNames?.trim() ? releaseNames : artistName}
@@ -266,15 +312,14 @@ interface BandlinkPlaylist {
 
 export default function PlaylistsPage() {
   const [artists, setArtists] = useState<Artist[]>([])
-  const [recentArtists, setRecentArtists] = useState<Artist[]>([])
   const [vkResults, setVkResults] = useState<VKPlaylist[]>([])
   const [bandlinkResults, setBandlinkResults] = useState<BandlinkPlaylist[]>([])
-  const [isSftpSyncing, setIsSftpSyncing] = useState(false)
-  const [parsingOutput, setParsingOutput] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
   const [playlistQuery, setPlaylistQuery] = useState('')
   const [debouncedPlaylistQuery, setDebouncedPlaylistQuery] = useState('')
   const [playlistTotal, setPlaylistTotal] = useState(0)
+  // F-86: до первого ответа сетка не рисовала ничего — на 390 это целый
+  // вьюпорт пустого фона, после которого карточки «всплывают».
+  const [playlistsLoading, setPlaylistsLoading] = useState(true)
   const playlistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'added_at' | 'parsed_at'>('added_at')
@@ -295,26 +340,11 @@ export default function PlaylistsPage() {
   const [actionBanner, setActionBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: "vk" | "bandlink" } | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
-  const [sftpConfirmOpen, setSftpConfirmOpen] = useState(false)
-  const [clearResultsOpen, setClearResultsOpen] = useState(false)
-  /** Локальные CSV (sftp_downloads) и настройки импорта */
-  const [sftpLocalFiles, setSftpLocalFiles] = useState<
-    { name: string; dataRows: number; mtimeISO: string; sizeBytes: number }[]
-  >([])
-  const [sftpHints, setSftpHints] = useState<{ host?: string; remotePath?: string } | null>(null)
-  const [selectedSftpCsv, setSelectedSftpCsv] = useState("")
-  const [sftpCleanupRemoved, setSftpCleanupRemoved] = useState(false)
-  const [sftpToolsBusy, setSftpToolsBusy] = useState(false)
 
   useEffect(() => {
     loadArtists()
-    loadRecentArtists()
     void loadResults()
-    const idle = window.setTimeout(() => {
-      void loadSftpLocalCsvList()
-    }, 0)
     return () => {
-      window.clearTimeout(idle)
       // F-PARS-13: таймер debounce жил после unmount → setState на размонтированном компоненте
       if (playlistDebounceRef.current) clearTimeout(playlistDebounceRef.current)
     }
@@ -332,29 +362,6 @@ export default function PlaylistsPage() {
     }, 350)
   }
 
-  const appendSftpLog = (line: string) => {
-    setParsingOutput((prev) => (prev ? `${prev}\n${line}` : line))
-  }
-
-  const loadSftpLocalCsvList = async () => {
-    try {
-      const res = await fetch("/api/playlists/sftp-admin")
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        return
-      }
-      const files = data.files || []
-      setSftpLocalFiles(files)
-      setSftpHints(data.hints || null)
-      setSelectedSftpCsv((cur) => {
-        if (cur && files.some((f: { name: string }) => f.name === cur)) return cur
-        return files[0]?.name || ""
-      })
-    } catch {
-      /* ignore */
-    }
-  }
-
   const loadArtists = async () => {
     try {
       const response = await fetch('/api/artists')
@@ -367,19 +374,8 @@ export default function PlaylistsPage() {
     }
   }
 
-  const loadRecentArtists = async () => {
-    try {
-      const response = await fetch('/api/parsers/recent-artists')
-      const data = await response.json()
-      if (data.success) {
-        setRecentArtists(data.artists)
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки недавних артистов:', error)
-    }
-  }
-
   const loadResults = async () => {
+    setPlaylistsLoading(true)
     try {
       /**
        * F-PARS-7: фильтр по артисту работал поверх первых 100 записей.
@@ -450,7 +446,7 @@ export default function PlaylistsPage() {
             artist_name: currentArtistName,
             playlist_name: p.playlist_name,
             playlist_url: p.playlist_url,
-            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_cover_url: p.playlist_cover_url || "",
             playlist_id: '',
             owner_id: '',
             parsed_at: p.parsed_at || p.added_at,
@@ -470,7 +466,7 @@ export default function PlaylistsPage() {
             track_names: trackNames,
             likes_count: '',
             platform: platform,
-            playlist_cover_url: p.playlist_cover_url || "/placeholder.svg",
+            playlist_cover_url: p.playlist_cover_url || "",
             playlist_url: p.playlist_url,
             added_at: p.added_at || p.parsed_at,
             parsed_at: p.parsed_at || p.added_at,
@@ -486,179 +482,11 @@ export default function PlaylistsPage() {
       setBandlinkResults(bandlinkFormatted)
     } catch (error) {
       console.error('Ошибка загрузки плейлистов:', error)
+    } finally {
+      setPlaylistsLoading(false)
     }
   }
   
-  const runManualParser = async () => {
-    setIsSftpSyncing(true)
-    setParsingOutput("🔄 Полный цикл SFTP (новые файлы + применение последнего CSV)...\n")
-
-    try {
-      appendSftpLog("📥 Подключение к SFTP и обработка...")
-      const q = sftpCleanupRemoved ? "?cleanupRemoved=1" : ""
-      const response = await fetch(`/api/playlists/sync-sftp${q}`)
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error("Нужна сессия администратора (войдите заново)")
-        }
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (data.success) {
-        appendSftpLog("✅ Синхронизация завершена")
-        appendSftpLog(`📥 Скачано новых файлов: ${data.stats?.downloaded ?? 0}`)
-        appendSftpLog(`➕ Добавлено: ${data.stats?.added ?? 0}`)
-        appendSftpLog(`🔄 Обновлено: ${data.stats?.updated ?? 0}`)
-        if (data.stats?.unchanged != null) {
-          appendSftpLog(`⏸ Без изменений: ${data.stats.unchanged}`)
-        }
-        appendSftpLog(`🗑️ Удалено (только если включена очистка): ${data.stats?.removed ?? 0}`)
-        if (data.errors?.length) {
-          appendSftpLog(`⚠️ ${data.errors.join("; ")}`)
-        }
-        await loadSftpLocalCsvList()
-        loadResults()
-      } else {
-        appendSftpLog(`❌ ${data.error || "Ошибка"}`)
-        if (data.errors?.length) appendSftpLog(data.errors.join("\n"))
-      }
-    } catch (error: unknown) {
-      console.error("Ошибка SFTP синхронизации:", error)
-      appendSftpLog(`❌ ${error instanceof Error ? error.message : String(error)}`)
-    } finally {
-      setIsSftpSyncing(false)
-    }
-  }
-
-  const sftpAdminPost = async (body: object) => {
-    const res = await fetch("/api/playlists/sftp-admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      throw new Error(data.error || `HTTP ${res.status}`)
-    }
-    return data
-  }
-
-  const runSftpDownloadNew = async () => {
-    setSftpToolsBusy(true)
-    appendSftpLog("📥 Скачать только новые CSV с SFTP...")
-    try {
-      const data = await sftpAdminPost({ op: "download_new" })
-      appendSftpLog(`Скачано файлов: ${data.downloaded ?? 0}`)
-      if (data.files?.length) appendSftpLog(`Файлы: ${data.files.join(", ")}`)
-      if (data.errors?.length) appendSftpLog(`⚠️ ${data.errors.join("; ")}`)
-      await loadSftpLocalCsvList()
-    } catch (e: unknown) {
-      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setSftpToolsBusy(false)
-    }
-  }
-
-  const runSftpDownloadLatest = async () => {
-    setSftpToolsBusy(true)
-    appendSftpLog("📥 Скачать последний CSV с SFTP (перезапись локально)...")
-    try {
-      const data = await sftpAdminPost({ op: "download_latest" })
-      if (data.filename) {
-        appendSftpLog(`Файл: ${data.filename}`)
-      } else {
-        appendSftpLog(data.errors?.[0] || "Нет файла на сервере")
-      }
-      if (data.errors?.length && !data.filename) {
-        appendSftpLog(data.errors.join("; "))
-      }
-      await loadSftpLocalCsvList()
-    } catch (e: unknown) {
-      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setSftpToolsBusy(false)
-    }
-  }
-
-  const runSftpApplySelected = async () => {
-    if (!selectedSftpCsv) {
-      appendSftpLog("⚠️ Выберите CSV в списке")
-      return
-    }
-    setSftpToolsBusy(true)
-    appendSftpLog(`💾 Применить к БД: ${selectedSftpCsv} (cleanup=${sftpCleanupRemoved ? "да" : "нет"})`)
-    try {
-      const data = await sftpAdminPost({
-        op: "apply",
-        filename: selectedSftpCsv,
-        cleanupRemoved: sftpCleanupRemoved,
-      })
-      const imp = data.import
-      if (imp) {
-        appendSftpLog(`Плейлистов в файле: ${imp.playlistsParsed}, +${imp.added} / ~${imp.updated} / удалено ${imp.removed}`)
-        if (imp.errors?.length) appendSftpLog(imp.errors.join("; "))
-      }
-      loadResults()
-    } catch (e: unknown) {
-      appendSftpLog(`❌ ${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setSftpToolsBusy(false)
-    }
-  }
-
-  const onSftpCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ""
-    if (!file) return
-    setSftpToolsBusy(true)
-    appendSftpLog(`📤 Загрузка и импорт: ${file.name}`)
-    try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("cleanupRemoved", sftpCleanupRemoved ? "1" : "0")
-      const res = await fetch("/api/playlists/sftp-admin", { method: "POST", body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-      appendSftpLog(`Сохранено как ${data.savedAs}`)
-      const imp = data.import
-      if (imp) {
-        appendSftpLog(`+${imp.added} / ~${imp.updated} / удалено ${imp.removed}`)
-      }
-      await loadSftpLocalCsvList()
-      loadResults()
-    } catch (err: unknown) {
-      appendSftpLog(`❌ ${err instanceof Error ? err.message : String(err)}`)
-    } finally {
-      setSftpToolsBusy(false)
-    }
-  }
-
-  const clearResultsConfirmed = async () => {
-    setClearResultsOpen(false)
-    try {
-      const response = await fetch("/api/parsers/clear", {
-        method: "DELETE",
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setVkResults([])
-        setBandlinkResults([])
-        setParsingOutput((prev) => prev + "\n[OK] Все результаты парсинга очищены\n")
-        setActionBanner({ type: "ok", text: "Результаты парсинга очищены" })
-      } else {
-        setActionBanner({ type: "err", text: "Ошибка очистки: " + (data.error || "") })
-      }
-    } catch (error) {
-      console.error("Ошибка очистки результатов:", error)
-      setActionBanner({ type: "err", text: "Ошибка очистки результатов" })
-    }
-  }
-
   // Загрузка статуса cookies
 
   /**
@@ -676,27 +504,6 @@ export default function PlaylistsPage() {
   // Обновление cookies Bandlink
 
   // Обновление cookies VK
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-
-
-
-
-
-  // Фильтрация артистов
-  const filteredArtists = artists.filter(artist => 
-    artist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    artist.username.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   // Фильтрация и сортировка плейлистов
   const filterAndSortPlaylists = (playlists: any[], artistFilter: string) => {
@@ -857,47 +664,21 @@ export default function PlaylistsPage() {
 
   return (
     <>
-    <div className="relative z-10 max-w-7xl mx-auto p-6 md:p-10 pb-24 space-y-8">
+    <div className="relative z-10 space-y-8">
         {actionBanner && (
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${
-              actionBanner.type === "ok"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : "border-red-500/30 bg-red-500/10 text-red-200"
-            }`}
-            role="status"
+          <Banner
+            variant={actionBanner.type === "ok" ? "success" : "danger"}
+            onClose={() => setActionBanner(null)}
           >
-            <span className="material-symbols-outlined flex-shrink-0">
-              {actionBanner.type === "ok" ? "check_circle" : "error"}
-            </span>
             {actionBanner.text}
-            <button
-              type="button"
-              onClick={() => setActionBanner(null)}
-              className="ml-auto text-gray-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-              aria-label="Закрыть"
-            >
-              <span className="material-symbols-outlined text-lg">close</span>
-            </button>
-          </div>
+          </Banner>
         )}
-        <div className="space-y-4 mb-2">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Плейлисты</span>
-          </div>
-          <div className="border-b border-white/5 pb-8">
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight mb-2">
-              Плейлисты
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-lg">
-              Управление плейлистами из VK, МТС Музыки, Яндекс Музыки и других площадок (SFTP).
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Плейлисты"
+          /* C-16/F-45: без техжаргона — админу важно, что это плейлисты площадок,
+             а не по какому протоколу они приезжают. */
+          subtitle="Плейлисты площадок: VK, МТС Музыка, Яндекс Музыка и другие."
+        />
 
         <Tabs defaultValue="playlists" className="space-y-8">
           <TabsList className="flex flex-wrap gap-2 h-auto p-0 bg-transparent w-full justify-start">
@@ -918,31 +699,21 @@ export default function PlaylistsPage() {
           </TabsList>
 
           <TabsContent value="playlists" className="space-y-8">
+            {/* 1.5: поиск, фильтр артиста и сортировки — в Toolbar; счётчик один
+                на экран (C-06/F-27), дубль «Показано: N плейлистов» убран.
+                «История» — ghost-ссылкой отсюда, отдельного пункта навигации у
+                сервисного экрана нет (0-в п.3). */}
             <div className="card-glass rounded-2xl border border-white/5 p-4 md:p-6 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="material-symbols-outlined text-primary text-xl">filter_alt</span>
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Фильтр</span>
-                <Input
+              <Toolbar className="gap-3 sm:flex-wrap sm:overflow-x-visible">
+                <SearchInput
                   placeholder="Поиск плейлиста или артиста…"
                   value={playlistQuery}
-                  onChange={(e) => handlePlaylistSearch(e.target.value)}
-                  className={`max-w-xs ${inputCls} h-10`}
+                  onValueChange={handlePlaylistSearch}
+                  containerClassName="w-full shrink-0 sm:w-72"
                 />
-                <p className="text-xs font-mono uppercase tracking-widest text-gray-500 ml-auto">
-                  Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
-                  {/* F-PARS-7: список усечён — фильтр работает поверх загруженного, честно говорим об этом */}
-                  {playlistTotal > PLAYLISTS_PAGE_TAKE && (
-                    <span
-                      className="ml-2 text-amber-400"
-                      title={`Загружены первые ${PLAYLISTS_PAGE_TAKE} записей. Уточните поиск, чтобы фильтр охватил все данные.`}
-                    >
-                      (усечено)
-                    </span>
-                  )}
-                </p>
                 <Select value={selectedArtistFilter} onValueChange={setSelectedArtistFilter}>
-                  <SelectTrigger className={`w-64 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-56 ${inputCls} h-10`}>
                     <SelectValue placeholder="Все артисты" />
                   </SelectTrigger>
                   <SelectContent>
@@ -955,10 +726,8 @@ export default function PlaylistsPage() {
                   </SelectContent>
                 </Select>
 
-                <span className="material-symbols-outlined text-accent-azure text-xl">sort</span>
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-500">Сортировка</span>
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as "added_at" | "parsed_at")}>
-                  <SelectTrigger className={`w-48 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-48 ${inputCls} h-10`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -968,7 +737,7 @@ export default function PlaylistsPage() {
                 </Select>
 
                 <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
-                  <SelectTrigger className={`w-40 ${inputCls} h-10`}>
+                  <SelectTrigger className={`w-full shrink-0 sm:w-40 ${inputCls} h-10`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -977,31 +746,56 @@ export default function PlaylistsPage() {
                   </SelectContent>
                 </Select>
 
-                <div className="text-xs text-gray-500 font-mono ml-auto">
-                  Показано: <span className="text-white font-semibold">{totalPlaylistsCount}</span> плейлистов
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                >
+                  <Link href="/dashboard/admin/playlists/history">
+                    <span className="material-symbols-outlined text-base" aria-hidden>history</span>
+                    История
+                  </Link>
+                </Button>
+
+                <p className="ml-auto shrink-0 text-xs font-mono uppercase tracking-widest text-gray-500">
+                  Показано {vkResults.length + bandlinkResults.length} из {playlistTotal}
+                  {/* F-PARS-7: список усечён — фильтр работает поверх загруженного, честно говорим об этом */}
+                  {playlistTotal > PLAYLISTS_PAGE_TAKE && (
+                    <span
+                      className="ml-2 text-amber-400"
+                      title={`Загружены первые ${PLAYLISTS_PAGE_TAKE} записей. Уточните поиск, чтобы фильтр охватил все данные.`}
+                    >
+                      (усечено)
+                    </span>
+                  )}
+                </p>
+              </Toolbar>
+            </div>
+
+            {/* F-86: место под карточки, пока идёт запрос */}
+            {playlistsLoading && vkResults.length + bandlinkResults.length === 0 && (
+              <div className="space-y-4" aria-busy="true" aria-label="Загрузка плейлистов">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                  {Array.from(
+                    { length: listSkeletonCount({ pageSize: PLAYLISTS_PAGE_TAKE, max: 8 }) },
+                    (_, i) => (
+                      <Skeleton key={i} className="aspect-square rounded-2xl bg-white/5" />
+                    )
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* VK Музыка */}
             {vkPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <img 
-                      src="/images/dsp-icons/vk-music.png" 
-                      alt="VK Music" 
-                      className="w-5 h-5"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">VK Музыка</h2>
-                  <Badge 
-                    className="border-0"
-                    style={{ backgroundColor: "#0077FF", color: "#FFFFFF" }}
-                  >
-                    {vkPlaylists.length}
-                  </Badge>
-                      </div>
+                <PlatformSectionHeader
+                  title="VK Музыка"
+                  platform="VK Музыка"
+                  count={vkPlaylists.length}
+                  icon={<img src="/images/dsp-icons/vk-music.png" alt="VK Music" className="w-5 h-5" />}
+                />
 
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {vkPlaylists.map((playlist) => (
@@ -1014,22 +808,12 @@ export default function PlaylistsPage() {
             {/* Яндекс Музыка */}
             {yandexPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <img 
-                      src="/images/dsp-icons/yandex-music.svg" 
-                      alt="Yandex Music" 
-                      className="w-7 h-7"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Яндекс Музыка</h2>
-                  <Badge 
-                    className="border-0"
-                    style={{ backgroundColor: "#FFCC00", color: "#000000" }}
-                  >
-                    {yandexPlaylists.length}
-                  </Badge>
-                        </div>
+                <PlatformSectionHeader
+                  title="Яндекс Музыка"
+                  platform="Яндекс Музыка"
+                  count={yandexPlaylists.length}
+                  icon={<img src="/images/dsp-icons/yandex-music.svg" alt="Yandex Music" className="w-7 h-7" />}
+                />
 
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {yandexPlaylists.map((playlist) => (
@@ -1042,22 +826,12 @@ export default function PlaylistsPage() {
             {/* МТС Музыка */}
             {mtsPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <img 
-                      src="/images/dsp-icons/mts-music.svg" 
-                      alt="MTS Music" 
-                      className="w-7 h-7"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">МТС Музыка</h2>
-                  <Badge 
-                    className="border-0"
-                    style={{ backgroundColor: "#E30611", color: "#FFFFFF" }}
-                  >
-                    {mtsPlaylists.length}
-                  </Badge>
-                </div>
+                <PlatformSectionHeader
+                  title="МТС Музыка"
+                  platform="МТС Музыка"
+                  count={mtsPlaylists.length}
+                  icon={<img src="/images/dsp-icons/mts-music.svg" alt="MTS Music" className="w-7 h-7" />}
+                />
                 
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {mtsPlaylists.map((playlist) => (
@@ -1070,22 +844,12 @@ export default function PlaylistsPage() {
             {/* Сбер Музыка */}
             {sberPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <img 
-                      src="/images/dsp-icons/sber-music.svg" 
-                      alt="Сбер Музыка" 
-                      className="w-7 h-7 object-contain"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Сбер Музыка</h2>
-                  <Badge 
-                    className="border-0"
-                    style={{ backgroundColor: "#21A038", color: "#FFFFFF" }}
-                  >
-                    {sberPlaylists.length}
-                  </Badge>
-                </div>
+                <PlatformSectionHeader
+                  title="Сбер Музыка"
+                  platform="Сбер Музыка"
+                  count={sberPlaylists.length}
+                  icon={<img src="/images/dsp-icons/sber-music.svg" alt="Сбер Музыка" className="w-7 h-7 object-contain" />}
+                />
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {sberPlaylists.map((playlist) => (
                     <PlaylistCard key={`sber-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
@@ -1098,22 +862,12 @@ export default function PlaylistsPage() {
             {/* Одноклассники */}
             {okPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <img 
-                      src="/placeholder.svg" 
-                      alt="Одноклассники" 
-                      className="w-7 h-7 object-contain"
-                    />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Одноклассники</h2>
-                  <Badge 
-                    className="border-0"
-                    style={{ backgroundColor: "#EE8208", color: "#FFFFFF" }}
-                  >
-                    {okPlaylists.length}
-                  </Badge>
-                </div>
+                <PlatformSectionHeader
+                  title="Одноклассники"
+                  platform="Одноклассники"
+                  count={okPlaylists.length}
+                  icon={<img src="/placeholder.svg" alt="Одноклассники" className="w-7 h-7 object-contain" />}
+                />
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {okPlaylists.map((playlist) => (
                     <PlaylistCard key={`ok-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
@@ -1124,13 +878,11 @@ export default function PlaylistsPage() {
 
             {otherPlaylists.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3">
-                  <div className="rounded-lg p-2">
-                    <span className="material-symbols-outlined text-2xl text-gray-400">library_music</span>
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Другие площадки</h2>
-                  <Badge className="border-0 bg-white/15 text-gray-200">{otherPlaylists.length}</Badge>
-                </div>
+                <PlatformSectionHeader
+                  title="Другие площадки"
+                  count={otherPlaylists.length}
+                  icon={<span className="material-symbols-outlined text-2xl text-gray-400">library_music</span>}
+                />
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {otherPlaylists.map((playlist) => (
                     <PlaylistCard key={`other-${playlist.id}`} playlist={playlist} type="bandlink" onAssign={openAssignModal} onDelete={setDeleteTarget} />
@@ -1140,26 +892,29 @@ export default function PlaylistsPage() {
             )}
 
             {vkPlaylists.length === 0 && yandexPlaylists.length === 0 && mtsPlaylists.length === 0 && sberPlaylists.length === 0 && okPlaylists.length === 0 && otherPlaylists.length === 0 && (
-              <div className="card-glass rounded-2xl border border-dashed border-white/15 flex flex-col items-center justify-center py-16 px-4">
-                <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">queue_music</span>
-                <h3 className="text-xl font-bold text-white mb-2">Нет плейлистов</h3>
-                <p className="text-gray-400 mb-6 text-center max-w-md text-sm">
-                  {selectedArtistFilter === "all"
+              <EmptyState
+                className="card-glass rounded-2xl border border-dashed border-white/15 px-4"
+                icon="queue_music"
+                title="Нет плейлистов"
+                description={
+                  selectedArtistFilter === "all"
                     ? "Запустите парсинг для получения плейлистов"
-                    : `Нет плейлистов для артиста «${selectedArtistFilter}»`}
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const tab = document.querySelector('[value="parsing"]') as HTMLElement
-                    tab?.click()
-                  }}
-                  className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary inline-flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-lg">settings</span>
-                  Перейти к парсингу
-                </Button>
-              </div>
+                    : `Нет плейлистов для артиста «${selectedArtistFilter}»`
+                }
+                action={
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const tab = document.querySelector('[value="parsing"]') as HTMLElement
+                      tab?.click()
+                    }}
+                    className="rounded-lg border-white/10 px-4 py-2 font-mono text-xs uppercase tracking-widest text-gray-500 hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined text-lg" aria-hidden>settings</span>
+                    Перейти к парсингу
+                  </Button>
+                }
+              />
             )}
           </TabsContent>
 
@@ -1191,29 +946,29 @@ export default function PlaylistsPage() {
                     </div>
                     <div className="flex gap-2">
                       {artistVKPlaylists.length > 0 && (
-                        <Badge style={{ backgroundColor: "#0077FF", color: "#FFFFFF" }}>
+                        <PlatformBadge platform="VK Музыка">
                           VK: {artistVKPlaylists.length}
-                        </Badge>
+                        </PlatformBadge>
                       )}
                       {artistBandlinkPlaylists.filter(p => p.platform === 'Яндекс Музыка').length > 0 && (
-                        <Badge style={{ backgroundColor: "#FFCC00", color: "#000000" }}>
+                        <PlatformBadge platform="Яндекс Музыка">
                           Яндекс: {artistBandlinkPlaylists.filter(p => p.platform === 'Яндекс Музыка').length}
-                        </Badge>
+                        </PlatformBadge>
                       )}
                       {artistBandlinkPlaylists.filter(p => p.platform === 'МТС Музыка').length > 0 && (
-                        <Badge style={{ backgroundColor: "#E30611", color: "#FFFFFF" }}>
+                        <PlatformBadge platform="МТС Музыка">
                           МТС: {artistBandlinkPlaylists.filter(p => p.platform === 'МТС Музыка').length}
-                        </Badge>
+                        </PlatformBadge>
                       )}
                       {artistBandlinkPlaylists.filter(p => p.platform === 'Сбер Музыка').length > 0 && (
-                        <Badge style={{ backgroundColor: "#21A038", color: "#FFFFFF" }}>
+                        <PlatformBadge platform="Сбер Музыка">
                           Сбер: {artistBandlinkPlaylists.filter(p => p.platform === 'Сбер Музыка').length}
-                        </Badge>
+                        </PlatformBadge>
                       )}
                       {artistBandlinkPlaylists.filter(p => p.platform === 'Одноклассники').length > 0 && (
-                        <Badge style={{ backgroundColor: "#EE8208", color: "#FFFFFF" }}>
+                        <PlatformBadge platform="Одноклассники">
                           ОК: {artistBandlinkPlaylists.filter(p => p.platform === 'Одноклассники').length}
-                        </Badge>
+                        </PlatformBadge>
                       )}
                     </div>
                   </div>
@@ -1233,104 +988,91 @@ export default function PlaylistsPage() {
 
             {/* Пустое состояние */}
             {getUniqueArtists().length === 0 && (
-              <div className="card-glass rounded-2xl border border-dashed border-white/15 flex flex-col items-center justify-center py-16 px-4">
-                <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">groups</span>
-                <h3 className="text-xl font-bold text-white mb-2">Нет артистов</h3>
-                <p className="text-gray-400 mb-6 text-center max-w-md text-sm">Запустите парсинг для получения плейлистов</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const tab = document.querySelector('[value="parsing"]') as HTMLElement
-                    tab?.click()
-                  }}
-                  className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary inline-flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-lg">settings</span>
-                  Перейти к парсингу
-                </Button>
-              </div>
+              <EmptyState
+                className="card-glass rounded-2xl border border-dashed border-white/15 px-4"
+                icon="groups"
+                title="Нет артистов"
+                description="Запустите парсинг для получения плейлистов"
+                action={
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const tab = document.querySelector('[value="parsing"]') as HTMLElement
+                      tab?.click()
+                    }}
+                    className="rounded-lg border-white/10 px-4 py-2 font-mono text-xs uppercase tracking-widest text-gray-500 hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined text-lg" aria-hidden>settings</span>
+                    Перейти к парсингу
+                  </Button>
+                }
+              />
             )}
           </TabsContent>
 
 
     </Tabs>
 
-        <DashboardFooter>
-          {/* DS8: было «TOTAL FOUND: N PLAYLISTS» */}
-          <div className="uppercase tracking-widest text-gray-400">
-            Найдено:{" "}
-            <span className="font-bold text-white">{vkResults.length + bandlinkResults.length}</span>{" "}
-            {(() => {
-              const n = vkResults.length + bandlinkResults.length
-              const mod10 = n % 10
-              const mod100 = n % 100
-              if (mod10 === 1 && mod100 !== 11) return "плейлист"
-              if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "плейлиста"
-              return "плейлистов"
-            })()}
-          </div>
-        </DashboardFooter>
       </div>
 
       {/* Модальное окно для привязки плейлиста к артисту */}
-      {assignModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAssignModalOpen(false)}>
-          <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-bold mb-4">Привязать плейлист к артисту</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Плейлист:</p>
-                <p className="font-medium">{selectedPlaylist?.name}</p>
-              </div>
+      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+        <DialogContent className="border border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Привязать плейлист к артисту</DialogTitle>
+          </DialogHeader>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Выберите артиста:</label>
-                <Select value={selectedArtistForAssign} onValueChange={setSelectedArtistForAssign}>
-                  <SelectTrigger className={`${inputCls} h-10`}>
-                    <SelectValue placeholder="Выберите артиста" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {artists.map(artist => (
-                      <SelectItem key={artist.id} value={artist.id}>
-                        {artist.name} (@{artist.username})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Плейлист:</p>
+              <p className="font-medium">{selectedPlaylist?.name}</p>
+            </div>
 
-              <div className="flex gap-3 mt-6">
-                <Button
-                  onClick={() => setAssignModalOpen(false)}
-                  variant="outline"
-                  className="flex-1"
-                  disabled={isAssigning}
-                >
-                  Отмена
-                </Button>
-                <Button
-                  onClick={() => assignPlaylistToArtist()}
-                  className="flex-1"
-                  disabled={isAssigning || !selectedArtistForAssign}
-                >
-                  {isAssigning ? (
-                    <>
-                      <span className="material-symbols-outlined mr-2 animate-spin">progress_activity</span>
-                      Привязка...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined mr-2">person_add</span>
-                      Привязать
-                    </>
-                  )}
-                </Button>
-              </div>
+            <FormField label="Выберите артиста:" htmlFor="assign-artist">
+              <Select value={selectedArtistForAssign} onValueChange={setSelectedArtistForAssign}>
+                <SelectTrigger id="assign-artist" className={`${inputCls} h-10`}>
+                  <SelectValue placeholder="Выберите артиста" />
+                </SelectTrigger>
+                <SelectContent>
+                  {artists.map(artist => (
+                    <SelectItem key={artist.id} value={artist.id}>
+                      {artist.name} (@{artist.username})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                onClick={() => setAssignModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+                disabled={isAssigning}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={() => assignPlaylistToArtist()}
+                className="flex-1"
+                disabled={isAssigning || !selectedArtistForAssign}
+              >
+                {isAssigning ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Привязка...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined mr-2" aria-hidden>person_add</span>
+                    Привязать
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* H3: переназначение плейлиста забирает его у прежнего артиста — спрашиваем явно */}
       <Dialog
@@ -1361,58 +1103,8 @@ export default function PlaylistsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={sftpConfirmOpen} onOpenChange={setSftpConfirmOpen}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl uppercase">Синхронизация SFTP</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Скачает только новые CSV с SFTP и применит к базе последний непустой файл из папки sftp_downloads. Учитывается галочка «Удалять из БД…» на странице. Операция может занять несколько минут.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" className="border-white/20" onClick={() => setSftpConfirmOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              type="button"
-              className="bg-primary text-black hover:bg-primary/90"
-              onClick={() => {
-                setSftpConfirmOpen(false)
-                void runManualParser()
-              }}
-            >
-              Запустить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={clearResultsOpen} onOpenChange={setClearResultsOpen}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl uppercase text-red-400">Очистка</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Очистить все результаты парсинга в базе? Это действие необратимо.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" className="border-white/20" onClick={() => setClearResultsOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-              onClick={() => void clearResultsConfirmed()}
-            >
-              Очистить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+        <DialogContent className="border border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase">Удалить плейлист</DialogTitle>
             <DialogDescription className="text-gray-400">Удалить эту запись из базы?</DialogDescription>

@@ -10,17 +10,13 @@ export default async function ArtistReleasesPage({ params }: { params: { usernam
 
   const artist = await prisma.user.findFirst({
     where: { username: params.username, role: "artist" },
-    select: { id: true, name: true, mainArtistId: true },
+    select: { id: true, mainArtistId: true },
   })
   if (!artist) notFound()
 
   if (!canViewArtistCabinet(session, artist)) notFound()
 
   return (
-    <ReleasesClient
-        artistId={artist.id}
-        username={params.username}
-        mainArtistName={artist.name}
-      />
+    <ReleasesClient artistId={artist.id} username={params.username} />
     )
 }

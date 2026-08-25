@@ -3,9 +3,15 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import Image from "next/image"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { Banner } from "@/components/ui/banner"
+import { Button } from "@/components/ui/button"
+import { FileInput } from "@/components/ui/file-input"
+import { FormField } from "@/components/ui/form-field"
+import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { EMPTY_STRINGS } from "@/lib/ui-strings"
 
 export type ArtistSettingsInitial = {
   id: string
@@ -157,41 +163,21 @@ export default function ArtistSettingsClient({
     }
   }
 
-  const inputClass =
-    "w-full bg-white/5 border border-white/10 text-white rounded-xl h-12 px-4 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none"
+  // C-17: поля пароля переехали на ui/input; собственных классов у формы больше
+  // нет — высота и фокус приходят из компонента.
+  const inputClass = "h-12 rounded-xl bg-white/5"
 
   return (
     <>
-      <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Настройки</span>
-        </div>
+      <div className="space-y-8">
+      <PageHeader
+        title="НАСТРОЙКИ"
+        subtitle="Профиль, аватар и смена пароля."
+      />
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">НАСТРОЙКИ</h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Профиль, аватар и смена пароля.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
-        <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-          <span className="w-1.5 h-6 bg-primary rounded-full" />
-          Профиль
-        </h2>
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+        {/* F-59: у трёх секций были зелёная, синяя и фиолетовая полосы без логики. */}
+        <SectionHeader className="mb-6" title="Профиль" />
         <dl className="space-y-5">
           <div>
             <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Имя артиста</dt>
@@ -200,7 +186,7 @@ export default function ArtistSettingsClient({
           </div>
           <div>
             <dt className="text-[10px] font-mono uppercase tracking-widest text-gray-500">Почта</dt>
-            <dd className="text-lg text-white mt-1">{artist.email || "Не указан"}</dd>
+            <dd className="text-lg text-white mt-1">{artist.email || EMPTY_STRINGS.notSet}</dd>
             <p className="text-xs text-gray-600 mt-1">Email может изменить только администратор</p>
           </div>
           <div>
@@ -210,11 +196,8 @@ export default function ArtistSettingsClient({
         </dl>
       </div>
 
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
-        <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-          <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
-          Аватар
-        </h2>
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+        <SectionHeader className="mb-6" title="Аватар" />
         <form onSubmit={handleAvatarSubmit} className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start gap-6">
             <div className="relative w-28 h-28 rounded-full border-2 border-primary/40 overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
@@ -231,37 +214,53 @@ export default function ArtistSettingsClient({
               )}
             </div>
             <div className="flex-1 w-full min-w-0">
-              <label htmlFor="avatar" className="cursor-pointer block">
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-6 hover:border-primary/30 transition-colors text-center">
-                  <span className="material-symbols-outlined text-4xl text-gray-500 mb-2 block">upload</span>
-                  <p className="text-sm text-gray-300">Нажмите чтобы выбрать изображение</p>
-                  <p className="text-xs text-gray-600 mt-1">PNG, JPG до 5MB</p>
-                </div>
-              </label>
-              <input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+              {/*
+                C-17/F-12: сырой `<input type="file">` за самописным label заменён
+                на FileInput — сам input остаётся в DOM и фокусируем, а зона
+                выбора это кнопка кита в прежней пунктирной раскладке.
+              */}
+              <FileInput
+                id="avatar"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                showFileName={false}
+                icon={null}
+                buttonVariant="ghost"
+                containerClassName="w-full"
+                buttonClassName="h-auto w-full flex-col gap-1 rounded-xl border-2 border-dashed border-white/10 p-6 text-center font-normal hover:border-primary/30 hover:bg-transparent"
+                buttonLabel={
+                  <>
+                    <span className="material-symbols-outlined mb-1 block text-4xl text-gray-500" aria-hidden>
+                      upload
+                    </span>
+                    <span className="text-sm text-gray-300">Нажмите чтобы выбрать изображение</span>
+                    <span className="text-xs text-gray-600">PNG, JPG до 5MB</span>
+                  </>
+                }
+              />
             </div>
           </div>
-          <button
+          {/* C-02 + 0-г: обе submit-кнопки — один вариант кита с единым disabled
+              (F-28), и на редком экране это outline, а не filled. */}
+          <Button
             type="submit"
+            variant="outline"
             disabled={avatarSubmitting || !avatarFile}
-            className="w-full bg-[#10b981] hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-xl h-12 text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="h-12 w-full rounded-xl border-white/15 text-gray-200 hover:bg-white/5"
           >
             {avatarSubmitting ? "Сохранение…" : "Сохранить аватарку"}
-          </button>
+          </Button>
         </form>
       </div>
 
-      <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
-        <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-          <span className="w-1.5 h-6 bg-purple-400 rounded-full" />
-          Смена пароля
-        </h2>
+      <div className="card-glass max-w-3xl rounded-2xl border border-white/5 p-6 md:p-8 mb-8">
+        <SectionHeader className="mb-6" title="Смена пароля" />
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-lg">
-          <div className="space-y-2">
-            <label htmlFor="currentPassword" className="text-[10px] font-mono uppercase tracking-widest text-gray-500 block">
-              Текущий пароль
-            </label>
-            <input
+          <FormField
+            label="Текущий пароль"
+            htmlFor="currentPassword"
+          >
+            <Input
               id="currentPassword"
               type="password"
               value={currentPassword}
@@ -271,12 +270,13 @@ export default function ArtistSettingsClient({
               spellCheck={false}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="newPassword" className="text-[10px] font-mono uppercase tracking-widest text-gray-500 block">
-              Новый пароль
-            </label>
-            <input
+          </FormField>
+          <FormField
+            label="Новый пароль"
+            htmlFor="newPassword"
+            hint="Минимум 6 символов"
+          >
+            <Input
               id="newPassword"
               type="password"
               value={newPassword}
@@ -287,13 +287,12 @@ export default function ArtistSettingsClient({
               required
               minLength={6}
             />
-            <p className="text-xs text-gray-600">Минимум 6 символов</p>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="text-[10px] font-mono uppercase tracking-widest text-gray-500 block">
-              Подтвердите новый пароль
-            </label>
-            <input
+          </FormField>
+          <FormField
+            label="Подтвердите новый пароль"
+            htmlFor="confirmPassword"
+          >
+            <Input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
@@ -303,37 +302,29 @@ export default function ArtistSettingsClient({
               spellCheck={false}
               required
             />
-          </div>
-          <button
+          </FormField>
+          <Button
             type="submit"
+            variant="outline"
             disabled={pwSubmitting}
-            className="w-full bg-[#10b981] hover:bg-emerald-400 disabled:opacity-50 text-black font-bold rounded-xl h-12 text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="h-12 w-full rounded-xl border-white/15 text-gray-200 hover:bg-white/5"
           >
             {pwSubmitting ? "Обновление…" : "Обновить пароль"}
-          </button>
+          </Button>
         </form>
       </div>
 
       {success && (
-        <div
-          role="status"
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 mb-4 flex items-start gap-2"
-        >
-          <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
+        <Banner variant="success" className="mb-4">
           {success}
-        </div>
+        </Banner>
       )}
       {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 mb-4 flex items-start gap-2"
-        >
-          <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
+        <Banner variant="danger" className="mb-4">
           {error}
-        </div>
+        </Banner>
       )}
 
-      <DashboardFooter role="artist" />
       </div>
     </>
   )

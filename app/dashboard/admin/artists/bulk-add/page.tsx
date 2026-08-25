@@ -14,8 +14,22 @@ import {
 } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Banner } from "@/components/ui/banner"
+import { PageHeader } from "@/components/ui/page-header"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { DEFAULT_BULK_ARTIST_NAMES, planBulkArtistAdd } from "@/lib/bulk-artist-add"
 
 export default function BulkAddArtistsPage() {
   const router = useRouter()
@@ -24,30 +38,9 @@ export default function BulkAddArtistsPage() {
   const [error, setError] = useState("")
   const [addedArtists, setAddedArtists] = useState<Array<{ name: string; password: string }>>([])
   const [isEditing, setIsEditing] = useState(false)
-  const [artistNames, setArtistNames] = useState([
-    "передоз",
-    "ЭНТЕNДАНS",
-    "ASTRODYA",
-    "EnellySayk",
-    "Etxrnxtx",
-    "Jelato",
-    "LXNOWER",
-    "Makishima",
-    "Matcukito Kioto",
-    "MEELBRN",
-    "MENDXZA",
-    "night moral",
-    "Nnaia",
-    "PLVT",
-    "Roudie J.",
-    "SLAVKESH",
-    "Sour Diesel",
-    "Takeda",
-    "TXYK",
-    "W.1ce3",
-    "WIDE PIE",
-    "wvlaik",
-  ])
+  // F-01: список пуст по умолчанию. Раньше здесь были зашиты 22 имени, половина
+  // из них уже была в базе, и один клик «Добавить всех» плодил дубли.
+  const [artistNames, setArtistNames] = useState<string[]>([...DEFAULT_BULK_ARTIST_NAMES])
   const [editText, setEditText] = useState("")
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newArtistName, setNewArtistName] = useState("")
@@ -96,48 +89,46 @@ export default function BulkAddArtistsPage() {
 
     try {
       const existingUsers = await fetchAllUsersFromApi()
+      // F-01: дубли отсекаются и по логину, и по имени — и внутри самого списка тоже.
+      const plan = planBulkArtistAdd(artistNames, existingUsers)
 
       const addedArtistsInfo: Array<{ name: string; password: string }> = []
       let successCount = 0
       let errorCount = 0
+      let skippedCount = plan.skippedDuplicates.length
 
-      for (const name of artistNames) {
+      for (const candidate of plan.toCreate) {
         try {
           const randomDigits = generateRandomDigits()
-          const password = `${name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")}${randomDigits}`
+          const password = `${candidate.username}${randomDigits}`
 
-          const username = name.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")
+          const response = await fetch("/api/artists", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: candidate.username,
+              password,
+              name: candidate.name,
+              email: undefined,
+              avatarUrl: undefined,
+              vkMusicUrl: undefined,
+              yandexMusicUrl: undefined,
+              spotifyUrl: undefined,
+            }),
+          })
 
-          const existingUser = existingUsers.some(
-            (user: { username: string }) => user.username.toLowerCase() === username.toLowerCase(),
-          )
+          const result = await response.json()
 
-          if (!existingUser) {
-            const response = await fetch("/api/artists", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                username,
-                password,
-                name,
-                email: undefined,
-                avatarUrl: undefined,
-                vkMusicUrl: undefined,
-                yandexMusicUrl: undefined,
-                spotifyUrl: undefined,
-              }),
-            })
-
-            const result = await response.json()
-
-            if (result.success) {
-              addedArtistsInfo.push({ name, password })
-              successCount++
-            } else {
-              errorCount++
-            }
+          if (result.success) {
+            addedArtistsInfo.push({ name: candidate.name, password })
+            successCount++
+          } else if (result.duplicate) {
+            // Сервер отбил дубль, которого не было в загруженном списке.
+            skippedCount++
+          } else {
+            errorCount++
           }
 
           await new Promise((resolve) => setTimeout(resolve, 100))
@@ -148,15 +139,19 @@ export default function BulkAddArtistsPage() {
 
       setAddedArtists(addedArtistsInfo)
 
+      const skippedNote = skippedCount > 0 ? `, пропущено как дубль: ${skippedCount}` : ""
+
       if (successCount > 0) {
         setSuccess(true)
-        if (errorCount > 0) {
-          setError(`Создано ${successCount} артистов, ${errorCount} ошибок`)
+        if (errorCount > 0 || skippedCount > 0) {
+          setError(`Создано ${successCount} артистов, ${errorCount} ошибок${skippedNote}`)
         }
       } else if (errorCount > 0) {
-        setError(`Не удалось создать ни одного артиста. Ошибок: ${errorCount}`)
+        setError(`Не удалось создать ни одного артиста. Ошибок: ${errorCount}${skippedNote}`)
+      } else if (skippedCount > 0) {
+        setError(`Новых артистов нет${skippedNote}`)
       } else {
-        setError("Все артисты уже существуют в системе")
+        setError("Список пуст: добавьте имена артистов")
       }
     } catch {
       setError("Произошла ошибка при добавлении артистов")
@@ -167,58 +162,19 @@ export default function BulkAddArtistsPage() {
 
   return (
     <>
-    <div className="space-y-6">
-        <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Массовое добавление</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
-            <div className="min-w-0">
-              <Link
-                href="/dashboard/admin/artists"
-                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                К списку
-              </Link>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                Массовое добавление
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">Создание нескольких артистов по списку имён</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary">groups</span>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-8">
+        <PageHeader
+          backHref="/dashboard/admin/artists"
+          title="Массовое добавление"
+          subtitle="Создание нескольких артистов по списку имён"
+        />
 
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
-            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
-            {error}
-          </div>
-        )}
+        {error && <Banner variant="danger">{error}</Banner>}
 
-        {success && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
-            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
-            Артисты успешно добавлены!
-          </div>
-        )}
+        {success && <Banner variant="success">Артисты успешно добавлены!</Banner>}
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            Список артистов
-          </h2>
+          <SectionHeader className="mb-6" size="sm" title="Список артистов" />
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm text-gray-400">
@@ -282,7 +238,11 @@ export default function BulkAddArtistsPage() {
                 </div>
               </div>
             ) : (
-              <div className="max-h-60 overflow-y-auto p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+              <ScrollArea
+                className="rounded-xl border border-white/10 bg-white/[0.02]"
+                viewportClassName="max-h-60 p-4"
+                fadeClassName="from-surface-page"
+              >
                 <ul className="space-y-1">
                   {artistNames.map((name, index) => (
                     <li key={`${name}-${index}`} className="flex items-center justify-between text-sm group min-w-0">
@@ -300,7 +260,7 @@ export default function BulkAddArtistsPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </ScrollArea>
             )}
 
             <div className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
@@ -315,24 +275,32 @@ export default function BulkAddArtistsPage() {
             {addedArtists.length > 0 && (
               <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 overflow-hidden">
                 <h3 className="text-sm font-medium mb-3 text-primary">Созданные учётные данные</h3>
-                <div className="max-h-60 overflow-auto rounded-lg border border-white/10 table-glass">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left border-b border-white/10 text-xs font-mono uppercase text-gray-500">
-                        <th className="p-3">Артист</th>
-                        <th className="p-3">Пароль</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {addedArtists.map((artist, index) => (
-                        <tr key={index} className="border-b border-white/5 hover:bg-white/[0.03]">
-                          <td className="p-3 text-white">{artist.name}</td>
-                          <td className="p-3 font-mono text-gray-300 [font-variant-numeric:tabular-nums]">{artist.password}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Вертикальный скролл — ScrollArea, горизонтальный и тени
+                    у краёв на 390 — сам DataTable (C-10, C-11). */}
+                <ScrollArea
+                  className="table-glass rounded-lg border border-white/10"
+                  viewportClassName="max-h-60"
+                  fadeClassName="from-surface-page"
+                >
+                <DataTable>
+                  <DataTableHeader>
+                    <DataTableHeadRow>
+                      <DataTableHeadCell>Артист</DataTableHeadCell>
+                      <DataTableHeadCell>Пароль</DataTableHeadCell>
+                    </DataTableHeadRow>
+                  </DataTableHeader>
+                  <DataTableBody>
+                    {addedArtists.map((artist, index) => (
+                      <DataTableRow key={index}>
+                        <DataTableCell className="text-white">{artist.name}</DataTableCell>
+                        <DataTableCell className="font-mono text-gray-300 [font-variant-numeric:tabular-nums]">
+                          {artist.password}
+                        </DataTableCell>
+                      </DataTableRow>
+                    ))}
+                  </DataTableBody>
+                </DataTable>
+                </ScrollArea>
               </div>
             )}
 
@@ -348,13 +316,14 @@ export default function BulkAddArtistsPage() {
               </Button>
               <Button
                 type="button"
+                variant="cta"
                 onClick={addAllArtists}
-                className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold inline-flex items-center justify-center gap-2"
-                disabled={isAdding}
+                className="rounded-lg"
+                disabled={isAdding || artistNames.length === 0}
               >
                 {isAdding ? (
                   <>
-                    <span className="inline-block size-4 border-2 border-black/30 border-t-black rounded-full motion-safe:animate-spin" aria-hidden />
+                    <Spinner size="sm" className="[&>span]:border-black/30 [&>span]:border-t-black" />
                     Добавление...
                   </>
                 ) : (
@@ -368,11 +337,10 @@ export default function BulkAddArtistsPage() {
           </div>
         </div>
 
-        <DashboardFooter />
       </div>
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+        <DialogContent className="border border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase tracking-tight">Добавить артиста</DialogTitle>
           </DialogHeader>

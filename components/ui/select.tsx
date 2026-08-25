@@ -6,6 +6,17 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Форк shadcn/ui select: экспортная поверхность и структура канонические,
+ * но тёмное «стекло» выпадашки shadcn не даёт — оно рисовалось сырыми
+ * `bg-[rgba(12,12,12,0.5)]` и `bg-emerald-500/15` прямо в классах (C-05).
+ *
+ * Этап 2.1: те же значения переехали на токены `app/tokens.css`
+ * (`surface-glass`, `surface-page`, `brand`) — пиксели не изменились,
+ * а цвет теперь правится в одном месте. Осталось два палитровых класса
+ * `text-emerald-50/100` для текста пункта: точного токена под них нет,
+ * а подмена на `brand` сдвинула бы оттенок.
+ */
 const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
@@ -79,7 +90,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-[200] max-h-[min(24rem,72vh)] min-w-[8rem] overflow-hidden rounded-xl border border-white/[0.14] bg-[rgba(12,12,12,0.5)] text-white shadow-[0_24px_56px_-12px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-[rgba(10,10,10,0.38)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "relative z-[200] max-h-[min(24rem,72vh)] min-w-[8rem] overflow-hidden rounded-xl border border-white/[0.14] bg-surface-glass/50 text-white shadow-[0_24px_56px_-12px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-surface-page/[0.38] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className
@@ -122,7 +133,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-8 pr-2 text-sm outline-none text-white/90 data-[highlighted]:bg-white/[0.12] data-[highlighted]:text-white data-[state=checked]:bg-emerald-500/15 data-[state=checked]:text-emerald-50 focus:bg-emerald-500/10 focus:text-emerald-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex w-full cursor-default select-none items-center rounded-md py-2 pl-8 pr-2 text-sm outline-none text-white/90 data-[highlighted]:bg-white/[0.12] data-[highlighted]:text-white data-[state=checked]:bg-brand/15 data-[state=checked]:text-emerald-50 focus:bg-brand/10 focus:text-emerald-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}

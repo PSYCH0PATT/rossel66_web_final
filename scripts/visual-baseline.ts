@@ -1,0 +1,1008 @@
+/**
+ * Визуальный baseline личных кабинетов — эталон перед UI-overhaul.
+ *
+ * Снимает full-page-скрины всех экранов админ-ЛК и артист-ЛК в двух вьюпортах
+ * (1440x900 и 390x844) под двумя ролями и раскладывает их по
+ * `screens/baseline/{role}/{route}/{viewport}.png`. Дальше `visual-diff.ts`
+ * сверяет с ними то, что получится после перевёрстки: план в `docs/ui-audit.md`
+ * (волны этапа 4), вердикты — в `docs/ia-decisions.md`.
+ *
+ * Стенд — тот же локальный docker-контур, что у e2e, и логин той же механикой:
+ * сессионная кука собирается `buildSessionCookieValue` из
+ * `tests/e2e/support/session.ts` по AUTH_SECRET из `.env.e2e`, пользователи —
+ * из `scripts/seed-e2e.ts`. Никакого UI-логина: он ограничен десятью попытками
+ * на IP, и полсотни переходов упёрлись бы в 429.
+ *
+ * Usage:
+ *   docker compose -f docker-compose.test.yml up -d
+ *   pnpm test:db:migrate && pnpm seed:e2e && pnpm build
+ *   npx tsx scripts/visual-baseline.ts
+ *   npx tsx scripts/visual-baseline.ts --routes analytics,releases --out screens/after
+ *
+ * Прогон детерминированный (Б-26): скрипт сам чистит ISR-кэш перед стартом
+ * сервера и маскирует относительное время («53 мин. назад») с меткой
+ * «Обновлено …» перед каждым кадром. Два прогона подряд на одном коде и без
+ * пересева базы обязаны дать 0.000 % на всех роутах:
+ *   npx tsx scripts/visual-baseline.ts --out screens/run-a
+ *   npx tsx scripts/visual-baseline.ts --out screens/run-b
+ *   npx tsx scripts/visual-diff.ts --baseline screens/run-a --current screens/run-b --threshold 0
+ * Пересев (`pnpm seed:e2e`, в том числе внутри global-setup playwright) между
+ * прогонами сдвигает скользящие даты аналитики и порядок артистов — это даст
+ * ложный дифф на /admin/analytics и /admin/artists.
+ *
+ * Флаги:
+ *   --routes <a,b,c>   подстроки: снимаются роуты, чьи путь или slug содержат любую
+ *   --out <dir>        корень вывода (по умолчанию screens/baseline)
+ *   --base-url <url>   готовый стенд; без него скрипт сам поднимет `next start`
+ */
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs"
+import { dirname, resolve } from "path"
+import { spawn, type ChildProcess } from "child_process"
+import { Client } from "pg"
+import { chromium, type BrowserContext, type Page } from "@playwright/test"
+
+import { loadEnvFile, loadTestEnvFiles, requireTestDatabaseUrl } from "../tests/support/env"
+import { startMockSupabaseStorage, type MockStorage } from "../tests/support/mock-supabase-storage"
+import { USERS, loginAs, type SeedUser } from "../tests/e2e/support/session"
+
+// .env.e2e первым — ровно как в playwright.config.ts: значения стенда должны
+// перебивать прод-креды из .env.local, иначе прогон уйдёт в боевой Supabase.
+loadEnvFile(resolve(process.cwd(), ".env.e2e"))
+loadTestEnvFiles()
+
+// ---------------------------------------------------------------------------
+// Каталог роутов
+// ---------------------------------------------------------------------------
+
+/** Артист, под которым снимается артист-ЛК (scripts/seed-e2e.ts). */
+const ARTIST = USERS.main
+/** Динамические сегменты — id из сида, числа там контрактные. */
+const SEED = {
+  artistId: "e2e-main-id",
+  adminReleaseId: "e2e-rel-main-1",
+  artistReleaseId: "e2e-rel-main-1",
+  artistPlaylistId: "e2e-pl-main-1",
+} as const
+
+type Role = "admin" | "artist" | "public"
+
+type RouteState = {
+  /** Попадёт в имя файла: `{viewport}--{name}.png`. */
+  name: string
+  /** Возвращает false, если состояние на этом вьюпорте недостижимо (нет узла). */
+  apply: (page: Page) => Promise<boolean>
+}
+
+type RouteSpec = {
+  path: string
+  states?: RouteState[]
+}
+
+/**
+ * Период «Год» вместо дефолтных 30 дней: сид кладёт аналитику одной датой
+ * (2026-06-15), в тридцатидневное окно она не попадает и график показывает
+ * пустое состояние. На md+ период — ряд пилюль, на телефоне — Select.
+ */
+async function selectYearPeriod(page: Page): Promise<boolean> {
+  const pill = page.getByRole("button", { name: "Год", exact: true }).first()
+  if (await pill.isVisible().catch(() => false)) {
+    await pill.click()
+    return true
+  }
+  const combo = page.getByRole("combobox").filter({ hasText: /дней|Период/ }).first()
+  if ((await combo.count()) === 0) return false
+  await combo.click()
+  await page.getByRole("option", { name: "Год", exact: true }).click()
+  return true
+}
+
+/**
+ * Тултип графика аналитики: recharts рисует его на mousemove по площади графика.
+ * Двумя движениями — на вход без смещения recharts не реагирует.
+ */
+const chartTooltip: RouteState = {
+  name: "chart-tooltip",
+  apply: async (page) => {
+    if (!(await selectYearPeriod(page))) return false
+    await stabilize(page)
+    const surface = page.locator(".recharts-surface").first()
+    if ((await surface.count()) === 0) return false
+    const box = await surface.boundingBox()
+    if (!box) return false
+    await page.mouse.move(box.x + box.width * 0.45, box.y + box.height * 0.5)
+    await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.5)
+    await page.locator(".recharts-tooltip-wrapper").first().waitFor({
+      state: "visible",
+      timeout: 5_000,
+    })
+    return true
+  },
+}
+
+/**
+ * Виды объединённого экрана «Отчёты» (решение 0-а): вместо табов /reports и
+ * отдельных экранов /payments, /unregistered-reports и /reports-generator —
+ * один ряд чипов. Эталон снимается по каждому виду, иначе после слияния три
+ * экрана остались бы без своих скринов.
+ */
+function reportsView(name: string, chip: string | RegExp): RouteState {
+  return {
+    name,
+    apply: async (page) => {
+      const chipButton = page.getByRole("button", { name: chip }).first()
+      if ((await chipButton.count()) === 0) return false
+      await chipButton.click()
+      await stabilize(page)
+      return true
+    },
+  }
+}
+
+/**
+ * Раскрытая квартальная папка: именно в ней живёт таблица «артист · отчёт ·
+ * сумма · подпись · выплачено» — бывший экран /payments (0-а). В свёрнутом
+ * виде её на скрине не видно вовсе.
+ */
+const reportsQuarterOpen: RouteState = {
+  name: "quarter-open",
+  apply: async (page) => {
+    const folder = page.getByText(/^Q[1-4] 20\d\d$/).first()
+    if ((await folder.count()) === 0) return false
+    await folder.click()
+    await page.locator("table").first().waitFor({ state: "visible", timeout: 10_000 })
+    await stabilize(page)
+    return true
+  },
+}
+
+/** Фильтры релизов: в админке это Dialog за кнопкой «Фильтры». */
+const releaseFilters: RouteState = {
+  name: "filters-open",
+  apply: async (page) => {
+    const trigger = page.getByRole("button", { name: /Фильтры/ }).first()
+    if ((await trigger.count()) === 0) return false
+    await trigger.click()
+    await page.locator('[role="dialog"]').first().waitFor({ state: "visible", timeout: 5_000 })
+    return true
+  },
+}
+
+/**
+ * Админ-ЛК. Не включены /dashboard/login и лендинг — публичные, вне скоупа
+ * overhaul. Нет и трёх адресов, которые после этапа 5 отвечают редиректом:
+ * /payments, /unregistered-reports и /reports-generator влиты в объединённые
+ * «Отчёты» (решение 0-а, вопросы №1 и №3) — снимать у них нечего, их вёрстка
+ * теперь снимается видами роута /dashboard/admin/reports.
+ */
+const ADMIN_ROUTES: RouteSpec[] = [
+  { path: "/dashboard/admin/dashboard" },
+  { path: "/dashboard/admin/analytics", states: [chartTooltip] },
+  {
+    path: "/dashboard/admin/reports",
+    states: [
+      reportsQuarterOpen,
+      reportsView("view-pending", "Ждут подписи"),
+      reportsView("view-unpaid", /Невыплаченные/),
+      reportsView("view-unregistered", "Без кабинета"),
+      reportsView("view-generator", "Генератор"),
+    ],
+  },
+  { path: "/dashboard/admin/playlists" },
+  { path: "/dashboard/admin/playlists/history" },
+  { path: "/dashboard/admin/artists" },
+  { path: "/dashboard/admin/artists/add" },
+  { path: "/dashboard/admin/artists/bulk-add" },
+  { path: `/dashboard/admin/artists/${SEED.artistId}` },
+  { path: `/dashboard/admin/artists/${SEED.artistId}/reports` },
+  { path: `/dashboard/admin/artists/${SEED.artistId}/payments` },
+  { path: `/dashboard/admin/artists/${SEED.artistId}/releases` },
+  { path: `/dashboard/admin/artists/${SEED.artistId}/playlists` },
+  { path: "/dashboard/admin/releases", states: [releaseFilters] },
+  { path: "/dashboard/admin/releases/add" },
+  { path: `/dashboard/admin/releases/${SEED.adminReleaseId}` },
+  { path: "/dashboard/admin/releases/koala-parser" },
+  { path: "/dashboard/admin/releases/zvonko-parser" },
+  { path: "/dashboard/admin/activity" },
+  { path: "/dashboard/admin/settings" },
+]
+
+/**
+ * Артист-ЛК. `/dashboard/artist/[username]` (бывшая визитка, вопрос №6),
+ * `/dashboard/artist`, `/dashboard/artist/analytics` и `…/payments` — серверные
+ * редиректы без собственной вёрстки, снимать нечего. Выплаты влиты в
+ * `…/reports` (решение 0-а, артистская половина) и снимаются там.
+ */
+const ARTIST_ROUTES: RouteSpec[] = [
+  { path: `/dashboard/artist/${ARTIST.username}/dashboard` },
+  // Фильтров как на админском списке здесь нет — только поиск и «Профиль»
+  // (native select, его выпадашку рисует ОС и в скрин она не попадает).
+  { path: `/dashboard/artist/${ARTIST.username}/releases` },
+  { path: `/dashboard/artist/${ARTIST.username}/releases/${SEED.artistReleaseId}` },
+  { path: `/dashboard/artist/${ARTIST.username}/analytics`, states: [chartTooltip] },
+  { path: `/dashboard/artist/${ARTIST.username}/playlists` },
+  { path: `/dashboard/artist/${ARTIST.username}/playlists/${SEED.artistPlaylistId}` },
+  { path: `/dashboard/artist/${ARTIST.username}/reports` },
+  { path: `/dashboard/artist/${ARTIST.username}/settings` },
+  { path: `/dashboard/artist/${ARTIST.username}/activity` },
+]
+
+/**
+ * Публичные экраны кабинета — снимаются БЕЗ сессионной куки, как их видит гость.
+ * Пока здесь один логин: до волны 4.4 он в каталог не входил («вне скоупа»),
+ * из-за чего у единственного экрана кабинета не было эталона.
+ */
+const PUBLIC_ROUTES: RouteSpec[] = [{ path: "/dashboard/login" }]
+
+const ROLES: Array<{
+  role: Role
+  /** null — контекст без логина (публичные экраны). */
+  user: SeedUser | null
+  routes: RouteSpec[]
+  prefix: string
+}> = [
+  { role: "admin", user: USERS.admin, routes: ADMIN_ROUTES, prefix: "/dashboard/admin/" },
+  {
+    role: "artist",
+    user: ARTIST,
+    routes: ARTIST_ROUTES,
+    prefix: `/dashboard/artist/${ARTIST.username}/`,
+  },
+  { role: "public", user: null, routes: PUBLIC_ROUTES, prefix: "/dashboard/" },
+]
+
+const VIEWPORTS = [
+  { name: "1440x900", width: 1440, height: 900 },
+  { name: "390x844", width: 390, height: 844 },
+] as const
+
+// ---------------------------------------------------------------------------
+// Аргументы
+// ---------------------------------------------------------------------------
+
+function parseArgs(argv: string[]) {
+  const out = {
+    routes: [] as string[],
+    outDir: "screens/baseline",
+    baseUrl: process.env.VISUAL_BASE_URL?.trim() || "",
+  }
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    const value = () => {
+      const v = argv[++i]
+      if (v === undefined) throw new Error(`У флага ${arg} нет значения`)
+      return v
+    }
+    if (arg === "--routes") out.routes = value().split(",").map((s) => s.trim()).filter(Boolean)
+    else if (arg === "--out") out.outDir = value()
+    else if (arg === "--base-url") out.baseUrl = value()
+    else if (arg === "--help" || arg === "-h") {
+      console.log(
+        "npx tsx scripts/visual-baseline.ts [--routes подстрока,...] [--out screens/baseline] [--base-url http://127.0.0.1:3000]"
+      )
+      process.exit(0)
+    } else throw new Error(`Неизвестный аргумент: ${arg}`)
+  }
+  return out
+}
+
+const args = parseArgs(process.argv.slice(2))
+
+/** Директория скрина: путь без роль-префикса, слэши в подчёркивания. */
+function slugFor(path: string, prefix: string): string {
+  const tail = path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, "")
+  return tail.replace(/\//g, "_") || "index"
+}
+
+function matchesFilter(path: string, slug: string): boolean {
+  if (args.routes.length === 0) return true
+  return args.routes.some((f) => path.includes(f) || slug.includes(f))
+}
+
+// ---------------------------------------------------------------------------
+// Стенд
+// ---------------------------------------------------------------------------
+
+const DEFAULT_BASE_URL = "http://127.0.0.1:3000"
+
+async function isUp(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(3_000) })
+    return res.status < 500
+  } catch {
+    return false
+  }
+}
+
+/** Сид обязан быть на месте: без него скрины были бы пустыми экранами. */
+async function assertSeeded(databaseUrl: string) {
+  const client = new Client({ connectionString: databaseUrl, connectionTimeoutMillis: 5_000 })
+  await client.connect()
+  try {
+    const { rows } = await client.query(
+      `SELECT count(*)::int AS c FROM "User" WHERE username = 'e2e-guard'`
+    )
+    if (rows[0]?.c !== 1) throw new Error("маркера e2e-guard в базе нет")
+  } catch (err) {
+    throw new Error(
+      `База не готова (${(err as Error).message}). Поднимите стенд:\n` +
+        "  docker compose -f docker-compose.test.yml up -d\n" +
+        "  pnpm test:db:migrate && pnpm seed:e2e"
+    )
+  } finally {
+    await client.end()
+  }
+}
+
+/** Дисковый кэш `unstable_cache` (Next 14). Пуст — значит, данные из базы. */
+const ISR_CACHE_DIR = ".next/cache/fetch-cache"
+
+function clearIsrCache() {
+  rmSync(resolve(process.cwd(), ISR_CACHE_DIR), { recursive: true, force: true })
+  console.log(`[baseline] очищен ISR-кэш ${ISR_CACHE_DIR}`)
+}
+
+async function startServer(baseUrl: string): Promise<ChildProcess> {
+  const port = new URL(baseUrl).port || "3000"
+  if (!existsSync(resolve(process.cwd(), ".next/BUILD_ID"))) {
+    throw new Error("Нет сборки: сначала `pnpm build`, потом этот скрипт")
+  }
+  console.log(`[baseline] поднимаю next start на :${port}`)
+  const child = spawn("pnpm", ["exec", "next", "start", "-p", port], {
+    env: { ...process.env, PORT: port },
+    stdio: "ignore",
+  })
+  const deadline = Date.now() + 120_000
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`next start упал с кодом ${child.exitCode}`)
+    if (await isUp(baseUrl)) return child
+    await new Promise((r) => setTimeout(r, 700))
+  }
+  child.kill()
+  throw new Error(`next start не поднялся за 120 с на ${baseUrl}`)
+}
+
+// ---------------------------------------------------------------------------
+// Съёмка
+// ---------------------------------------------------------------------------
+
+/**
+ * Гасим анимации и каретку: без этого один и тот же экран даёт разные пиксели
+ * от прогона к прогону, и visual-diff.ts тонет в ложных срабатываниях.
+ */
+const FREEZE_CSS = `
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    caret-color: transparent !important;
+  }
+  html { scroll-behavior: auto !important; }
+`
+
+/**
+ * Ждём, пока разметка перестанет меняться (Б-26).
+ *
+ * `FREEZE_CSS` гасит CSS-анимации, но график recharts на /admin/analytics
+ * растёт через requestAnimationFrame — данные там приезжают клиентским
+ * запросом, и к моменту `networkidle` линии ещё в пути. Кадры двух прогонов
+ * попадали в разные моменты этой анимации: 0.596 % @1440 и 1.387 % @390.
+ *
+ * Сигнатура — дешёвый хеш `body.innerHTML`, считается в браузере (гонять
+ * мегабайт разметки через протокол на каждую пробу незачем). Три одинаковые
+ * пробы подряд — разметка успокоилась; не дождались за таймаут — это находка
+ * прогона, а не повод снимать кадр молча.
+ */
+async function waitForRenderSettled(page: Page, timeoutMs = 15_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  let previous: number | null = null
+  let stable = 0
+  while (Date.now() < deadline) {
+    const signature = await page
+      .evaluate(() => {
+        const html = document.body.innerHTML
+        let hash = 0
+        for (let i = 0; i < html.length; i++) hash = (hash * 31 + html.charCodeAt(i)) | 0
+        return hash
+      })
+      .catch(() => null)
+    if (signature === null) return false
+    stable = signature === previous ? stable + 1 : 0
+    previous = signature
+    if (stable >= 2) return true
+    await page.waitForTimeout(250)
+  }
+  return false
+}
+
+/**
+ * Маскировка динамики перед кадром (Б-26).
+ *
+ * `FREEZE_CSS` гасит анимации, но не время: лента печатает относительный
+ * возраст события («только что», «53 мин. назад» — `formatDate` в
+ * components/activity-feed.tsx), а шапка артистского дашборда — метку
+ * «Обновлено DD.MM.YYYY» от `new Date()` на сервере. Между двумя прогонами
+ * этот текст меняется, и `/admin/dashboard` @1440 давал 1.3 % расхождения при
+ * пороге 0.5 % — то есть визуальный дифф по дашбордам ничего не доказывал.
+ *
+ * Маскируем ТОЛЬКО относительное время и метку свежести. Абсолютные даты не
+ * трогаем: на них держится контрольная точка `/admin/activity`, где два
+ * прогона и до этого сходились в 0.000 %, и эталон должен показывать
+ * настоящие данные, а не заглушки.
+ */
+const DYNAMIC_TEXT_MASKS: Array<{ pattern: RegExp; replacement: string }> = [
+  {
+    // components/activity-feed.tsx: «только что», «5 мин. назад», «3 ч. назад»,
+    // «1 день назад», «4 дн. назад». Дальше семи дней там абсолютная дата.
+    pattern: /^(только что|\d+ мин\. назад|\d+ ч\. назад|1 день назад|\d+ дн\. назад)$/,
+    replacement: "00 мин. назад",
+  },
+  {
+    // Метка свежести в подписи шапки артистского дашборда (вердикт 3.2).
+    pattern: /^Обновлено \d{1,2}\.\d{1,2}\.\d{4}$/,
+    replacement: "Обновлено 00.00.0000",
+  },
+]
+
+/** Текст, который сам скрипт подставил, — он и должен остаться в кадре. */
+const MASK_REPLACEMENTS = DYNAMIC_TEXT_MASKS.map((m) => m.replacement)
+
+/**
+ * Подменяет динамику фиксированным текстом и возвращает то, что маска НЕ
+ * поймала. Промах маски (переписали копирайт — регулярка перестала совпадать)
+ * обязан быть виден: молчащий инструмент здесь хуже отсутствующего.
+ */
+async function maskDynamics(page: Page): Promise<string[]> {
+  const rules = DYNAMIC_TEXT_MASKS.map((m) => ({
+    source: m.pattern.source,
+    flags: m.pattern.flags,
+    replacement: m.replacement,
+  }))
+  try {
+    return await page.evaluate(
+      (input) => {
+        // Никаких функций в переменных внутри evaluate: tsx компилирует файл с
+        // --keep-names, стрелка с выведенным именем уезжает в браузер обёрнутой
+        // в esbuild-хелпер `__name`, которого там нет (ReferenceError, кадр
+        // уходит незамаскированным). Только анонимные стрелки в аргументах —
+        // на этом же обжигался emptinessSignals ниже.
+        const compiled = input.rules.map((r) => ({
+          re: new RegExp(r.source, r.flags),
+          replacement: r.replacement,
+        }))
+
+        // Сначала листовые элементы: JSX `Обновлено {formatDateRu(...)}` даёт
+        // ДВА соседних текстовых узла, и поузловая подмена его не поймала бы.
+        const leaves = Array.from(document.querySelectorAll("*")).filter(
+          (el) => el.children.length === 0
+        )
+        for (const el of leaves) {
+          const text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
+          if (!text) continue
+          const hit = compiled.find((c) => c.re.test(text))
+          if (hit) el.textContent = hit.replacement
+        }
+
+        // Частицы логина (components/sparkles.tsx) живут в <canvas>: позиции
+        // раздаёт Math.random(), а двигает их requestAnimationFrame — ни
+        // FREEZE_CSS, ни ожидания на это не действуют, и /dashboard/login
+        // держал вечный шум 0.05–0.07 % между прогонами. Кадр — про вёрстку,
+        // а не про случайные точки: гасим слой целиком, разметку не трогая.
+        for (const canvas of Array.from(document.querySelectorAll("canvas"))) {
+          ;(canvas as HTMLElement).style.visibility = "hidden"
+        }
+
+        // Затем отдельные текстовые узлы: то же время может стоять рядом с
+        // вложенным элементом, и такой родитель листом не является.
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        let node = walker.nextNode()
+        while (node) {
+          const text = (node.nodeValue ?? "").replace(/\s+/g, " ").trim()
+          if (text) {
+            const hit = compiled.find((c) => c.re.test(text))
+            if (hit) node.nodeValue = hit.replacement
+          }
+          node = walker.nextNode()
+        }
+
+        // Самопроверка: не осталось ли в кадре относительного времени, которое
+        // маска не узнала. Свои же подстановки под шаблон подходят — их мимо.
+        const relative = /(только что|\d+\s*(мин\.|ч\.|дн\.|дня|дней|день)\s*назад)/
+        const seen = new Set<string>()
+        const check = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        let probe = check.nextNode()
+        while (probe) {
+          const text = (probe.nodeValue ?? "").replace(/\s+/g, " ").trim()
+          if (text && relative.test(text) && !input.replacements.includes(text)) {
+            seen.add(text.slice(0, 60))
+          }
+          probe = check.nextNode()
+        }
+        return [...seen]
+      },
+      { rules, replacements: MASK_REPLACEMENTS }
+    )
+  } catch (err) {
+    return [`маскировка не сработала: ${(err as Error).message.split("\n")[0]}`]
+  }
+}
+
+/**
+ * До Б-13 иконочный шрифт приезжал с fonts.googleapis.com с `display=swap`, и
+ * до его загрузки на месте иконок стоял текст лигатуры — «currency_rubl»,
+ * «done_all», «menu». Теперь файл лежит в `public/fonts` и раздаётся со своего
+ * домена (`app/material-symbols.css`), но ожидание нужно по-прежнему:
+ * `document.fonts.ready` резолвится до того, как шрифт реально дошёл, и один и
+ * тот же экран давал то иконки, то слова — расхождение до 2 % между прогонами.
+ */
+const ICON_FONT = '24px "Material Symbols Outlined"'
+
+/**
+ * Дошёл ли иконочный шрифт. Раньше ожидание было с `.catch(() => {})` и
+ * молчало: при сорвавшемся запросе к fonts.googleapis.com кадр снимался
+ * с лигатурами-словами вместо иконок («dashboard», «person», «logout»),
+ * роут получал статус ok, и такой скрин уходил в эталон. Теперь неудача
+ * возвращается наверх и попадает в проблемы прогона.
+ *
+ * Проверка живая и после Б-13: файл локальный, но 404 на нём, сломанный
+ * @font-face или чужая правка имени семейства дадут ровно ту же картину.
+ */
+async function iconFontReady(page: Page): Promise<boolean> {
+  return page
+    .waitForFunction(
+      (font) => {
+        if (!document.querySelector(".material-symbols-outlined")) return true
+        document.fonts.load(font)
+        // `document.fonts.check()` недостаточно: он отвечает true и тогда, когда
+        // запрос за файлом сорвался, — «шрифт доступен» для него значит «есть
+        // чем нарисовать», а фолбэк есть всегда. Спрашиваем сам FontFace: пока
+        // лигатуры рисуются словами, его статус не `loaded`.
+        for (const face of document.fonts) {
+          if (face.family.includes("Material Symbols") && face.status === "loaded") return true
+        }
+        return false
+      },
+      ICON_FONT,
+      { timeout: 20_000 }
+    )
+    .then(() => true)
+    .catch(() => false)
+}
+
+/**
+ * @param reloadOnFontMiss перезагрузить страницу, если шрифт не приехал.
+ *   Только для первого захода на роут: внутри `RouteState.apply` перезагрузка
+ *   стёрла бы уже применённое состояние (открытый чип, раскрытую папку).
+ * @returns false, если иконочный шрифт так и не приехал — кадр негоден.
+ */
+async function stabilize(page: Page, reloadOnFontMiss = false): Promise<boolean> {
+  await page.addStyleTag({ content: FREEZE_CSS }).catch(() => {})
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {})
+  await page.evaluate(() => document.fonts?.ready).catch(() => {})
+  let fontOk = await iconFontReady(page)
+  if (!fontOk && reloadOnFontMiss) {
+    // Одна повторная попытка: срыв обычно сетевой и одноразовый.
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {})
+    await page.addStyleTag({ content: FREEZE_CSS }).catch(() => {})
+    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {})
+    fontOk = await iconFontReady(page)
+  }
+  // Спиннеры остаются в DOM с классом animate-spin даже с погашенной анимацией,
+  // так что ждём именно их исчезновения, а не «конца анимации».
+  await page
+    .waitForFunction(() => !document.querySelector(".animate-spin"), null, { timeout: 20_000 })
+    .catch(() => {})
+  await page.waitForTimeout(400)
+  return fontOk
+}
+
+/**
+ * Признаки того, что экран снят ПУСТЫМ: пустые состояния, таблицы без строк,
+ * графики без точек. Такой скрин не годится в доказательство — на нём нечему
+ * разъезжаться, и визуальный дифф по нему ничего не проверяет (правило
+ * приёмки волн, docs/ui-audit.md).
+ *
+ * Считаем только видимое: скрытые вкладки и свёрнутые блоки к состоянию
+ * экрана отношения не имеют.
+ */
+async function emptinessSignals(page: Page): Promise<string[]> {
+  try {
+    return await page.evaluate(() => {
+      // Никаких именованных функций внутри evaluate: tsx компилирует файл с
+      // --keep-names, и такие функции уезжают в браузер обёрнутыми в
+      // esbuild-хелпер `__name`, которого там нет (ReferenceError, а детектор
+      // молча возвращал «пусто»). Только анонимные стрелки в аргументах.
+      const signals: string[] = []
+
+      const empties = Array.from(document.querySelectorAll("[data-empty-state]")).filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      })
+      if (empties.length > 0) {
+        const titles = empties
+          // Заголовок — первый <p>: textContent целиком тянет за собой ещё и
+          // лигатуру иконки («inboxСобытий пока нет»).
+          .map((el) => ((el.querySelector("p") ?? el).textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 40))
+          .filter((t) => t.length > 0)
+        signals.push(`пустых состояний ${empties.length} («${titles.join("», «")}»)`)
+      }
+
+      const emptyTables = Array.from(document.querySelectorAll("table")).filter((t) => {
+        const r = t.getBoundingClientRect()
+        return r.width > 0 && r.height > 0 && t.querySelectorAll("tbody tr").length === 0
+      })
+      if (emptyTables.length > 0) signals.push(`таблиц без строк ${emptyTables.length}`)
+
+      // Точки данных recharts: линия, площадь, столбец, сектор, маркер.
+      const marks =
+        ".recharts-line-curve, .recharts-area-area, .recharts-bar-rectangle, .recharts-sector, .recharts-dot"
+      const emptyCharts = Array.from(document.querySelectorAll(".recharts-surface")).filter((svg) => {
+        // Квадратики легенды — тоже .recharts-surface, но 10×10 и без данных
+        // по определению: без этого отсева экран с полным графиком приезжал
+        // «пустым» четыре раза подряд.
+        if (svg.querySelector(".recharts-legend-icon")) return false
+        const r = svg.getBoundingClientRect()
+        return r.width >= 60 && r.height >= 40 && svg.querySelectorAll(marks).length === 0
+      })
+      if (emptyCharts.length > 0) signals.push(`графиков без точек ${emptyCharts.length}`)
+
+      return signals
+    })
+  } catch (err) {
+    // Детектор, который молча не сработал, — та же ловушка, что и пустой
+    // экран: лучше громкий warn, чем ложное «ok».
+    return [`проверка не сработала: ${(err as Error).message.split("\n")[0]}`]
+  }
+}
+
+type Shot = { file: string; state?: string }
+/**
+ * fail — скрина нет или экран не тот (4xx/5xx, редирект, таймаут).
+ * warn — скрин снят, но верить ему нельзя: экран нажаловался в консоль,
+ *        состояние не открылось или экран снят ПУСТЫМ (EMPTY_PREFIX).
+ *        Чинить это не задача baseline, но в docs/baseline-issues.md попадает.
+ */
+/** Метка причины «экран снят пустым» — по ней же считается итог прогона. */
+const EMPTY_PREFIX = "пустой экран: "
+/** Б-26: маска динамики промахнулась — кадр не воспроизведётся между прогонами. */
+const MASK_MISS_PREFIX = "не замаскировано относительное время: "
+/** Б-26: разметка всё ещё менялась в момент затвора — кадр невоспроизводим. */
+const UNSETTLED_PROBLEM =
+  "разметка не успокоилась за 15 с — кадр снят посреди отрисовки и между прогонами разъедется"
+
+type Status = "ok" | "warn" | "fail"
+type Result = {
+  role: Role
+  path: string
+  slug: string
+  viewport: string
+  status: Status
+  problems: string[]
+  shots: Shot[]
+}
+
+async function captureRoute(
+  page: Page,
+  baseUrl: string,
+  route: RouteSpec,
+  slug: string,
+  role: Role,
+  viewport: string,
+  outDir: string
+): Promise<Result> {
+  // Set, а не массив: один и тот же hydration-mismatch React кидает по разу на
+  // каждый несовпавший узел, и без дедупликации отчёт заплывает копиями.
+  const problems = new Set<string>()
+  const shots: Shot[] = []
+  const onPageError = (err: Error) => problems.add(`pageerror: ${err.message.slice(0, 160)}`)
+  // Ответ 4xx/5xx на подзапросе консоль печатает без URL — ловим его отдельно,
+  // иначе в отчёте остаётся бесполезное «Failed to load resource: 404».
+  const onResponse = (res: { status(): number; url(): string }) => {
+    const status = res.status()
+    if (status < 400) return
+    const url = res.url().replace(baseUrl, "")
+    if (url === route.path) return
+    problems.add(`подзапрос HTTP ${status}: ${url.slice(0, 140)}`)
+  }
+  const onConsole = (msg: { type(): string; text(): string }) => {
+    if (msg.type() !== "error") return
+    const text = msg.text()
+    // Оборванные запросы — это мы сами: переключение состояния и уход со
+    // страницы отменяют висящий fetch. К вёрстке отношения не имеет.
+    if (/ERR_SOCKET_NOT_CONNECTED|ERR_ABORTED|net::ERR_FAILED/.test(text)) return
+    // Дубль того, что onResponse уже записал с адресом.
+    if (/^Failed to load resource/.test(text)) return
+    problems.add(`console: ${text.slice(0, 160)}`)
+  }
+  page.on("pageerror", onPageError)
+  page.on("console", onConsole)
+  page.on("response", onResponse)
+
+  const dir = resolve(process.cwd(), outDir, role, slug)
+  mkdirSync(dir, { recursive: true })
+
+  try {
+    const response = await page.goto(`${baseUrl}${route.path}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 45_000,
+    })
+    const status = response?.status()
+    if (status && status >= 400) problems.add(`HTTP ${status}`)
+
+    if (!(await stabilize(page, true))) {
+      problems.add("иконочный шрифт не загрузился — на месте иконок лигатуры-слова, кадр в эталон не годится")
+    }
+
+    const landed = new URL(page.url()).pathname
+    // Сам экран логина — легальная цель (роль public), а не выброшенная сессия.
+    if (landed === "/dashboard/login" && route.path !== "/dashboard/login") {
+      problems.add("редирект на /dashboard/login — сессия не принята (AUTH_SECRET стенда?)")
+    } else if (landed !== route.path) {
+      problems.add(`редирект на ${landed}`)
+    }
+
+    // Б-26: сначала дожидаемся конца рисования, потом гасим динамику — и
+    // только затем затвор. В обратном порядке кадр разъезжается между
+    // прогонами на анимации графика и на относительном времени.
+    if (!(await waitForRenderSettled(page))) problems.add(UNSETTLED_PROBLEM)
+    for (const leftover of await maskDynamics(page)) {
+      problems.add(`${MASK_MISS_PREFIX}${leftover}`)
+    }
+
+    const file = `${outDir}/${role}/${slug}/${viewport}.png`
+    await page.screenshot({ path: resolve(process.cwd(), file), fullPage: true })
+    shots.push({ file })
+
+    for (const signal of await emptinessSignals(page)) {
+      problems.add(`${EMPTY_PREFIX}${signal}`)
+    }
+
+    for (const state of route.states ?? []) {
+      try {
+        const applied = await state.apply(page)
+        if (!applied) {
+          problems.add(`состояние «${state.name}» недостижимо: нужного узла на экране нет`)
+          continue
+        }
+        await page.waitForTimeout(300)
+        if (!(await waitForRenderSettled(page))) {
+          problems.add(`«${state.name}»: ${UNSETTLED_PROBLEM}`)
+        }
+        for (const leftover of await maskDynamics(page)) {
+          problems.add(`${MASK_MISS_PREFIX}«${state.name}»: ${leftover}`)
+        }
+        const stateFile = `${outDir}/${role}/${slug}/${viewport}--${state.name}.png`
+        await page.screenshot({ path: resolve(process.cwd(), stateFile), fullPage: true })
+        shots.push({ file: stateFile, state: state.name })
+
+        for (const signal of await emptinessSignals(page)) {
+          problems.add(`${EMPTY_PREFIX}«${state.name}»: ${signal}`)
+        }
+      } catch (err) {
+        problems.add(`состояние «${state.name}»: ${(err as Error).message.split("\n")[0]}`)
+      }
+    }
+  } catch (err) {
+    problems.add((err as Error).message.split("\n")[0])
+  } finally {
+    page.off("pageerror", onPageError)
+    page.off("console", onConsole)
+    page.off("response", onResponse)
+  }
+
+  // Экран, который отрисовался и наругался в консоль, — это находка, а не
+  // сломанный роут: скрин снят и годится в эталон. Роут валят только вещи,
+  // после которых снимать нечего или снято не то.
+  const list = [...problems]
+  const fatal = list.some(
+    (p) => p.startsWith("HTTP ") || p.startsWith("редирект") || p.startsWith("page.goto")
+  )
+  const status: Status =
+    shots.length === 0 || fatal ? "fail" : list.length > 0 ? "warn" : "ok"
+
+  return { role, path: route.path, slug, viewport, status, problems: list, shots }
+}
+
+// ---------------------------------------------------------------------------
+// Отчёт
+// ---------------------------------------------------------------------------
+
+function printTable(results: Result[]) {
+  type Row = { role: string; path: string; status: string; files: string }
+  const byRoute = new Map<string, Result[]>()
+  for (const r of results) {
+    const key = `${r.role} ${r.path}`
+    byRoute.set(key, [...(byRoute.get(key) ?? []), r])
+  }
+
+  const rows: Row[] = []
+  for (const [key, group] of byRoute) {
+    const [role, path] = key.split(" ")
+    const files = group
+      .flatMap((g) => g.shots.map((s) => s.file.split("/").pop()!))
+      .join(", ")
+    const failed = group.filter((g) => g.status === "fail")
+    const warned = group.filter((g) => g.status === "warn")
+    const status =
+      failed.length > 0
+        ? `fail (${failed.map((f) => f.viewport).join(", ")})`
+        : warned.length > 0
+          ? `warn (${warned.map((w) => w.viewport).join(", ")})`
+          : "ok"
+    rows.push({ role, path, status, files: files || "—" })
+  }
+
+  const head: Row = { role: "РОЛЬ", path: "РОУТ", status: "СТАТУС", files: "ФАЙЛЫ" }
+  const width = (k: keyof Row) => Math.max(...[head, ...rows].map((r) => r[k].length))
+  const w = { role: width("role"), path: width("path"), status: width("status") }
+  const line = (r: Row) =>
+    `${r.role.padEnd(w.role)}  ${r.path.padEnd(w.path)}  ${r.status.padEnd(w.status)}  ${r.files}`
+
+  console.log("")
+  console.log(line(head))
+  console.log("─".repeat(w.role + w.path + w.status + 6 + 20))
+  for (const r of rows) console.log(line(r))
+}
+
+function printProblems(results: Result[]) {
+  const withProblems = results.filter((r) => r.problems.length > 0)
+  if (withProblems.length === 0) return
+  console.log("\nПроблемы:")
+  for (const r of withProblems) {
+    console.log(`  ${r.role} ${r.path} @${r.viewport}`)
+    for (const p of r.problems) console.log(`    · ${p}`)
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+async function main() {
+  const databaseUrl = requireTestDatabaseUrl()
+  await assertSeeded(databaseUrl)
+
+  const baseUrl = (args.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "")
+
+  // Б-26: getCachedAdminDashboard и getCachedActivitiesForFeed идут через
+  // unstable_cache, а он лежит на диске в .next/cache/fetch-cache и переживает
+  // прогон. Эталон 25.08 однажды снялся с данными, оставшимися от e2e (30
+  // отчётов вместо 29, чужие события в ленте). Чистка — шаг прогона, а не
+  // строчка в документе, которую забудут выполнить.
+  clearIsrCache()
+
+  let server: ChildProcess | undefined
+  if (await isUp(baseUrl)) {
+    console.log(`[baseline] использую уже поднятый ${baseUrl}`)
+    console.log(
+      "[baseline] ВНИМАНИЕ: свежесть данных не гарантирована — у живого `next start` " +
+        "своя память ISR, файлы кэша ей не указ. Для эталона погасите сервер и дайте " +
+        "скрипту поднять свой."
+    )
+  } else if (args.baseUrl) {
+    throw new Error(`Стенд ${baseUrl} недоступен`)
+  } else {
+    server = await startServer(baseUrl)
+  }
+
+  // Тот же стаб, что в tests/e2e/global-setup.ts: без него роуты отчётов уйдут
+  // в настоящий Supabase — lib/supabase.ts при пустых переменных подставляет
+  // захардкоженный прод-URL.
+  let storage: MockStorage | undefined
+  if (!args.baseUrl) {
+    const port = Number(process.env.E2E_STORAGE_PORT || 54330)
+    try {
+      storage = await startMockSupabaseStorage(port)
+      console.log(`[baseline] стаб Supabase Storage на ${storage.url}`)
+    } catch (err) {
+      // Прерванный прогон e2e оставляет стаб висеть на том же порту. Если он
+      // отвечает — берём его, иначе порт занят чем-то чужим и это ошибка.
+      if ((err as NodeJS.ErrnoException).code !== "EADDRINUSE") throw err
+      if (!(await isUp(`http://127.0.0.1:${port}/storage/v1/bucket`))) {
+        throw new Error(`Порт ${port} занят не стабом Storage — освободите его`)
+      }
+      console.log(`[baseline] переиспользую стаб Storage на :${port}`)
+    }
+  }
+
+  const browser = await chromium.launch()
+  const results: Result[] = []
+
+  try {
+    for (const { role, user, routes, prefix } of ROLES) {
+      const planned = routes
+        .map((route) => ({ route, slug: slugFor(route.path, prefix) }))
+        .filter(({ route, slug }) => matchesFilter(route.path, slug))
+      if (planned.length === 0) continue
+
+      for (const viewport of VIEWPORTS) {
+        // Отдельный контекст на вьюпорт: часть кабинета ветвится по замеренной
+        // в JS ширине (hooks/use-mobile-detector.ts), и простой resize уже
+        // отрисованной страницы дал бы не то состояние, что при заходе с телефона.
+        const context: BrowserContext = await browser.newContext({
+          viewport: { width: viewport.width, height: viewport.height },
+          deviceScaleFactor: 1,
+          reducedMotion: "reduce",
+          locale: "ru-RU",
+          timezoneId: "Europe/Moscow",
+        })
+        if (user) await loginAs(context, user, baseUrl)
+        const page = await context.newPage()
+
+        for (const { route, slug } of planned) {
+          process.stdout.write(`  ${role} ${viewport.name} ${route.path} … `)
+          const result = await captureRoute(
+            page,
+            baseUrl,
+            route,
+            slug,
+            role,
+            viewport.name,
+            args.outDir
+          )
+          results.push(result)
+          console.log(
+            result.status === "ok" ? "ok" : `${result.status.toUpperCase()} — ${result.problems[0] ?? ""}`
+          )
+        }
+
+        await context.close()
+      }
+    }
+  } finally {
+    await browser.close()
+    await storage?.close()
+    server?.kill()
+  }
+
+  const manifestPath = resolve(process.cwd(), args.outDir, "manifest.json")
+  mkdirSync(dirname(manifestPath), { recursive: true })
+  writeFileSync(
+    manifestPath,
+    JSON.stringify(
+      {
+        viewports: VIEWPORTS.map((v) => v.name),
+        routes: results.map(({ role, path, viewport, status, problems, shots }) => ({
+          role,
+          path,
+          viewport,
+          status,
+          problems,
+          files: shots.map((s) => s.file),
+        })),
+      },
+      null,
+      2
+    ) + "\n"
+  )
+
+  printTable(results)
+  printProblems(results)
+
+  const failed = results.filter((r) => r.status === "fail")
+  const warned = results.filter((r) => r.status === "warn")
+  const empty = results.filter((r) => r.problems.some((p) => p.startsWith(EMPTY_PREFIX)))
+  const shots = results.reduce((n, r) => n + r.shots.length, 0)
+  console.log(
+    `\nСнято ${shots} скринов. Роут-вьюпортов: ok ${results.length - failed.length - warned.length}, ` +
+      `warn ${warned.length}, fail ${failed.length} из ${results.length}. ` +
+      `Манифест: ${args.outDir}/manifest.json`
+  )
+  if (empty.length > 0) {
+    console.log(
+      `Снято ПУСТЫМИ: ${empty.length} роут-вьюпортов — ` +
+        "такой скрин не доказательство, экран считается непроверенным (docs/ui-audit.md, приёмка волн):"
+    )
+    for (const r of empty) {
+      const why = r.problems.filter((p) => p.startsWith(EMPTY_PREFIX)).join("; ")
+      console.log(`  · ${r.role} ${r.path} @${r.viewport} — ${why.slice(EMPTY_PREFIX.length)}`)
+    }
+  }
+  if (failed.length + warned.length > 0) {
+    console.log("Здесь ничего не чиним — находки уходят в docs/baseline-issues.md")
+  }
+}
+
+main().catch((err) => {
+  console.error(`\n${(err as Error).message}`)
+  process.exit(1)
+})

@@ -302,23 +302,20 @@ async function processKoalaResults(releases: any[]) {
         const created = await addRelease(newRelease);
         added++;
         
+        // F-03: одна запись на событие — «дубликат для админа» задваивал
+        // журнал одним таймстампом, причём без имени актора.
         await addActivity({
           type: 'release_added',
           userId: artist.id,
           userRole: 'artist',
           title: 'Новый релиз добавлен',
           description: `Релиз "${koalaRelease.title}" добавлен из Koala Music`,
-          metadata: { releaseId: created.id, koalaId: koalaRelease.koala_id }
-        });
-        
-        // Дубликат для админа
-        await addActivity({
-          type: 'release_added',
-          userId: 'system',
-          userRole: 'admin',
-          title: 'Новый релиз добавлен',
-          description: `Релиз "${koalaRelease.title}" добавлен из Koala Music (артист: ${artist.name || artist.username})`,
-          metadata: { releaseId: created.id, koalaId: koalaRelease.koala_id, artistId: artist.id, artistName: artist.name }
+          metadata: {
+            releaseId: created.id,
+            koalaId: koalaRelease.koala_id,
+            artistId: artist.id,
+            artistName: artist.name,
+          }
         });
       }
     }

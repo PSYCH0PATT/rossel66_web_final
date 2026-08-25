@@ -3,121 +3,52 @@
 import { useState, useMemo, useRef } from "react"
 import { useReleasesList, revalidateReleasesLists } from "@/lib/hooks/use-dashboard-fetch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { AdminInput } from "@/components/ui/admin-input"
-import { AdminSelect, AdminSelectContent, AdminSelectItem, AdminSelectTrigger, AdminSelectValue } from "@/components/ui/admin-select"
-import { SelectContent, SelectItem } from "@/components/ui/select"
+import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FormField } from "@/components/ui/form-field"
+import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
+import { Pagination } from "@/components/ui/pagination"
+import { SearchInput } from "@/components/ui/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { Toolbar, ToolbarButton } from "@/components/ui/toolbar"
 import Image from "next/image"
 import Link from "next/link"
 import type { ReleaseListItem } from "@/lib/release-list-dto"
 
 type ReleaseRow = ReleaseListItem & { artistName?: string }
 
-function getStatusVariant(status?: string): "live" | "delivered" | "moderation" | "rejected" | "draft" {
-  switch (status) {
-    case "Доставлен":
-    case "released":
-    case "Одобрен":
-      return "live"
-    case "В доставке":
-    case "delivery":
-      return "delivered"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "moderation"
-    case "Отклонен":
-    case "Отклонён":
-    case "Снят":
-      return "rejected"
-    default:
-      return "draft"
-  }
+/** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
 }
 
-function getStatusLabel(status?: string): string {
-  switch (status) {
-    case "Доставлен":
-    case "released":
-    case "Одобрен":
-      return "Доставлен"
-    case "В доставке":
-    case "delivery":
-      return "В доставке"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "Модерируется"
-    case "Отклонен":
-    case "Отклонён":
-    case "Снят":
-      return "Отклонен"
-    default:
-      return status || "Драфт"
-  }
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const variant = getStatusVariant(status)
-  const label = getStatusLabel(status)
-
-  if (variant === "live") {
-    return (
-      <span className="release-status-badge release-status-badge--live">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-        {label}
-      </span>
-    )
-  }
-  if (variant === "delivered") {
-    return (
-      <span className="release-status-badge release-status-badge--delivered">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>check</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "moderation") {
-    return (
-      <span className="release-status-badge release-status-badge--moderation">
-        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>sync</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "rejected") {
-    return (
-      <span className="release-status-badge release-status-badge--rejected">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>block</span>
-        {label}
-      </span>
-    )
-  }
-  return (
-    <span className="release-status-badge release-status-badge--draft">
-      <span className="material-symbols-outlined" style={{ fontSize: 10 }}>edit</span>
-      {label}
-    </span>
-  )
-}
-
-/** Единая высота панели: кнопки и поле поиска h-10 */
-const toolbarBtnClass =
-  "h-10 min-h-10 inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-mono uppercase tracking-wider whitespace-nowrap transition-colors hover:border-white/25"
-
-function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
-  const pages: (number | "...")[] = []
-  if (page <= 3) {
-    pages.push(1, 2, 3, "...", totalPages)
-  } else if (page >= totalPages - 2) {
-    pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages)
-  } else {
-    pages.push(1, "...", page - 1, page, page + 1, "...", totalPages)
-  }
-  return pages
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт /api/releases. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 export default function AdminReleasesClient() {
@@ -218,14 +149,9 @@ export default function AdminReleasesClient() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const to = Math.min(page * pageSize, total)
-  const pageNumbers = getPageNumbers(page, totalPages)
-
   const formatDate = (dateStr: string) => {
     try {
-      if (!dateStr) return "--"
+      if (!dateStr) return "—"
       if (dateStr.includes('.')) {
         const parts = dateStr.split('.')
         if (parts.length === 3) {
@@ -236,92 +162,60 @@ export default function AdminReleasesClient() {
         }
       }
       const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return dateStr || "--"
+      if (isNaN(d.getTime())) return dateStr || "—"
       return d.toLocaleDateString("ru-RU")
     } catch {
-      return dateStr || "--"
+      return dateStr || "—"
     }
   }
 
   return (
-    <div className="p-0 md:p-0 max-w-full pb-6 md:pb-0">
-      {/* Header section */}
-      <div className="flex flex-col gap-6 mb-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-[#10b981] cursor-pointer transition-colors">ДАШБОРД</span>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>chevron_right</span>
-          <span className="text-white">Релизы</span>
-        </div>
-
-        {/* Строка 1: только заголовок. Строка 2: все кнопки */}
-        <div className="border-b border-white/5 pb-6">
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-tight mb-4">
-            РЕЛИЗЫ
-          </h1>
-
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-            {/* Кнопки слева; на узком экране переносятся, на sm+ — скролл одной полосой */}
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 [-ms-overflow-style:none] [scrollbar-width:thin] sm:flex-nowrap sm:overflow-x-auto sm:pb-1">
-              <Link href="/dashboard/admin/releases/zvonko-parser" className="shrink-0">
-                <button
-                  type="button"
-                  className={toolbarBtnClass}
-                  style={{ borderColor: "rgba(59,130,246,0.35)", color: "#60a5fa", background: "rgba(59,130,246,0.08)" }}
-                >
-                  <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>download</span>
-                  Zvonko Parser
-                </button>
-              </Link>
-
-              <Link href="/dashboard/admin/releases/koala-parser" className="shrink-0">
-                <button
-                  type="button"
-                  className={toolbarBtnClass}
-                  style={{ borderColor: "rgba(16,185,129,0.35)", color: "#34d399", background: "rgba(16,185,129,0.08)" }}
-                >
-                  <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>sync</span>
-                  Koala Parser
-                </button>
-              </Link>
-
-              <button
-                type="button"
-                onClick={handleAssignReleasesToArtists}
-                disabled={isAssigning}
-                className={`${toolbarBtnClass} disabled:cursor-not-allowed disabled:opacity-50`}
-                style={{ borderColor: "rgba(251,146,60,0.35)", color: "#fb923c", background: "rgba(251,146,60,0.08)" }}
-              >
-                <span className={`material-symbols-outlined shrink-0 ${isAssigning ? "animate-spin" : ""}`} style={{ fontSize: 16 }}>
-                  {isAssigning ? "sync" : "link"}
-                </span>
-                {isAssigning ? "Привязка..." : "Привязать релизы"}
-              </button>
+    <div className="space-y-8">
+      {/* C-01: шапка экрана. Тулбар и поиск — в слоте meta, под H1. */}
+      <PageHeader
+        title="РЕЛИЗЫ"
+        rowClassName="items-stretch md:items-stretch"
+        meta={
+          <div className="mt-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            {/* C-08 + 0-г: тулбар начинается с поиска — это primary экрана.
+                Парсеры, привязка и добавление ушли в overflow «Сервис» (0-в). */}
+            <Toolbar className="flex-1">
+              {/* Б-19: подпись обрывалась на «Поиск по названию или». Причин
+                  было две, и правки тоже две. Первая: колонка шапки под meta
+                  меряется по содержимому, а вклад поля туда шёл не от
+                  `max-w-sm`, а от собственной ширины <input> (~233px) — отсюда
+                  явная база `flex-[1_1_20rem]` и потолок `max-w-md`. Вторая:
+                  сама подпись была длиннее поля даже так; лупа слева и без
+                  слова «Поиск» говорит, что это поиск. */}
+              <SearchInput
+                value={q}
+                onValueChange={handleSearch}
+                placeholder="Название или UPC"
+                containerClassName="w-full min-w-0 sm:max-w-md sm:flex-[1_1_20rem]"
+              />
 
               {/* Filters */}
               <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
-                  <button
-                    type="button"
-                    className={`${toolbarBtnClass} relative`}
-                    style={{
-                      borderColor: activeFiltersCount > 0 ? "rgba(16,185,129,0.45)" : "rgba(255,255,255,0.12)",
-                      color: activeFiltersCount > 0 ? "#10b981" : "#9ca3af",
-                      background: activeFiltersCount > 0 ? "rgba(16,185,129,0.08)" : "rgba(0,0,0,0.35)",
-                    }}
+                  <ToolbarButton
+                    tone={activeFiltersCount > 0 ? "active" : "neutral"}
+                    icon="tune"
+                    className="relative"
                   >
-                    <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>tune</span>
                     Фильтры
                     {activeFiltersCount > 0 && (
-                      <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#10b981] text-[10px] font-bold text-black">
+                      <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[10px] font-bold text-black">
                         {activeFiltersCount}
                       </span>
                     )}
-                  </button>
+                  </ToolbarButton>
                 </DialogTrigger>
                 <DialogContent
-                  className="border-white/10 text-white"
-                  style={{ backgroundColor: "#0f1117", maxWidth: "32rem", width: "100%" }}
+                  // globals.css задаёт `.grid { max-width: 100% }`, и это
+                  // перебивает max-w-lg самого DialogContent — прежний код
+                  // держал ширину inline-стилем. `!` вместо стиля: ширина
+                  // модалки остаётся прежней, 32rem.
+                  className="!max-w-lg border-white/10 bg-surface-dialog-blue text-white"
                 >
                   <DialogHeader>
                     <DialogTitle className="text-white font-display text-xl tracking-wide uppercase">
@@ -329,28 +223,22 @@ export default function AdminReleasesClient() {
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="status" className="text-gray-400 text-xs font-mono uppercase tracking-wider">
-                        Статус
-                      </Label>
-                      <AdminSelect value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1) }}>
-                        <AdminSelectTrigger id="status" className="border-white/10 text-white bg-black/40">
-                          <AdminSelectValue placeholder="Все статусы" />
-                        </AdminSelectTrigger>
-                        <SelectContent className="border-white/10 text-white" style={{ backgroundColor: "#0f1117" }}>
+                    <FormField label="Статус" htmlFor="status">
+                      <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1) }}>
+                        <SelectTrigger id="status" className="border-white/10 text-white bg-black/40">
+                          <SelectValue placeholder="Все статусы" />
+                        </SelectTrigger>
+                        <SelectContent>
                           <SelectItem value="all">Все статусы</SelectItem>
                           <SelectItem value="Модерируется">Модерируется</SelectItem>
                           <SelectItem value="Отклонен">Отклонен</SelectItem>
                           <SelectItem value="В доставке">В доставке</SelectItem>
                           <SelectItem value="Доставлен">Доставлен</SelectItem>
                         </SelectContent>
-                      </AdminSelect>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="artist" className="text-gray-400 text-xs font-mono uppercase tracking-wider">
-                        Артист
-                      </Label>
-                      <AdminInput
+                      </Select>
+                    </FormField>
+                    <FormField label="Артист" htmlFor="artist">
+                      <Input
                         id="artist"
                         type="text"
                         placeholder="Имя артиста (частичное совпадение)"
@@ -358,321 +246,255 @@ export default function AdminReleasesClient() {
                         onChange={(e) => { setFilterArtistName(e.target.value); setPage(1) }}
                         className="border-white/10 text-white bg-black/40"
                       />
-                    </div>
+                    </FormField>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="dateFrom" className="text-gray-400 text-xs font-mono uppercase tracking-wider">
-                          Дата от
-                        </Label>
-                        <AdminInput
+                      {/* F-12: нативные date-инпуты выпадали из тёмной темы */}
+                      <FormField label="Дата от" htmlFor="dateFrom">
+                        <DatePicker
                           id="dateFrom"
-                          type="date"
-                          value={filterDateFrom}
-                          onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1) }}
-                          className="border-white/10 text-white bg-black/40"
+                          value={parseIsoDate(filterDateFrom)}
+                          onChange={(date) => { setFilterDateFrom(toIsoDate(date)); setPage(1) }}
+                          placeholder="дд.мм.гггг"
+                          className="h-10 w-full justify-start border-white/10 bg-black/40 text-sm normal-case text-white"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dateTo" className="text-gray-400 text-xs font-mono uppercase tracking-wider">
-                          Дата до
-                        </Label>
-                        <AdminInput
+                      </FormField>
+                      <FormField label="Дата до" htmlFor="dateTo">
+                        <DatePicker
                           id="dateTo"
-                          type="date"
-                          value={filterDateTo}
-                          onChange={(e) => { setFilterDateTo(e.target.value); setPage(1) }}
-                          className="border-white/10 text-white bg-black/40"
+                          value={parseIsoDate(filterDateTo)}
+                          onChange={(date) => { setFilterDateTo(toIsoDate(date)); setPage(1) }}
+                          placeholder="дд.мм.гггг"
+                          className="h-10 w-full justify-start border-white/10 bg-black/40 text-sm normal-case text-white"
                         />
-                      </div>
+                      </FormField>
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={resetFilters}
-                        className="flex-1 py-2 rounded-lg border border-white/10 text-gray-400 text-sm font-mono uppercase tracking-wider hover:border-white/20 hover:text-white transition-all"
+                        className="flex-1 rounded-lg border-white/10 text-sm font-mono uppercase tracking-wider text-gray-400 hover:text-white"
                       >
                         Сбросить
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="cta"
                         onClick={() => setIsFilterOpen(false)}
-                        className="flex-1 py-2 rounded-lg bg-[#10b981] text-black text-sm font-bold uppercase tracking-wider hover:bg-emerald-400 transition-all"
+                        className="flex-1 rounded-lg text-sm uppercase tracking-wider"
                       >
                         Применить
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </DialogContent>
               </Dialog>
 
               {(activeFiltersCount > 0 || q) && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className={toolbarBtnClass}
-                  style={{ borderColor: "rgba(148,163,184,0.35)", color: "#94a3b8", background: "rgba(0,0,0,0.35)" }}
-                >
-                  <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>filter_alt_off</span>
+                <ToolbarButton tone="muted" icon="filter_alt_off" onClick={resetFilters}>
                   Сбросить
-                </button>
+                </ToolbarButton>
               )}
 
-              <Link href="/dashboard/admin/releases/add" className="shrink-0">
-                <button
-                  type="button"
-                  className={toolbarBtnClass}
-                  style={{ borderColor: "rgba(16,185,129,0.45)", color: "#4ade80", background: "rgba(16,185,129,0.08)" }}
+              {/* 0-в п.5: сервисные операции экрана — одним меню, «Привязать
+                  релизы» последним пунктом (владелец о ней не помнит). */}
+              <ActionMenu kind="service" className="ml-auto h-10 max-md:h-11">
+                <ActionMenuItem asChild icon="add" description="Когда автоимпорт не принёс">
+                  <Link href="/dashboard/admin/releases/add">Добавить релиз</Link>
+                </ActionMenuItem>
+                <ActionMenuItem asChild icon="download" description="Импорт из Zvonko Digital">
+                  <Link href="/dashboard/admin/releases/zvonko-parser">Zvonko Parser</Link>
+                </ActionMenuItem>
+                <ActionMenuItem asChild icon="sync" description="Импорт из Koala Music">
+                  <Link href="/dashboard/admin/releases/koala-parser">Koala Parser</Link>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  icon="link"
+                  description="Релизы без артиста — по совпадению имени"
+                  disabled={isAssigning}
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    void handleAssignReleasesToArtists()
+                  }}
                 >
-                  <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>add</span>
-                  Добавить релиз
-                </button>
-              </Link>
-            </div>
-
-            {/* Поиск — справа, та же высота h-10 */}
-            <div className="relative group h-10 w-full shrink-0 sm:ml-auto sm:w-72 sm:max-w-sm">
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Поиск по названию или UPC..."
-                className="h-10 w-full rounded-lg border border-white/10 bg-black/40 py-0 pl-10 pr-9 font-mono text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981]/30 group-hover:border-white/15"
-              />
-              <span
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 transition-colors group-hover:text-gray-400"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>search</span>
-              </span>
-              {q && (
-                <button
-                  type="button"
-                  onClick={() => handleSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 transition-colors hover:text-white"
-                  aria-label="Очистить поиск"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
-                </button>
-              )}
-            </div>
+                  {isAssigning ? "Привязка…" : "Привязать релизы"}
+                </ActionMenuItem>
+              </ActionMenu>
+            </Toolbar>
           </div>
-        </div>
-      </div>
-
-      {/* Счётчик под разделителем, над таблицей, слева */}
-      <div className="text-xs text-gray-500 font-mono uppercase tracking-wider mb-3">
-        {loading ? "Загрузка…" : total === 0 ? "0 релизов" : `${from}–${to} из ${total}`}
-      </div>
+        }
+      />
 
       {/* Table */}
       <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
         {/* Top gradient accent line */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
 
-        <div className="overflow-x-auto">
-          {loading && releases.length === 0 ? (
-            <div className="flex justify-center items-center py-20">
-              <span className="material-symbols-outlined animate-spin text-[#10b981] text-4xl">sync</span>
-            </div>
-          ) : releases.length === 0 ? (
-            <div className="py-20 text-center">
-              <span className="material-symbols-outlined text-5xl text-gray-600 block mb-4">library_music</span>
-              <p className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-4">Релизы не найдены</p>
-              {(activeFiltersCount > 0 || debouncedQ) && (
-                <button
+        {loading && releases.length === 0 ? (
+          <div className="flex justify-center items-center py-20">
+            <Spinner size="lg" />
+          </div>
+        ) : releases.length === 0 ? (
+          <EmptyState
+            className="py-20"
+            icon="library_music"
+            title="Релизы не найдены"
+            action={
+              (activeFiltersCount > 0 || debouncedQ) && (
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={resetFilters}
-                  className="px-4 py-2 rounded-lg border border-white/10 text-gray-400 text-xs font-mono uppercase tracking-wider hover:border-white/20 hover:text-white transition-all"
+                  className="rounded-lg border-white/10 font-mono text-xs uppercase tracking-wider text-gray-400 hover:text-white"
                 >
                   Сбросить фильтры
-                </button>
-              )}
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
-                  <th className="px-6 py-5 font-mono">Обложка</th>
-                  <th className="px-6 py-5 font-mono">Название</th>
-                  <th className="px-6 py-5 font-mono">Артист</th>
-                  <th className="px-6 py-5 font-mono">UPC</th>
-                  <th className="px-6 py-5 font-mono">Дата</th>
-                  <th className="px-6 py-5 font-mono">Статус</th>
-                  <th className="px-6 py-5 font-mono text-center">Треков</th>
-                  <th className="px-6 py-5 font-mono text-right">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {releases.map((release) => (
-                  <tr
-                    key={release.id}
-                    className="group border-b border-white/5 transition-all duration-200 table-row-hover relative"
-                  >
-                    {/* Cover */}
-                    <td className="px-6 py-4">
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-[#10b981]/50 transition-all flex-shrink-0">
-                        {release.coverUrl ? (
-                          <Image
-                            src={release.coverUrl}
-                            alt={release.title}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-800/60 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center backdrop-blur-[1px]">
-                          <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>play_arrow</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Title */}
-                    <td className="px-6 py-4">
-                      <Link href={`/dashboard/admin/releases/${release.id}`}>
-                        <div className="font-bold text-white group-hover:text-[#10b981] transition-colors leading-snug max-w-[200px] truncate">
-                          {release.title}
-                        </div>
-                        {(release as any).type && (
-                          <div className="text-xs text-gray-500 mt-0.5 font-mono">{(release as any).type}</div>
-                        )}
-                      </Link>
-                    </td>
-
-                    {/* Artist */}
-                    <td className="px-6 py-4">
-                      <div className="text-gray-300 max-w-[160px] truncate">{release.artistName ?? ""}</div>
-                    </td>
-
-                    {/* UPC */}
-                    <td className="px-6 py-4 font-mono text-xs text-gray-400 tracking-wider">
-                      {release.upc || "--"}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-6 py-4 text-gray-400 font-mono text-xs whitespace-nowrap">
-                      {release.releaseDate ? formatDate(release.releaseDate) : "--"}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4">
-                      <StatusBadge status={release.status} />
-                    </td>
-
-                    {/* Tracks */}
-                    <td className="px-6 py-4 text-center text-gray-400 font-mono">
-                      <span className="flex items-center justify-center gap-1">
-                        <span className="material-symbols-outlined text-emerald-500/60" style={{ fontSize: 14 }}>music_note</span>
-                        {release.trackCount ?? 0}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/dashboard/admin/releases/${release.id}`}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#10b981]/30 text-[#10b981] hover:bg-[#10b981]/15 hover:border-[#10b981]/60 transition-all"
-                          title="Редактировать"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>edit</span>
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteRelease(release.id)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/15 hover:border-red-500/60 transition-all"
-                          title="Удалить"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* Loading overlay when paginating */}
-          {loading && releases.length > 0 && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 rounded-xl backdrop-blur-[1px]">
-              <span className="material-symbols-outlined animate-spin text-[#10b981] text-4xl">sync</span>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination footer */}
-        <div className="px-6 py-4 border-t border-white/5 flex flex-wrap justify-between items-center gap-3 bg-black/20">
-          <div className="text-xs text-gray-500 font-mono uppercase">
-            {loading
-              ? "Загрузка..."
-              : `Показано ${from}–${to} из ${total} релизов`}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Page size selector */}
-            <div className="flex items-center gap-1 mr-2">
-              {([20, 50, 100] as const).map((size) => (
-                <button
-                  key={size}
-                  onClick={() => { setPageSize(size); setPage(1) }}
-                  className={`px-2 py-1 rounded text-xs border transition-colors font-mono ${
-                    pageSize === size
-                      ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
-                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-
-            {/* Previous */}
-            <button
-              disabled={loading || page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-mono"
-            >
-              Previous
-            </button>
-
-            {pageNumbers.map((p, i) =>
-              p === "..." ? (
-                <span key={`ellipsis-${i}`} className="text-gray-600 text-xs font-mono px-1">…</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p as number)}
-                  className={`px-3 py-1 rounded text-xs border transition-colors font-mono ${
-                    p === page
-                      ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
-                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {p}
-                </button>
+                </Button>
               )
-            )}
+            }
+          />
+        ) : (
+          /* C-10: скролл с видимым индикатором и тенями — колонки за краем
+             больше не теряются на 390 (F-77); строка кликабельна целиком (F-31) */
+          <DataTable>
+            <DataTableHeader>
+              <DataTableHeadRow className="bg-black/40">
+                <DataTableHeadCell>Обложка</DataTableHeadCell>
+                <DataTableHeadCell>Название</DataTableHeadCell>
+                <DataTableHeadCell>Артист</DataTableHeadCell>
+                <DataTableHeadCell>UPC</DataTableHeadCell>
+                <DataTableHeadCell>Дата</DataTableHeadCell>
+                <DataTableHeadCell>Статус</DataTableHeadCell>
+                <DataTableHeadCell className="text-center">Треков</DataTableHeadCell>
+                <DataTableHeadCell className="text-right">Действия</DataTableHeadCell>
+              </DataTableHeadRow>
+            </DataTableHeader>
+            <DataTableBody className="text-sm">
+              {releases.map((release) => (
+                <DataTableRow
+                  key={release.id}
+                  href={`/dashboard/admin/releases/${release.id}`}
+                  className="group table-row-hover"
+                >
+                  {/* Cover */}
+                  <DataTableCell>
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-brand/50 transition-all flex-shrink-0">
+                      {release.coverUrl ? (
+                        <Image
+                          src={release.coverUrl}
+                          alt={release.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-800/60 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
+                        </div>
+                      )}
+                    </div>
+                  </DataTableCell>
 
-            {/* Next */}
-            <button
-              disabled={loading || page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-mono"
-            >
-              Next
-            </button>
+                  {/* Title */}
+                  <DataTableCell>
+                    <Link href={`/dashboard/admin/releases/${release.id}`}>
+                      <div className="font-bold text-white group-hover:text-brand transition-colors leading-snug max-w-[200px] truncate">
+                        {release.title}
+                      </div>
+                      {(release as any).type && (
+                        <div className="text-xs text-gray-500 mt-0.5 font-mono">{(release as any).type}</div>
+                      )}
+                    </Link>
+                  </DataTableCell>
+
+                  {/* Artist */}
+                  <DataTableCell>
+                    <div className="text-gray-300 max-w-[160px] truncate">{release.artistName ?? ""}</div>
+                  </DataTableCell>
+
+                  {/* UPC */}
+                  <DataTableCell className="font-mono text-xs text-gray-400 tracking-wider">
+                    {/* Б-17 / F-93: одно тире «—» на весь кабинет; здесь печаталось «--». */}
+                    {release.upc || "—"}
+                  </DataTableCell>
+
+                  {/* Date */}
+                  <DataTableCell className="text-gray-400 font-mono text-xs whitespace-nowrap">
+                    {release.releaseDate ? formatDate(release.releaseDate) : "—"}
+                  </DataTableCell>
+
+                  {/* Status */}
+                  <DataTableCell>
+                    <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
+                  </DataTableCell>
+
+                  {/* Tracks */}
+                  <DataTableCell className="text-center text-gray-400 font-mono">
+                    <span className="flex items-center justify-center gap-1">
+                      <span className="material-symbols-outlined text-emerald-500/60" style={{ fontSize: 14 }}>music_note</span>
+                      {release.trackCount ?? 0}
+                    </span>
+                  </DataTableCell>
+
+                  {/* 2.1: edit-иконка убрана — она дублировала клик по строке
+                      (F-31); удаление — в overflow строки, деструктив второго
+                      плана с подтверждением (F-13). */}
+                  <DataTableCell className="text-right">
+                    <div className="flex items-center justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Действия над релизом ${release.title}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-8 w-8 rounded-lg text-gray-400 hover:text-white max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>more_horiz</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-56 border border-white/10 bg-black/90 backdrop-blur-xl"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenuItem
+                            className="text-red-400 focus:bg-red-500/10 focus:text-red-300"
+                            onSelect={() => {
+                              void handleDeleteRelease(release.id)
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-base" aria-hidden>delete</span>
+                            Удалить релиз
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        )}
+
+        {/* Loading overlay when paginating */}
+        {loading && releases.length > 0 && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 rounded-xl backdrop-blur-[1px]">
+            <Spinner size="lg" />
           </div>
+        )}
+
+        {/* C-06: счётчик, «на странице» и навигация — один компонент (F-21,
+            F-26, F-27); строки русские (F-11) */}
+        <div className="px-6 py-4 border-t border-white/5 bg-black/20">
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            loading={loading}
+            itemForms={["релиз", "релиза", "релизов"]}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          />
         </div>
       </div>
 
-      {/* Footer status */}
-      <div className="mt-12 flex justify-between items-center pt-6 border-t border-white/5 text-sm">
-        <div className="text-gray-500 font-mono flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#10b981] inline-block animate-pulse" />
-          System Online
-        </div>
-        <div className="text-gray-400 font-mono">
-          TOTAL RELEASES: <span className="text-white font-bold">{loading ? "…" : total}</span>
-        </div>
-      </div>
     </div>
   )
 }

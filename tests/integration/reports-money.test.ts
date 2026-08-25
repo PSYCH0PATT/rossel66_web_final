@@ -11,7 +11,7 @@
  *   pnpm test:integration
  */
 import assert from "node:assert/strict"
-import { before, describe, it } from "node:test"
+import { after, before, describe, it } from "node:test"
 import { loadTestEnvFiles, requireTestDatabaseUrl } from "../support/env"
 
 loadTestEnvFiles()
@@ -63,6 +63,18 @@ async function resetState() {
     data: { isRegistered: true, isPaid: false },
   })
 }
+
+// Сюит — единственный во всём `tests/integration`, кто ставит AKA-связку
+// `e2e-linked-id → e2e-main-id`, а stream-metric.test.ts требует обратного:
+// getArtistGroupIds(MAIN) === [MAIN]. От гонки между файлами защищает не этот хук, а
+// порядок запуска (`test:integration` гоняет эту пару последовательно) — сегодня
+// последний тест сюита и так оставляет связки снятыми. Хук держит это свойство явным:
+// resetState() зовётся ПЕРЕД каждым тестом, и без него «база чиста на выходе» было бы
+// случайным свойством последнего теста, а не правилом файла.
+after(async () => {
+  if (skipSuite) return
+  await resetState()
+})
 
 describe("баланс артиста и авансы", () => {
   it("считает начисленное по всем кварталам", async (t) => {
@@ -228,13 +240,15 @@ describe("группа профилей и аналитика", () => {
       return rows._sum.streams ?? 0
     }
 
-    // До привязки: свои 1500 + коллаб 700 (имя главного в строке коллаба).
-    assert.equal(await sum(MAIN, "E2E Main", "e2e-main"), 2200)
+    // До привязки: свои 1500 + коллаб 700 (имя главного в строке коллаба) +
+    // свежий ряд 1400 (B-12: строки за последние 14 дней, чтобы кабинет
+    // артиста не снимался пустым).
+    assert.equal(await sum(MAIN, "E2E Main", "e2e-main"), 3600)
 
     await prisma.user.update({ where: { id: LINKED }, data: { mainArtistId: MAIN } })
 
     // После: + строки привязанного (300). Коллаб — та же одна строка, не удваивается.
-    assert.equal(await sum(MAIN, "E2E Main", "e2e-main"), 2500)
+    assert.equal(await sum(MAIN, "E2E Main", "e2e-main"), 3900)
 
     // Кабинет привязанного показывает только его: свои 300 + коллаб 700.
     assert.equal(await sum(LINKED, "E2E Linked", "e2e-linked"), 1000)
@@ -257,8 +271,9 @@ describe("группа профилей и аналитика", () => {
 
     assert.ok(main, "главный должен быть в списке")
     assert.equal(linked, undefined, "привязанный профиль отдельной опцией быть не должен")
-    // 1500 своих + 300 привязанного + 700 коллаба ОДИН раз. Без дедупа было бы 3200.
-    assert.equal(main!.totalStreams, 2500)
+    // 1500 своих + 1400 свежих + 300 привязанного + 700 коллаба ОДИН раз.
+    // Без дедупа коллаба было бы на 700 больше.
+    assert.equal(main!.totalStreams, 3900)
 
     // Имя вне ростера остаётся отдельной строкой — его привязывают вручную.
     const outsider = options.find((o) => o.trackArtist === "Совсем Чужой Артист")

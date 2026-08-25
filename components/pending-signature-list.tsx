@@ -6,19 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   Calendar,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   DollarSign,
   Download,
-  Loader2,
   PenLine,
   Play,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ReportSortControls, type SortState } from "@/components/report-sort-controls"
+import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Pagination } from "@/components/ui/pagination"
+import { Spinner } from "@/components/ui/spinner"
+import type { SortField, SortState } from "@/components/report-sort-controls"
+import { downloadFileFromApi } from "@/lib/download-file"
 
 interface PendingReport {
   id: string
@@ -32,29 +32,37 @@ interface PendingReport {
   uploadDate: string
 }
 
-const DEFAULT_SORT: SortState = { sort: "acknowledgedAt", dir: "asc" }
+export const PENDING_DEFAULT_SORT: SortState = { sort: "acknowledgedAt", dir: "asc" }
+
+export const PENDING_SORT_FIELDS: SortField[] = [
+  "acknowledgedAt",
+  "artistName",
+  "totalAmount",
+  "totalPlays",
+  "year",
+  "uploadedAt",
+]
 
 /**
  * Отчёты, с которыми артист ознакомился, но подписи ещё нет. Плоский список по
  * всем кварталам: раньше такие строки приходилось выискивать по квартальным
  * карточкам вручную.
  */
-export default function PendingSignatureList() {
+export default function PendingSignatureList({ sort }: { sort: SortState }) {
   const [reports, setReports] = useState<PendingReport[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT)
   const [isLoading, setIsLoading] = useState(true)
 
-  const load = useCallback(async (nextPage: number, nextSize: number, sort: SortState) => {
+  const load = useCallback(async (nextPage: number, nextSize: number, nextSort: SortState) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
         page: String(nextPage),
         pageSize: String(nextSize),
-        sort: sort.sort,
-        dir: sort.dir,
+        sort: nextSort.sort,
+        dir: nextSort.dir,
       })
       const res = await fetch(`/api/reports/attention?${params}`)
       if (!res.ok) throw new Error("Не удалось загрузить очередь")
@@ -72,14 +80,11 @@ export default function PendingSignatureList() {
     }
   }, [])
 
+  // Сортировка живёт в Toolbar экрана «Отчёты» (1.3): её смена — это новая
+  // первая страница очереди.
   useEffect(() => {
-    void load(1, 20, DEFAULT_SORT)
-  }, [load])
-
-  const changeSort = (next: SortState) => {
-    setSortState(next)
-    void load(1, pageSize, next)
-  }
+    void load(1, 20, sort)
+  }, [load, sort])
 
   const handleSign = async (reportId: string) => {
     try {
@@ -101,10 +106,6 @@ export default function PendingSignatureList() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const to = Math.min(page * pageSize, total)
-
   return (
     <Card className="bg-transparent border-slate-600/30">
       <CardHeader className="pb-3">
@@ -120,24 +121,19 @@ export default function PendingSignatureList() {
               </p>
             </div>
           </div>
-          <ReportSortControls
-            value={sortState}
-            onChange={changeSort}
-            disabled={isLoading}
-            fields={["acknowledgedAt", "artistName", "totalAmount", "totalPlays", "year", "uploadedAt"]}
-          />
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading && reports.length === 0 ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <Spinner />
           </div>
         ) : reports.length === 0 ? (
-          <div className="py-10 text-center">
-            <CheckCircle className="mx-auto mb-3 h-10 w-10 text-green-400/70" />
-            <p className="text-slate-300">Очередь пуста — все ознакомленные отчёты подписаны.</p>
-          </div>
+          <EmptyState
+            className="py-10"
+            icon="task_alt"
+            title="Очередь пуста — все ознакомленные отчёты подписаны."
+          />
         ) : (
           <>
             <div className="space-y-3">
@@ -155,9 +151,12 @@ export default function PendingSignatureList() {
                         <h4 className="truncate text-base font-semibold text-white sm:text-lg">
                           {report.artistName}
                         </h4>
-                        <span className="rounded bg-slate-700/60 px-2 py-0.5 font-mono text-xs text-slate-300">
+                        <Badge
+                          variant="outline"
+                          className="rounded border-transparent bg-slate-700/60 px-2 py-0.5 font-mono text-xs font-normal text-slate-300"
+                        >
                           {report.quarter} {report.year}
-                        </span>
+                        </Badge>
                       </div>
                       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs sm:gap-4 sm:text-sm">
                         <div className="flex items-center gap-1 whitespace-nowrap sm:gap-2">
@@ -192,17 +191,22 @@ export default function PendingSignatureList() {
                           onCheckedChange={(checked) => {
                             if (checked) void handleSign(report.id)
                           }}
-                          style={{ backgroundColor: "#475569", border: "1px solid #64748b" }}
+                          className="border border-slate-500 data-[state=unchecked]:bg-slate-600"
                         />
                       </div>
                     </div>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2 self-end sm:ml-4 sm:self-center">
                     <Button
-                      variant="outline"
+                      variant="success-outline"
                       size="sm"
-                      onClick={() => window.open(`/api/reports/download/${report.id}`, "_blank")}
-                      className="whitespace-nowrap border-green-500/50 text-xs text-green-400 hover:bg-green-500/20 hover:text-green-300 sm:text-sm"
+                      onClick={() =>
+                        void downloadFileFromApi(
+                          `/api/reports/download/${report.id}`,
+                          `${report.artistName} ${report.quarter} ${report.year}.xlsx`
+                        )
+                      }
+                      className="whitespace-nowrap text-xs sm:text-sm"
                     >
                       <Download className="h-3 w-3 sm:mr-1 sm:h-4 sm:w-4" />
                       <span className="hidden sm:inline">Скачать</span>
@@ -212,45 +216,16 @@ export default function PendingSignatureList() {
               ))}
             </div>
             {total > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-600/30 pt-4">
-                <span className="text-sm text-slate-400">
-                  {from}–{to} из {total}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">На странице:</span>
-                  <Select value={String(pageSize)} onValueChange={(v) => void load(1, Number(v), sortState)}>
-                    <SelectTrigger className="w-[90px] border-slate-600 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isLoading || page <= 1}
-                    onClick={() => void load(page - 1, pageSize, sortState)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-slate-300">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isLoading || page >= totalPages}
-                    onClick={() => void load(page + 1, pageSize, sortState)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <Pagination
+                className="mt-4 border-t border-slate-600/30 pt-4"
+                page={page}
+                total={total}
+                pageSize={pageSize}
+                loading={isLoading}
+                itemForms={["отчёт", "отчёта", "отчётов"]}
+                onPageChange={(next) => void load(next, pageSize, sort)}
+                onPageSizeChange={(size) => void load(1, size, sort)}
+              />
             )}
           </>
         )}

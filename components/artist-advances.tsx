@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Banner } from "@/components/ui/banner"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
 import { formatDateRu } from "@/lib/format-date"
+import { todayIso } from "@/lib/business-date"
 
 type Advance = {
   id: string
@@ -19,12 +25,6 @@ type Advance = {
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-function todayIso() {
-  const now = new Date()
-  const tzOffsetMs = now.getTimezoneOffset() * 60_000
-  return new Date(now.getTime() - tzOffsetMs).toISOString().slice(0, 10)
-}
-
 /**
  * Авансы артиста: выдача, история, удаление.
  *
@@ -32,6 +32,20 @@ function todayIso() {
  * выдачи (lib/advance.ts) — вручную ничего отмечать не нужно. Пока аванс не
  * погашен, у артиста «Доступно к выплате» равно нулю.
  */
+/** «YYYY-MM-DD» → Date для DatePicker (календарь работает с локальной полночью). */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт API авансов. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 export function ArtistAdvances({ artistId }: { artistId: string }) {
   const [advances, setAdvances] = useState<Advance[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -121,17 +135,19 @@ export function ArtistAdvances({ artistId }: { artistId: string }) {
 
   return (
     <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-bold tracking-wide text-white">
-          <span className="h-6 w-1.5 rounded-full bg-orange-400" />
-          Авансы
-        </h2>
-        {total > 0 && (
-          <span className="font-mono text-sm text-gray-400 tabular-nums">
-            Всего выдано: <span className="text-white">{fmt(total)} ₽</span>
-          </span>
-        )}
-      </div>
+      <SectionHeader
+        className="mb-6 flex-col items-start gap-2 sm:flex-row sm:items-center"
+        size="sm"
+        accent="orange"
+        title="Авансы"
+        action={
+          total > 0 ? (
+            <span className="font-mono text-sm text-gray-400 tabular-nums">
+              Всего выдано: <span className="text-white">{fmt(total)} ₽</span>
+            </span>
+          ) : null
+        }
+      />
 
       <p className="mb-6 max-w-2xl text-sm font-light text-gray-400">
         Аванс гасится автоматически из отчётов, пришедших после даты выдачи. Пока остаток не
@@ -156,12 +172,12 @@ export function ArtistAdvances({ artistId }: { artistId: string }) {
           <Label htmlFor="advance-date" className="text-white">
             Дата выдачи
           </Label>
-          <Input
+          <DatePicker
             id="advance-date"
-            type="date"
-            value={issuedAt}
-            onChange={(e) => setIssuedAt(e.target.value)}
-            className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-white"
+            value={parseIsoDate(issuedAt)}
+            onChange={(date) => setIssuedAt(toIsoDate(date))}
+            placeholder="дд.мм.гггг"
+            className="h-11 w-full justify-start rounded-lg border-white/10 bg-white/5 text-sm normal-case text-white"
           />
         </div>
         <div className="space-y-2">
@@ -187,20 +203,19 @@ export function ArtistAdvances({ artistId }: { artistId: string }) {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        <Banner variant="danger" className="mb-4 rounded-lg px-3 py-2">
           {error}
-        </p>
+        </Banner>
       )}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400">Загрузка…</p>
+        <Spinner size="sm" label="Загрузка…" />
       ) : advances.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
-          <span className="material-symbols-outlined mx-auto mb-3 block text-4xl text-gray-500">
-            payments
-          </span>
-          <p className="text-sm text-gray-400">Авансов не выдавалось</p>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8"
+          icon="payments"
+          title="Авансов не выдавалось"
+        />
       ) : (
         <div className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/5">
           {advances.map((advance) => (
@@ -225,10 +240,10 @@ export function ArtistAdvances({ artistId }: { artistId: string }) {
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="destructive-outline"
                 size="sm"
                 onClick={() => void handleDelete(advance)}
-                className="self-end border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 sm:self-center"
+                className="self-end sm:self-center"
               >
                 <span className="material-symbols-outlined text-base">delete</span>
               </Button>

@@ -51,7 +51,8 @@ export function ReportSortControls({ value, onChange, fields, disabled }: Props)
         onValueChange={(v) => onChange({ ...value, sort: v as SortField })}
         disabled={disabled}
       >
-        <SelectTrigger className="h-9 w-[170px] border-slate-600 text-white">
+        {/* F-70: фиксированные 170px резали «Дата ознакомления» до «Дата…». */}
+        <SelectTrigger className="h-9 w-auto min-w-[170px] border-slate-600 text-white">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

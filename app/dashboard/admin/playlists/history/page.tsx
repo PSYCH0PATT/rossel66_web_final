@@ -2,11 +2,25 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { DatePicker } from "@/components/ui/date-picker"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
+import { Spinner } from "@/components/ui/spinner"
+import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge"
 import { formatDateRu } from "@/lib/format-date"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface HistoryRecord {
   id: string
@@ -29,6 +43,20 @@ const FILTER_DEBOUNCE_MS = 350
 
 const filterInput =
   "h-10 rounded-lg border border-white/10 bg-white/5 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+
+/** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт /api/playlists/history. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 export default function PlaylistHistoryPage() {
   const [history, setHistory] = useState<HistoryRecord[]>([])
@@ -93,14 +121,18 @@ export default function PlaylistHistoryPage() {
     return labels[type] || type
   }
 
-  const getChangeTypeClass = (type: string) => {
-    const map: Record<string, string> = {
-      added: "bg-primary/15 text-primary border-primary/30",
-      updated: "bg-accent-azure/15 text-accent-azure border-accent-azure/30",
-      removed: "bg-red-500/15 text-red-400 border-red-500/30",
-      position_changed: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  /**
+   * C-15: бейдж из кита вместо CSS-класса .release-status-badge с цветами
+   * по месту. Тон на тип изменения сохранён прежний.
+   */
+  const getChangeTypeVariant = (type: string): StatusBadgeProps["variant"] => {
+    const map: Record<string, StatusBadgeProps["variant"]> = {
+      added: "live",
+      updated: "delivered",
+      removed: "rejected",
+      position_changed: "warning",
     }
-    return map[type] || "bg-white/5 text-gray-400 border-white/10"
+    return map[type] || "draft"
   }
 
   /**
@@ -131,59 +163,55 @@ export default function PlaylistHistoryPage() {
     })
   }
 
-  return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/playlists" className="hover:text-primary transition-colors">
-              Плейлисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">История</span>
-          </div>
-          <div className="border-b border-white/5 pb-8 flex flex-col sm:flex-row items-start sm:items-end sm:justify-between gap-4">
-            <div>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                История плейлистов
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">Изменения из SFTP и синхронизаций</p>
-            </div>
-          </div>
-        </div>
+  /** Фильтры «тронуты» — значит пустой список это результат поиска, а не пустой экран. */
+  const hasActiveFilters =
+    filters.startDate !== "" ||
+    filters.endDate !== "" ||
+    filters.changeType !== "all" ||
+    filters.artistName !== "" ||
+    filters.playlistUrl !== ""
 
+  return (
+    <div className="space-y-8">
+        <PageHeader title="История плейлистов" subtitle="Изменения из SFTP и синхронизаций" />
+
+        {/* C-14/F-41: пока записей нет и фильтры не тронуты, показывать блок из
+            пяти полей незачем — экран открывается пустым состоянием. */}
+        {(history.length > 0 || hasActiveFilters || loading) && (
         <div className="card-glass rounded-2xl border border-white/5 p-6">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            <span className="material-symbols-outlined text-primary">filter_alt</span>
-            Фильтры
-          </h2>
+          <SectionHeader
+            className="mb-6"
+            size="sm"
+            title={
+              <>
+                <span className="material-symbols-outlined text-primary" aria-hidden>filter_alt</span>
+                Фильтры
+              </>
+            }
+          />
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 mb-1.5 block">Дата от</label>
-              <Input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className={filterInput}
+            {/* F-12: нативные date-инпуты выпадали из тёмной темы */}
+            <FormField label="Дата от" htmlFor="filter-start-date" className="space-y-1.5">
+              <DatePicker
+                id="filter-start-date"
+                value={parseIsoDate(filters.startDate)}
+                onChange={(date) => setFilters({ ...filters, startDate: toIsoDate(date) })}
+                placeholder="дд.мм.гггг"
+                className={`${filterInput} w-full justify-start normal-case`}
               />
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 mb-1.5 block">Дата до</label>
-              <Input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className={filterInput}
+            </FormField>
+            <FormField label="Дата до" htmlFor="filter-end-date" className="space-y-1.5">
+              <DatePicker
+                id="filter-end-date"
+                value={parseIsoDate(filters.endDate)}
+                onChange={(date) => setFilters({ ...filters, endDate: toIsoDate(date) })}
+                placeholder="дд.мм.гггг"
+                className={`${filterInput} w-full justify-start normal-case`}
               />
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 mb-1.5 block">Тип</label>
+            </FormField>
+            <FormField label="Тип" htmlFor="filter-change-type" className="space-y-1.5">
               <Select value={filters.changeType} onValueChange={(value) => setFilters({ ...filters, changeType: value })}>
-                <SelectTrigger className={filterInput}>
+                <SelectTrigger id="filter-change-type" className={filterInput}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,34 +222,36 @@ export default function PlaylistHistoryPage() {
                   <SelectItem value="position_changed">Позиция</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 mb-1.5 block">Артист</label>
+            </FormField>
+            <FormField label="Артист" htmlFor="filter-artist" className="space-y-1.5">
               <Input
+                id="filter-artist"
                 placeholder="Имя..."
                 value={filters.artistName}
                 onChange={(e) => setFilters({ ...filters, artistName: e.target.value })}
                 className={filterInput}
                 spellCheck={false}
               />
-            </div>
-            <div>
-              <label className="text-xs font-mono uppercase text-gray-500 mb-1.5 block">URL</label>
+            </FormField>
+            <FormField label="URL" htmlFor="filter-url" className="space-y-1.5">
               <Input
+                id="filter-url"
                 placeholder="URL плейлиста..."
                 value={filters.playlistUrl}
                 onChange={(e) => setFilters({ ...filters, playlistUrl: e.target.value })}
                 className={filterInput}
                 spellCheck={false}
               />
-            </div>
+            </FormField>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
+            {/* F-20: «Обновить» одного вида на всех экранах админки — ghost. */}
             <Button
               type="button"
+              variant="ghost"
               onClick={() => void loadHistory()}
               disabled={loading}
-              className="rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold"
+              className="rounded-lg text-gray-400 hover:text-white"
             >
               <span className={`material-symbols-outlined text-lg mr-1 ${loading ? "motion-safe:animate-spin" : ""}`}>
                 refresh
@@ -233,37 +263,44 @@ export default function PlaylistHistoryPage() {
             </Button>
           </div>
         </div>
+        )}
 
         <div className="card-glass rounded-2xl border border-white/5 p-6">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
-            <span className="material-symbols-outlined text-accent-azure">history</span>
-            Записи ({history.length})
-          </h2>
+          {/* F-59: полосы секций экрана одного цвета */}
+          <SectionHeader
+            className="mb-6"
+            size="sm"
+            title={
+              <>
+                <span className="material-symbols-outlined text-primary" aria-hidden>history</span>
+                Записи ({history.length})
+              </>
+            }
+          />
           {loading ? (
-            <div className="text-center py-12 text-gray-500 font-mono text-sm">Загрузка...</div>
-          ) : history.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 font-mono text-sm border border-dashed border-white/10 rounded-xl">
-              Нет записей
+            <div className="flex justify-center py-12">
+              <Spinner label="Загрузка…" />
             </div>
+          ) : history.length === 0 ? (
+            <EmptyState className="py-12 border border-dashed border-white/10 rounded-xl" title="Нет записей" />
           ) : (
-            <div className="rounded-2xl border border-white/10 overflow-x-auto table-glass">
-              <table className="w-full border-collapse min-w-[700px] text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-mono uppercase text-gray-500 border-b border-white/10">
-                    <th className="p-3 whitespace-nowrap">Дата</th>
-                    <th className="p-3 whitespace-nowrap">Тип</th>
-                    <th className="p-3">Плейлист</th>
-                    <th className="p-3 whitespace-nowrap">Платформа</th>
-                    <th className="p-3 whitespace-nowrap">Артист</th>
-                    <th className="p-3">Трек</th>
-                    <th className="p-3 whitespace-nowrap">Позиция</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="rounded-2xl border border-white/10 overflow-hidden table-glass">
+              <DataTable tableClassName="min-w-[700px]">
+                <DataTableHeader>
+                  <DataTableHeadRow>
+                    <DataTableHeadCell>Дата</DataTableHeadCell>
+                    <DataTableHeadCell>Тип</DataTableHeadCell>
+                    <DataTableHeadCell>Плейлист</DataTableHeadCell>
+                    <DataTableHeadCell>Платформа</DataTableHeadCell>
+                    <DataTableHeadCell>Артист</DataTableHeadCell>
+                    <DataTableHeadCell>Трек</DataTableHeadCell>
+                    <DataTableHeadCell>Позиция</DataTableHeadCell>
+                  </DataTableHeadRow>
+                </DataTableHeader>
+                <DataTableBody>
                   {history.map((record) => (
-                    <tr key={record.id} className="border-b border-white/5 hover:bg-white/[0.04] table-row-hover">
-                      <td className="p-3 text-gray-300 whitespace-nowrap [font-variant-numeric:tabular-nums] text-xs">
+                    <DataTableRow key={record.id} className="table-row-hover">
+                      <DataTableCell className="text-gray-300 whitespace-nowrap [font-variant-numeric:tabular-nums] text-xs">
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-base text-gray-500">schedule</span>
                           <span>{formatChangeDate(record.change_date)}</span>
@@ -271,23 +308,23 @@ export default function PlaylistHistoryPage() {
                             <span className="text-gray-500">{formatChangeTime(record.created_at)}</span>
                           )}
                         </div>
-                      </td>
-                      <td className="p-3">
-                        <span className={`release-status-badge text-[0.65rem] border ${getChangeTypeClass(record.change_type)}`}>
+                      </DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge variant={getChangeTypeVariant(record.change_type)} withIcon={false}>
                           {getChangeTypeLabel(record.change_type)}
-                        </span>
-                      </td>
-                      <td className="p-3 min-w-0 max-w-xs">
+                        </StatusBadge>
+                      </DataTableCell>
+                      <DataTableCell className="min-w-0 max-w-xs">
                         <div className="truncate text-white" title={record.playlist_name}>
                           {record.playlist_name}
                         </div>
                         <div className="text-xs text-gray-500 truncate" title={record.playlist_url}>
                           {record.playlist_url}
                         </div>
-                      </td>
-                      <td className="p-3 text-gray-400">{record.platform}</td>
-                      <td className="p-3 text-gray-300">{record.artist_name || "—"}</td>
-                      <td className="p-3 min-w-0 max-w-[140px]">
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">{record.platform}</DataTableCell>
+                      <DataTableCell className="text-gray-300">{record.artist_name || "—"}</DataTableCell>
+                      <DataTableCell className="min-w-0 max-w-[140px]">
                         {record.track_title ? (
                           <div className="truncate text-gray-400" title={record.track_title}>
                             {record.track_title}
@@ -295,8 +332,8 @@ export default function PlaylistHistoryPage() {
                         ) : (
                           "—"
                         )}
-                      </td>
-                      <td className="p-3 text-gray-300 [font-variant-numeric:tabular-nums]">
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-300 [font-variant-numeric:tabular-nums]">
                         {record.change_type === "position_changed" &&
                         record.old_position !== null &&
                         record.new_position !== null ? (
@@ -310,16 +347,15 @@ export default function PlaylistHistoryPage() {
                         ) : (
                           "—"
                         )}
-                      </td>
-                    </tr>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </tbody>
-              </table>
+                </DataTableBody>
+              </DataTable>
             </div>
           )}
         </div>
 
-        <DashboardFooter />
       </div>
     )
 }

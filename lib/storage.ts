@@ -16,6 +16,13 @@ import {
 import { revalidateArtistDashboardsForArtistIds } from './revalidate-artist-dashboard'
 import { releaseDateToSortDate } from '@/lib/release-date-sort'
 import { normalizeReleaseDate } from '@/lib/release-date'
+import {
+  activityActorLabel,
+  dedupeActivities,
+  SYSTEM_ACTOR_ID,
+} from '@/lib/activity-log'
+import { activityViewFilter, type ActivityView } from '@/lib/activity-views'
+import { MIN_PAYOUT_AMOUNT } from './report-acknowledgment'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -169,6 +176,12 @@ export interface Activity {
   description: string
   metadata?: Record<string, any>
   createdAt: string
+  /**
+   * F-03: имя актора резолвится на сервере. Раньше экран искал его в
+   * подгруженной странице списка пользователей и почти всегда показывал
+   * вместо имени сырой числовой id.
+   */
+  userName?: string
 }
 
 const ACTIVITY_RETENTION_DAYS = 90
@@ -864,10 +877,77 @@ export async function addActivity(activity: Omit<Activity, 'id' | 'createdAt'>):
 
 export interface ActivityFilters {
   userId?: string
+  /**
+   * F-04: лента кабинета. Событие попадает в неё, если записано на любой
+   * профиль группы ИЛИ указывает на него в metadata.artistId — события про
+   * релизы и отчёты пишет система, и артист там только в метаданных.
+   */
+  artistGroupIds?: string[]
   role?: 'artist' | 'admin'
   types?: ActivityType[]
+  /**
+   * Вид журнала (0-б): «Главное» — три желания владельца плюс самостоятельные
+   * действия артиста (ответ №5). Складывается с остальными фильтрами по И.
+   */
+  view?: ActivityView
   dateFrom?: string
   dateTo?: string
+}
+
+/**
+ * F-03: сколько событий останется после схлопывания пар.
+ *
+ * Считать `count()` по всей выборке нельзя — он вернёт число строк, включая
+ * дубли, и счётчик на экране разойдётся со списком. Вычитать дубли текущей
+ * страницы тоже нельзя: тогда «всего» прыгает при листании. Поэтому тянем
+ * только поля ключа дедупа (четыре узких колонки) и считаем честно. Журнал
+ * ограничен сверху ретеншном в 90 дней (ACTIVITY_RETENTION_DAYS); на всякий
+ * случай стоит потолок, за которым возвращаем число строк.
+ */
+const ACTIVITY_COUNT_SCAN_LIMIT = 20_000
+
+async function countDedupedActivities(where: any): Promise<number> {
+  const rows = await prisma.activity.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: ACTIVITY_COUNT_SCAN_LIMIT,
+    select: { id: true, type: true, metadata: true, createdAt: true },
+  })
+  if (rows.length === ACTIVITY_COUNT_SCAN_LIMIT) {
+    return prisma.activity.count({ where })
+  }
+  return dedupeActivities(
+    rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      userId: '',
+      userRole: 'admin' as const,
+      title: '',
+      description: '',
+      metadata: (r.metadata ?? undefined) as Record<string, unknown> | undefined,
+      createdAt: r.createdAt.toISOString(),
+    }))
+  ).length
+}
+
+/** F-03: имена акторов одним запросом — вместо сырых id на экране. */
+async function attachActorNames(activities: Activity[]): Promise<Activity[]> {
+  const ids = [...new Set(
+    activities.map((a) => a.userId).filter((id) => id && id !== SYSTEM_ACTOR_ID)
+  )]
+
+  const users = ids.length
+    ? await prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, username: true },
+      })
+    : []
+  const namesById = new Map(users.map((u) => [u.id, u.name || u.username]))
+
+  return activities.map((activity) => ({
+    ...activity,
+    userName: activityActorLabel(activity, namesById),
+  }))
 }
 
 export async function getActivitiesFiltered(
@@ -877,7 +957,14 @@ export async function getActivitiesFiltered(
 ): Promise<{ activities: Activity[]; total: number }> {
   const where: any = {}
   
-  if (filters.userId) {
+  if (filters.artistGroupIds?.length) {
+    where.OR = [
+      { userId: { in: filters.artistGroupIds } },
+      ...filters.artistGroupIds.map((id) => ({
+        metadata: { path: ['artistId'], equals: id },
+      })),
+    ]
+  } else if (filters.userId) {
     where.userId = filters.userId
   }
   if (filters.role) {
@@ -885,6 +972,19 @@ export async function getActivitiesFiltered(
   }
   if (filters.types?.length) {
     where.type = { in: filters.types }
+  }
+  if (filters.view) {
+    // Вид — это ИЛИ из типов и оговорки про самостоятельные действия артиста,
+    // поэтому уходит в AND: иначе он затёр бы OR группы профилей (F-04).
+    const view = activityViewFilter(filters.view)
+    const legs: any[] = []
+    if (view.types.length) legs.push({ type: { in: view.types } })
+    if (view.includeArtistSelfProfile) {
+      legs.push({ type: 'user_data_updated', userRole: 'artist' })
+    }
+    if (legs.length) {
+      where.AND = [...(where.AND ?? []), { OR: legs }]
+    }
   }
   if (filters.dateFrom || filters.dateTo) {
     where.createdAt = {}
@@ -899,12 +999,16 @@ export async function getActivitiesFiltered(
       skip: offset,
       take: limit
     }),
-    prisma.activity.count({ where })
+    countDedupedActivities(where),
   ])
   
-  return { 
-    activities: activities.map(activityFromPrisma), 
-    total 
+  // F-03: пары «уведомление артисту + уведомление админу» об одном объекте
+  // схлопываются на чтении — в базе они уже есть, миграцией их не убрать.
+  const deduped = dedupeActivities(activities.map(activityFromPrisma))
+
+  return {
+    activities: await attachActorNames(deduped),
+    total,
   }
 }
 
@@ -914,7 +1018,7 @@ export async function getActivitiesByUserId(userId: string, limit: number = 10):
     orderBy: { createdAt: 'desc' },
     take: limit
   })
-  return activities.map(activityFromPrisma)
+  return attachActorNames(dedupeActivities(activities.map(activityFromPrisma)))
 }
 
 export async function getActivitiesByRole(role: 'artist' | 'admin', limit: number = 10): Promise<Activity[]> {
@@ -952,8 +1056,12 @@ export interface ArtistBalance {
   lastUpdated: string
 }
 
-/** Минимальная сумма выплаты, ₽. */
-export const MIN_PAYOUT_AMOUNT = 3000
+/**
+ * Минимальная сумма выплаты, ₽. Объявлена в lib/report-acknowledgment.ts рядом
+ * со вторым порогом цикла и связывающей их фразой (F-17); здесь ре-экспорт,
+ * чтобы не сужать поверхность модуля.
+ */
+export { MIN_PAYOUT_AMOUNT }
 
 // Расширенный интерфейс отчета с дополнительными полями
 export interface ReportData extends Omit<Report, 'status'> {

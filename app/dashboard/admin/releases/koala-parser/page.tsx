@@ -1,10 +1,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
+import { StatCard } from "@/components/ui/stat-card"
+import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
 
 interface ParseStats {
   total: number
@@ -34,14 +47,19 @@ interface KoalaRelease {
   parsed_at: string
 }
 
-function statusBadgeClass(raw: string): string {
+/**
+ * C-15: бейдж из кита вместо CSS-классов .release-status-badge--*.
+ * Маппинг местный — статусы приходят из Koala как есть, общий
+ * releaseStatusVariant их набор не покрывает.
+ */
+function statusVariant(raw: string): ReleaseStatusVariant {
   const s = raw || ""
-  if (["Доставлен", "released", "Одобрен"].includes(s)) return "release-status-badge release-status-badge--live"
-  if (["В доставке", "delivery"].includes(s)) return "release-status-badge release-status-badge--delivered"
+  if (["Доставлен", "released", "Одобрен"].includes(s)) return "live"
+  if (["В доставке", "delivery"].includes(s)) return "delivered"
   if (["Модерируется", "На модерации", "moderation", "scheduled", "Новый", "новый"].includes(s))
-    return "release-status-badge release-status-badge--moderation"
-  if (["Отклонен", "Отклонён", "Снят"].includes(s)) return "release-status-badge release-status-badge--rejected"
-  return "release-status-badge release-status-badge--draft"
+    return "moderation"
+  if (["Отклонен", "Отклонён", "Снят"].includes(s)) return "rejected"
+  return "draft"
 }
 
 export default function KoalaParserPage() {
@@ -122,105 +140,74 @@ export default function KoalaParserPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
+      <div className="flex justify-center py-16">
+          <Spinner label="Загрузка…" />
         </div>
       )
   }
 
   return (
     
-      <div className="space-y-8 max-w-7xl mx-auto pb-8">
-        <div className="space-y-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/releases" className="hover:text-primary">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Koala Parser</span>
-          </div>
-          <div className="border-b border-white/5 pb-8 flex flex-col gap-4 lg:flex-row items-start lg:items-end lg:justify-between">
-            <div>
-              <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
-                Koala Music Parser
-              </h1>
-              <p className="text-sm text-gray-400 font-light max-w-lg mt-2">
-                Импорт релизов из Koala Music: статус последнего запуска и таблица последних записей.
-              </p>
-            </div>
-            <Button
-              onClick={() => void runParser()}
-              disabled={isRunning}
-              className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold shrink-0 inline-flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-            >
+      <div className="space-y-8">
+        {/* F-36: шапка парсера — один шаблон с zvonko-parser */}
+        {/* F-60/0-д п.3: имя парсера одно и то же в навигации, меню «Сервис» и H1. */}
+        <PageHeader
+          title="Koala Parser"
+          subtitle="Импорт релизов из Koala Music: статус последнего запуска и таблица последних записей."
+          actions={
+            <Button onClick={() => void runParser()} disabled={isRunning} variant="cta" className="rounded-lg">
               {isRunning ? (
                 <>
-                  <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                  <span className="material-symbols-outlined text-lg animate-spin" aria-hidden>progress_activity</span>
                   Парсинг…
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-lg">play_arrow</span>
+                  <span className="material-symbols-outlined text-lg" aria-hidden>play_arrow</span>
                   Запустить парсинг
                 </>
               )}
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">schedule</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Последний запуск</p>
-            <p className="font-display text-2xl text-white mt-2">
-              {status?.lastRun ? formatDate(status.lastRun) : "Никогда"}
-            </p>
-          </div>
+          <StatCard
+            label="Последний запуск"
+            tone="azure"
+            bgIcon="schedule"
+            value={
+              // Значение — не число, а строка в дисплейном шрифте: он широкий,
+              // и на узкой карточке «не запускался»/дата упирались в край.
+              <span className="text-xl [overflow-wrap:anywhere]">
+                {status?.lastRun ? formatDate(status.lastRun) : "Никогда"}
+              </span>
+            }
+          />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">flag</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Статус</p>
-            <p
-              className={`font-display text-2xl mt-2 ${
-                status?.success ? "text-primary" : status?.lastRun ? "text-destructive" : "text-yellow-500"
-              }`}
-            >
-              {status?.success ? "Успешно" : status?.lastRun ? "Ошибка" : "Не запускался"}
-            </p>
-          </div>
+          <StatCard
+            label="Статус"
+            tone="primary"
+            bgIcon="flag"
+            value={
+              <span
+                className={`text-xl [overflow-wrap:anywhere] ${
+                  status?.success ? "text-primary" : status?.lastRun ? "text-destructive" : "text-status-warning"
+                }`}
+              >
+                {status?.success ? "Успешно" : status?.lastRun ? "Ошибка" : "Не запускался"}
+              </span>
+            }
+          />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">library_add</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Добавлено</p>
-            <p className="font-display text-2xl text-white mt-2">{status?.stats?.added ?? 0}</p>
-          </div>
+          <StatCard label="Добавлено" tone="primary" bgIcon="library_add" value={status?.stats?.added ?? 0} />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">sync</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Обновлено</p>
-            <p className="font-display text-2xl text-white mt-2">{status?.stats?.updated ?? 0}</p>
-          </div>
+          <StatCard label="Обновлено" tone="azure" bgIcon="sync" value={status?.stats?.updated ?? 0} />
         </div>
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-2">
-            <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-            Расписание автоматического парсинга
-          </h2>
+          <SectionHeader className="mb-2" title="Расписание автоматического парсинга" />
           <p className="text-sm text-gray-400 mb-4">Парсер может запускаться по расписанию (cron).</p>
           <div className="flex flex-wrap gap-6 text-sm text-gray-300">
             <span className="inline-flex items-center gap-2">
@@ -235,70 +222,69 @@ export default function KoalaParserPage() {
         </div>
 
         {status?.message && (
-          <div
-            className={`card-glass rounded-2xl border p-6 md:p-8 ${
-              status.success ? "border-primary/30" : "border-destructive/40"
-            }`}
+          <Banner
+            variant={status.success ? "success" : "danger"}
+            icon={status.success ? "check_circle" : "cancel"}
           >
-            <div className="flex items-start gap-3">
-              <span
-                className={`material-symbols-outlined shrink-0 ${
-                  status.success ? "text-primary" : "text-destructive"
-                }`}
-              >
-                {status.success ? "check_circle" : "cancel"}
-              </span>
-              <div>
-                <p className={`font-medium ${status.success ? "text-primary" : "text-destructive"}`}>{status.message}</p>
-                {status.stats && (
-                  <p className="text-sm text-gray-500 font-mono mt-2">
-                    Всего: {status.stats.total} · Добавлено: {status.stats.added} · Обновлено: {status.stats.updated} ·
-                    Пропущено: {status.stats.skipped}
-                  </p>
-                )}
-                {status.stats?.errors && status.stats.errors.length > 0 && (
-                  <ul className="mt-2 text-sm text-destructive space-y-1">
-                    {status.stats.errors.map((err, index) => (
-                      <li key={index}>• {err}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
+            <p className="font-medium">{status.message}</p>
+            {status.stats && (
+              <p className="text-sm text-gray-500 font-mono mt-2">
+                Всего: {status.stats.total} · Добавлено: {status.stats.added} · Обновлено: {status.stats.updated} ·
+                Пропущено: {status.stats.skipped}
+              </p>
+            )}
+            {status.stats?.errors && status.stats.errors.length > 0 && (
+              <ul className="mt-2 text-sm space-y-1">
+                {status.stats.errors.map((err, index) => (
+                  <li key={index}>• {err}</li>
+                ))}
+              </ul>
+            )}
+          </Banner>
         )}
 
-        {lastReleases.length > 0 && (
+        {/* F-34/C-14: подзаголовок обещает таблицу последних записей — при нуле
+            вместо неё было пусто, теперь честное пустое состояние. */}
+        {lastReleases.length === 0 ? (
+          <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+            <SectionHeader className="mb-1" title="Последние спарсенные релизы" />
+            <EmptyState
+              className="py-8"
+              icon="database"
+              title="Пока нечего показать"
+              description="Записи появятся после первого запуска парсера"
+            />
+          </div>
+        ) : (
           <div className="card-glass rounded-2xl border border-white/5 p-0 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <div className="p-6 md:p-8 pb-0">
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-1">
-                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
-                Последние спарсенные релизы
-              </h2>
+              <SectionHeader className="mb-1" title="Последние спарсенные релизы" />
               <p className="text-sm text-gray-400 mb-4">Релизы из последнего запуска парсера</p>
             </div>
-            <div className="table-glass overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Название</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Артист</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Статус</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">UPC</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">BandLink</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Дата</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <div className="table-glass">
+              <DataTable>
+                <DataTableHeader>
+                  <DataTableHeadRow>
+                    <DataTableHeadCell>Название</DataTableHeadCell>
+                    <DataTableHeadCell>Артист</DataTableHeadCell>
+                    <DataTableHeadCell>Статус</DataTableHeadCell>
+                    <DataTableHeadCell>UPC</DataTableHeadCell>
+                    <DataTableHeadCell>BandLink</DataTableHeadCell>
+                    <DataTableHeadCell>Дата</DataTableHeadCell>
+                  </DataTableHeadRow>
+                </DataTableHeader>
+                <DataTableBody>
                   {lastReleases.map((release) => (
-                    <TableRow key={release.koala_id} className="table-row-hover border-white/10">
-                      <TableCell className="text-white font-medium">{release.title}</TableCell>
-                      <TableCell className="text-gray-400">{release.artist}</TableCell>
-                      <TableCell>
-                        <span className={statusBadgeClass(release.status)}>{release.status}</span>
-                      </TableCell>
-                      <TableCell className="text-gray-400">
+                    <DataTableRow key={release.koala_id} className="table-row-hover">
+                      <DataTableCell className="text-white font-medium">{release.title}</DataTableCell>
+                      <DataTableCell className="text-gray-400">{release.artist}</DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge variant={statusVariant(release.status)} withIcon={false}>
+                          {release.status}
+                        </StatusBadge>
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">
                         {release.upc ? (
                           <span className="inline-flex items-center gap-1">
                             <span className="material-symbols-outlined text-primary text-base">barcode_scanner</span>
@@ -307,8 +293,8 @@ export default function KoalaParserPage() {
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </DataTableCell>
+                      <DataTableCell>
                         {release.bandlink_url ? (
                           <a
                             href={release.bandlink_url}
@@ -322,17 +308,16 @@ export default function KoalaParserPage() {
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-gray-400">{release.release_date || "—"}</TableCell>
-                    </TableRow>
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">{release.release_date || "—"}</DataTableCell>
+                    </DataTableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </DataTableBody>
+              </DataTable>
             </div>
           </div>
         )}
 
-        <DashboardFooter />
       </div>
     )
 }

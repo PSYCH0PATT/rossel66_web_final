@@ -1,14 +1,15 @@
 import { notFound, redirect } from "next/navigation"
-import Link from "next/link"
 import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { getCachedArtistPlaylists } from "@/lib/cached-dashboard"
 import { getPlaylistCoverUrl } from "@/lib/playlist-cover"
+import { humanizeCredits } from "@/lib/humanize-credits"
 import { PlaylistCoverImage } from "@/components/playlist-cover-image"
 import { getSessionUser } from "@/lib/server-auth"
 import { canViewArtistCabinet } from "@/lib/artist-links"
-import { DashboardFooter } from "@/components/dashboard-footer"
 import { ProfileFilterUrl } from "@/components/profile-filter"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
 function firstTrackLabel(trackDataJson: string): string {
   try {
     const arr = JSON.parse(trackDataJson || "[]") as { trackTitle?: string; titleArtist?: string }[]
@@ -65,42 +66,23 @@ export default async function PlaylistsPage({
     selectedProfile === "all"
       ? allPlaylists
       : allPlaylists.filter((p) => p.profile_id === selectedProfile)
-  const total = playlists.length
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
-        <div className="flex flex-col gap-6 mb-8">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link
-              href={`/dashboard/artist/${params.username}/dashboard`}
-              className="hover:text-[#10b981] cursor-pointer transition-colors"
-            >
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-              chevron_right
-            </span>
-            <span className="text-white">Плейлисты</span>
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-            <div>
-              <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">ПЛЕЙЛИСТЫ</h1>
-              <p className="text-sm text-gray-400 font-light max-w-md">
-                Плейлисты, в которые попали ваши треки на стриминговых платформах.
-              </p>
-            </div>
-            <ProfileFilterUrl value={selectedProfile} className="w-full md:w-56" />
-          </div>
-        </div>
+    <div className="space-y-8">
+        <PageHeader
+          title="ПЛЕЙЛИСТЫ"
+          subtitle="Плейлисты, в которые попали ваши треки на стриминговых платформах."
+          actionsClassName="w-full md:w-auto"
+          actions={<ProfileFilterUrl value={selectedProfile} className="w-full md:w-56" />}
+        />
 
         {playlists.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 mb-12">
             {playlists.map((playlist) => {
               const cover = getPlaylistCoverUrl(playlist.platform, playlist.cover_url)
               const trackLine = firstTrackLabel(playlist.track_data)
               const releaseLine = firstReleaseLabel(playlist.track_data)
-              const subtitleLine = releaseLine || trackLine || "—"
+              const subtitleLine = humanizeCredits(releaseLine || trackLine) || "—"
 
               return (
                 <a
@@ -157,26 +139,17 @@ export default async function PlaylistsPage({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 card-glass rounded-2xl border border-white/5 mb-12">
-            <span className="material-symbols-outlined text-5xl text-gray-600 mb-4 opacity-30">queue_music</span>
-            <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">У вас пока нет плейлистов</p>
-            <p className="text-[10px] text-gray-600 mt-2 text-center max-w-md px-4">
-              Здесь будут отображаться плейлисты, в которые попали ваши треки.
-            </p>
+          /* F-58: пустое состояние было нечитаемым — серый на сером, текст мельче подписи. */
+          <div className="card-glass rounded-2xl border border-white/5 mb-12">
+            <EmptyState
+              className="py-16"
+              icon="queue_music"
+              title="У вас пока нет плейлистов"
+              description="Здесь будут отображаться плейлисты, в которые попали ваши треки."
+            />
           </div>
         )}
 
-        <DashboardFooter role="artist">
-          {/* DS8: было «TOTAL FOUND: N PLAYLISTS» */}
-          <div className="uppercase tracking-widest text-gray-400">
-            Найдено: <span className="font-bold text-white">{total}</span>{" "}
-            {total % 10 === 1 && total % 100 !== 11
-              ? "плейлист"
-              : total % 10 >= 2 && total % 10 <= 4 && (total % 100 < 12 || total % 100 > 14)
-                ? "плейлиста"
-                : "плейлистов"}
-          </div>
-        </DashboardFooter>
       </div>
     )
 }

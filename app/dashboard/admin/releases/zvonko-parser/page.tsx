@@ -1,12 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import { StatCard } from "@/components/ui/stat-card"
+import { StatusBadge, type ReleaseStatusVariant } from "@/components/ui/status-badge"
 
 interface ParseStats {
   total: number
@@ -45,20 +58,27 @@ interface ZvonkoRelease {
 const inputCls =
   "h-9 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 
-function statusBadgeClass(raw: string): string {
+/**
+ * C-15: бейдж из кита вместо CSS-классов .release-status-badge--*.
+ * Маппинг местный: у Zvonko «Новый» — это «в доставке», а не модерация,
+ * как на карточке релиза. Расхождение данных, а не стиля.
+ */
+function statusVariant(raw: string): ReleaseStatusVariant {
   const s = raw || ""
-  if (["Доставлен", "released", "Одобрен"].includes(s)) return "release-status-badge release-status-badge--live"
-  if (["Новый"].includes(s)) return "release-status-badge release-status-badge--delivered"
-  if (["В доставке", "delivery"].includes(s)) return "release-status-badge release-status-badge--delivered"
-  if (["Модерируется", "На модерации", "moderation", "scheduled"].includes(s))
-    return "release-status-badge release-status-badge--moderation"
-  if (["Отклонен", "Отклонён", "Снят"].includes(s)) return "release-status-badge release-status-badge--rejected"
-  return "release-status-badge release-status-badge--draft"
+  if (["Доставлен", "released", "Одобрен"].includes(s)) return "live"
+  if (["Новый"].includes(s)) return "delivered"
+  if (["В доставке", "delivery"].includes(s)) return "delivered"
+  if (["Модерируется", "На модерации", "moderation", "scheduled"].includes(s)) return "moderation"
+  if (["Отклонен", "Отклонён", "Снят"].includes(s)) return "rejected"
+  return "draft"
 }
 
 export default function ZvonkoParserPage() {
   const [status, setStatus] = useState<ParserStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  /** F-36: параметры запуска и справка по режимам — по требованию. */
+  const [paramsOpen, setParamsOpen] = useState(false)
+  const [modesOpen, setModesOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [lastReleases, setLastReleases] = useState<ZvonkoRelease[]>([])
   const [pagesToParse, setPagesToParse] = useState<number>(1)
@@ -155,41 +175,26 @@ export default function ZvonkoParserPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-gray-400">
-          <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm font-mono uppercase tracking-widest">Загрузка…</p>
+      <div className="flex justify-center py-16">
+          <Spinner label="Загрузка…" />
         </div>
       )
   }
 
   return (
     
-      <div className="space-y-8 max-w-7xl mx-auto pb-8">
-        <div className="space-y-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/releases" className="hover:text-primary">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Zvonko Parser</span>
-          </div>
-          <div className="border-b border-white/5 pb-8">
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
-              Zvonko Digital Parser
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-lg mt-2">
-              Парсинг, сравнение и добавление релизов из Zvonko Digital.
-            </p>
-            <div className="flex flex-col xl:flex-row items-start xl:items-end xl:justify-between gap-4 mt-6">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="pages" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Страниц
-                  </Label>
+      <div className="space-y-8">
+        {/* F-36: шапка парсера — один шаблон с koala-parser; «Страниц» и
+            «Действие» свёрнуты в «Параметры запуска» у самой кнопки — в
+            обычный день их не трогают. F-35: CTA того же цвета, что там.
+            F-60/0-д п.3: имя парсера одно и то же в навигации, меню и H1. */}
+        <PageHeader
+          title="Zvonko Parser"
+          subtitle="Парсинг, сравнение и добавление релизов из Zvonko Digital."
+          meta={
+            paramsOpen && (
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <FormField label="Страниц" htmlFor="pages" className="space-y-1">
                   <Input
                     id="pages"
                     type="number"
@@ -200,144 +205,110 @@ export default function ZvonkoParserPage() {
                     className={`${inputCls} w-20 text-center`}
                     disabled={isRunning}
                   />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="action" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Действие
-                  </Label>
-                  <select
-                    id="action"
+                </FormField>
+                {/* F-12: нативный select с системной стрелкой в тёмной форме */}
+                <FormField label="Действие" htmlFor="action" className="space-y-1">
+                  <Select
                     value={selectedAction}
-                    onChange={(e) => setSelectedAction(e.target.value as "parse" | "compare" | "add")}
-                    className={`${inputCls} min-w-[180px] cursor-pointer`}
+                    onValueChange={(v) => setSelectedAction(v as "parse" | "compare" | "add")}
                     disabled={isRunning}
                   >
-                    <option value="parse">Парсинг</option>
-                    <option value="compare">Сравнение</option>
-                    <option value="add">Добавление</option>
-                  </select>
-                </div>
+                    <SelectTrigger id="action" className={`${inputCls} min-w-[180px]`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parse">Парсинг</SelectItem>
+                      <SelectItem value="compare">Сравнение</SelectItem>
+                      <SelectItem value="add">Добавление</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
               </div>
-              <Button
-                onClick={() => void runParser()}
-                disabled={isRunning}
-                className="rounded-lg bg-accent-azure text-black hover:bg-sky-400 font-bold shrink-0 inline-flex items-center gap-2"
-              >
-                {isRunning ? (
-                  <>
-                    <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                    {actionRunningLabel}
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-lg">
-                      {selectedAction === "parse"
-                        ? "download"
-                        : selectedAction === "compare"
-                          ? "sync"
-                          : "play_arrow"}
-                    </span>
-                    {actionLabel}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
+            )
+          }
+          actions={
+            <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-expanded={paramsOpen}
+              onClick={() => setParamsOpen((open) => !open)}
+              className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden>tune</span>
+              Параметры запуска
+              <span className="material-symbols-outlined text-base" aria-hidden>
+                {paramsOpen ? "expand_less" : "expand_more"}
+              </span>
+            </Button>
+            <Button onClick={() => void runParser()} disabled={isRunning} variant="cta" className="rounded-lg">
+              {isRunning ? (
+                <>
+                  <span className="material-symbols-outlined text-lg animate-spin" aria-hidden>progress_activity</span>
+                  {actionRunningLabel}
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-lg" aria-hidden>
+                    {selectedAction === "parse"
+                      ? "download"
+                      : selectedAction === "compare"
+                        ? "sync"
+                        : "play_arrow"}
+                  </span>
+                  {actionLabel}
+                </>
+              )}
+            </Button>
+            </>
+          }
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">schedule</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Последний запуск</p>
-            <p className="font-display text-xl text-white mt-2">
-              {status?.lastRun ? formatDate(status.lastRun) : "Никогда"}
-            </p>
-          </div>
+          <StatCard
+            label="Последний запуск"
+            tone="azure"
+            bgIcon="schedule"
+            value={
+              // Значение — не число, а строка в дисплейном шрифте: он широкий,
+              // и на узкой карточке «не запускался»/дата упирались в край.
+              <span className="text-xl [overflow-wrap:anywhere]">
+                {status?.lastRun ? formatDate(status.lastRun) : "Никогда"}
+              </span>
+            }
+          />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">flag</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Статус</p>
-            <p
-              className={`font-display text-xl mt-2 ${
-                status?.success ? "text-primary" : status?.lastRun ? "text-destructive" : "text-yellow-500"
-              }`}
-            >
-              {status?.success ? "Успешно" : status?.lastRun ? "Ошибка" : "Не запускался"}
-            </p>
-          </div>
+          <StatCard
+            label="Статус"
+            tone="primary"
+            bgIcon="flag"
+            value={
+              <span
+                className={`text-xl [overflow-wrap:anywhere] ${
+                  status?.success ? "text-primary" : status?.lastRun ? "text-destructive" : "text-status-warning"
+                }`}
+              >
+                {status?.success ? "Успешно" : status?.lastRun ? "Ошибка" : "Не запускался"}
+              </span>
+            }
+          />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-accent-azure">travel_explore</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Найдено</p>
-            <p className="font-display text-2xl text-white mt-2">{status?.stats?.total ?? 0}</p>
-          </div>
+          <StatCard label="Найдено" tone="azure" bgIcon="travel_explore" value={status?.stats?.total ?? 0} />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-primary">library_add</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Добавлено</p>
-            <p className="font-display text-2xl text-white mt-2">{status?.stats?.added ?? 0}</p>
-          </div>
+          <StatCard label="Добавлено" tone="primary" bgIcon="library_add" value={status?.stats?.added ?? 0} />
 
-          <div className="stat-card-glass p-6 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined stat-dash-bg-icon text-purple-400">layers</span>
-            </div>
-            <p className="text-xs font-mono uppercase tracking-widest text-gray-500">Страниц</p>
-            <p className="font-display text-2xl text-white mt-2">
-              {status?.pagesProcessed ?? 0}/{status?.totalPages ?? pagesToParse}
-            </p>
-          </div>
+          <StatCard
+            label="Страниц"
+            tone="purple"
+            bgIcon="layers"
+            value={`${status?.pagesProcessed ?? 0}/${status?.totalPages ?? pagesToParse}`}
+          />
         </div>
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-4">
-            <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-            <span className="material-symbols-outlined text-primary text-2xl">tune</span>
-            Режимы работы
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-400">
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Парсинг</h4>
-              <p>Извлечение данных о релизах из Zvonko Digital.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">download</span>
-                Название, артист, UPC, обложка, даты
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Сравнение</h4>
-              <p>Сопоставление с существующими релизами в системе.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">sync</span>
-                Дубликаты по UPC и названиям
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold">Добавление</h4>
-              <p>Добавление новых релизов в систему.</p>
-              <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base text-accent-azure">play_arrow</span>
-                Треки и ISRC
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
-          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-2">
-            <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
-            Расписание автоматического парсинга
-          </h2>
+          <SectionHeader className="mb-2" title="Расписание автоматического парсинга" />
           <p className="text-sm text-gray-400 mb-4">Парсер может запускаться по расписанию (cron).</p>
           <div className="flex flex-wrap gap-6 text-sm text-gray-300">
             <span className="inline-flex items-center gap-2">
@@ -352,72 +323,57 @@ export default function ZvonkoParserPage() {
         </div>
 
         {status?.message && (
-          <div
-            className={`card-glass rounded-2xl border p-6 md:p-8 ${
-              status.success ? "border-primary/30" : "border-destructive/40"
-            }`}
+          <Banner
+            variant={status.success ? "success" : "danger"}
+            icon={status.success ? "check_circle" : "cancel"}
           >
-            <div className="flex items-start gap-3">
-              <span
-                className={`material-symbols-outlined shrink-0 ${
-                  status.success ? "text-primary" : "text-destructive"
-                }`}
-              >
-                {status.success ? "check_circle" : "cancel"}
-              </span>
-              <div>
-                <p className={`font-medium ${status.success ? "text-primary" : "text-destructive"}`}>{status.message}</p>
-                {status.stats && (
-                  <p className="text-sm text-gray-500 font-mono mt-2">
-                    Всего: {status.stats.total} · Добавлено: {status.stats.added} · Обновлено: {status.stats.updated} ·
-                    Пропущено: {status.stats.skipped}
-                  </p>
-                )}
-                {status.pagesProcessed != null && (
-                  <p className="text-sm text-gray-500 font-mono mt-1">
-                    Обработано страниц: {status.pagesProcessed}/{status.totalPages ?? pagesToParse}
-                  </p>
-                )}
-                {status.stats?.errors && status.stats.errors.length > 0 && (
-                  <ul className="mt-2 text-sm text-destructive space-y-1">
-                    {status.stats.errors.map((err, index) => (
-                      <li key={index}>• {err}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
+            <p className="font-medium">{status.message}</p>
+            {status.stats && (
+              <p className="text-sm text-gray-500 font-mono mt-2">
+                Всего: {status.stats.total} · Добавлено: {status.stats.added} · Обновлено: {status.stats.updated} ·
+                Пропущено: {status.stats.skipped}
+              </p>
+            )}
+            {status.pagesProcessed != null && (
+              <p className="text-sm text-gray-500 font-mono mt-1">
+                Обработано страниц: {status.pagesProcessed}/{status.totalPages ?? pagesToParse}
+              </p>
+            )}
+            {status.stats?.errors && status.stats.errors.length > 0 && (
+              <ul className="mt-2 text-sm space-y-1">
+                {status.stats.errors.map((err, index) => (
+                  <li key={index}>• {err}</li>
+                ))}
+              </ul>
+            )}
+          </Banner>
         )}
 
         {lastReleases.length > 0 && (
           <div className="card-glass rounded-2xl border border-white/5 p-0 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <div className="p-6 md:p-8 pb-0">
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-1">
-                <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-                Последние обработанные релизы
-              </h2>
+              <SectionHeader className="mb-1" title="Последние обработанные релизы" />
               <p className="text-sm text-gray-400 mb-4">Релизы из последнего запуска парсера</p>
             </div>
-            <div className="table-glass overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Название</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Артист</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Статус</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">UPC</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Жанр</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Площадки</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Дата</TableHead>
-                    <TableHead className="text-gray-500 font-mono text-xs uppercase tracking-widest">Стр.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <div className="table-glass">
+              <DataTable>
+                <DataTableHeader>
+                  <DataTableHeadRow>
+                    <DataTableHeadCell>Название</DataTableHeadCell>
+                    <DataTableHeadCell>Артист</DataTableHeadCell>
+                    <DataTableHeadCell>Статус</DataTableHeadCell>
+                    <DataTableHeadCell>UPC</DataTableHeadCell>
+                    <DataTableHeadCell>Жанр</DataTableHeadCell>
+                    <DataTableHeadCell>Площадки</DataTableHeadCell>
+                    <DataTableHeadCell>Дата</DataTableHeadCell>
+                    <DataTableHeadCell>Стр.</DataTableHeadCell>
+                  </DataTableHeadRow>
+                </DataTableHeader>
+                <DataTableBody>
                   {lastReleases.map((release) => (
-                    <TableRow key={release.id} className="table-row-hover border-white/10">
-                      <TableCell className="text-white font-medium">
+                    <DataTableRow key={release.id} className="table-row-hover">
+                      <DataTableCell className="text-white font-medium">
                         <div className="flex items-center gap-2 min-w-[12rem]">
                           {release.cover ? (
                             <img
@@ -431,12 +387,14 @@ export default function ZvonkoParserPage() {
                           ) : null}
                           {release.title}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-gray-400">{release.artist}</TableCell>
-                      <TableCell>
-                        <span className={statusBadgeClass(release.status)}>{release.status}</span>
-                      </TableCell>
-                      <TableCell className="text-gray-400">
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">{release.artist}</DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge variant={statusVariant(release.status)} withIcon={false}>
+                          {release.status}
+                        </StatusBadge>
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">
                         {release.upc ? (
                           <span className="inline-flex items-center gap-1">
                             <span className="material-symbols-outlined text-primary text-base">barcode_scanner</span>
@@ -445,9 +403,9 @@ export default function ZvonkoParserPage() {
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-gray-400">{release.genre || <span className="text-gray-600">—</span>}</TableCell>
-                      <TableCell className="text-gray-400 max-w-[12rem] truncate" title={release.platforms}>
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">{release.genre || <span className="text-gray-600">—</span>}</DataTableCell>
+                      <DataTableCell className="text-gray-400 max-w-[12rem] truncate" title={release.platforms}>
                         {release.platforms ? (
                           <span className="inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-xs font-mono text-gray-400">
                             {release.platforms}
@@ -455,22 +413,69 @@ export default function ZvonkoParserPage() {
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-gray-400">{release.date || "—"}</TableCell>
-                      <TableCell className="text-gray-400">
+                      </DataTableCell>
+                      <DataTableCell className="text-gray-400">{release.date || "—"}</DataTableCell>
+                      <DataTableCell className="text-gray-400">
                         <span className="inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-xs font-mono">
                           {release.page}
                         </span>
-                      </TableCell>
-                    </TableRow>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </DataTableBody>
+              </DataTable>
             </div>
           </div>
         )}
 
-        <DashboardFooter />
+        {/* 2.4: справка «Режимы работы» — редкая, поэтому свёрнута и внизу. */}
+        <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={modesOpen}
+            onClick={() => setModesOpen((open) => !open)}
+            className="rounded-lg px-0 font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden>tune</span>
+            Режимы работы
+            <span className="material-symbols-outlined text-base" aria-hidden>
+              {modesOpen ? "expand_less" : "expand_more"}
+            </span>
+          </Button>
+          {modesOpen && (
+            <div className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-400">
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Парсинг</h4>
+                <p>Извлечение данных о релизах из Zvonko Digital.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">download</span>
+                  Название, артист, UPC, обложка, даты
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Сравнение</h4>
+                <p>Сопоставление с существующими релизами в системе.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">sync</span>
+                  Дубликаты по UPC и названиям
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-white font-semibold">Добавление</h4>
+                <p>Добавление новых релизов в систему.</p>
+                <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base text-accent-azure">play_arrow</span>
+                  Треки и ISRC
+                </p>
+              </div>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     )
 }

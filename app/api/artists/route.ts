@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { isHashedPassword, verifyPassword } from "@/lib/password"
 import type { Prisma } from "@prisma/client"
-import { addUser, getUserByUsername, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
+import { addUser, assignReportsToNewArtist, assignReleasesToNewArtist, updateUser, deleteUser, addActivity, getReleasesByArtistId } from "@/lib/storage"
 import { prisma } from "@/lib/prisma"
 import * as path from "path"
 import { supabase, ensureBucketExists } from "@/lib/supabase"
 import { requireAdmin, requireSelfOrAdmin, getSessionUser } from "@/lib/server-auth"
 import { artistPostSchema, artistPutSchema } from "@/lib/api-schemas"
+import { duplicateArtistReason } from "@/lib/bulk-artist-add"
+import { excludeTestAccountsWhere, shouldHideTestAccounts } from "@/lib/test-accounts"
 import {
   getArtistReportMissingFields,
   type IncompleteReportArtist,
@@ -86,10 +88,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Username, password and name are required" }, { status: 400 })
     }
 
-    // Check if username already exists
-    const existingUser = await getUserByUsername(username)
-    if (existingUser) {
-      return NextResponse.json({ error: "Username already exists" }, { status: 400 })
+    // F-01: дедупликация на сервере, а не только в форме. Массовое добавление
+    // шлёт имена пачкой, и клиентский список существующих артистов может быть
+    // неполным или устареть между запросами; дубль по имени клиент не ловил
+    // вовсе. Флаг duplicate в ответе позволяет собрать отчёт «пропущено как
+    // дубль: N», не путая дубли с настоящими ошибками.
+    const collisions = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { equals: username, mode: "insensitive" } },
+          { name: { equals: name.trim(), mode: "insensitive" } },
+        ],
+      },
+      select: { username: true, name: true },
+    })
+    const duplicateReason = duplicateArtistReason({ username, name }, collisions)
+    if (duplicateReason !== null) {
+      return NextResponse.json(
+        {
+          success: false,
+          duplicate: true,
+          duplicateReason,
+          error:
+            duplicateReason === "username"
+              ? "Username already exists"
+              : "Артист с таким именем уже существует",
+        },
+        { status: 400 }
+      )
     }
 
     // Add user to database
@@ -169,24 +195,22 @@ export async function POST(request: Request) {
     if (assignedReleases > 0) {
       const artistReleases = await getReleasesByArtistId(newUser.id)
       for (const release of artistReleases) {
-        // Уведомление для артиста
+        // F-03: одна запись на событие. Раньше их было две — «артисту» и
+        // «админу» — и в общем журнале они стояли парой одним таймстампом,
+        // причём вторая без имени актора. Артист видит эту же строку:
+        // лента кабинета читает и по metadata.artistId (F-04).
         await addActivity({
           type: 'release_added',
           userId: newUser.id,
           userRole: 'artist',
           title: 'Добавлен релиз',
           description: `Добавлен релиз "${release.title}"`,
-          metadata: { artistId: newUser.id, releaseId: release.id, releaseTitle: release.title }
-        })
-        
-        // Уведомление для админа
-        await addActivity({
-          type: 'release_added',
-          userId: 'system',
-          userRole: 'admin',
-          title: 'Добавлен релиз',
-          description: `Добавлен релиз "${release.title}" (артист: ${newUser.name || newUser.username})`,
-          metadata: { artistId: newUser.id, artistName: newUser.name, releaseId: release.id, releaseTitle: release.title }
+          metadata: {
+            artistId: newUser.id,
+            artistName: newUser.name,
+            releaseId: release.id,
+            releaseTitle: release.title,
+          }
         })
       }
     }
@@ -367,12 +391,20 @@ export async function GET(request: Request) {
           }
         : undefined
 
+    // F-37: экран списка артистов просит выдачу без тестовых учёток
+    // (hideTest=1). Условие уходит в оба where — как и mainArtistId ниже, —
+    // поэтому список, total и счётчики считаются по одной выборке. Прямые
+    // запросы к API (прогоны, интеграции) фильтр не трогает.
+    const hideTestAccounts = shouldHideTestAccounts(searchParams.get("hideTest") === "1")
+    const testAccountsWhere = hideTestAccounts ? excludeTestAccountsWhere() : {}
+
     // Привязанные профили (AKA) в списке не показываются: своей карточки у них
     // больше нет, всё управление — в карточке главного. Условие стоит в обоих
     // where, поэтому синхронно уходит и из списка, и из total, и из счётчиков.
     const where: Prisma.UserWhereInput = {
       role: "artist",
       mainArtistId: null,
+      ...testAccountsWhere,
       ...(verifiedParam !== null ? { verified: verifiedParam === "true" } : {}),
       ...(searchWhere ?? {}),
     }
@@ -380,6 +412,7 @@ export async function GET(request: Request) {
     const baseArtistWhere: Prisma.UserWhereInput = {
       role: "artist",
       mainArtistId: null,
+      ...testAccountsWhere,
       ...(searchWhere ?? {}),
     }
 
@@ -513,10 +546,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Artist not found" }, { status: 404 })
     }
 
+    // Ответ №5 к решению 0-б: в дефолтной ленте остаются самостоятельные
+    // действия артиста (сменил пароль, аватарку), а правки админа — нет.
+    // Отличить их можно только по актору, а он писался всегда «Системой»:
+    // свой профиль артист правит этим же роутом (self-or-admin).
+    const selfUpdate = session.id === updatedUser.id
     await addActivity({
       type: 'user_data_updated',
-      userId: 'system',
-      userRole: 'admin',
+      userId: selfUpdate ? session.id : 'system',
+      userRole: selfUpdate ? session.role : 'admin',
       title: 'Данные артиста обновлены',
       description: `Профиль артиста "${updatedUser.name}" был обновлен`,
       metadata: { artistId: updatedUser.id, artistName: updatedUser.name }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/server-auth"
+import { unpaidReportWhere } from "@/lib/payments-filter"
 
 export const dynamic = "force-dynamic"
 
@@ -16,6 +17,9 @@ export async function GET(request: Request) {
     const rawPs = parseInt(searchParams.get("pageSize") || "20", 10)
     const pageSize = ALLOWED_PAGE_SIZES.has(rawPs) ? rawPs : 20
     const unpaidOnly = searchParams.get("unpaidOnly") === "true"
+    // 0-а: объединённому экрану «Отчёты» нужны только два числа — «Невыплаченных»
+    // в StatCard и счётчик на чипе. Строки для них не нужны.
+    const countsOnly = searchParams.get("countsOnly") === "1"
     const artistIdFilter = searchParams.get("artistId")?.trim()
 
     const baseWhere: {
@@ -25,15 +29,23 @@ export async function GET(request: Request) {
     if (artistIdFilter) {
       baseWhere.artistId = artistIdFilter
     }
-    const unpaidClause: { OR: Array<{ isPaid: false } | { isPaid: null }> } = {
-      OR: [{ isPaid: false }, { isPaid: null }],
-    }
+    // F-69: нулевые суммы — не долг, они не попадают ни в список
+    // «Невыплаченные», ни в счётчик над ним.
+    const unpaidClause = unpaidReportWhere()
     const where = {
       ...baseWhere,
       ...(unpaidOnly ? unpaidClause : {}),
     }
 
     const skip = (page - 1) * pageSize
+
+    if (countsOnly) {
+      const [total, unpaidTotal] = await Promise.all([
+        prisma.report.count({ where: baseWhere }),
+        prisma.report.count({ where: { ...baseWhere, ...unpaidClause } }),
+      ])
+      return NextResponse.json({ success: true, payments: [], total, unpaidTotal })
+    }
 
     const [reports, total, unpaidTotal] = await Promise.all([
       prisma.report.findMany({

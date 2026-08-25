@@ -11,9 +11,16 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import Link from "next/link"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { Banner } from "@/components/ui/banner"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FileInput } from "@/components/ui/file-input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
 import { ArtistAdvances } from "@/components/artist-advances"
 import { ArtistLinkedProfiles } from "@/components/artist-linked-profiles"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { PLATFORM_ICONS } from "@/lib/platform-icon"
 
 export default function EditArtistPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -35,6 +42,9 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [artistNotFound, setArtistNotFound] = useState(false)
+  /** Удаление переехало сюда с карточки в списке: там оно срабатывало по наведению. */
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   // Новые поля для артиста
   const [fio, setFio] = useState("")
   const [fioShort, setFioShort] = useState("")
@@ -265,6 +275,28 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
     }
   }
 
+  const handleDeleteArtist = async () => {
+    setIsDeleting(true)
+    setError("")
+    try {
+      const response = await fetch(`/api/artists?id=${encodeURIComponent(artistId)}`, {
+        method: "DELETE",
+      })
+      const result = await response.json()
+      if (result.success) {
+        router.push("/dashboard/admin/artists")
+        return
+      }
+      setError(result.error || "Не удалось удалить артиста")
+      setDeleteOpen(false)
+    } catch {
+      setError("Произошла ошибка при удалении артиста")
+      setDeleteOpen(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (artistNotFound) {
     return (
       <div className="space-y-6">
@@ -273,67 +305,30 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
               href="/dashboard/admin/artists"
               className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
+              <span className="material-symbols-outlined text-base" aria-hidden>arrow_back</span>
               <span>Назад к списку артистов</span>
             </Link>
           </div>
 
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
-            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
-            Артист не найден
-          </div>
+          <Banner variant="danger">Артист не найден</Banner>
         </div>
       )
   }
 
   return (
     
-      <div className="space-y-6">
-        <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/artists" className="hover:text-primary cursor-pointer transition-colors">
-              Артисты
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white truncate max-w-[180px]">{name}</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-8">
-            <div className="min-w-0">
-              <Link
-                href="/dashboard/admin/artists"
-                className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                К списку
-              </Link>
-              <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">
-                Редактирование
-              </h1>
-              <p className="text-sm text-gray-400 font-light mt-2">{name}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-2xl text-primary">person</span>
-            </div>
-          </div>
-        </div>
+      <div className="space-y-8">
+        {/* C-01/F-24: H1 — имя артиста, действие живёт в подзаголовке.
+            F-66: декоративный квадрат в слоте actions был div без действия. */}
+        <PageHeader
+          backHref="/dashboard/admin/artists"
+          title={name || username || "Артист"}
+          subtitle="Редактирование профиля"
+        />
 
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start gap-2" role="alert">
-            <span className="material-symbols-outlined text-red-400 flex-shrink-0">error</span>
-            {error}
-          </div>
-        )}
+        {error && <Banner variant="danger">{error}</Banner>}
 
-        {success && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2" role="status">
-            <span className="material-symbols-outlined text-emerald-400 flex-shrink-0">check_circle</span>
-            Данные артиста успешно обновлены!
-          </div>
-        )}
+        {success && <Banner variant="success">Данные артиста успешно обновлены!</Banner>}
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-6 h-auto gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
@@ -342,38 +337,35 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">settings</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Профиль</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Профиль</span>
             </TabsTrigger>
             <TabsTrigger
               value="releases"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">library_music</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Релизы</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Релизы</span>
             </TabsTrigger>
             <TabsTrigger
               value="reports"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">description</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Отчёты</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Отчёты</span>
             </TabsTrigger>
             <TabsTrigger
               value="payments"
               className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 text-gray-400"
             >
               <span className="material-symbols-outlined text-lg sm:text-base flex-shrink-0">payments</span>
-              <span className="hidden sm:inline text-xs font-mono uppercase">Выплаты</span>
+              <span className="text-[10px] font-mono uppercase sm:text-xs">Выплаты</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Вкладка Профиль */}
           <TabsContent value="profile" className="space-y-4">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                Информация об артисте
-              </h2>
+              <SectionHeader className="mb-6" size="sm" title="Информация об артисте" />
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -402,16 +394,19 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           value={currentPassword}
                           className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 font-mono text-white"
                         />
-                        <button
+                        <Button
                           type="button"
+                          size="icon"
+                          variant="outline"
                           onClick={() => setShowCurrentPassword((v) => !v)}
-                          className="h-11 shrink-0 rounded-lg border border-white/10 px-3 text-gray-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          className="h-11 w-auto shrink-0 rounded-lg border-white/10 bg-transparent px-3 text-gray-400 hover:bg-transparent hover:text-white"
                           title={showCurrentPassword ? "Скрыть пароль" : "Показать пароль"}
+                          aria-label={showCurrentPassword ? "Скрыть пароль" : "Показать пароль"}
                         >
-                          <span className="material-symbols-outlined text-lg leading-none">
+                          <span className="material-symbols-outlined text-lg leading-none" aria-hidden>
                             {showCurrentPassword ? "visibility_off" : "visibility"}
                           </span>
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <p className="text-xs text-amber-400">
@@ -527,7 +522,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                   {/* Добавляем новые поля для ссылок на музыкальные сервисы */}
                   <div className="space-y-2">
                     <Label htmlFor="vkMusicUrl" className="text-white flex items-center gap-1">
-                      <img src="https://cdn.simpleicons.org/vk/0077FF" alt="VK Music" className="h-4 w-4" />
+                      <img src={PLATFORM_ICONS.vk} alt="VK Music" className="h-4 w-4" />
                       ВК Музыка
                     </Label>
                     <div className="relative">
@@ -546,7 +541,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
                   <div className="space-y-2">
                     <Label htmlFor="yandexMusicUrl" className="text-white flex items-center gap-1">
-                      <img src="https://cdn.simpleicons.org/yandexmusic/FFCC00" alt="Yandex Music" className="h-4 w-4" />
+                      <img src={PLATFORM_ICONS.yandex} alt="Yandex Music" className="h-4 w-4" />
                       Яндекс Музыка
                     </Label>
                     <div className="relative">
@@ -565,7 +560,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
 
                   <div className="space-y-2">
                     <Label htmlFor="spotifyUrl" className="text-white flex items-center gap-1">
-                      <img src="/spotify-logo.png" alt="Spotify" className="h-4 w-4" />
+                      <img src={PLATFORM_ICONS.spotify} alt="Spotify" className="h-4 w-4" />
                       Spotify
                     </Label>
                     <div className="relative">
@@ -603,19 +598,16 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                           <span className="material-symbols-outlined text-6xl text-gray-500">person</span>
                         </div>
                       )}
-                      <label
-                        htmlFor="avatar-upload"
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        <span className="material-symbols-outlined text-lg">upload</span>
-                        <span>Загрузить аватар</span>
-                      </label>
-                      <input
+                      <FileInput
                         id="avatar-upload"
-                        type="file"
                         accept="image/*"
                         onChange={handleAvatarChange}
-                        className="hidden"
+                        icon="upload"
+                        buttonLabel="Загрузить аватар"
+                        /* C-03: filled на карточке одна — «Сохранить изменения». */
+                        buttonVariant="outline"
+                        buttonClassName="gap-2 rounded-lg border-white/15 px-4 py-2 text-gray-200 hover:bg-white/5"
+                        showFileName={false}
                       />
                       <p className="text-xs text-muted-foreground mt-2">Рекомендуемый размер: 256x256 пикселей</p>
                     </div>
@@ -695,27 +687,20 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           {/* Вкладка Релизы */}
           <TabsContent value="releases" className="space-y-4">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                Управление релизами
-              </h2>
+              <SectionHeader className="mb-6" size="sm" title="Управление релизами" />
+                {/* F-25/F-66: обе кнопки — «Добавить релиз» и «Создать первый
+                    релиз» — были без onClick и href, то есть неработающими
+                    контролами. Удалены; заведение релиза живёт на /releases
+                    в overflow «Сервис». */}
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <p className="text-gray-400 text-sm">Здесь вы можете управлять релизами артиста</p>
-                    <Button className="bg-primary text-black hover:bg-primary/90 rounded-lg font-semibold inline-flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg">add</span>
-                      Добавить релиз
-                    </Button>
-                  </div>
-                  
-                  <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
-                    <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">library_music</span>
-                    <h3 className="text-lg font-medium text-white mb-2">Нет релизов</h3>
-                    <p className="text-gray-400 mb-4 text-sm">У этого артиста пока нет добавленных релизов</p>
-                    <Button variant="outline" className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg">
-                      Создать первый релиз
-                    </Button>
-                  </div>
+                  <p className="text-gray-400 text-sm">Здесь вы можете управлять релизами артиста</p>
+
+                  <EmptyState
+                    className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8"
+                    icon="library_music"
+                    title="Нет релизов"
+                    description="У этого артиста пока нет добавленных релизов"
+                  />
                 </div>
             </div>
           </TabsContent>
@@ -723,10 +708,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           {/* Вкладка Отчёты */}
           <TabsContent value="reports" className="space-y-4">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 bg-primary rounded-full" />
-                Отчёты и аналитика
-              </h2>
+              <SectionHeader className="mb-6" size="sm" title="Отчёты и аналитика" />
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <p className="text-gray-400 text-sm">Отчёты по прослушиваниям и доходам ({reports.length})</p>
@@ -737,7 +719,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                     >
                       {isLoadingReports ? (
                         <>
-                          <span className="inline-block size-4 border-2 border-black/30 border-t-black rounded-full motion-safe:animate-spin" aria-hidden />
+                          <Spinner size="sm" className="[&>span]:border-black/30 [&>span]:border-t-black" />
                           Загрузка...
                         </>
                       ) : (
@@ -751,8 +733,7 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                   
                   {isLoadingReports ? (
                     <div className="p-8 text-center">
-                      <span className="inline-block size-8 border-2 border-primary/30 border-t-primary rounded-full motion-safe:animate-spin mx-auto mb-4" aria-hidden />
-                      <p className="text-gray-400 text-sm">Загрузка отчётов...</p>
+                      <Spinner label="Загрузка отчётов..." />
                     </div>
                   ) : reports.length > 0 ? (
                     <div className="space-y-3">
@@ -804,18 +785,21 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
                       ))}
                     </div>
                   ) : (
-                    <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
-                      <span className="material-symbols-outlined text-5xl text-gray-500 mx-auto mb-4 block">description</span>
-                      <h3 className="text-lg font-medium text-white mb-2">Нет отчётов</h3>
-                      <p className="text-gray-400 mb-4 text-sm">У этого артиста пока нет загруженных отчётов</p>
-                      <Button 
-                        variant="outline" 
-                        className="border-primary/40 text-primary hover:bg-primary/10 rounded-lg"
-                        onClick={() => window.open('/admin/reports', '_blank')}
-                      >
-                        Перейти к загрузке отчётов
-                      </Button>
-                    </div>
+                    <EmptyState
+                      className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-8"
+                      icon="description"
+                      title="Нет отчётов"
+                      description="У этого артиста пока нет загруженных отчётов"
+                      action={
+                        <Button
+                          variant="outline"
+                          className="rounded-lg border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => window.open('/admin/reports', '_blank')}
+                        >
+                          Перейти к загрузке отчётов
+                        </Button>
+                      }
+                    />
                   )}
                 </div>
             </div>
@@ -827,7 +811,58 @@ export default function EditArtistPage({ params }: { params: { id: string } }) {
           </TabsContent>
         </Tabs>
 
-        <DashboardFooter />
+        <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/[0.04] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="font-display text-base font-semibold uppercase tracking-wide text-red-200">
+                Удаление артиста
+              </h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Профиль «{name || username}» будет удалён безвозвратно вместе с доступом в кабинет.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(true)}
+              className="shrink-0 border-red-500/50 text-red-300 hover:bg-red-500/15 hover:text-red-200"
+            >
+              <span className="material-symbols-outlined mr-1 text-base">delete</span>
+              Удалить артиста
+            </Button>
+          </div>
+        </div>
+
+        <Dialog open={deleteOpen} onOpenChange={(open) => !isDeleting && setDeleteOpen(open)}>
+          <DialogContent className="max-w-md border border-white/10 text-white sm:rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg">Удалить артиста?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-400">
+              Артист «{name || username}» будет удалён безвозвратно. Это действие нельзя отменить.
+            </p>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isDeleting}
+                onClick={() => setDeleteOpen(false)}
+                className="border-white/15 text-gray-300 hover:bg-white/5"
+              >
+                Отмена
+              </Button>
+              <Button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteArtist}
+                variant="destructive"
+              >
+                {isDeleting ? "Удаление…" : "Удалить"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     )
 }

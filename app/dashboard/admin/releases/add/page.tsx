@@ -1,15 +1,18 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
+import { FileInput } from "@/components/ui/file-input"
+import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface Track {
   title: string
@@ -19,6 +22,20 @@ interface Track {
 
 const inputCls =
   "h-10 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+
+/** «YYYY-MM-DD» → Date для DatePicker: календарь работает с локальной полночью. */
+function parseIsoDate(value: string): Date | undefined {
+  const [year, month, day] = value.split("-").map(Number)
+  if (!year || !month || !day) return undefined
+  return new Date(year, month - 1, day)
+}
+
+/** Date из DatePicker → «YYYY-MM-DD»: формат, который ждёт POST /api/releases. */
+function toIsoDate(date?: Date): string {
+  if (!date) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 export default function AddReleasePage() {
   const router = useRouter()
@@ -166,72 +183,62 @@ export default function AddReleasePage() {
   ]
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-8">
-        <div className="space-y-4">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest flex-wrap gap-x-2 gap-y-1">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link href="/dashboard/admin/releases" className="hover:text-primary">
-              Релизы
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Новый релиз</span>
-          </div>
-          <div className="border-b border-white/5 pb-8">
-            <Link
-              href="/dashboard/admin/releases"
-              className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest mb-3"
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              К списку
-            </Link>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
-              Добавить релиз
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-md mt-2">
-              Заполните карточку релиза, обложку и треклист. UPC — 12 цифр.
-            </p>
-          </div>
-        </div>
+    <div className="space-y-8">
+        {/* F-32: primary экрана — в слоте actions шапки, как в карточке релиза;
+            «Отмена» рядом ghost-ом. Кнопка вне формы связана с ней по id. */}
+        <PageHeader
+          backHref="/dashboard/admin/releases"
+          title="Добавить релиз"
+          subtitle="Заполните карточку релиза, обложку и треклист. UPC — 12 цифр."
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => router.push("/dashboard/admin/releases")}
+                className="rounded-lg font-mono text-xs uppercase tracking-widest text-gray-400 hover:text-white"
+                disabled={isSubmitting}
+              >
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                form="release-add-form"
+                variant="cta"
+                className="rounded-lg"
+                disabled={isSubmitting}
+              >
+                <span className="material-symbols-outlined text-lg" aria-hidden>add</span>
+                {isSubmitting ? "Создание..." : "Создать релиз"}
+              </Button>
+            </>
+          }
+        />
 
-        {error && (
-          <div
-            role="alert"
-            className="card-glass rounded-2xl border border-destructive/30 p-4 flex items-start gap-3"
-          >
-            <span className="material-symbols-outlined text-destructive shrink-0">error</span>
-            <p className="text-sm text-gray-300">{error}</p>
-          </div>
-        )}
+        {error && <Banner variant="danger">{error}</Banner>}
 
-        {success && (
-          <div
-            role="status"
-            className="card-glass rounded-2xl border border-primary/30 p-4 flex items-start gap-3"
-          >
-            <span className="material-symbols-outlined text-primary shrink-0">check_circle</span>
-            <p className="text-sm text-gray-300">Релиз успешно создан. Перенаправление...</p>
-          </div>
-        )}
+        {success && <Banner variant="success">Релиз успешно создан. Перенаправление...</Banner>}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* C-18: одна колонка читаемой ширины — поля во всю ширину экрана
+            читаются хуже, чем прежняя сетка. */}
+        <form id="release-add-form" onSubmit={handleSubmit} className="max-w-3xl space-y-8">
+          {/* C-18/F-10: одна колонка — вторая половина сетки пустовала. */}
+          <div className="grid grid-cols-1 gap-6">
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-                <span className="material-symbols-outlined text-primary text-2xl">album</span>
-                Информация о релизе
-              </h2>
+              <SectionHeader
+                className="mb-6"
+                title={
+                  <>
+                    <span className="material-symbols-outlined text-primary text-2xl" aria-hidden>album</span>
+                    Информация о релизе
+                  </>
+                }
+              />
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="artist" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Артист <span className="text-destructive">*</span>
-                  </Label>
+                <FormField label="Артист" htmlFor="artist" required>
                   <Select value={artistId} onValueChange={setArtistId}>
-                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                    <SelectTrigger id="artist" className={`w-full ${inputCls} h-10`}>
                       <SelectValue placeholder="Выберите артиста" />
                     </SelectTrigger>
                     <SelectContent>
@@ -242,12 +249,9 @@ export default function AddReleasePage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Название релиза <span className="text-destructive">*</span>
-                  </Label>
+                <FormField label="Название релиза" htmlFor="title" required>
                   <Input
                     id="title"
                     value={title}
@@ -255,12 +259,14 @@ export default function AddReleasePage() {
                     className={inputCls}
                     placeholder="Введите название релиза"
                   />
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="upc" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    UPC <span className="text-destructive">*</span>
-                  </Label>
+                <FormField
+                  label="UPC"
+                  htmlFor="upc"
+                  required
+                  hint="12-значный универсальный код продукта"
+                >
                   <div className="relative">
                     <Input
                       id="upc"
@@ -274,33 +280,22 @@ export default function AddReleasePage() {
                       barcode_scanner
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 font-mono">12-значный универсальный код продукта</p>
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="releaseDate" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Дата релиза <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="releaseDate"
-                      type="date"
-                      value={releaseDate}
-                      onChange={(e) => setReleaseDate(e.target.value)}
-                      className={`${inputCls} pl-10`}
-                    />
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
-                      calendar_month
-                    </span>
-                  </div>
-                </div>
+                {/* F-12: нативный date-инпут выпадал из тёмной темы */}
+                <FormField label="Дата релиза" htmlFor="releaseDate" required>
+                  <DatePicker
+                    id="releaseDate"
+                    value={parseIsoDate(releaseDate)}
+                    onChange={(date) => setReleaseDate(toIsoDate(date))}
+                    placeholder="дд.мм.гггг"
+                    className={`${inputCls} w-full justify-start normal-case text-sm text-white`}
+                  />
+                </FormField>
 
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                    Статус <span className="text-destructive">*</span>
-                  </Label>
+                <FormField label="Статус" htmlFor="status" required>
                   <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
-                    <SelectTrigger className={`w-full ${inputCls} h-10`}>
+                    <SelectTrigger id="status" className={`w-full ${inputCls} h-10`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -311,17 +306,22 @@ export default function AddReleasePage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FormField>
               </div>
             </div>
 
             <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-azure/50 to-transparent" />
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-                <span className="w-1.5 h-6 rounded-full bg-accent-azure shrink-0" />
-                <span className="material-symbols-outlined text-accent-azure text-2xl">upload</span>
-                Обложка релиза
-              </h2>
+              <SectionHeader
+                className="mb-6"
+                accent="azure"
+                title={
+                  <>
+                    <span className="material-symbols-outlined text-accent-azure text-2xl" aria-hidden>upload</span>
+                    Обложка релиза
+                  </>
+                }
+              />
               <div className="flex flex-col items-center justify-center p-6 border border-dashed border-white/15 rounded-xl bg-white/[0.02]">
                 {coverPreview ? (
                   <div className="relative w-48 h-48 mb-4 rounded-lg overflow-hidden border border-white/10">
@@ -332,14 +332,16 @@ export default function AddReleasePage() {
                     <span className="material-symbols-outlined text-6xl text-gray-600">album</span>
                   </div>
                 )}
-                <label
-                  htmlFor="cover-upload"
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer bg-primary text-black font-semibold hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:scale-[1.02] transition-all"
-                >
-                  <span className="material-symbols-outlined text-lg">upload</span>
-                  Загрузить обложку
-                </label>
-                <input id="cover-upload" type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
+                {/* F-12: нативный file-инпут → кнопка из кита */}
+                <FileInput
+                  id="cover-upload"
+                  accept="image/*"
+                  onChange={handleCoverChange}
+                  buttonLabel="Загрузить обложку"
+                  buttonVariant="outline"
+                  icon="upload"
+                  showFileName={false}
+                />
                 <p className="text-xs text-gray-500 font-mono text-center mt-3 uppercase tracking-wider">
                   Рекомендуемый размер: 3000×3000 px · JPG, PNG
                 </p>
@@ -350,17 +352,16 @@ export default function AddReleasePage() {
           <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-                <span className="w-1.5 h-6 rounded-full bg-primary shrink-0" />
-                <span className="material-symbols-outlined text-primary text-2xl">queue_music</span>
-                Треки
-              </h2>
-              <Button
-                type="button"
-                onClick={addTrack}
-                className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-semibold inline-flex items-center gap-2"
-                size="sm"
-              >
+              <SectionHeader
+                className="mb-0"
+                title={
+                  <>
+                    <span className="material-symbols-outlined text-primary text-2xl" aria-hidden>queue_music</span>
+                    Треки
+                  </>
+                }
+              />
+              <Button type="button" onClick={addTrack} variant="outline" size="sm" className="rounded-lg border-white/15 text-gray-200 hover:bg-white/5">
                 <span className="material-symbols-outlined text-lg">add</span>
                 Добавить трек
               </Button>
@@ -374,77 +375,54 @@ export default function AddReleasePage() {
                       <Button
                         type="button"
                         onClick={() => removeTrack(index)}
-                        variant="outline"
+                        variant="destructive-outline"
                         size="sm"
-                        className="border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
+                        aria-label={`Удалить трек ${index + 1}`}
                       >
-                        <span className="material-symbols-outlined text-lg">delete</span>
+                        <span className="material-symbols-outlined text-lg" aria-hidden>delete</span>
                       </Button>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                        Название <span className="text-destructive">*</span>
-                      </Label>
+                    <FormField label="Название" htmlFor={`track-title-${index}`} required>
                       <Input
+                        id={`track-title-${index}`}
                         value={track.title}
                         onChange={(e) => updateTrack(index, "title", e.target.value)}
                         className={inputCls}
                         placeholder="Название трека"
                       />
-                    </div>
+                    </FormField>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">ISRC</Label>
+                    <FormField label="ISRC" htmlFor={`track-isrc-${index}`}>
                       <Input
+                        id={`track-isrc-${index}`}
                         value={track.isrc}
                         onChange={(e) => updateTrack(index, "isrc", e.target.value.toUpperCase())}
                         className={inputCls}
                         placeholder="USRC17607839"
                         maxLength={12}
                       />
-                    </div>
+                    </FormField>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                        Длительность <span className="text-destructive">*</span>
-                      </Label>
+                    <FormField label="Длительность" htmlFor={`track-duration-${index}`} required>
                       <Input
+                        id={`track-duration-${index}`}
                         value={track.duration}
                         onChange={(e) => updateTrack(index, "duration", e.target.value)}
                         className={inputCls}
                         placeholder="3:45"
                       />
-                    </div>
+                    </FormField>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 flex-wrap">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/dashboard/admin/releases")}
-              className="border border-white/10 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-primary"
-              disabled={isSubmitting}
-            >
-              Отмена
-            </Button>
-            <Button
-              type="submit"
-              className="rounded-lg bg-primary text-black hover:bg-emerald-400 font-bold shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02] transition-all"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Создание..." : "Создать релиз"}
-            </Button>
-          </div>
         </form>
 
-        <DashboardFooter />
       </div>
     )
 }

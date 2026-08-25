@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { revalidateStreamAnalytics } from "@/lib/hooks/use-dashboard-fetch"
 import { cn } from "@/lib/utils"
 
@@ -243,7 +244,11 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
           <p className="text-xs text-red-400 font-mono">{error}</p>
         ) : null}
 
-        <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+        {/* F-38/F-39: скролл списка с видимым скроллбаром и фейдом. */}
+        <ScrollArea
+          viewportClassName="max-h-[50vh] space-y-2 pr-1"
+          fadeClassName="from-surface-raised"
+        >
           {loading && unmapped.length === 0 ? (
             <p className="text-sm text-gray-500 font-mono uppercase tracking-widest py-8 text-center">
               Загрузка…
@@ -281,7 +286,8 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
                   />
                   <Button
                     type="button"
-                    className="h-9 shrink-0 bg-[#10b981] hover:bg-emerald-400 text-black font-bold text-[10px] uppercase tracking-widest"
+                    variant="cta"
+                    className="h-9 shrink-0 text-[10px] uppercase tracking-widest shadow-none"
                     disabled={!selection[row.trackArtist] || linking === row.trackArtist}
                     onClick={() => void handleLink(row.trackArtist)}
                   >
@@ -291,7 +297,7 @@ export function UnmappedArtistsPanel({ open, onOpenChange, onLinked }: UnmappedA
               </div>
             ))
           )}
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )

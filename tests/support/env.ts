@@ -1,25 +1,32 @@
 import { existsSync, readFileSync } from "fs"
 import { resolve } from "path"
 
+/**
+ * Разбирает один .env-файл в process.env, не перетирая уже заданные ключи.
+ * Кто загрузился первым — тот и выиграл, поэтому порядок вызовов важен.
+ */
+export function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) return
+  for (const line of readFileSync(filePath, "utf8").split("\n")) {
+    const t = line.trim()
+    if (!t || t.startsWith("#")) continue
+    const eq = t.indexOf("=")
+    if (eq <= 0) continue
+    const key = t.slice(0, eq).trim()
+    let value = t.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (process.env[key] === undefined) process.env[key] = value
+  }
+}
+
 export function loadTestEnvFiles() {
   for (const name of [".env.test.local", ".env.e2e.local", ".env.local", ".env"]) {
-    const filePath = resolve(process.cwd(), name)
-    if (!existsSync(filePath)) continue
-    for (const line of readFileSync(filePath, "utf8").split("\n")) {
-      const t = line.trim()
-      if (!t || t.startsWith("#")) continue
-      const eq = t.indexOf("=")
-      if (eq <= 0) continue
-      const key = t.slice(0, eq).trim()
-      let value = t.slice(eq + 1).trim()
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1)
-      }
-      if (process.env[key] === undefined) process.env[key] = value
-    }
+    loadEnvFile(resolve(process.cwd(), name))
   }
 }
 

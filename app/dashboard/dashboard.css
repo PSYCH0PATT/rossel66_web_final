@@ -20,27 +20,9 @@
   --input: 0 0% 14%;
   --ring: 160 84% 39%;
 
-  /* Sidebar specific colors */
-  --sidebar-background: 0 0% 6%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 160 84% 39%;
-  --sidebar-primary-foreground: 0 0% 0%;
-  --sidebar-accent: 0 0% 10%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 12%;
-  --sidebar-ring: 160 84% 39%;
-
-  /* Custom category colors for dashboard */
-  --category-green: 160 84% 39%;
-  --category-blue: 217.2 91.2% 59.8%;
-  --category-purple: 263.4 70% 50.4%;
-  --category-red: 0 72.2% 50.6%;
-  --category-amber: 47.9 95.8% 53.1%;
-  
-  /* Azure and Emerald colors */
-  --azure: 199 89% 48%;
-  --emerald: 160 84% 39%;
-  
+  /* Скругление темы shadcn. Переменные --sidebar-*, --category-*, --azure и
+     --emerald удалены на этапе 2.1: их не читал ни один компонент и ни один
+     конфиг — цвета «категорий» и лазурь живут хексами в tailwind.config. */
   --radius: 0.375rem;
 }
 
@@ -112,51 +94,15 @@
   }
 }
 
-/**
- * DS3: заголовки страниц не ужимались на узких вьюпортах.
- *
- * Крупный display-шрифт задан фиксированными классами (text-4xl / text-5xl) в
- * ~30 местах, поэтому длинный заголовок обрезался справа. Вместо правки каждого
- * экрана ограничиваем размер только на узких экранах — десктоп не трогаем.
- * `overflow-wrap: anywhere` страхует от очень длинного слова без пробелов.
- */
-@media (max-width: 640px) {
-  .dashboard-theme h1 {
-    font-size: clamp(1.5rem, 7.5vw, 2.25rem);
-    line-height: 1.1;
-    overflow-wrap: anywhere;
-  }
-}
-
 /*
- * Планшет: с md сайдбар занимает 256px, контент становится ЗАМЕТНО уже, а
- * заголовок наоборот вырастает до md:text-5xl — «ПЛЕЙЛИСТЫ» обрезался на 768px.
- * Этот брейкпоинт в дизайн-аудите не проверялся.
+ * Размера H1 здесь больше нет (B-09, docs/backlog.md). Два медиазапроса
+ * `.dashboard-theme h1` были обходным путём тех времён, когда размер задавался
+ * классами в ~30 экранах: они перебивали его на всём, что уже 1024px. После
+ * канона шапки (C-01) размер живёт в одном месте — components/ui/page-header.tsx,
+ * там же теперь и адаптив (те же ступени, те же границы). Не возвращать сюда
+ * ни размер, ни перенос: правило по тегу бьёт по любому h1 кабинета, включая
+ * чужие, и снова делает источников размера два.
  */
-@media (min-width: 641px) and (max-width: 1023px) {
-  .dashboard-theme h1 {
-    font-size: clamp(1.75rem, 4.5vw, 3rem);
-    line-height: 1.1;
-    overflow-wrap: anywhere;
-  }
-}
-
-/* Специальные стили для админских input через data-атрибут */
-input[data-admin-input="true"],
-input[data-admin-input="true"]:focus,
-input[data-admin-input="true"]:focus-visible,
-input[data-admin-input="true"]:hover,
-input[data-admin-input="true"]:active {
-  background: #1a1d24 !important;
-  background-color: #1a1d24 !important;
-}
-
-/* A11y-2: раньше здесь стояли outline:none + box-shadow:none !important —
-   поле в фокусе выглядело как обычное, и навигация с клавиатуры шла вслепую. */
-input[data-admin-input="true"]:focus-visible {
-  outline: 2px solid hsl(var(--primary)) !important;
-  outline-offset: 2px !important;
-}
 
 /* Force Radix Dialog to respect max width (matches Tailwind max-w-lg = 32rem) */
 [data-radix-dialog-content] {
@@ -183,24 +129,6 @@ input[data-admin-input="true"]:focus-visible {
   appearance: textfield;
 }
 
-/* Специальные стили для админских select через data-атрибут */
-button[data-admin-select="true"],
-button[data-admin-select="true"]:focus,
-button[data-admin-select="true"]:focus-visible,
-button[data-admin-select="true"]:hover,
-button[data-admin-select="true"]:active,
-button[data-admin-select="true"][data-state="open"],
-button[data-admin-select="true"][data-state="closed"] {
-  background: #1a1d24 !important;
-  background-color: #1a1d24 !important;
-}
-
-/* A11y-2: видимый фокус вместо прежних outline:none + box-shadow:none */
-button[data-admin-select="true"]:focus-visible {
-  outline: 2px solid hsl(var(--primary)) !important;
-  outline-offset: 2px !important;
-}
-
 /* Фикс для Dialog - гарантируем правильную ширину */
 /* Используем очень высокую специфичность чтобы переопределить globals.css */
 body [data-radix-dialog-content],
@@ -220,6 +148,15 @@ html body [data-radix-dialog-content],
 }
 
 /* Dashboard specific utility classes from HTML prototype */
+/*
+ * НЕ дубль утилиты Tailwind, хотя выглядит одинаково: `globals.css:1571`
+ * объявляет `.font-display` со СТАРЫМ литеральным именем семейства
+ * ('Syncopate'), а шрифт подключён через next/font под сгенерированным именем
+ * в `--font-syncopate`. В собранном бандле правило из globals.css идёт после
+ * утилиты Tailwind и побеждает — то есть без этой строки дисплейный шрифт
+ * подменяется фолбэком на всех экранах кабинета. Проверено визуальным
+ * прогоном при B-09: удаление ломало начертание H1 и стат-карточек.
+ */
 .font-display {
   font-family: var(--font-syncopate), sans-serif;
 }
@@ -227,20 +164,20 @@ html body [data-radix-dialog-content],
   width: 6px;
 }
 .dashboard-theme::-webkit-scrollbar-track {
-  background: #050505;
+  background: rgb(var(--surface-scrollbar-track));
 }
 .dashboard-theme::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgb(var(--surface-scrollbar-thumb));
   border-radius: 4px;
 }
 .dashboard-theme::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
+  background: rgb(var(--brand));
 }
 .dashboard-theme .glass-panel {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(10, 10, 10, 0.4);
+  background: rgb(var(--surface-page) / 0.4);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 .dashboard-theme .grid-bg {
@@ -266,15 +203,15 @@ html body [data-radix-dialog-content],
   box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
 }
 .dashboard-theme .stat-card-glass {
-  background: rgba(20, 20, 20, 0.6);
+  background: rgb(var(--surface-raised) / 0.6);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
 }
 .dashboard-theme .stat-card-glass:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(30, 30, 30, 0.7);
+  border-color: rgb(var(--brand) / 0.3);
+  background: rgb(var(--surface-hover) / 0.7);
   transform: translateY(-2px);
 }
 

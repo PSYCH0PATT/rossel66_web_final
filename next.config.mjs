@@ -16,8 +16,12 @@ const nextConfig = {
       isDev
         ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
         : "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com data:",
+      // Б-13: иконочный шрифт лежит в public/fonts, а Nunito Sans приезжает
+      // на билде через next/font — рантайм-запросов к Google больше нет ни
+      // одного. Дырка в CSP закрыта: теперь «доступа к Google нет» проверяет
+      // сам браузер, а не только договорённость.
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self' data:",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https:",
       "frame-ancestors 'none'",

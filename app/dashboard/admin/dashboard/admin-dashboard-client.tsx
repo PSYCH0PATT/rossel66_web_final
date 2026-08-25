@@ -2,14 +2,16 @@
 
 import Link from "next/link"
 import { useMemo } from "react"
-import { useRouter } from "next/navigation"
 import { ActivityFeed } from "@/components/activity-feed"
 import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
 import type { AdminDashboardPayload } from "@/lib/cached-dashboard"
-import { formatRubExact, formatRubKpiShort } from "@/lib/format-dashboard-rub"
+// C-16/F-16: суммы кабинета — через formatMoney, всегда с «₽» (вердикт 1.1).
+import { formatMoney, formatMoneyShort } from "@/lib/format-money"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DashboardFooter } from "@/components/dashboard-footer"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader, SectionHeaderLink } from "@/components/ui/section-header"
+import { StatCard } from "@/components/ui/stat-card"
 
 type StreamDay = { date: string; streams: number }
 
@@ -23,6 +25,8 @@ type Props = {
   payments: Payment[]
   reports: AdminDashboardPayload["reports"]
   initialStreamsByDay: StreamDay[]
+  /** F-18: окно метрики — то же, что просит страница аналитики. */
+  streamWindowDays: number
   initialActivities: Activity[]
 }
 
@@ -34,10 +38,9 @@ export default function AdminDashboardClient({
   payments,
   reports,
   initialStreamsByDay,
+  streamWindowDays,
   initialActivities,
 }: Props) {
-  const router = useRouter()
-
   const metrics = useMemo(() => {
     const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
     const pendingPayments = payments.filter((p) => !p.isPaid).length
@@ -53,174 +56,113 @@ export default function AdminDashboardClient({
   }, [artistCount, releaseCount, reportCount, pendingReleases, payments])
 
   return (
-    <>
-    <div className="mb-8 flex flex-col gap-3 md:mb-12 md:gap-6">
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <span className="hover:text-primary cursor-pointer transition-colors">ДАШБОРД</span>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-          <span className="text-white">Обзор</span>
-        </div>
-        <div className="flex flex-col items-start gap-4 border-b border-white/5 pb-4 md:flex-row md:items-end md:justify-between md:gap-6 md:pb-8">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-tight uppercase">
-              ДАШБОРД
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Панель управления лейблом. Обзор текущих метрик и недавней активности.
-            </p>
-          </div>
-          <div className="flex gap-3 items-center">
-            <button
-              type="button"
-              onClick={() => router.refresh()}
-              className="inline-flex min-h-11 items-center text-xs text-gray-500 hover:text-primary font-mono uppercase tracking-widest border border-white/10 rounded-lg px-3 py-2"
-            >
-              Обновить данные
-            </button>
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-500 font-mono uppercase">Обновлено</p>
-              <p className="text-white font-mono text-sm">
-                {new Date().toLocaleString("ru-RU", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    /* 0-д п.3: на desktop дашборд помещается в один экран — высота страницы
+       равна вьюпорту за вычетом полей шелла, а лента и график делят остаток
+       (Friction 1.1: «график ниже фолда», C-18). Ниже xl — обычный поток. */
+    <div className="flex flex-col gap-8 xl:h-[calc(100vh-5.5rem)]">
+      {/* 0-д п.2: «Обновить данные» и метка «Обновлено …» убраны — на read-only
+          обзоре действий нет вовсе (0-г), а страница и так перезапрашивается. */}
+      <PageHeader
+        title="ГЛАВНАЯ"
+        subtitle="Панель управления лейблом. Обзор текущих метрик и недавней активности."
+      />
 
       <TooltipProvider delayDuration={200}>
       {/* DS10/DS2: та же сетка и плотность, что у артиста — было grid-cols-1 и gap-6 на мобильном */}
-      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-12">
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon stat-dash-bg-icon--short text-white">groups</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-white/5 text-white mb-3 border border-white/10">
-                <span className="material-symbols-outlined text-xl">person</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Артисты</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.artistCount}</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6">
+        <StatCard
+          label="Артисты"
+          value={metrics.artistCount}
+          icon="person"
+          bgIcon="groups"
+          bgIconClassName="stat-dash-bg-icon--short"
+        />
 
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#0ea5e9]">album</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-accent-azure/10 text-accent-azure mb-3 border border-accent-azure/20">
-                <span className="material-symbols-outlined text-xl">library_music</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Релизы</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.releaseCount}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Релизы"
+          value={metrics.releaseCount}
+          icon="library_music"
+          bgIcon="album"
+          tone="azure"
+        />
 
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#10b981]">bar_chart</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-primary/10 text-primary mb-3 border border-primary/20">
-                <span className="material-symbols-outlined text-xl">description</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Отчёты</h3>
-            </div>
-            <div className="flex items-end justify-between">
-              <p className="text-2xl font-bold text-white font-display md:text-3xl xl:text-4xl">{metrics.reportCount}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Отчёты"
+          value={metrics.reportCount}
+          icon="description"
+          bgIcon="bar_chart"
+          tone="primary"
+        />
 
-        <div className="stat-card-glass p-4 md:p-6 rounded-2xl relative overflow-hidden group">
-          <div className="stat-dash-bg-wrap">
-            <span className="material-symbols-outlined stat-dash-bg-icon text-[#c084fc]">currency_ruble</span>
-          </div>
-          <div className="flex flex-col h-full justify-between relative z-10">
-            <div className="mb-4">
-              <span className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-500/10 text-purple-400 mb-3 border border-purple-500/20">
-                <span className="material-symbols-outlined text-xl">currency_ruble</span>
-              </span>
-              <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest">Выплаты</h3>
-            </div>
-            <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="cursor-default whitespace-nowrap text-2xl font-bold text-white font-display tabular-nums md:text-3xl xl:text-4xl">
-                    {formatRubKpiShort(metrics.totalPayments)}
-                  </p>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  className="z-[250] max-w-xs border border-white/10 bg-[rgba(15,15,15,0.96)] px-3 py-2 text-xs font-mono text-white shadow-lg"
-                >
-                  {formatRubExact(metrics.totalPayments)}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Выплаты"
+          icon="currency_ruble"
+          bgIcon="currency_ruble"
+          tone="purple"
+          bgIconClassName="text-brand-purple-fg"
+          value={
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default whitespace-nowrap">
+                  {formatMoneyShort(metrics.totalPayments)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="z-[250] max-w-xs border border-white/10 bg-surface-dialog/[0.96] px-3 py-2 text-xs font-mono text-white shadow-lg"
+              >
+                {formatMoney(metrics.totalPayments)}
+              </TooltipContent>
+            </Tooltip>
+          }
+        />
       </div>
       </TooltipProvider>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-primary rounded-full"></span>
-              ПОСЛЕДНЯЯ АКТИВНОСТЬ
-            </h2>
-            <Link
-              className="inline-flex min-h-11 items-center text-xs text-primary hover:text-emerald-300 uppercase tracking-widest font-mono border-b border-primary/30 hover:border-primary transition-all"
-              href="/dashboard/admin/activity"
-            >
-              Все события
-            </Link>
-          </div>
-          <div className="card-glass rounded-2xl overflow-hidden border border-white/5">
-            <ActivityFeed role="admin" limit={5} initialActivities={initialActivities} />
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-8 xl:grid-cols-2">
+        <div className="flex min-h-0 flex-col">
+          <SectionHeader
+            className="mb-6"
+            title="ПОСЛЕДНЯЯ АКТИВНОСТЬ"
+            action={
+              <SectionHeaderLink asChild className="inline-flex min-h-11 items-center pb-0">
+                <Link href="/dashboard/admin/activity">Все события</Link>
+              </SectionHeaderLink>
+            }
+          />
+          <div className="card-glass min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/5">
+            {/* view="main" — ровно тот вид, с которым лента приезжает с сервера
+                (dashboard/page.tsx): состав админских событий прежний, чинится
+                только рассинхрон RSC и клиентского перезапроса (Б-24). */}
+            <ActivityFeed role="admin" limit={5} view="main" initialActivities={initialActivities} />
           </div>
         </div>
 
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-accent-azure rounded-full"></span>
-              СТАТИСТИКА СТРИМОВ
-            </h2>
-            {/*
-              DS7: легенда «CURRENT / TARGET» была декоративной — на графике
-              одна серия (реальные прослушивания), никакого «target» не
-              существует, а англоязычные подписи нарушали единый язык.
-              Оставляем честную подпись одной серии.
-            */}
-            <span className="flex items-center text-[10px] font-mono uppercase tracking-widest text-gray-400">
-              <span className="mr-2 h-2 w-2 rounded-full bg-primary" />
-              Прослушивания
-            </span>
-          </div>
+          {/*
+            DS7: легенда «CURRENT / TARGET» была декоративной — на графике
+            одна серия (реальные прослушивания), никакого «target» не
+            существует, а англоязычные подписи нарушали единый язык.
+            Оставляем честную подпись одной серии.
+          */}
+          <SectionHeader
+            className="mb-6"
+            title="СТАТИСТИКА СТРИМОВ"
+            accent="azure"
+            action={
+              <span className="flex items-center text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                <span className="mr-2 h-2 w-2 rounded-full bg-primary" />
+                Прослушивания
+              </span>
+            }
+          />
 
-          <div className="card-glass rounded-2xl flex-1 border border-white/5 p-8 flex flex-col relative min-h-[360px]">
-            <StreamingChart days={30} initialStreamsByDay={initialStreamsByDay} />
+          <div className="card-glass relative flex min-h-0 flex-1 flex-col rounded-2xl border border-white/5 p-4 xl:p-6">
+            <StreamingChart days={streamWindowDays} initialStreamsByDay={initialStreamsByDay} />
           </div>
         </div>
       </div>
 
-      <DashboardFooter />
-    </>
+    </div>
   )
 }

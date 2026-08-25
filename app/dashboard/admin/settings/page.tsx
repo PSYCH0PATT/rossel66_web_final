@@ -1,9 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FormField } from "@/components/ui/form-field"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AdminInput } from "@/components/ui/admin-input"
+import { PageHeader } from "@/components/ui/page-header"
+import { SectionHeader } from "@/components/ui/section-header"
+import { Spinner } from "@/components/ui/spinner"
+import { StatusBadge } from "@/components/ui/status-badge"
 import {
   Dialog,
   DialogContent,
@@ -12,11 +28,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import Link from "next/link"
 import { fetchAllUsersFromApi } from "@/lib/fetch-all-users"
 import { fetchAllArtistsFromApi } from "@/lib/fetch-all-artists"
 import { useDashboardProfile } from "@/components/dashboard-user-context"
-import { DashboardFooter } from "@/components/dashboard-footer"
 
 interface Backup {
   id: string
@@ -27,7 +41,7 @@ interface Backup {
   filesIncluded: string[]
 }
 
-type Banner = { variant: "success" | "error" | "info"; message: string }
+type BannerState = { variant: "success" | "error" | "info"; message: string }
 
 const inputClass =
   "h-11 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -43,7 +57,7 @@ export default function AdminSettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [backups, setBackups] = useState<Backup[]>([])
   const [loadingBackups, setLoadingBackups] = useState(false)
-  const [banner, setBanner] = useState<Banner | null>(null)
+  const [banner, setBanner] = useState<BannerState | null>(null)
   const [restoreTarget, setRestoreTarget] = useState<{ id: string; filename: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; filename: string } | null>(null)
   const [restoreBusy, setRestoreBusy] = useState(false)
@@ -304,60 +318,39 @@ export default function AdminSettingsPage() {
     }
   }
 
-  const bannerStyles =
-    banner?.variant === "success"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-      : banner?.variant === "error"
-        ? "border-red-500/30 bg-red-500/10 text-red-200"
-        : "border-white/15 bg-white/5 text-gray-300"
-
   return (
     <>
     <div className="space-y-8">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-            <Link href="/dashboard/admin/dashboard" className="hover:text-primary cursor-pointer transition-colors">
-              ДАШБОРД
-            </Link>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Настройки</span>
-          </div>
-          <div className="border-b border-white/5 pb-8">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight uppercase">Настройки</h1>
-            <p className="text-sm text-gray-400 font-light mt-2">Пароль и управление данными</p>
-          </div>
-        </div>
+        <PageHeader title="Настройки" subtitle="Пароль и управление данными" />
 
+        {/* C-15: баннер из кита — кнопка закрытия больше не копируется по месту */}
         {banner && (
-          <div className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2 ${bannerStyles}`} role="status">
-            <span className="material-symbols-outlined flex-shrink-0">
-              {banner.variant === "success" ? "check_circle" : banner.variant === "error" ? "error" : "info"}
-            </span>
-            <span>{banner.message}</span>
-            <button
-              type="button"
-              onClick={() => setBanner(null)}
-              className="ml-auto text-gray-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-              aria-label="Закрыть уведомление"
-            >
-              <span className="material-symbols-outlined text-lg">close</span>
-            </button>
-          </div>
+          <Banner
+            variant={banner.variant === "error" ? "danger" : banner.variant}
+            onClose={() => setBanner(null)}
+          >
+            {banner.message}
+          </Banner>
         )}
 
-        <div className="grid grid-cols-1 md:max-w-md gap-6">
+        {/* C-18/F-10: секции идут в один ряд — раньше карточка пароля занимала
+            треть ширины, а справа от неё было пусто. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
           <div className="card-glass rounded-2xl border border-white/5 p-6">
-            <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-              <span className="w-1.5 h-6 bg-accent-azure rounded-full" />
-              <span className="material-symbols-outlined text-accent-azure text-xl">lock</span>
-              Пароль
-            </h2>
+            {/* F-59: полосы секций одного цвета — раньше азур и зелёный без логики */}
+            <SectionHeader
+              className="mb-6"
+              size="sm"
+              title={
+                <>
+                  <span className="material-symbols-outlined text-primary text-xl" aria-hidden>lock</span>
+                  Пароль
+                </>
+              }
+            />
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password" className="text-xs font-mono uppercase text-gray-500">
-                  Текущий пароль
-                </Label>
-                <AdminInput
+              <FormField label="Текущий пароль" htmlFor="current-password">
+                <Input
                   id="current-password"
                   type="password"
                   value={currentPassword}
@@ -365,12 +358,9 @@ export default function AdminSettingsPage() {
                   className={inputClass}
                   autoComplete="current-password"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password" className="text-xs font-mono uppercase text-gray-500">
-                  Новый пароль
-                </Label>
-                <AdminInput
+              </FormField>
+              <FormField label="Новый пароль" htmlFor="new-password">
+                <Input
                   id="new-password"
                   type="password"
                   value={newPassword}
@@ -378,12 +368,9 @@ export default function AdminSettingsPage() {
                   className={inputClass}
                   autoComplete="new-password"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-xs font-mono uppercase text-gray-500">
-                  Подтверждение
-                </Label>
-                <AdminInput
+              </FormField>
+              <FormField label="Подтверждение" htmlFor="confirm-password">
+                <Input
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
@@ -391,25 +378,40 @@ export default function AdminSettingsPage() {
                   className={inputClass}
                   autoComplete="new-password"
                 />
-              </div>
-              <Button type="button" onClick={handlePasswordChange} className="w-full rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
+              </FormField>
+              {/* 0-г/C-03: экран редкий — submit'ы здесь outline, filled нет ни одной. */}
+              <Button
+                type="button"
+                onClick={handlePasswordChange}
+                variant="outline"
+                className="w-full rounded-lg border-white/15 text-gray-200 hover:bg-white/5"
+              >
                 Обновить пароль
               </Button>
             </div>
           </div>
-        </div>
 
         <div className="card-glass rounded-2xl border border-white/5 p-6 md:p-8">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2 mb-6">
-            <span className="w-1.5 h-6 bg-primary rounded-full" />
-            <span className="material-symbols-outlined text-primary text-xl">database</span>
-            Управление данными
-          </h2>
+          <SectionHeader
+            className="mb-6"
+            size="sm"
+            title={
+              <>
+                <span className="material-symbols-outlined text-primary text-xl" aria-hidden>database</span>
+                Управление данными
+              </>
+            }
+          />
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-mono uppercase text-gray-500">Резервное копирование</Label>
-                <Button type="button" onClick={handleCreateBackup} className="w-full rounded-lg bg-primary text-black hover:bg-primary/90 font-semibold">
+                <Button
+                  type="button"
+                  onClick={handleCreateBackup}
+                  variant="outline"
+                  className="w-full rounded-lg border-white/15 text-gray-200 hover:bg-white/5"
+                >
                   <span className="material-symbols-outlined text-lg mr-2">save</span>
                   Создать бэкап
                 </Button>
@@ -434,9 +436,9 @@ export default function AdminSettingsPage() {
                 <Button
                   type="button"
                   onClick={loadBackups}
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="rounded-lg border-white/15 text-gray-400 hover:bg-white/5"
+                  className="rounded-lg text-gray-400 hover:text-white"
                 >
                   <span className="material-symbols-outlined text-base mr-1">refresh</span>
                   Обновить
@@ -444,39 +446,40 @@ export default function AdminSettingsPage() {
               </div>
 
               {loadingBackups ? (
-                <div className="text-center py-10 text-gray-500 text-sm font-mono">Загрузка...</div>
-              ) : backups.length === 0 ? (
-                <div className="text-center py-10 text-gray-500 text-sm border border-dashed border-white/10 rounded-xl">
-                  Нет резервных копий. Создайте первый бэкап.
+                <div className="flex justify-center py-10">
+                  <Spinner label="Загрузка…" />
                 </div>
+              ) : backups.length === 0 ? (
+                <EmptyState
+                  className="py-10 border border-dashed border-white/10 rounded-xl"
+                  title="Нет резервных копий"
+                  description="Создайте первый бэкап."
+                />
               ) : (
-                <div className="rounded-2xl border border-white/10 overflow-x-auto table-glass">
-                  <table className="w-full text-sm min-w-[560px]">
-                    <thead>
-                      <tr className="text-left text-xs font-mono uppercase text-gray-500 border-b border-white/10">
-                        <th className="p-3">Дата</th>
-                        <th className="p-3">Размер</th>
-                        <th className="p-3">Тип</th>
-                        <th className="p-3 text-right">Действия</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="rounded-2xl border border-white/10 overflow-hidden table-glass">
+                  <DataTable tableClassName="min-w-[560px]">
+                    <DataTableHeader>
+                      <DataTableHeadRow>
+                        <DataTableHeadCell>Дата</DataTableHeadCell>
+                        <DataTableHeadCell>Размер</DataTableHeadCell>
+                        <DataTableHeadCell>Тип</DataTableHeadCell>
+                        <DataTableHeadCell className="text-right">Действия</DataTableHeadCell>
+                      </DataTableHeadRow>
+                    </DataTableHeader>
+                    <DataTableBody>
                       {backups.map((backup) => (
-                        <tr key={backup.id} className="border-b border-white/5 hover:bg-white/[0.04] table-row-hover">
-                          <td className="p-3 text-white [font-variant-numeric:tabular-nums]">{formatDate(backup.createdAt)}</td>
-                          <td className="p-3 text-gray-400">{formatFileSize(backup.size)}</td>
-                          <td className="p-3">
-                            <span
-                              className={`release-status-badge text-[0.65rem] ${
-                                backup.type === "auto"
-                                  ? "bg-accent-azure/15 text-accent-azure border-accent-azure/30"
-                                  : "bg-primary/15 text-primary border-primary/30"
-                              } border`}
+                        <DataTableRow key={backup.id} className="table-row-hover">
+                          <DataTableCell className="text-white [font-variant-numeric:tabular-nums]">{formatDate(backup.createdAt)}</DataTableCell>
+                          <DataTableCell className="text-gray-400">{formatFileSize(backup.size)}</DataTableCell>
+                          <DataTableCell>
+                            <StatusBadge
+                              variant={backup.type === "auto" ? "delivered" : "live"}
+                              withIcon={false}
                             >
                               {backup.type === "auto" ? "Авто" : "Ручной"}
-                            </span>
-                          </td>
-                          <td className="p-3">
+                            </StatusBadge>
+                          </DataTableCell>
+                          <DataTableCell>
                             <div className="flex justify-end gap-2">
                               <Button
                                 type="button"
@@ -501,19 +504,19 @@ export default function AdminSettingsPage() {
                               <Button
                                 type="button"
                                 onClick={() => setDeleteTarget({ id: backup.id, filename: backup.filename })}
-                                variant="outline"
+                                variant="destructive-outline"
                                 size="sm"
                                 aria-label="Удалить бэкап"
-                                className="rounded-lg border-red-500/40 h-9 w-9 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11 text-red-400 hover:bg-red-500/10"
+                                className="rounded-lg h-9 w-9 p-0 max-md:h-11 max-md:w-11 pointer-coarse:h-11 pointer-coarse:w-11"
                               >
                                 <span className="material-symbols-outlined text-lg">delete</span>
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </DataTableCell>
+                        </DataTableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </DataTableBody>
+                  </DataTable>
                 </div>
               )}
 
@@ -526,12 +529,11 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         </div>
-
-        <DashboardFooter />
+        </div>
       </div>
 
       <Dialog open={!!restoreTarget} onOpenChange={(o) => !o && setRestoreTarget(null)}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+        <DialogContent className="bg-surface-dialog border border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase">Восстановление</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -544,7 +546,7 @@ export default function AdminSettingsPage() {
             </Button>
             <Button
               type="button"
-              className="bg-primary text-black hover:bg-primary/90"
+              variant="cta"
               onClick={confirmRestore}
               disabled={restoreBusy}
             >
@@ -555,7 +557,7 @@ export default function AdminSettingsPage() {
       </Dialog>
 
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="bg-[#0f0f0f] border border-white/10 text-white sm:max-w-md">
+        <DialogContent className="bg-surface-dialog border border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl uppercase text-red-400">Удалить бэкап</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -568,8 +570,7 @@ export default function AdminSettingsPage() {
             </Button>
             <Button
               type="button"
-              variant="outline"
-              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+              variant="destructive-outline"
               onClick={confirmDeleteBackup}
               disabled={deleteBusy}
             >

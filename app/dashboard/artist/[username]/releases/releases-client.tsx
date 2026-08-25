@@ -6,6 +6,24 @@ import Image from "next/image"
 import Link from "next/link"
 import { ProfileFilter } from "@/components/profile-filter"
 import { useReleasesList } from "@/lib/hooks/use-dashboard-fetch"
+import { Button } from "@/components/ui/button"
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeadCell,
+  DataTableHeader,
+  DataTableHeadRow,
+  DataTableResponsive,
+  DataTableRow,
+} from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { Pagination } from "@/components/ui/pagination"
+import { SearchInput } from "@/components/ui/search-input"
+import { Spinner } from "@/components/ui/spinner"
+import { ReleaseStatusBadge } from "@/components/ui/status-badge"
+import { releaseTypeLabel } from "@/lib/release-status"
 
 interface Release {
   id: string
@@ -16,162 +34,19 @@ interface Release {
   upc?: string
   releaseDate: string
   status?: string
-  tracks?: any[]
   trackCount?: number
   primaryIsrc?: string
   featuredArtistNames?: string[]
-  artistDisplay: string
 }
 
-/**
- * Кто указан в колонке «Артисты».
- *
- * Основным берётся артист самого релиза (`artistName` из API), а не владелец
- * кабинета: в объединённом кабинете группы связанных профилей релизы принадлежат
- * разным профилям, и подпись именем главного была бы неверной.
- */
-function buildArtistDisplay(release: any, fallbackName: string): string {
-  const mainName = release.artistName || fallbackName
-  const featuredNames: string[] = []
-  if (Array.isArray(release.featuredArtistNames)) {
-    for (const nm of release.featuredArtistNames) {
-      if (nm) featuredNames.push(nm)
-    }
-  }
-  if (Array.isArray(release.tracks)) {
-    for (const t of release.tracks as any[]) {
-      if (Array.isArray(t?.featuredArtistNames)) {
-        for (const nm of t.featuredArtistNames) {
-          if (nm && !featuredNames.includes(nm)) featuredNames.push(nm)
-        }
-      }
-    }
-  }
-  return featuredNames.length ? `${mainName}, ${featuredNames.join(", ")}` : mainName
-}
-
-type StatusVariant = "live" | "delivered" | "moderation" | "draft" | "rejected"
-
-function getStatusVariant(status?: string): StatusVariant {
-  switch (status) {
-    case "Доставлен":
-    case "released":
-    case "Одобрен":
-      return "live"
-    case "В доставке":
-    case "delivery":
-      return "delivered"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "moderation"
-    case "Отклонен":
-    case "Отклонён":
-    case "Снят":
-      return "rejected"
-    default:
-      return "draft"
-  }
-}
-
-function getStatusLabel(status?: string): string {
-  switch (status) {
-    case "Доставлен":
-      return "Доставлен"
-    case "released":
-      return "В релизе"
-    case "Одобрен":
-      return "Одобрен"
-    case "В доставке":
-    case "delivery":
-      return "В доставке"
-    case "Модерируется":
-    case "На модерации":
-    case "moderation":
-    case "scheduled":
-      return "На модерации"
-    case "Отклонен":
-    case "Отклонён":
-      return "Отклонён"
-    case "Снят":
-      return "Снят"
-    default:
-      if (!status || status === "draft") return "Черновик"
-      return status
-  }
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const variant = getStatusVariant(status)
-  const label = getStatusLabel(status)
-
-  if (variant === "live") {
-    return (
-      <span className="release-status-badge release-status-badge--live">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-        {label}
-      </span>
-    )
-  }
-  if (variant === "delivered") {
-    return (
-      <span className="release-status-badge release-status-badge--delivered">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>check</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "moderation") {
-    return (
-      <span className="release-status-badge release-status-badge--moderation">
-        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 10 }}>sync</span>
-        {label}
-      </span>
-    )
-  }
-  if (variant === "rejected") {
-    return (
-      <span className="release-status-badge release-status-badge--rejected">
-        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>block</span>
-        {label}
-      </span>
-    )
-  }
-  return (
-    <span className="release-status-badge release-status-badge--draft">
-      <span className="material-symbols-outlined" style={{ fontSize: 10 }}>edit</span>
-      {label}
-    </span>
-  )
-}
-
-function primaryIsrc(tracks: any[] | undefined): string | undefined {
-  if (!Array.isArray(tracks)) return undefined
-  const t = tracks.find((x) => x?.isrc)
-  return t?.isrc as string | undefined
-}
-
-function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
-  const pages: (number | "...")[] = []
-  if (page <= 3) {
-    pages.push(1, 2, 3, "...", totalPages)
-  } else if (page >= totalPages - 2) {
-    pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages)
-  } else {
-    pages.push(1, "...", page - 1, page, page + 1, "...", totalPages)
-  }
-  return pages
-}
+const RELEASE_FORMS = ["релиз", "релиза", "релизов"] as const
 
 interface Props {
   artistId: string
   username: string
-  mainArtistName: string
 }
 
-export default function ReleasesClient({ artistId, username, mainArtistName }: Props) {
+export default function ReleasesClient({ artistId, username }: Props) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [q, setQ] = useState("")
@@ -204,13 +79,11 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
       upc: release.upc as string | undefined,
       releaseDate: String(release.releaseDate),
       status: release.status as string | undefined,
-      tracks: (release.tracks as any[]) ?? [],
       trackCount: release.trackCount as number | undefined,
       primaryIsrc: release.primaryIsrc as string | undefined,
       featuredArtistNames: release.featuredArtistNames as string[] | undefined,
-      artistDisplay: buildArtistDisplay(release, mainArtistName),
     }))
-  }, [data, mainArtistName])
+  }, [data])
 
   const loading = isLoading
   const total = typeof data?.total === "number" ? data.total : releases.length
@@ -224,44 +97,28 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
     }, 300)
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const to = Math.min(page * pageSize, total)
-  const pageNumbers = getPageNumbers(page, totalPages)
-
   // Единый русский формат DD.MM.YYYY (поддерживает и "DD.MM.YYYY", и ISO),
   // без английских «May 14, 2026» и «Invalid Date».
-  const formatDate = (dateStr: string) => formatDateRu(dateStr, "--")
+  const formatDate = (dateStr: string) => formatDateRu(dateStr, "—")
+
+  const releaseHref = (id: string) => `/dashboard/artist/${username}/releases/${id}`
+
+  /*
+   * F-14 в списке считается по `trackCount` из ответа API, а не по `tracks`:
+   * списочный DTO треки не отдаёт (lib/release-list-dto.ts), поэтому прежний
+   * `releaseTrackCount(release.tracks)` всегда получал ноль — релиз с двумя
+   * треками показывался в списке как «Нет данных», а на своей карточке как
+   * «Доставлен». В админском списке это поле и так использовалось.
+   */
 
   return (
-    <div className="max-w-full p-0 pb-6 md:pb-0">
-      <div className="flex flex-col gap-6 mb-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center text-xs text-gray-500 font-mono uppercase tracking-widest space-x-2">
-          <Link
-            href={`/dashboard/artist/${username}/dashboard`}
-            className="hover:text-[#10b981] cursor-pointer transition-colors"
-          >
-            ДАШБОРД
-          </Link>
-          <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
-            chevron_right
-          </span>
-          <span className="text-white">Релизы</span>
-        </div>
-
-        {/* Page header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-8">
-          <div>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
-              РЕЛИЗЫ
-            </h1>
-            <p className="text-sm text-gray-400 font-light max-w-md">
-              Управляйте дискографией, отслеживайте статус доставки и мониторинг дистрибуции на всех цифровых платформах.
-            </p>
-          </div>
-
-          <div className="flex w-full flex-col gap-2 md:w-auto md:shrink-0 md:flex-row md:justify-end">
+    <div className="space-y-8">
+      <PageHeader
+        title="РЕЛИЗЫ"
+        subtitle="Ваши релизы и статусы доставки."
+        actionsClassName="w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end"
+        actions={
+          <>
             <ProfileFilter
               value={profileId}
               onChange={(next) => {
@@ -270,280 +127,189 @@ export default function ReleasesClient({ artistId, username, mainArtistName }: P
               }}
               className="w-full md:w-56"
             />
-            <div className="relative group w-full md:w-64">
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Поиск по названию или UPC..."
-                className="block w-full min-w-0 rounded-lg border border-white/10 bg-black/40 p-2.5 pl-10 font-mono text-sm text-white outline-none transition-all placeholder-gray-600 focus:border-[#10b981] focus:ring-[#10b981] group-hover:border-white/20"
-              />
-              <span
-                className="material-symbols-outlined absolute left-3 top-2.5 text-gray-600 group-hover:text-gray-400 transition-colors"
-                style={{ fontSize: 18 }}
-              >
-                search
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+            <SearchInput
+              value={q}
+              onValueChange={handleSearch}
+              placeholder="Название или UPC"
+              containerClassName="w-full md:w-64"
+            />
+          </>
+        }
+      />
 
       {/* Table container */}
       <div className="w-full rounded-xl overflow-hidden table-glass shadow-2xl relative">
         {/* Top gradient accent line */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
 
         <div>
           {loading && releases.length === 0 ? (
             <div className="flex justify-center items-center py-20">
-              <span className="material-symbols-outlined animate-spin text-[#10b981] text-4xl">sync</span>
+              <Spinner size="lg" />
             </div>
           ) : releases.length === 0 ? (
-            <div className="py-20 text-center">
-              <span className="material-symbols-outlined text-5xl text-gray-600 block mb-4">library_music</span>
-              {debouncedQ ? (
-                <>
-                  <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">Ничего не найдено</p>
-                  <button
-                    onClick={() => handleSearch("")}
-                    className="mt-4 text-[#10b981] font-mono text-xs uppercase tracking-wider hover:underline"
-                  >
+            <EmptyState
+              className="py-20"
+              icon="library_music"
+              title={debouncedQ ? "Ничего не найдено" : "Пока нет релизов"}
+              action={
+                debouncedQ ? (
+                  <Button variant="outline" onClick={() => handleSearch("")}>
                     Сбросить поиск
-                  </button>
-                </>
-              ) : (
-                <p className="text-gray-500 font-mono text-sm uppercase tracking-wider">Пока нет релизов</p>
-              )}
-            </div>
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
-            <>
-              {/* Mobile: карточки вместо таблицы */}
-              <div className="space-y-3 p-3 md:hidden">
-                {releases.map((release) => {
-                  const isrc = release.primaryIsrc ?? primaryIsrc(release.tracks)
-                  return (
-                    <Link
-                      key={release.id}
-                      href={`/dashboard/artist/${username}/releases/${release.id}`}
-                      className="block rounded-xl border border-white/5 bg-[#0a0a0a]/50 p-4 backdrop-blur-sm transition-colors hover:border-white/10"
-                    >
-                      <div className="flex gap-3">
-                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10">
-                          {release.coverUrl ? (
-                            <Image
-                              src={release.coverUrl}
-                              alt={release.title}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-[#1a1a1a]">
-                              <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 28 }}>
-                                album
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-bold leading-snug text-white">{release.title}</div>
-                          {release.type ? (
-                            <div className="mt-0.5 font-mono text-xs uppercase tracking-wider text-gray-500">
-                              {release.type}
-                            </div>
-                          ) : null}
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <p className="text-sm text-gray-300 truncate">{release.artistDisplay}</p>
-                            <div className="shrink-0">
-                              <StatusBadge status={release.status} />
-                            </div>
-                          </div>
-                        </div>
-                        <span className="material-symbols-outlined shrink-0 text-gray-500" style={{ fontSize: 22 }}>
-                          chevron_right
-                        </span>
-                      </div>
-                      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 border-t border-white/5 pt-3 text-[11px] font-mono">
-                        <dt className="text-gray-500 uppercase tracking-wider">Дата</dt>
-                        <dd className="text-right text-gray-200 tabular-nums">
-                          {release.releaseDate ? formatDate(release.releaseDate) : "—"}
-                        </dd>
-                        <dt className="text-gray-500 uppercase tracking-wider">UPC</dt>
-                        <dd className="break-all text-right text-gray-300">{release.upc || "—"}</dd>
-                        <dt className="text-gray-500 uppercase tracking-wider">ISRC</dt>
-                        <dd className="break-all text-right text-gray-300">{isrc || "—"}</dd>
-                      </dl>
-                    </Link>
-                  )
-                })}
-              </div>
-
-              <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="text-xs uppercase tracking-widest text-gray-500 border-b border-white/10 bg-black/40">
-                  <th className="px-6 py-5 font-mono">Обложка</th>
-                  <th className="px-6 py-5 font-mono">Название / версия</th>
-                  <th className="px-6 py-5 font-mono">Артисты</th>
-                  <th className="px-6 py-5 font-mono">UPC</th>
-                  <th className="px-6 py-5 font-mono">Дата</th>
-                  <th className="px-6 py-5 font-mono">Статус</th>
-                  <th className="px-6 py-5 font-mono text-right">Действие</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {releases.map((release) => (
-                  <tr
-                    key={release.id}
-                    className="group border-b border-white/5 transition-all duration-200 table-row-hover hover:border-l-2 hover:border-l-[#10b981]/50 cursor-pointer"
-                  >
-                    {/* Cover */}
-                    <td className="px-6 py-4">
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-[#10b981]/50 transition-all flex-shrink-0">
-                        {release.coverUrl ? (
-                          <Image
-                            src={release.coverUrl}
-                            alt={release.title}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
-                            <span className="material-symbols-outlined text-gray-600" style={{ fontSize: 22 }}>album</span>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center backdrop-blur-[1px]">
-                          <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>play_arrow</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Title / Version */}
-                    <td className="px-6 py-4">
-                      <Link href={`/dashboard/artist/${username}/releases/${release.id}`}>
-                        <div className="font-bold text-white group-hover:text-[#10b981] transition-colors leading-snug">
-                          {release.title}
-                        </div>
-                        {release.type && (
-                          <div className="text-xs text-gray-500 mt-0.5 font-mono">{release.type}</div>
-                        )}
-                      </Link>
-                    </td>
-
-                    {/* Artists */}
-                    <td className="px-6 py-4">
-                      <div className="text-gray-300">{release.artistDisplay}</div>
-                    </td>
-
-                    {/* UPC */}
-                    <td className="px-6 py-4 font-mono text-xs text-gray-400 tracking-wider">
-                      {release.upc || "--"}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-6 py-4 text-gray-400 font-mono text-xs">
-                      {release.releaseDate ? formatDate(release.releaseDate) : "--"}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4">
-                      <StatusBadge status={release.status} />
-                    </td>
-
-                    {/* Action */}
-                    <td className="px-6 py-4 text-right">
+            <DataTableResponsive
+              cards={
+                /* Mobile: карточки вместо таблицы */
+                <div className="space-y-3 p-3">
+                  {releases.map((release) => {
+                    const isrc = release.primaryIsrc
+                    return (
                       <Link
-                        href={`/dashboard/artist/${username}/releases/${release.id}`}
-                        className="inline-flex text-gray-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+                        key={release.id}
+                        href={releaseHref(release.id)}
+                        className="block rounded-xl border border-white/5 bg-surface-page/50 p-4 backdrop-blur-sm transition-colors hover:border-white/10"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>more_horiz</span>
+                        <div className="flex gap-3">
+                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10">
+                            {release.coverUrl ? (
+                              <Image
+                                src={release.coverUrl}
+                                alt={release.title}
+                                fill
+                                className="object-cover"
+                                sizes="64px"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-surface-overlay">
+                                <span className="material-symbols-outlined text-[28px] leading-none text-gray-600">
+                                  album
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold leading-snug text-white">{release.title}</div>
+                            {/*
+                              F-73: слот версии рендерится всегда — при пустом
+                              `type` он остаётся пустым, но высоту держит, и
+                              карточки в списке перестают прыгать.
+                            */}
+                            <div className="mt-0.5 min-h-4 font-mono text-xs uppercase tracking-wider text-gray-500">
+                              {releaseTypeLabel(release.type)}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
+                            </div>
+                          </div>
+                          <span className="material-symbols-outlined shrink-0 text-[22px] leading-none text-gray-500">
+                            chevron_right
+                          </span>
+                        </div>
+                        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 border-t border-white/5 pt-3 text-[11px] font-mono">
+                          <dt className="text-gray-500 uppercase tracking-wider">Дата</dt>
+                          <dd className="text-right text-gray-200 tabular-nums">
+                            {release.releaseDate ? formatDate(release.releaseDate) : "—"}
+                          </dd>
+                          <dt className="text-gray-500 uppercase tracking-wider">UPC</dt>
+                          <dd className="break-all text-right text-gray-300">{release.upc || "—"}</dd>
+                          <dt className="text-gray-500 uppercase tracking-wider">ISRC</dt>
+                          <dd className="break-all text-right text-gray-300">{isrc || "—"}</dd>
+                        </dl>
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-              </div>
-            </>
+                    )
+                  })}
+                </div>
+              }
+              table={
+                <DataTable tableClassName="text-left">
+                  <DataTableHeader>
+                    <DataTableHeadRow className="bg-black/40">
+                      <DataTableHeadCell className="px-6 py-5">Обложка</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-5">Название / версия</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-5">UPC</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-5">Дата</DataTableHeadCell>
+                      <DataTableHeadCell className="px-6 py-5">Статус</DataTableHeadCell>
+                    </DataTableHeadRow>
+                  </DataTableHeader>
+                  <DataTableBody className="text-sm">
+                    {releases.map((release) => (
+                      // F-31: строка кликабельна целиком, а не «попади в название».
+                      <DataTableRow key={release.id} href={releaseHref(release.id)} className="group">
+                        <DataTableCell className="px-6 py-4">
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-brand/50 transition-all flex-shrink-0">
+                            {release.coverUrl ? (
+                              <Image
+                                src={release.coverUrl}
+                                alt={release.title}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-surface-overlay flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[22px] leading-none text-gray-600">
+                                  album
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </DataTableCell>
+
+                        <DataTableCell className="px-6 py-4">
+                          <div className="font-bold text-white transition-colors group-hover:text-brand leading-snug">
+                            {release.title}
+                          </div>
+                          {/* F-73: тот же фиксированный слот версии, что и в карточках. */}
+                          <div className="min-h-4 text-xs text-gray-500 mt-0.5 font-mono">
+                            {releaseTypeLabel(release.type)}
+                          </div>
+                        </DataTableCell>
+
+                        <DataTableCell className="px-6 py-4 font-mono text-xs text-gray-400 tracking-wider">
+                          {release.upc || "—"}
+                        </DataTableCell>
+
+                        <DataTableCell className="px-6 py-4 text-gray-400 font-mono text-xs">
+                          {release.releaseDate ? formatDate(release.releaseDate) : "—"}
+                        </DataTableCell>
+
+                        <DataTableCell className="px-6 py-4">
+                          <ReleaseStatusBadge status={release.status} trackCount={release.trackCount ?? 0} />
+                        </DataTableCell>
+
+                      </DataTableRow>
+                    ))}
+                  </DataTableBody>
+                </DataTable>
+              }
+            />
           )}
         </div>
 
-        {/* Pagination footer (inside table container) */}
-        <div className="px-6 py-4 border-t border-white/5 flex flex-wrap justify-between items-center gap-3 bg-black/20">
-          <div className="text-xs text-gray-500 font-mono uppercase">
-            {loading
-              ? "Loading..."
-              : `Showing ${from}–${to} of ${total} releases`}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Page size selector */}
-            <div className="flex items-center gap-1 mr-2">
-              {([20, 50, 100] as const).map((size) => (
-                <button
-                  key={size}
-                  onClick={() => { setPageSize(size); setPage(1) }}
-                  className={`px-2 py-1 rounded text-xs border transition-colors font-mono ${
-                    pageSize === size
-                      ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
-                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-
-            {/* Page navigation */}
-            <button
-              disabled={loading || page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-
-            {pageNumbers.map((p, i) =>
-              p === "..." ? (
-                <span key={`ellipsis-${i}`} className="text-gray-600 text-xs font-mono px-1">…</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p as number)}
-                  className={`px-3 py-1 rounded text-xs border transition-colors font-mono ${
-                    p === page
-                      ? "bg-[#10b981]/20 border-[#10b981]/30 text-[#10b981]"
-                      : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            )}
-
-            <button
-              disabled={loading || page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 rounded bg-white/5 border border-white/5 text-gray-400 text-xs hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
+        {/*
+          C-06: счётчик, размер страницы и навигация — один компонент.
+          При одной странице навигация скрывается целиком (F-26), счётчик
+          остаётся единственным (F-27) и по-русски (F-11).
+        */}
+        <div className="px-6 py-4 border-t border-white/5 bg-black/20">
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            loading={loading}
+            itemForms={RELEASE_FORMS}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setPage(1)
+            }}
+          />
         </div>
       </div>
 
-      {/* Footer status line */}
-      <div className="mt-12 mb-6 flex justify-between items-center pt-6 text-sm md:mb-0">
-        <div className="text-gray-500 font-mono flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#10b981] inline-block animate-pulse" />
-          System Online
-        </div>
-        <div className="text-gray-400 font-mono">
-          TOTAL RELEASES:{" "}
-          <span className="text-white font-bold">{total}</span>
-        </div>
-      </div>
     </div>
   )
 }

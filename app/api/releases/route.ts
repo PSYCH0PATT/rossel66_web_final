@@ -223,20 +223,14 @@ export async function POST(request: Request) {
       (created) =>
         artist
           ? [
+              // F-03: одна запись на событие — пара «артисту + админу»
+              // задваивала журнал одним таймстампом.
               {
                 type: "release_added",
                 userId: artist.id,
                 userRole: "artist",
                 title: "Добавлен новый релиз",
                 description: `Релиз "${created.title}" успешно добавлен`,
-                metadata: { releaseId: created.id, releaseTitle: created.title },
-              },
-              {
-                type: "release_added",
-                userId: "system",
-                userRole: "admin",
-                title: "Добавлен новый релиз",
-                description: `Релиз "${created.title}" добавлен (артист: ${artist.name || artist.username})`,
                 metadata: {
                   releaseId: created.id,
                   releaseTitle: created.title,

@@ -66,24 +66,20 @@ async function assignArtistData(username: string) {
   if (assignedReleases > 0) {
     const artistReleases = await getReleasesByArtistId(artist.id)
     for (const release of artistReleases) {
-      // Уведомление для артиста
+      // F-03: одна запись на событие вместо пары «артисту + админу».
       await addActivity({
         type: 'release_added',
         userId: artist.id,
         userRole: 'artist',
         title: 'Добавлен релиз',
         description: `Добавлен релиз "${release.title}"`,
-        metadata: { artistId: artist.id, releaseId: release.id, releaseTitle: release.title, manual: true }
-      })
-      
-      // Уведомление для админа
-      await addActivity({
-        type: 'release_added',
-        userId: 'system',
-        userRole: 'admin',
-        title: 'Добавлен релиз',
-        description: `Добавлен релиз "${release.title}" (артист: ${artist.name || artist.username})`,
-        metadata: { artistId: artist.id, artistName: artist.name, releaseId: release.id, releaseTitle: release.title, manual: true }
+        metadata: {
+          artistId: artist.id,
+          artistName: artist.name,
+          releaseId: release.id,
+          releaseTitle: release.title,
+          manual: true,
+        }
       })
     }
   }

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
+import { ARTIST_FEED_VIEW, isActivityView } from '@/lib/activity-views'
 import { getSessionUser, requireAuth, requireAdmin } from '@/lib/server-auth'
 
 // GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
+// `view=main|playlists|signatures|errors|all` — виды журнала из решения 0-б
+// (docs/ia-decisions.md): дефолт экрана «Главное» вместо всех 470 записей.
 export async function GET(request: NextRequest) {
   try {
     const denied = await requireAuth(request)
@@ -13,8 +16,20 @@ export async function GET(request: NextRequest) {
     let userId = searchParams.get('userId') || undefined
     const role = (searchParams.get('role') as 'artist' | 'admin') || undefined
 
-    if (session?.role === 'artist') {
-      userId = session.id
+    // F-04: лента кабинета собирается по группе связанных профилей и по
+    // metadata.artistId — события про релизы и отчёты пишет система, и артист
+    // указан в них только метаданными. Артист всегда видит только свою группу;
+    // админ, открывший кабинет артиста, видит ровно ту же ленту.
+    // `cabinet=1` ставит только лента кабинета (components/activity-feed.tsx):
+    // журнал админа на /activity остаётся строгим фильтром «кто сделал».
+    const cabinetMode = searchParams.get('cabinet') === '1'
+    let artistGroupIds: string[] | undefined
+    const cabinetOwnerId =
+      session?.role === 'artist' ? session.id : cabinetMode ? userId : undefined
+    if (cabinetOwnerId) {
+      const { getArtistGroupIds } = await import('@/lib/artist-links')
+      artistGroupIds = await getArtistGroupIds(cabinetOwnerId)
+      userId = undefined
     }
     // H5: не фильтруем по неполному хардкод-вайтлисту (иначе валидный, но не
     // перечисленный тип отбрасывался → фильтр не применялся → возвращались ВСЕ).
@@ -23,15 +38,30 @@ export async function GET(request: NextRequest) {
     const types: ActivityType[] | undefined = typeParam.length
       ? (typeParam as ActivityType[])
       : undefined
+    // 0-б: вид журнала. «Все события» — это отсутствие ограничения, поэтому
+    // в фильтры не уходит.
+    //
+    // Б-24: у ленты кабинета вид не спрашивают — он артистский всегда. Иначе
+    // `?view=all` или `?type=advance_issued` из браузера возвращали бы артисту
+    // внутреннюю бухгалтерию лейбла. Журнал админа (/admin/activity) ходит без
+    // `cabinet=1` и свои виды выбирает сам.
+    const viewParam = searchParams.get('view')
+    const view = cabinetOwnerId
+      ? ARTIST_FEED_VIEW
+      : isActivityView(viewParam) && viewParam !== 'all'
+        ? viewParam
+        : undefined
     const dateFrom = searchParams.get('dateFrom') || undefined
     const dateTo = searchParams.get('dateTo') || undefined
     const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 500)
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10))
 
     const filters = {
+      ...(artistGroupIds?.length && { artistGroupIds }),
       ...(userId && { userId }),
-      ...(role && { role }),
+      ...(!artistGroupIds && role && { role }),
       ...(types?.length && { types }),
+      ...(view && { view }),
       ...(dateFrom && { dateFrom }),
       ...(dateTo && { dateTo })
     }

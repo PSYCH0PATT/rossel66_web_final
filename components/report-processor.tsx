@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { Banner } from "@/components/ui/banner"
+import { FileInput } from "@/components/ui/file-input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Spinner } from "@/components/ui/spinner"
 import { Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import {
   ARTIST_REPORT_FIELD_LABELS,
@@ -157,21 +160,20 @@ export default function ReportProcessor() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Загрузка файлов */}
             <div className="space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>ℹ️ Информация:</strong> Данные артистов (ФИО, договор, процент) берутся из профилей артистов в системе. 
-                  Отчёты создаются только для артистов с указанным процентом. Доли роялти берутся из настроек треков в релизах (если указаны).
-                </p>
-              </div>
+              {/* C-05: светлая info-плашка внутри тёмного кабинета (F-48). */}
+              <Banner variant="info" className="rounded-lg p-3 text-sm">
+                <strong>ℹ️ Информация:</strong> Данные артистов (ФИО, договор, процент) берутся из профилей артистов в системе.
+                Отчёты создаются только для артистов с указанным процентом. Доли роялти берутся из настроек треков в релизах (если указаны).
+              </Banner>
 
               <div className="space-y-2">
                 <Label htmlFor="file">Файл с данными (.xlsx)</Label>
-                <Input
+                <FileInput
                   id="file"
-                  type="file"
                   accept=".xlsx"
                   onChange={handleFileChange}
                   disabled={processing}
+                  showFileName={false}
                 />
                 {file && (
                   <p className="text-sm text-gray-600">
@@ -357,14 +359,17 @@ export default function ReportProcessor() {
             </div>
 
             {/* Кнопка обработки */}
-            <Button 
-              type="submit" 
+            {/* C-02/F-28: единственная filled экрана и честный disabled из кита —
+                полупрозрачный ярко-зелёный раньше читался как активная кнопка. */}
+            <Button
+              type="submit"
+              variant="cta"
               disabled={processing || !file || !quarter}
-              className="w-full"
+              className="w-full rounded-lg"
             >
               {processing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Spinner size="sm" className="mr-2" />
                   Обработка...
                 </>
               ) : (
@@ -398,62 +403,70 @@ export default function ReportProcessor() {
               </p>
 
               {!result.success && (result.output || result.error) && (
-                <details className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm">
-                  <summary className="text-red-800 font-medium cursor-pointer">
-                    Подробности ошибки
-                  </summary>
-                  <pre className="mt-3 text-xs text-red-700 whitespace-pre-wrap break-words font-mono max-h-48 overflow-y-auto">
-                    {[result.output, result.error].filter(Boolean).join('\n')}
-                  </pre>
-                </details>
+                <Banner variant="danger" icon={null} className="rounded-lg p-4 text-sm">
+                  <details>
+                    <summary className="cursor-pointer font-medium text-red-200">
+                      Подробности ошибки
+                    </summary>
+                    <ScrollArea className="mt-3" viewportClassName="max-h-48" fadeClassName="from-status-danger/10">
+                      <pre className="whitespace-pre-wrap break-words font-mono text-xs text-red-200/90">
+                        {[result.output, result.error].filter(Boolean).join('\n')}
+                      </pre>
+                    </ScrollArea>
+                  </details>
+                </Banner>
               )}
 
               {(result.incompleteArtists?.length ?? result.missingContractArtists?.length ?? 0) > 0 && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-                  <p className="text-amber-800 font-medium mb-2">
+                <Banner variant="warning" icon={null} className="rounded-lg p-4 text-sm">
+                  <p className="mb-2 font-medium text-amber-100">
                     Артисты без обязательных данных для отчёта (
                     {result.incompleteArtists?.length ?? result.missingContractArtists?.length}):
                   </p>
-                  <p className="text-amber-700 text-xs mb-2">
+                  <p className="mb-2 text-xs text-amber-200/80">
                     Нужны: ФИО, номер договора и процент в Supabase.
                   </p>
                   {result.incompleteArtists && result.incompleteArtists.length > 0 ? (
-                    <ul className="text-amber-700 text-xs font-mono space-y-1 max-h-48 overflow-y-auto">
-                      {result.incompleteArtists.map((artist) => (
-                        <li key={artist.name}>
-                          {artist.name} — нет:{" "}
-                          {artist.missingFields
-                            .map((f) => ARTIST_REPORT_FIELD_LABELS[f])
-                            .join(", ")}
-                        </li>
-                      ))}
-                    </ul>
+                    <ScrollArea viewportClassName="max-h-48" fadeClassName="from-status-warning/10">
+                      <ul className="space-y-1 font-mono text-xs text-amber-200/90">
+                        {result.incompleteArtists.map((artist) => (
+                          <li key={artist.name}>
+                            {artist.name} — нет:{" "}
+                            {artist.missingFields
+                              .map((f) => ARTIST_REPORT_FIELD_LABELS[f])
+                              .join(", ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
                   ) : (
-                    <p className="text-amber-700 text-xs font-mono break-words">
+                    <p className="break-words font-mono text-xs text-amber-200/90">
                       {result.missingContractArtists?.join(", ")}
                     </p>
                   )}
-                </div>
+                </Banner>
               )}
-              
+
               {result.uploadStats && (
-                <div className="space-y-1 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm mt-4">
-                  <p className="text-green-600 font-medium text-base">
+                <div className="mt-4 space-y-1 rounded-lg border border-white/10 bg-white/5 p-4 text-sm">
+                  <p className="text-base font-medium text-emerald-400">
                     ✅ Загружено в облако: {result.uploadStats.uploaded}
                   </p>
                   {(result.uploadStats.uploadedNames?.length ?? 0) > 0 && (
-                    <ul className="text-gray-600 mt-2 text-xs font-mono space-y-1 max-h-48 overflow-y-auto">
-                      {result.uploadStats.uploadedNames!.map((name) => (
-                        <li key={name}>{name}</li>
-                      ))}
-                    </ul>
+                    <ScrollArea className="mt-2" viewportClassName="max-h-48" fadeClassName="from-surface-raised">
+                      <ul className="space-y-1 font-mono text-xs text-gray-400">
+                        {result.uploadStats.uploadedNames!.map((name) => (
+                          <li key={name}>{name}</li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
                   )}
                   {result.uploadStats.failed > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-200">
-                      <p className="text-red-600 font-medium">
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="font-medium text-red-400">
                         ❌ Ошибка загрузки: {result.uploadStats.failed}
                       </p>
-                      <p className="text-gray-600 mt-1">
+                      <p className="mt-1 text-gray-400">
                         {result.uploadStats.failedNames.join(', ')}
                       </p>
                     </div>
@@ -464,22 +477,22 @@ export default function ReportProcessor() {
               {result.success && result.reports && result.reports.length > 0 && (
                 <div className="space-y-3">
                   {result.processedArtists && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-400">
                       Обработано артистов: {result.processedArtists}
                     </p>
                   )}
-                  
+
                   <div className="space-y-2">
                     <h4 className="font-medium">Созданные отчёты:</h4>
                     {result.reports.map((report) => (
-                      <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={report.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{report.artistName}</span>
                           <Badge variant={report.isRegistered ? "default" : "secondary"}>
                             {report.isRegistered ? "Зарегистрирован" : "Не зарегистрирован"}
                           </Badge>
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-400">
                           {report.totalPlays.toLocaleString("ru-RU")} прослушиваний • {formatCurrency(report.totalAmount)}
                         </div>
                       </div>

@@ -1,0 +1,54 @@
+/*
+ * Иконочный шрифт кабинета — Б-13 (docs/backlog.md).
+ *
+ * Было: <link> на fonts.googleapis.com в шапке app/layout.tsx. Нет доступа к
+ * домену — во всём кабинете нет НИ ОДНОЙ иконки, а пока шрифт едет, на их
+ * месте видны слова лигатур («person», «library_music», «logout»). У проекта
+ * аудитория в России, где домен недоступен регулярно, — то есть это не
+ * «медленная сеть», а штатное состояние.
+ *
+ * Стало: тот же самый файл лежит в public/fonts и раздаётся со своего домена.
+ * Material Symbols — Apache-2.0, самохостинг разрешён лицензией.
+ *
+ * Правила ниже — ДОСЛОВНО то, что отдавал Google по адресу
+ * css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1, включая
+ * порядок и `-webkit-font-feature-settings`. Совпадение дословное намеренно:
+ * любое «улучшение» здесь сдвинуло бы рендер всех экранов сразу.
+ *
+ * Отличий от гугловской версии два, оба намеренные:
+ *   1. `font-display: block` вместо `swap` — именно `swap` и показывал слова
+ *      лигатур вместо иконок, пока файл едет. Иконке нечего показать в
+ *      фолбэке, поэтому короткий невидимый период честнее подмены.
+ *   2. Имя семейства оставлено прежним («Material Symbols Outlined»), поэтому
+ *      здесь обычный @font-face, а не next/font/local: по этому имени ищет
+ *      сторож эталона (scripts/visual-baseline.ts) и находит FontFace, чтобы
+ *      отличить «шрифт доехал» от «рисуем фолбэком».
+ *
+ * <link rel="preload"> НЕ добавляем: браузер грузит @font-face лениво, только
+ * когда на странице есть элемент с этим семейством. Лендинг иконками не
+ * пользуется и за 1,1 МБ не платит; preload заставил бы платить.
+ */
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}

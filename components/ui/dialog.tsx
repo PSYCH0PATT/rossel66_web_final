@@ -44,9 +44,14 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
+      {/*
+        F-80 (docs/ui-audit.md, C-13): сток shadcn даёт тап-таргет 16×16 —
+        втрое меньше нормы 44px. Приведено к тому же виду, что закрытие
+        ui/sheet на этапе 2.2: 44×44 и русская sr-подпись.
+      */}
+      <DialogPrimitive.Close className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-5 w-5" />
+        <span className="sr-only">Закрыть</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
