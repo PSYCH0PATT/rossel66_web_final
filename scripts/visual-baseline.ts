@@ -19,12 +19,23 @@
  *   npx tsx scripts/visual-baseline.ts
  *   npx tsx scripts/visual-baseline.ts --routes analytics,releases --out screens/after
  *
+ * Прогон детерминированный (Б-26): скрипт сам чистит ISR-кэш перед стартом
+ * сервера и маскирует относительное время («53 мин. назад») с меткой
+ * «Обновлено …» перед каждым кадром. Два прогона подряд на одном коде и без
+ * пересева базы обязаны дать 0.000 % на всех роутах:
+ *   npx tsx scripts/visual-baseline.ts --out screens/run-a
+ *   npx tsx scripts/visual-baseline.ts --out screens/run-b
+ *   npx tsx scripts/visual-diff.ts --baseline screens/run-a --current screens/run-b --threshold 0
+ * Пересев (`pnpm seed:e2e`, в том числе внутри global-setup playwright) между
+ * прогонами сдвигает скользящие даты аналитики и порядок артистов — это даст
+ * ложный дифф на /admin/analytics и /admin/artists.
+ *
  * Флаги:
  *   --routes <a,b,c>   подстроки: снимаются роуты, чьи путь или slug содержат любую
  *   --out <dir>        корень вывода (по умолчанию screens/baseline)
  *   --base-url <url>   готовый стенд; без него скрипт сам поднимет `next start`
  */
-import { existsSync, mkdirSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs"
 import { dirname, resolve } from "path"
 import { spawn, type ChildProcess } from "child_process"
 import { Client } from "pg"
@@ -322,6 +333,14 @@ async function assertSeeded(databaseUrl: string) {
   }
 }
 
+/** Дисковый кэш `unstable_cache` (Next 14). Пуст — значит, данные из базы. */
+const ISR_CACHE_DIR = ".next/cache/fetch-cache"
+
+function clearIsrCache() {
+  rmSync(resolve(process.cwd(), ISR_CACHE_DIR), { recursive: true, force: true })
+  console.log(`[baseline] очищен ISR-кэш ${ISR_CACHE_DIR}`)
+}
+
 async function startServer(baseUrl: string): Promise<ChildProcess> {
   const port = new URL(baseUrl).port || "3000"
   if (!existsSync(resolve(process.cwd(), ".next/BUILD_ID"))) {
@@ -361,6 +380,153 @@ const FREEZE_CSS = `
   }
   html { scroll-behavior: auto !important; }
 `
+
+/**
+ * Ждём, пока разметка перестанет меняться (Б-26).
+ *
+ * `FREEZE_CSS` гасит CSS-анимации, но график recharts на /admin/analytics
+ * растёт через requestAnimationFrame — данные там приезжают клиентским
+ * запросом, и к моменту `networkidle` линии ещё в пути. Кадры двух прогонов
+ * попадали в разные моменты этой анимации: 0.596 % @1440 и 1.387 % @390.
+ *
+ * Сигнатура — дешёвый хеш `body.innerHTML`, считается в браузере (гонять
+ * мегабайт разметки через протокол на каждую пробу незачем). Три одинаковые
+ * пробы подряд — разметка успокоилась; не дождались за таймаут — это находка
+ * прогона, а не повод снимать кадр молча.
+ */
+async function waitForRenderSettled(page: Page, timeoutMs = 15_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  let previous: number | null = null
+  let stable = 0
+  while (Date.now() < deadline) {
+    const signature = await page
+      .evaluate(() => {
+        const html = document.body.innerHTML
+        let hash = 0
+        for (let i = 0; i < html.length; i++) hash = (hash * 31 + html.charCodeAt(i)) | 0
+        return hash
+      })
+      .catch(() => null)
+    if (signature === null) return false
+    stable = signature === previous ? stable + 1 : 0
+    previous = signature
+    if (stable >= 2) return true
+    await page.waitForTimeout(250)
+  }
+  return false
+}
+
+/**
+ * Маскировка динамики перед кадром (Б-26).
+ *
+ * `FREEZE_CSS` гасит анимации, но не время: лента печатает относительный
+ * возраст события («только что», «53 мин. назад» — `formatDate` в
+ * components/activity-feed.tsx), а шапка артистского дашборда — метку
+ * «Обновлено DD.MM.YYYY» от `new Date()` на сервере. Между двумя прогонами
+ * этот текст меняется, и `/admin/dashboard` @1440 давал 1.3 % расхождения при
+ * пороге 0.5 % — то есть визуальный дифф по дашбордам ничего не доказывал.
+ *
+ * Маскируем ТОЛЬКО относительное время и метку свежести. Абсолютные даты не
+ * трогаем: на них держится контрольная точка `/admin/activity`, где два
+ * прогона и до этого сходились в 0.000 %, и эталон должен показывать
+ * настоящие данные, а не заглушки.
+ */
+const DYNAMIC_TEXT_MASKS: Array<{ pattern: RegExp; replacement: string }> = [
+  {
+    // components/activity-feed.tsx: «только что», «5 мин. назад», «3 ч. назад»,
+    // «1 день назад», «4 дн. назад». Дальше семи дней там абсолютная дата.
+    pattern: /^(только что|\d+ мин\. назад|\d+ ч\. назад|1 день назад|\d+ дн\. назад)$/,
+    replacement: "00 мин. назад",
+  },
+  {
+    // Метка свежести в подписи шапки артистского дашборда (вердикт 3.2).
+    pattern: /^Обновлено \d{1,2}\.\d{1,2}\.\d{4}$/,
+    replacement: "Обновлено 00.00.0000",
+  },
+]
+
+/** Текст, который сам скрипт подставил, — он и должен остаться в кадре. */
+const MASK_REPLACEMENTS = DYNAMIC_TEXT_MASKS.map((m) => m.replacement)
+
+/**
+ * Подменяет динамику фиксированным текстом и возвращает то, что маска НЕ
+ * поймала. Промах маски (переписали копирайт — регулярка перестала совпадать)
+ * обязан быть виден: молчащий инструмент здесь хуже отсутствующего.
+ */
+async function maskDynamics(page: Page): Promise<string[]> {
+  const rules = DYNAMIC_TEXT_MASKS.map((m) => ({
+    source: m.pattern.source,
+    flags: m.pattern.flags,
+    replacement: m.replacement,
+  }))
+  try {
+    return await page.evaluate(
+      (input) => {
+        // Никаких функций в переменных внутри evaluate: tsx компилирует файл с
+        // --keep-names, стрелка с выведенным именем уезжает в браузер обёрнутой
+        // в esbuild-хелпер `__name`, которого там нет (ReferenceError, кадр
+        // уходит незамаскированным). Только анонимные стрелки в аргументах —
+        // на этом же обжигался emptinessSignals ниже.
+        const compiled = input.rules.map((r) => ({
+          re: new RegExp(r.source, r.flags),
+          replacement: r.replacement,
+        }))
+
+        // Сначала листовые элементы: JSX `Обновлено {formatDateRu(...)}` даёт
+        // ДВА соседних текстовых узла, и поузловая подмена его не поймала бы.
+        const leaves = Array.from(document.querySelectorAll("*")).filter(
+          (el) => el.children.length === 0
+        )
+        for (const el of leaves) {
+          const text = (el.textContent ?? "").replace(/\s+/g, " ").trim()
+          if (!text) continue
+          const hit = compiled.find((c) => c.re.test(text))
+          if (hit) el.textContent = hit.replacement
+        }
+
+        // Частицы логина (components/sparkles.tsx) живут в <canvas>: позиции
+        // раздаёт Math.random(), а двигает их requestAnimationFrame — ни
+        // FREEZE_CSS, ни ожидания на это не действуют, и /dashboard/login
+        // держал вечный шум 0.05–0.07 % между прогонами. Кадр — про вёрстку,
+        // а не про случайные точки: гасим слой целиком, разметку не трогая.
+        for (const canvas of Array.from(document.querySelectorAll("canvas"))) {
+          ;(canvas as HTMLElement).style.visibility = "hidden"
+        }
+
+        // Затем отдельные текстовые узлы: то же время может стоять рядом с
+        // вложенным элементом, и такой родитель листом не является.
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        let node = walker.nextNode()
+        while (node) {
+          const text = (node.nodeValue ?? "").replace(/\s+/g, " ").trim()
+          if (text) {
+            const hit = compiled.find((c) => c.re.test(text))
+            if (hit) node.nodeValue = hit.replacement
+          }
+          node = walker.nextNode()
+        }
+
+        // Самопроверка: не осталось ли в кадре относительного времени, которое
+        // маска не узнала. Свои же подстановки под шаблон подходят — их мимо.
+        const relative = /(только что|\d+\s*(мин\.|ч\.|дн\.|дня|дней|день)\s*назад)/
+        const seen = new Set<string>()
+        const check = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        let probe = check.nextNode()
+        while (probe) {
+          const text = (probe.nodeValue ?? "").replace(/\s+/g, " ").trim()
+          if (text && relative.test(text) && !input.replacements.includes(text)) {
+            seen.add(text.slice(0, 60))
+          }
+          probe = check.nextNode()
+        }
+        return [...seen]
+      },
+      { rules, replacements: MASK_REPLACEMENTS }
+    )
+  } catch (err) {
+    return [`маскировка не сработала: ${(err as Error).message.split("\n")[0]}`]
+  }
+}
 
 /**
  * До Б-13 иконочный шрифт приезжал с fonts.googleapis.com с `display=swap`, и
@@ -499,6 +665,11 @@ type Shot = { file: string; state?: string }
  */
 /** Метка причины «экран снят пустым» — по ней же считается итог прогона. */
 const EMPTY_PREFIX = "пустой экран: "
+/** Б-26: маска динамики промахнулась — кадр не воспроизведётся между прогонами. */
+const MASK_MISS_PREFIX = "не замаскировано относительное время: "
+/** Б-26: разметка всё ещё менялась в момент затвора — кадр невоспроизводим. */
+const UNSETTLED_PROBLEM =
+  "разметка не успокоилась за 15 с — кадр снят посреди отрисовки и между прогонами разъедется"
 
 type Status = "ok" | "warn" | "fail"
 type Result = {
@@ -571,6 +742,14 @@ async function captureRoute(
       problems.add(`редирект на ${landed}`)
     }
 
+    // Б-26: сначала дожидаемся конца рисования, потом гасим динамику — и
+    // только затем затвор. В обратном порядке кадр разъезжается между
+    // прогонами на анимации графика и на относительном времени.
+    if (!(await waitForRenderSettled(page))) problems.add(UNSETTLED_PROBLEM)
+    for (const leftover of await maskDynamics(page)) {
+      problems.add(`${MASK_MISS_PREFIX}${leftover}`)
+    }
+
     const file = `${outDir}/${role}/${slug}/${viewport}.png`
     await page.screenshot({ path: resolve(process.cwd(), file), fullPage: true })
     shots.push({ file })
@@ -587,6 +766,12 @@ async function captureRoute(
           continue
         }
         await page.waitForTimeout(300)
+        if (!(await waitForRenderSettled(page))) {
+          problems.add(`«${state.name}»: ${UNSETTLED_PROBLEM}`)
+        }
+        for (const leftover of await maskDynamics(page)) {
+          problems.add(`${MASK_MISS_PREFIX}«${state.name}»: ${leftover}`)
+        }
         const stateFile = `${outDir}/${role}/${slug}/${viewport}--${state.name}.png`
         await page.screenshot({ path: resolve(process.cwd(), stateFile), fullPage: true })
         shots.push({ file: stateFile, state: state.name })
@@ -677,9 +862,22 @@ async function main() {
   await assertSeeded(databaseUrl)
 
   const baseUrl = (args.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "")
+
+  // Б-26: getCachedAdminDashboard и getCachedActivitiesForFeed идут через
+  // unstable_cache, а он лежит на диске в .next/cache/fetch-cache и переживает
+  // прогон. Эталон 25.08 однажды снялся с данными, оставшимися от e2e (30
+  // отчётов вместо 29, чужие события в ленте). Чистка — шаг прогона, а не
+  // строчка в документе, которую забудут выполнить.
+  clearIsrCache()
+
   let server: ChildProcess | undefined
   if (await isUp(baseUrl)) {
     console.log(`[baseline] использую уже поднятый ${baseUrl}`)
+    console.log(
+      "[baseline] ВНИМАНИЕ: свежесть данных не гарантирована — у живого `next start` " +
+        "своя память ISR, файлы кэша ей не указ. Для эталона погасите сервер и дайте " +
+        "скрипту поднять свой."
+    )
   } else if (args.baseUrl) {
     throw new Error(`Стенд ${baseUrl} недоступен`)
   } else {
