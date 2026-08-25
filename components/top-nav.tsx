@@ -46,7 +46,9 @@ export default function TopNav({ role, username, mobileMenuOpen, onMobileMenuTog
         // Перевод пути на русский
         if (lastPath === "dashboard") label = "Главная"
         if (lastPath === "releases") label = "Релизы"
-        if (lastPath === "reports") label = "Отчёты"
+        // F-51: последняя крошка обязана совпадать с H1. У артиста экран
+        // объединённый («Отчёты и выплаты», решение 0-а), у админа — «Отчёты».
+        if (lastPath === "reports") label = role === "artist" ? "Отчёты и выплаты" : "Отчёты"
         if (lastPath === "payments") label = "Выплаты"
         if (lastPath === "playlists") label = "Плейлисты"
         if (lastPath === "artists") label = "Артисты"

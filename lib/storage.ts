@@ -22,6 +22,7 @@ import {
   SYSTEM_ACTOR_ID,
 } from '@/lib/activity-log'
 import { activityViewFilter, type ActivityView } from '@/lib/activity-views'
+import { MIN_PAYOUT_AMOUNT } from './report-acknowledgment'
 
 /** Не превращать сбой БД (неверный DATABASE_URL и т.д.) в «пользователь не найден». */
 function isInfrastructureDbError(error: unknown): boolean {
@@ -1055,8 +1056,12 @@ export interface ArtistBalance {
   lastUpdated: string
 }
 
-/** Минимальная сумма выплаты, ₽. */
-export const MIN_PAYOUT_AMOUNT = 3000
+/**
+ * Минимальная сумма выплаты, ₽. Объявлена в lib/report-acknowledgment.ts рядом
+ * со вторым порогом цикла и связывающей их фразой (F-17); здесь ре-экспорт,
+ * чтобы не сужать поверхность модуля.
+ */
+export { MIN_PAYOUT_AMOUNT }
 
 // Расширенный интерфейс отчета с дополнительными полями
 export interface ReportData extends Omit<Report, 'status'> {

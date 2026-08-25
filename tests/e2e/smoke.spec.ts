@@ -82,6 +82,18 @@ test("сросшиеся экраны отвечают редиректом на
   }
 })
 
+test("артист: «Выплаты» отвечают редиректом на «Отчёты и выплаты» @smoke", async ({
+  page,
+  context,
+}) => {
+  // Артистская половина решения 0-а (Б-16): экранов про одни деньги было два.
+  await loginAs(context, USERS.main, BASE)
+  await page.goto(`/dashboard/artist/${USERS.main.username}/payments`)
+  await page.waitForURL(`**/dashboard/artist/${USERS.main.username}/reports`)
+  await expect(page.getByRole("heading", { name: "ОТЧЁТЫ И ВЫПЛАТЫ" })).toBeVisible()
+  await expect(page.getByTestId("total-balance")).toBeVisible()
+})
+
 test("визитка артиста ведёт на его главную @smoke", async ({ page, context }) => {
   await loginAs(context, USERS.main, BASE)
   await page.goto(`/dashboard/artist/${USERS.main.username}`)

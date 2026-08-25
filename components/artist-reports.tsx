@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import type { Report } from "@/lib/storage"
+import { useMemo, useState, type ReactNode } from "react"
+import type { ArtistBalance, Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { formatDateRu } from "@/lib/format-date"
 import { formatMoney } from "@/lib/format-money"
@@ -9,6 +9,7 @@ import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
 import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
+import ArtistBalanceSummary from "@/components/artist-balance-summary"
 import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -27,6 +28,16 @@ interface ArtistReportsProps {
    * на странице оказывалось два заголовка подряд разного размера.
    */
   title?: string
+  /**
+   * Баланс артиста. Передан — это объединённый экран «Отчёты и выплаты» в
+   * кабинете артиста (решение 0-а, артистская половина): сверху появляется
+   * денежный блок с бывшего /payments, а на карточках квартала — статус
+   * выплаты, единственное, чего в них не было и что показывал дубль.
+   * Не передан — это админская вкладка отчётов артиста, она не меняется.
+   */
+  balance?: ArtistBalance | null
+  /** Подзаголовок шапки; у объединённого экрана он про деньги, а не только про PDF. */
+  subtitle?: ReactNode
 }
 
 export default function ArtistReports({
@@ -34,7 +45,11 @@ export default function ArtistReports({
   reports: initialReports,
   artistName,
   title = "ОТЧЁТЫ",
+  balance,
+  subtitle = "Квартальные отчёты, предпросмотр и скачивание PDF.",
 }: ArtistReportsProps) {
+  /** Экран денег показывается только там, где есть баланс (кабинет артиста). */
+  const showMoney = balance !== undefined
   const [reports, setReports] = useState(initialReports)
   // По умолчанию — самый свежий год, за который ЕСТЬ отчёты (а не календарный год).
   // Иначе артист с отчётами только за прошлый год видит «Нет отчётов за 2026».
@@ -127,7 +142,7 @@ export default function ArtistReports({
       <div className="space-y-8">
       <PageHeader
         title={title}
-        subtitle="Квартальные отчёты, предпросмотр и скачивание PDF."
+        subtitle={subtitle}
         actions={
           years.length > 1 ? (
             <div className="flex flex-wrap gap-2">
@@ -145,6 +160,15 @@ export default function ArtistReports({
           ) : undefined
         }
       />
+
+      {showMoney && (
+        <ArtistBalanceSummary
+          balance={balance ?? null}
+          paidAmount={reports
+            .filter((report) => report.isPaid)
+            .reduce((sum, report) => sum + (report.totalAmount ?? 0), 0)}
+        />
+      )}
 
       {years.length > 0 ? (
         <>
@@ -237,6 +261,13 @@ export default function ArtistReports({
                             {report.isAcknowledged && (
                               <StatusBadge variant="live" withIcon={false}>
                                 Ознакомлен
+                              </StatusBadge>
+                            )}
+                            {/* Б-16: единственное, чего не было на карточке и что
+                                показывал дубль «История отчётов» на /payments. */}
+                            {showMoney && (
+                              <StatusBadge variant={report.isPaid ? "live" : "warning"} withIcon={false}>
+                                {report.isPaid ? "Выплачено" : "Не выплачено"}
                               </StatusBadge>
                             )}
                             <span className="text-yellow-400/90 tabular-nums">

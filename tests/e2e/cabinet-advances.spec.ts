@@ -9,7 +9,9 @@ import { expect, test } from "@playwright/test"
 import { USERS, getAs, loginAs, sessionHeader } from "./support/session"
 
 const BASE = "http://127.0.0.1:3000"
-const PAYMENTS = `/dashboard/artist/${USERS.main.username}/payments`
+// 0-а (артистская половина): деньги живут на объединённом «Отчёты и выплаты»;
+// /payments остался редиректом сюда же.
+const PAYMENTS = `/dashboard/artist/${USERS.main.username}/reports`
 
 async function removeAllAdvances(request: import("@playwright/test").APIRequestContext) {
   const list = await getAs(request, USERS.admin, `/api/advances?artistId=${USERS.main.id}`)

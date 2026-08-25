@@ -1,31 +1,12 @@
-import { notFound, redirect } from "next/navigation"
-import { getSessionUser } from "@/lib/server-auth"
-import { canViewArtistCabinet } from "@/lib/artist-links"
-import { prisma } from "@/lib/prisma"
-import { getCachedArtistReports } from "@/lib/cached-dashboard"
-import { getArtistBalance } from "@/lib/storage"
-import PaymentsClient from "./payments-client"
+import { redirect } from "next/navigation"
 
-export const revalidate = 600
-
-export default async function ArtistPaymentsPage({ params }: { params: { username: string } }) {
-  const session = getSessionUser()
-  if (!session) redirect("/dashboard/login")
-
-  const artist = await prisma.user.findFirst({
-    where: { username: params.username, role: "artist" },
-    select: { id: true, name: true, mainArtistId: true },
-  })
-  if (!artist) notFound()
-
-  if (!canViewArtistCabinet(session, artist)) notFound()
-
-  const [reports, balance] = await Promise.all([
-    getCachedArtistReports(artist.id),
-    getArtistBalance(artist.id),
-  ])
-
-  return (
-    <PaymentsClient username={params.username} reports={reports as any} balance={balance} />
-    )
+/**
+ * Экран «Выплаты» влит в объединённые «Отчёты и выплаты» — решение 0-а и ответ
+ * владельца на вопрос №2 (docs/ia-decisions.md): сущность одна, а «История
+ * отчётов» на этом экране повторяла /reports карточка-в-карточку. Пункт
+ * сайдбара снят, роут остаётся редиректом, чтобы старые закладки вели туда же.
+ * Зеркально админскому app/dashboard/admin/payments/page.tsx.
+ */
+export default function ArtistPaymentsPage({ params }: { params: { username: string } }) {
+  redirect(`/dashboard/artist/${params.username}/reports`)
 }

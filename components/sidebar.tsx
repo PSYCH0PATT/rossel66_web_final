@@ -44,6 +44,11 @@ const SidebarNavItem = memo(function SidebarNavItem({
     case "Отчёты":
       iconName = "analytics"
       break
+    case "Отчёты и выплаты":
+      // Экран прежде всего про отчёты; «analytics» тут был бы вторым таким же
+      // значком рядом с «Аналитикой».
+      iconName = "receipt_long"
+      break
     case "Выплаты":
       iconName = "account_balance_wallet"
       break
@@ -237,13 +242,16 @@ export default function Sidebar({ role, username, mobileMenuOpen, onMobileMenuOp
   const artistNavItems: NavItemConfig[] = useMemo(
     () => [
       // Порядок = приоритету владельца (docs/ia-decisions.md, §3): аналитика
-      // первым содержательным разделом, дальше релизы → отчёты → выплаты →
-      // плейлисты. Набор пунктов прежний, переставлен только порядок.
+      // первым содержательным разделом, дальше релизы → отчёты → плейлисты.
+      // 0-а (артистская половина, Б-16): «Отчёты» и «Выплаты» были двумя
+      // пунктами про одни деньги — стали одним, роут /payments остался
+      // редиректом. Слово «выплаты» из подписи не убрано намеренно: артист
+      // пользовался этим пунктом, и его исчезновение читалось бы как «выплаты
+      // убрали», а не «переехали».
       { href: `${artistBasePath}/dashboard`, label: "Главная" },
       { href: `${artistBasePath}/analytics`, label: "Аналитика" },
       { href: `${artistBasePath}/releases`, label: "Релизы" },
-      { href: `${artistBasePath}/reports`, label: "Отчёты" },
-      { href: `${artistBasePath}/payments`, label: "Выплаты" },
+      { href: `${artistBasePath}/reports`, label: "Отчёты и выплаты" },
       { href: `${artistBasePath}/playlists`, label: "Плейлисты" },
     ],
     [artistBasePath]

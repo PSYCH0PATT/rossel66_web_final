@@ -197,8 +197,9 @@ const ADMIN_ROUTES: RouteSpec[] = [
 
 /**
  * Артист-ЛК. `/dashboard/artist/[username]` (бывшая визитка, вопрос №6),
- * `/dashboard/artist` и `/dashboard/artist/analytics` — серверные редиректы
- * без собственной вёрстки, снимать нечего.
+ * `/dashboard/artist`, `/dashboard/artist/analytics` и `…/payments` — серверные
+ * редиректы без собственной вёрстки, снимать нечего. Выплаты влиты в
+ * `…/reports` (решение 0-а, артистская половина) и снимаются там.
  */
 const ARTIST_ROUTES: RouteSpec[] = [
   { path: `/dashboard/artist/${ARTIST.username}/dashboard` },
@@ -209,7 +210,6 @@ const ARTIST_ROUTES: RouteSpec[] = [
   { path: `/dashboard/artist/${ARTIST.username}/analytics`, states: [chartTooltip] },
   { path: `/dashboard/artist/${ARTIST.username}/playlists` },
   { path: `/dashboard/artist/${ARTIST.username}/playlists/${SEED.artistPlaylistId}` },
-  { path: `/dashboard/artist/${ARTIST.username}/payments` },
   { path: `/dashboard/artist/${ARTIST.username}/reports` },
   { path: `/dashboard/artist/${ARTIST.username}/settings` },
   { path: `/dashboard/artist/${ARTIST.username}/activity` },
