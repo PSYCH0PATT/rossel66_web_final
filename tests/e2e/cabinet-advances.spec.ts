@@ -103,6 +103,40 @@ test.describe.serial("авансы", () => {
     expect(foreign.status()).toBe(403)
   })
 
+  /**
+   * Б-24: «Аванс выдан» пишется на админа, но с `metadata.artistId` артиста —
+   * и по правилу F-04 (лента кабинета читает и по метаданным) уезжал артисту в
+   * браузер. Вид ленты кабинета теперь ставит сервер, а не клиент, поэтому
+   * ни `view=all`, ни явный `type=advance_issued` бухгалтерию не достают.
+   */
+  test("выданный аванс не доезжает до ленты артиста", async ({ page, context, request }) => {
+    await removeAllAdvances(request)
+    expect((await createAdvance(request, 2000, "2026-05-01")).status()).toBe(200)
+
+    const forced = await getAs(
+      request,
+      USERS.main,
+      "/api/activities?cabinet=1&role=artist&view=all&type=advance_issued&limit=500"
+    )
+    expect(forced.status()).toBe(200)
+    const forcedActivities: Array<{ type: string }> = (await forced.json()).activities
+    expect(forcedActivities.filter((a) => a.type.startsWith("advance_"))).toHaveLength(0)
+
+    // Проверка не вырожденная: события артистской тройки в ленте есть.
+    const feed = await getAs(request, USERS.main, "/api/activities?cabinet=1&role=artist&limit=500")
+    const activities: Array<{ type: string }> = (await feed.json()).activities
+    expect(activities.length).toBeGreaterThan(0)
+    expect(activities.every((a) => !a.type.startsWith("advance_"))).toBe(true)
+    expect(
+      activities.some((a) => a.type === "playlist_found" || a.type === "report_status_changed")
+    ).toBe(true)
+
+    await loginAs(context, USERS.main, BASE)
+    await page.goto(`/dashboard/artist/${USERS.main.username}/activity`)
+    await expect(page.getByText("Событий пока нет")).toHaveCount(0)
+    await expect(page.getByText(/Аванс/)).toHaveCount(0)
+  })
+
   test("погашенный аванс возвращает деньги к выплате", async ({ page, context, request }) => {
     await removeAllAdvances(request)
     // 3000 гасятся целиком из Q2 (5000) → остаётся 7000 − 3000 = 4000.

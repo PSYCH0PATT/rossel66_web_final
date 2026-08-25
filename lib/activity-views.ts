@@ -15,10 +15,19 @@
  * журнале нет — кроновые ошибки либо не логируются, либо неотличимы. «Ошибки»
  * показывают `parser_error`, то есть всё, что журналируется сегодня; полный
  * охват третьего желания владельца — фича-трек логики событий.
+ *
+ * Артистская тройка — другая (0-б, артист-ЛК; ответ №8): **статусы релизов ·
+ * плейлисты · отчётность**. Вид `artist` собран под неё и админскую тройку не
+ * повторяет: у владельца в «Главном» релизов нет, у артиста нет поломок.
+ * Б-24: в ленту артиста НЕ входят авансы (`advance_issued`/`advance_removed` —
+ * внутренняя бухгалтерия лейбла), выплаты, генерация отчётов, профильные,
+ * парсерные и аналитические события. Вид принудительно ставится на сервере
+ * (`getCachedActivitiesForFeed`, `/api/activities`), а не выбирается вызовом:
+ * событие, которого артист видеть не должен, не доезжает до браузера.
  */
 import type { ActivityType } from './storage'
 
-export type ActivityView = 'main' | 'playlists' | 'signatures' | 'errors' | 'all'
+export type ActivityView = 'main' | 'playlists' | 'signatures' | 'errors' | 'all' | 'artist'
 
 export const ACTIVITY_VIEWS: readonly ActivityView[] = [
   'main',
@@ -26,6 +35,7 @@ export const ACTIVITY_VIEWS: readonly ActivityView[] = [
   'signatures',
   'errors',
   'all',
+  'artist',
 ] as const
 
 /** Добавления в плейлисты — желание владельца №1. */
@@ -36,6 +46,34 @@ const SIGNATURE_TYPES: ActivityType[] = ['report_status_changed']
 
 /** Поломки — желание владельца №3, в границах того, что пишется в журнал. */
 const ERROR_TYPES: ActivityType[] = ['parser_error']
+
+/**
+ * Статусы релизов — первый пункт артистской тройки. Смена статуса пишется
+ * Zvonko-парсером (`release_status_updated`), появление релиза — ручным
+ * добавлением, Koala-парсером и привязкой (`release_added`). Два парсерных
+ * типа сегодня не пишет никто, но они живые в `ActivityType` и в подписях
+ * админского журнала — пусть вид не разъедется с ними при возврате.
+ */
+const ARTIST_RELEASE_TYPES: ActivityType[] = [
+  'release_status_updated',
+  'release_added',
+  'parser_release_found',
+  'parser_release_updated',
+]
+
+/**
+ * Отчётность артиста — третий пункт тройки: и «вам назначен отчёт»
+ * (`report_received`), и подписание/ознакомление (`report_status_changed`).
+ * Генерация отчётов (`reports_generated`) — внутренняя операция лейбла.
+ */
+const ARTIST_REPORT_TYPES: ActivityType[] = ['report_status_changed', 'report_received']
+
+/**
+ * Единственный вид ленты кабинета артиста. Ставится на сервере в двух точках
+ * входа (lib/cached-dashboard.ts и app/api/activities/route.ts), поэтому имя
+ * вида не размазано строковыми литералами по вызовам.
+ */
+export const ARTIST_FEED_VIEW: ActivityView = 'artist'
 
 export interface ActivityViewFilter {
   /** Типы событий вида. Пустой массив — по типу не ограничиваем. */
@@ -64,6 +102,13 @@ export function activityViewFilter(view: ActivityView): ActivityViewFilter {
       return { types: [...SIGNATURE_TYPES], includeArtistSelfProfile: false }
     case 'errors':
       return { types: [...ERROR_TYPES], includeArtistSelfProfile: false }
+    case 'artist':
+      // Б-24: ровно три группы владельца для артиста. Оговорка №5 сюда не
+      // распространяется — «ТОЛЬКО статусы релизов, плейлисты и отчётность».
+      return {
+        types: [...ARTIST_RELEASE_TYPES, ...PLAYLIST_TYPES, ...ARTIST_REPORT_TYPES],
+        includeArtistSelfProfile: false,
+      }
     case 'all':
     default:
       return { types: [], includeArtistSelfProfile: false }

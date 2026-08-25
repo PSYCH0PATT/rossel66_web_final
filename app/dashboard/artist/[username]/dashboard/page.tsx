@@ -6,6 +6,7 @@ import {
   getCachedStreamAnalytics,
   getCachedActivitiesForFeed,
 } from "@/lib/cached-dashboard"
+import { ARTIST_FEED_VIEW } from "@/lib/activity-views"
 import { buildArtistDashboardStreamFilters } from "@/lib/analytics-request-filters"
 import { STREAM_WINDOW_DAYS } from "@/lib/stream-window"
 import ArtistDashboardClient from "./artist-dashboard-client"
@@ -32,7 +33,9 @@ export default async function ArtistDashboardPage({
   // «всего прослушиваний» на двух экранах кабинета расходится.
   const [analytics, activities] = await Promise.all([
     getCachedStreamAnalytics(await buildArtistDashboardStreamFilters(data.artist)),
-    getCachedActivitiesForFeed(data.artist.id, "artist", 5),
+    // Б-24: блок «Последняя активность» показывает тот же артистский вид,
+    // что и экран «Все события» (решение 0-б).
+    getCachedActivitiesForFeed(data.artist.id, "artist", 5, ARTIST_FEED_VIEW),
   ])
 
   return (

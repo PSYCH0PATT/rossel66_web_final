@@ -13,7 +13,7 @@ import {
   playlistRowVisibleToCabinetUser,
 } from "@/lib/playlist-artist-match"
 import { getActivitiesFiltered, type Activity, type Report, type User, type Release } from "@/lib/storage"
-import type { ActivityView } from "@/lib/activity-views"
+import { ARTIST_FEED_VIEW, type ActivityView } from "@/lib/activity-views"
 import { getStreamAnalytics, type StreamFilters } from "@/lib/flash-storage"
 import { findManyPlaylistRows, type PlaylistListRow } from "@/lib/prisma-playlist-read"
 import { reportEffectiveYear } from "@/lib/report-year"
@@ -328,6 +328,11 @@ export const getCachedActivitiesForFeed = unstable_cache(
     /** Вид журнала (0-б): лента дашборда показывает «Главное». */
     view?: ActivityView
   ): Promise<Activity[]> => {
+    // Б-24: ленту кабинета артиста нельзя получить «без вида» даже по
+    // забывчивости вызова — иначе в браузер уезжает внутренняя бухгалтерия
+    // лейбла («Аванс выдан», «Аванс удалён»). Состав вида — решение 0-б,
+    // артистская тройка: статусы релизов · плейлисты · отчётность.
+    const effectiveView = role === "artist" ? ARTIST_FEED_VIEW : view
     const filters: Parameters<typeof getActivitiesFiltered>[0] = {}
     if (userId && role === "artist") {
       // F-04: кабинет у группы связанных профилей один, а события про релизы
@@ -337,17 +342,20 @@ export const getCachedActivitiesForFeed = unstable_cache(
       filters.artistGroupIds = await getArtistGroupIds(userId)
     } else if (userId) {
       filters.userId = userId
-    } else if (role && !view) {
+    } else if (role && !effectiveView) {
       // При виде из 0-б роль не сужаем: «Ознакомление с отчётом» пишется
       // только на артиста (app/api/reports/acknowledge/route.ts), и с
       // role=admin второе желание владельца в ленту не попадало бы вовсе.
       filters.role = role
     }
-    if (view) filters.view = view
+    if (effectiveView) filters.view = effectiveView
     const { activities } = await getActivitiesFiltered(filters, limit, 0)
     return activities
   },
-  ["activities-feed-v2"],
+  // v3 — Б-24: у v2 в кэше лежат ленты, снятые ДО артистского вида (с авансами).
+  // Ключ обязан смениться вместе с составом, иначе кабинет ещё десять минут
+  // (revalidate) отдавал бы старую выборку.
+  ["activities-feed-v3"],
   { revalidate: DASHBOARD_REVALIDATE_SEC }
 )
 

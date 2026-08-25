@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getCachedActivitiesForFeed } from "@/lib/cached-dashboard"
+import { ARTIST_FEED_VIEW } from "@/lib/activity-views"
 import { ActivityFeed } from "@/components/activity-feed"
 import { PageHeader } from "@/components/ui/page-header"
 import { getSessionUser } from "@/lib/server-auth"
@@ -31,7 +32,15 @@ export default async function ArtistActivityPage({
     notFound()
   }
 
-  const activities = await getCachedActivitiesForFeed(row.id, "artist", ACTIVITY_LIMIT)
+  // Б-24: состав ленты артиста — статусы релизов, плейлисты и отчётность
+  // (решение 0-б, ответ №8). Вид принуждается и внутри загрузчика; здесь он
+  // назван явно, чтобы читающий экран видел, что именно приезжает.
+  const activities = await getCachedActivitiesForFeed(
+    row.id,
+    "artist",
+    ACTIVITY_LIMIT,
+    ARTIST_FEED_VIEW
+  )
 
   return (
     <div className="space-y-8">
@@ -51,6 +60,7 @@ export default async function ArtistActivityPage({
           userId={row.id}
           role="artist"
           limit={ACTIVITY_LIMIT}
+          view={ARTIST_FEED_VIEW}
           initialActivities={activities}
         />
       </div>

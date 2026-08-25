@@ -131,7 +131,10 @@ export default function AdminDashboardClient({
             }
           />
           <div className="card-glass min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/5">
-            <ActivityFeed role="admin" limit={5} initialActivities={initialActivities} />
+            {/* view="main" — ровно тот вид, с которым лента приезжает с сервера
+                (dashboard/page.tsx): состав админских событий прежний, чинится
+                только рассинхрон RSC и клиентского перезапроса (Б-24). */}
+            <ActivityFeed role="admin" limit={5} view="main" initialActivities={initialActivities} />
           </div>
         </div>
 

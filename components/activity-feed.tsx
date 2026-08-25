@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Music, ListMusic, FileText, DollarSign, User, FileCheck, UserPlus, UserMinus, CheckCircle } from 'lucide-react'
 import { Activity } from '@/lib/storage'
+import type { ActivityView } from '@/lib/activity-views'
 import { formatDateRu } from '@/lib/format-date'
 import { humanizeCredits } from '@/lib/humanize-credits'
 import { Badge } from '@/components/ui/badge'
@@ -15,11 +16,18 @@ interface ActivityFeedProps {
   role?: 'artist' | 'admin'
   limit?: number
   compact?: boolean
+  /**
+   * Вид журнала (0-б). Б-24: перезапрос с клиента обязан ходить за тем же
+   * составом, что приехал с сервера, иначе после перезагрузки лента показывает
+   * больше, чем показал RSC. Сервер вид всё равно принуждает
+   * (app/api/activities/route.ts), это про явность вызова.
+   */
+  view?: ActivityView
   /** С сервера (RSC) — без клиентского fetch при первом рендере */
   initialActivities?: Activity[]
 }
 
-export function ActivityFeed({ userId, role, limit = 5, compact = false, initialActivities }: ActivityFeedProps) {
+export function ActivityFeed({ userId, role, limit = 5, compact = false, view, initialActivities }: ActivityFeedProps) {
   const [activities, setActivities] = useState<Activity[]>(() => initialActivities ?? [])
   const [loading, setLoading] = useState(initialActivities === undefined)
 
@@ -30,7 +38,7 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
       return
     }
     loadActivities()
-  }, [userId, role, limit, initialActivities])
+  }, [userId, role, limit, view, initialActivities])
 
   const loadActivities = async () => {
     try {
@@ -41,6 +49,7 @@ export function ActivityFeed({ userId, role, limit = 5, compact = false, initial
       // F-04: лента кабинета — по группе профилей и metadata.artistId,
       // а не строго по userId (см. app/api/activities/route.ts).
       if (role === 'artist') params.append('cabinet', '1')
+      if (view) params.append('view', view)
       params.append('limit', limit.toString())
 
       const response = await fetch(`/api/activities?${params}`)

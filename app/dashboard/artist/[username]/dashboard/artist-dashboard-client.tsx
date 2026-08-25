@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import Link from "next/link"
 import { ActivityFeed } from "@/components/activity-feed"
+import { ARTIST_FEED_VIEW } from "@/lib/activity-views"
 import { StreamingChart } from "@/components/streaming-chart-lazy"
 import type { Activity } from "@/lib/storage"
 import type { ArtistDashboardPayload } from "@/lib/cached-dashboard"
@@ -141,6 +142,7 @@ export default function ArtistDashboardClient({
               userId={artist.id}
               role="artist"
               limit={5}
+              view={ARTIST_FEED_VIEW}
               initialActivities={initialActivities}
             />
           </div>

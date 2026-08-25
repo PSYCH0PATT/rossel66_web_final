@@ -26,6 +26,7 @@ process.env.PYRUS_WRITE_DISABLED = "true"
 const MAIN = "e2e-main-id"
 const LINKED = "e2e-linked-id"
 const SOLO = "e2e-solo-id"
+const ADMIN = "e2e-admin-id"
 const AT = new Date("2026-08-15T12:53:04.000Z")
 
 let skipSuite = false
@@ -249,6 +250,122 @@ describe("F-04: лента кабинета артиста", () => {
 
     const { getActivitiesFiltered } = await import("@/lib/storage")
     const { activities } = await getActivitiesFiltered({ artistGroupIds: [MAIN] }, 50, 0)
+    assert.deepEqual(activities, [])
+  })
+})
+
+/**
+ * Б-24: артист видел внутреннюю бухгалтерию лейбла. `advance_issued` пишется
+ * на админа, но с `metadata.artistId` артиста — и по правилу F-04 (лента
+ * кабинета читает и по метаданным) приезжала артисту в браузер. Состав ленты
+ * артиста по решению 0-б — статусы релизов, плейлисты, отчётность.
+ */
+describe("Б-24: лента артиста без чужой бухгалтерии", () => {
+  async function seedArtistFeedFixture() {
+    const { prisma } = await import("@/lib/prisma")
+    await prisma.activity.createMany({
+      data: [
+        {
+          // Форма ровно как у app/api/advances/route.ts: актор — админ,
+          // артист только в метаданных.
+          id: "act-advance-issued",
+          type: "advance_issued",
+          userId: ADMIN,
+          userRole: "admin",
+          title: "Аванс выдан",
+          description: "E2E Main: аванс 6 000 ₽ от 01.05.2026",
+          metadata: { advanceId: "adv-1", artistId: MAIN, amount: 6000 },
+          createdAt: AT,
+        },
+        {
+          id: "act-advance-removed",
+          type: "advance_removed",
+          userId: ADMIN,
+          userRole: "admin",
+          title: "Аванс удалён",
+          description: "E2E Main: аванс 6 000 ₽ от 01.05.2026",
+          metadata: { advanceId: "adv-1", artistId: MAIN, amount: 6000 },
+          createdAt: AT,
+        },
+        {
+          id: "act-release-status",
+          type: "release_status_updated",
+          userId: MAIN,
+          userRole: "artist",
+          title: "Статус релиза обновлён",
+          description: 'Релиз "E2E Main Track One" переведён в «Доставлен»',
+          metadata: { artistId: MAIN, releaseId: "e2e-rel-main-1", status: "Доставлен" },
+          createdAt: AT,
+        },
+        {
+          id: "act-playlist",
+          type: "playlist_found",
+          userId: MAIN,
+          userRole: "artist",
+          title: "Добавлен плейлист",
+          description: "«E2E Main Playlist One» · Spotify",
+          metadata: { artistId: MAIN, playlistName: "E2E Main Playlist One" },
+          createdAt: AT,
+        },
+      ],
+    })
+  }
+
+  it("«Аванс выдан» есть в данных, но артисту не приходит", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    await resetState()
+    await seedArtistFeedFixture()
+
+    const { getActivitiesFiltered } = await import("@/lib/storage")
+    const { activities } = await getActivitiesFiltered(
+      { artistGroupIds: [MAIN], view: "artist" },
+      50,
+      0
+    )
+    const types = activities.map((a) => a.type)
+
+    assert.equal(types.includes("advance_issued"), false, "аванс доехал до артиста")
+    assert.equal(types.includes("advance_removed"), false, "удаление аванса доехало до артиста")
+    assert.ok(types.includes("release_status_updated"), "статус релиза до артиста не доехал")
+    assert.ok(types.includes("playlist_found"), "плейлист до артиста не доехал")
+  })
+
+  it("контроль: без вида аванс приходит — фикстура воспроизводит баг", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    await resetState()
+    await seedArtistFeedFixture()
+
+    const { getActivitiesFiltered } = await import("@/lib/storage")
+    const { activities } = await getActivitiesFiltered({ artistGroupIds: [MAIN] }, 50, 0)
+    assert.ok(
+      activities.some((a) => a.type === "advance_issued"),
+      "фикстура не воспроизводит Б-24: аванс не попадает в ленту даже без вида"
+    )
+  })
+
+  it("вид не ломает правило группы: чужой аванс тоже не приходит", async (t) => {
+    if (skipSuite) return t.skip("нет базы")
+    await resetState()
+    const { prisma } = await import("@/lib/prisma")
+    await prisma.activity.create({
+      data: {
+        id: "act-advance-alien",
+        type: "advance_issued",
+        userId: ADMIN,
+        userRole: "admin",
+        title: "Аванс выдан",
+        description: "E2E Solo: аванс 1 000 ₽",
+        metadata: { advanceId: "adv-2", artistId: SOLO, amount: 1000 },
+        createdAt: AT,
+      },
+    })
+
+    const { getActivitiesFiltered } = await import("@/lib/storage")
+    const { activities } = await getActivitiesFiltered(
+      { artistGroupIds: [MAIN], view: "artist" },
+      50,
+      0
+    )
     assert.deepEqual(activities, [])
   })
 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addActivity, getActivitiesFiltered, type ActivityType } from '@/lib/storage'
-import { isActivityView } from '@/lib/activity-views'
+import { ARTIST_FEED_VIEW, isActivityView } from '@/lib/activity-views'
 import { getSessionUser, requireAuth, requireAdmin } from '@/lib/server-auth'
 
 // GET /api/activities?userId=xxx&role=admin&type=release_added&type=playlist_found&dateFrom=...&dateTo=...&limit=50&offset=0
@@ -40,8 +40,17 @@ export async function GET(request: NextRequest) {
       : undefined
     // 0-б: вид журнала. «Все события» — это отсутствие ограничения, поэтому
     // в фильтры не уходит.
+    //
+    // Б-24: у ленты кабинета вид не спрашивают — он артистский всегда. Иначе
+    // `?view=all` или `?type=advance_issued` из браузера возвращали бы артисту
+    // внутреннюю бухгалтерию лейбла. Журнал админа (/admin/activity) ходит без
+    // `cabinet=1` и свои виды выбирает сам.
     const viewParam = searchParams.get('view')
-    const view = isActivityView(viewParam) && viewParam !== 'all' ? viewParam : undefined
+    const view = cabinetOwnerId
+      ? ARTIST_FEED_VIEW
+      : isActivityView(viewParam) && viewParam !== 'all'
+        ? viewParam
+        : undefined
     const dateFrom = searchParams.get('dateFrom') || undefined
     const dateTo = searchParams.get('dateTo') || undefined
     const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50', 10)), 500)
