@@ -5,7 +5,7 @@ import type { ArtistBalance, Report } from "@/lib/storage"
 import { canAcknowledgeReports } from "@/lib/report-acknowledgment"
 import { formatDateRu } from "@/lib/format-date"
 import { formatMoney } from "@/lib/format-money"
-import { isReportYearDerived, reportEffectiveYear } from "@/lib/report-year"
+import { reportEffectiveYear } from "@/lib/report-year"
 import { downloadFileFromApi } from "@/lib/download-file"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ReportPreview } from "@/components/report-preview"
@@ -13,7 +13,6 @@ import ArtistBalanceSummary from "@/components/artist-balance-summary"
 import { Banner } from "@/components/ui/banner"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
-import { FilterChip } from "@/components/ui/filter-chip"
 import { PageHeader } from "@/components/ui/page-header"
 import { SectionHeader } from "@/components/ui/section-header"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -51,18 +50,6 @@ export default function ArtistReports({
   /** Экран денег показывается только там, где есть баланс (кабинет артиста). */
   const showMoney = balance !== undefined
   const [reports, setReports] = useState(initialReports)
-  // По умолчанию — самый свежий год, за который ЕСТЬ отчёты (а не календарный год).
-  // Иначе артист с отчётами только за прошлый год видит «Нет отчётов за 2026».
-  const [currentYear, setCurrentYear] = useState<number>(() => {
-    const ys = [
-      ...new Set(
-        initialReports
-          .map((r) => reportEffectiveYear(r))
-          .filter((y): y is number => typeof y === "number")
-      ),
-    ].sort((a, b) => b - a)
-    return ys[0] ?? new Date().getFullYear()
-  })
   const [previewReportId, setPreviewReportId] = useState<string | null>(null)
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null)
   const [ackMessage, setAckMessage] = useState<string | null>(null)
@@ -71,30 +58,37 @@ export default function ArtistReports({
 
   const acknowledgeGate = useMemo(() => canAcknowledgeReports(reports), [reports])
 
-  // D2: отчёт без заполненного year не попадал ни в одну вкладку (был невидим),
-  // хотя его сумма учитывалась в балансе. Год выводим из даты загрузки.
-  const years = [
-    ...new Set(
-      reports
-        .map((report) => reportEffectiveYear(report))
-        .filter((y): y is number => typeof y === "number")
-    ),
-  ].sort((a, b) => b - a)
-
-  const reportsByQuarter = reports
-    .filter((report) => reportEffectiveYear(report) === currentYear)
-    .reduce<Record<string, Report[]>>((acc, report) => {
-      if (!acc[report.quarter]) {
-        acc[report.quarter] = []
+  /**
+   * Все отчёты на одном экране, без переключателя годов.
+   *
+   * Раньше список фильтровался по выбранному году, а год по умолчанию брался
+   * самый свежий из имеющихся. Баланс при этом всегда считался по всем годам —
+   * и новый отчёт за прошлый год увеличивал сумму, не появляясь в списке:
+   * он лежал за чипом года, который никто не нажимал.
+   *
+   * Группа — период целиком (год + квартал), иначе Q1 разных лет слиплись бы
+   * в одну секцию. Порядок — от свежего к старому.
+   */
+  const periods = useMemo(() => {
+    const groups = new Map<string, { year: number | null; quarter: string; reports: Report[] }>()
+    for (const report of reports) {
+      const year = reportEffectiveYear(report)
+      const key = `${year ?? "—"}|${report.quarter}`
+      const group = groups.get(key)
+      if (group) {
+        group.reports.push(report)
+      } else {
+        groups.set(key, { year, quarter: report.quarter, reports: [report] })
       }
-      acc[report.quarter].push(report)
-      return acc
-    }, {})
+    }
 
-  const sortedQuarters = Object.keys(reportsByQuarter).sort((a, b) => {
     const quarterOrder: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 }
-    return quarterOrder[a] - quarterOrder[b]
-  })
+    return [...groups.values()].sort((a, b) => {
+      // Отчёты без года — в конец: датировать их нечем, но терять нельзя.
+      if (a.year !== b.year) return (b.year ?? -Infinity) - (a.year ?? -Infinity)
+      return (quarterOrder[b.quarter] ?? 0) - (quarterOrder[a.quarter] ?? 0)
+    })
+  }, [reports])
 
   const handleDownloadReport = (reportId: string, fileName: string) => {
     void downloadFileFromApi(`/api/reports/download/${reportId}`, fileName)
@@ -140,26 +134,7 @@ export default function ArtistReports({
   return (
     <>
       <div className="space-y-8">
-      <PageHeader
-        title={title}
-        subtitle={subtitle}
-        actions={
-          years.length > 1 ? (
-            <div className="flex flex-wrap gap-2">
-              {years.map((year) => (
-                <FilterChip
-                  key={year}
-                  tone="success"
-                  active={year === currentYear}
-                  onClick={() => setCurrentYear(year)}
-                >
-                  {year}
-                </FilterChip>
-              ))}
-            </div>
-          ) : undefined
-        }
-      />
+      <PageHeader title={title} subtitle={subtitle} />
 
       {showMoney && (
         <ArtistBalanceSummary
@@ -170,7 +145,7 @@ export default function ArtistReports({
         />
       )}
 
-      {years.length > 0 ? (
+      {reports.length > 0 ? (
         <>
           {/*
             F-44: два абзаца во всю ширину занимали на 390 весь первый экран, и
@@ -208,10 +183,9 @@ export default function ArtistReports({
             )}
           </Banner>
 
-          {sortedQuarters.length > 0 ? (
-            <div className="space-y-8 mb-12">
-              {sortedQuarters.map((quarter) => (
-                <div key={quarter} className="space-y-4">
+          <div className="space-y-8 mb-12">
+              {periods.map((period) => (
+                <div key={`${period.year ?? "—"}|${period.quarter}`} className="space-y-4">
                   <SectionHeader
                     as="h3"
                     size="sm"
@@ -219,12 +193,12 @@ export default function ArtistReports({
                     className="mb-0 border-b border-white/5 pb-2"
                     title={
                       <span className="font-mono text-sm uppercase tracking-widest text-gray-500">
-                        {quarter} {currentYear}
+                        {period.quarter} {period.year ?? ""}
                       </span>
                     }
                   />
                   <div className="space-y-3">
-                    {reportsByQuarter[quarter].map((report) => (
+                    {period.reports.map((report) => (
                       <div
                         key={report.id}
                         className="card-glass rounded-2xl border border-white/5 p-4 hover:border-white/10 transition-colors"
@@ -240,15 +214,7 @@ export default function ArtistReports({
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-white font-bold text-sm truncate">
-                            Отчёт за {quarter} {reportEffectiveYear(report) ?? ""}
-                            {isReportYearDerived(report) && (
-                              <span
-                                className="ml-1 text-[10px] font-normal text-amber-400/80"
-                                title="Год в отчёте не указан — определён по дате загрузки"
-                              >
-                                (год по дате загрузки)
-                              </span>
-                            )}
+                            Отчёт за {period.quarter} {period.year ?? ""}
                           </h4>
                           <p className="text-xs text-gray-400 mt-1 font-mono tabular-nums">
                             {report.uploadDate ? `Загружен: ${formatDateRu(report.uploadDate)}` : "—"}
@@ -338,14 +304,7 @@ export default function ArtistReports({
                   </div>
                 </div>
               ))}
-            </div>
-          ) : (
-            <EmptyState
-              className="mb-12"
-              icon="folder_off"
-              title={`Нет отчётов за ${currentYear} год`}
-            />
-          )}
+          </div>
         </>
       ) : (
         <div className="card-glass rounded-2xl border border-white/5 mb-12">
