@@ -2217,9 +2217,34 @@ const sectionDeviations = {
 // Сборка и запись
 // ---------------------------------------------------------------------------
 
+/**
+ * Срез помечается коммитом ПРОСКАНИРОВАННОГО кода, а не HEAD. Иначе каждая
+ * пересборка карты меняла бы свой же штамп на коммит, которого ещё нет, и
+ * `pnpm design:map` никогда не давал бы чистое дерево дважды подряд.
+ */
 const gitSha = (() => {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim()
+    return execFileSync(
+      "git",
+      [
+        "log",
+        "-1",
+        "--format=%h",
+        // --first-parent: содержимое кабинета приезжает и слияниями веток,
+        // а без флага упрощение истории по путям их пропускает и штамп
+        // указывает на давний коммит внутри влитой ветки.
+        "--first-parent",
+        "--",
+        PAGES_ROOT,
+        COMPONENTS_ROOT,
+        ROOT_LAYOUT,
+        "app/tokens.css",
+        "app/dashboard/dashboard.css",
+        "app/globals.css",
+        "tailwind.config.js",
+      ],
+      { encoding: "utf8" }
+    ).trim() || null
   } catch {
     return null
   }
