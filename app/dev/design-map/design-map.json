@@ -7,10 +7,10 @@
     "scope": {
       "roots": [
         "app/dashboard/**",
-        "components/** (кроме ui)",
+        "components/** — только достижимые из роутов кабинета",
         "components/ui/** — отдельной секцией как эталон"
       ],
-      "files": 143,
+      "files": 127,
       "byZone": [
         {
           "name": "page",
@@ -24,17 +24,34 @@
         },
         {
           "name": "cabinet-component",
-          "count": 29,
+          "count": 34,
           "title": "компоненты кабинета"
-        },
-        {
-          "name": "landing-component",
-          "count": 21,
-          "title": "компоненты вне кабинета"
         }
       ],
       "routes": 38,
-      "jsxElements": 3139
+      "jsxElements": 2793,
+      "excluded": {
+        "note": "Файлы components/**, не достижимые ни из одного роута кабинета: лендинг и формы. В скоуп карты не входят и ни в одно число не попадают.",
+        "count": 16,
+        "files": [
+          "components/ScalableContainer.tsx",
+          "components/analytics/TrackPaidFreeDistribution.tsx",
+          "components/artists-section.tsx",
+          "components/contact-form-section.tsx",
+          "components/custom-cursor.tsx",
+          "components/facts-section.tsx",
+          "components/faq-section.tsx",
+          "components/floating_paper.tsx",
+          "components/footer.tsx",
+          "components/hero.tsx",
+          "components/mobile-artists-slider.tsx",
+          "components/mobile-services-slider.tsx",
+          "components/navbar.tsx",
+          "components/partners-section.tsx",
+          "components/services-section.tsx",
+          "components/smooth-scroll.tsx"
+        ]
+      }
     },
     "zoneTitles": {
       "page": "экраны кабинета",
@@ -52,7 +69,7 @@
       "rule": "raw <button>, <input>, <select>, <table> запрещены — только components/ui",
       "scope": "app/dashboard/**",
       "filesCovered": 50,
-      "filesOutside": 30
+      "filesOutside": 35
     },
     {
       "id": "eslint-color",
@@ -62,7 +79,7 @@
       "rule": "bg-[#…] / text-[#…] / border-[#…] в className и style={{ color|background|borderColor|fill|stroke }} запрещены",
       "scope": "app/dashboard/**",
       "filesCovered": 50,
-      "filesOutside": 30
+      "filesOutside": 35
     },
     {
       "id": "page-shell",
@@ -72,7 +89,7 @@
       "rule": "на корне страницы нет max-w-*, mx-auto, p-*, px-*, pb-* — ширину и поля даёт DashboardShell",
       "scope": "app/dashboard/**/{page,loading}.tsx, *-client.tsx, components/artist-reports.tsx",
       "filesCovered": 47,
-      "filesOutside": 33
+      "filesOutside": 38
     },
     {
       "id": "page-header-canon",
@@ -149,9 +166,9 @@
                 "utilities": [
                   "surface-dialog"
                 ],
-                "usage": 6,
+                "usage": 7,
                 "usageDetail": {
-                  "viaUtilities": 6,
+                  "viaUtilities": 7,
                   "viaVar": 0
                 }
               },
@@ -181,9 +198,9 @@
                 "utilities": [
                   "surface-raised"
                 ],
-                "usage": 11,
+                "usage": 12,
                 "usageDetail": {
-                  "viaUtilities": 9,
+                  "viaUtilities": 10,
                   "viaVar": 2
                 }
               },
@@ -297,9 +314,9 @@
                   "brand",
                   "accent-emerald"
                 ],
-                "usage": 34,
+                "usage": 36,
                 "usageDetail": {
-                  "viaUtilities": 17,
+                  "viaUtilities": 19,
                   "viaVar": 17
                 }
               },
@@ -585,9 +602,9 @@
             "utilities": [
               "primary"
             ],
-            "usage": 122,
+            "usage": 123,
             "usageDetail": {
-              "viaUtilities": 121,
+              "viaUtilities": 122,
               "viaVar": 1
             }
           },
@@ -821,7 +838,7 @@
           {
             "name": "rounded-lg",
             "value": "0.5rem",
-            "usage": 115
+            "usage": 119
           },
           {
             "name": "rounded-xl",
@@ -831,7 +848,7 @@
           {
             "name": "rounded-2xl",
             "value": "1rem",
-            "usage": 78
+            "usage": 80
           },
           {
             "name": "rounded-3xl",
@@ -871,23 +888,23 @@
         "sizes": [
           {
             "name": "text-xs",
-            "count": 130,
+            "count": 139,
             "byZone": {
               "page": 93,
-              "cabinet-component": 37
+              "cabinet-component": 46
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 62
+                "count": 67
               },
               {
                 "name": "кнопка",
-                "count": 16
+                "count": 18
               },
               {
                 "name": "блок",
-                "count": 12
+                "count": 13
               },
               {
                 "name": "таблица",
@@ -903,7 +920,7 @@
               },
               {
                 "name": "список",
-                "count": 4
+                "count": 5
               },
               {
                 "name": "оверлей",
@@ -933,22 +950,22 @@
             "tags": [
               {
                 "name": "p",
-                "count": 47
+                "count": 52
               },
               {
                 "name": "Button",
-                "count": 16
+                "count": 18
               },
               {
                 "name": "span",
                 "count": 15
               },
               {
-                "name": "DataTableCell",
-                "count": 11
+                "name": "div",
+                "count": 12
               },
               {
-                "name": "div",
+                "name": "DataTableCell",
                 "count": 11
               },
               {
@@ -957,7 +974,7 @@
               },
               {
                 "name": "ul",
-                "count": 4
+                "count": 5
               },
               {
                 "name": "TooltipContent",
@@ -1050,19 +1067,19 @@
                 "classText": ""
               }
             ],
-            "more": 125
+            "more": 134
           },
           {
             "name": "text-sm",
-            "count": 124,
+            "count": 129,
             "byZone": {
               "page": 70,
-              "cabinet-component": 54
+              "cabinet-component": 59
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 61
+                "count": 66
               },
               {
                 "name": "блок",
@@ -1112,7 +1129,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 46
+                "count": 50
               },
               {
                 "name": "div",
@@ -1120,7 +1137,7 @@
               },
               {
                 "name": "span",
-                "count": 15
+                "count": 16
               },
               {
                 "name": "Label",
@@ -1225,7 +1242,7 @@
                 "classText": ""
               }
             ],
-            "more": 119
+            "more": 124
           },
           {
             "name": "text-base",
@@ -1332,15 +1349,15 @@
           },
           {
             "name": "text-[10px]",
-            "count": 56,
+            "count": 57,
             "byZone": {
               "page": 41,
-              "cabinet-component": 15
+              "cabinet-component": 16
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 30
+                "count": 31
               },
               {
                 "name": "пункт меню",
@@ -1370,7 +1387,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 19
+                "count": 20
               },
               {
                 "name": "span",
@@ -1447,7 +1464,7 @@
                 "classText": ""
               }
             ],
-            "more": 51
+            "more": 52
           },
           {
             "name": "text-lg",
@@ -1641,14 +1658,15 @@
           },
           {
             "name": "text-[11px]",
-            "count": 20,
+            "count": 22,
             "byZone": {
-              "page": 20
+              "page": 20,
+              "cabinet-component": 2
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 18
+                "count": 20
               },
               {
                 "name": "блок",
@@ -1661,12 +1679,12 @@
                 "count": 17
               },
               {
-                "name": "dl",
-                "count": 2
+                "name": "p",
+                "count": 3
               },
               {
-                "name": "p",
-                "count": 1
+                "name": "dl",
+                "count": 2
               }
             ],
             "samples": [
@@ -1711,7 +1729,7 @@
                 "classText": ""
               }
             ],
-            "more": 15
+            "more": 17
           },
           {
             "name": "text-2xl",
@@ -1890,6 +1908,77 @@
               }
             ],
             "more": 3
+          },
+          {
+            "name": "text-3xl",
+            "count": 6,
+            "byZone": {
+              "cabinet-component": 3,
+              "page": 3
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 4
+              },
+              {
+                "name": "заголовок",
+                "count": 2
+              }
+            ],
+            "tags": [
+              {
+                "name": "span",
+                "count": 4
+              },
+              {
+                "name": "h3",
+                "count": 2
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 704,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
+                "line": 328,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/artist/[username]/settings/artist-settings-client.tsx",
+                "line": 212,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 128,
+                "zone": "cabinet-component",
+                "tag": "h3",
+                "kind": "заголовок",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 148,
+                "zone": "cabinet-component",
+                "tag": "h3",
+                "kind": "заголовок",
+                "classText": ""
+              }
+            ],
+            "more": 1
           },
           {
             "name": "sm:text-2xl",
@@ -2162,61 +2251,6 @@
               {
                 "file": "components/analytics/unmapped-artists-panel.tsx",
                 "line": 322,
-                "zone": "cabinet-component",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              }
-            ],
-            "more": 0
-          },
-          {
-            "name": "text-3xl",
-            "count": 4,
-            "byZone": {
-              "page": 3,
-              "cabinet-component": 1
-            },
-            "kinds": [
-              {
-                "name": "текст",
-                "count": 4
-              }
-            ],
-            "tags": [
-              {
-                "name": "span",
-                "count": 4
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 704,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
-                "line": 328,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/artist/[username]/settings/artist-settings-client.tsx",
-                "line": 212,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "components/top-nav.tsx",
-                "line": 80,
                 "zone": "cabinet-component",
                 "tag": "span",
                 "kind": "текст",
@@ -2636,19 +2670,19 @@
         "weights": [
           {
             "name": "font-bold",
-            "count": 71,
+            "count": 75,
             "byZone": {
               "page": 54,
-              "cabinet-component": 17
+              "cabinet-component": 21
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 28
+                "count": 30
               },
               {
                 "name": "заголовок",
-                "count": 10
+                "count": 12
               },
               {
                 "name": "компонент",
@@ -2682,7 +2716,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 14
+                "count": 16
               },
               {
                 "name": "span",
@@ -2701,12 +2735,12 @@
                 "count": 8
               },
               {
-                "name": "SelectTrigger",
-                "count": 5
+                "name": "h3",
+                "count": 6
               },
               {
-                "name": "h3",
-                "count": 4
+                "name": "SelectTrigger",
+                "count": 5
               },
               {
                 "name": "h4",
@@ -2779,19 +2813,19 @@
                 "classText": ""
               }
             ],
-            "more": 66
+            "more": 70
           },
           {
             "name": "font-medium",
-            "count": 36,
+            "count": 38,
             "byZone": {
-              "cabinet-component": 18,
+              "cabinet-component": 20,
               "page": 18
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 19
+                "count": 21
               },
               {
                 "name": "заголовок",
@@ -2817,7 +2851,7 @@
               },
               {
                 "name": "p",
-                "count": 7
+                "count": 9
               },
               {
                 "name": "h3",
@@ -2886,7 +2920,7 @@
                 "classText": ""
               }
             ],
-            "more": 31
+            "more": 33
           },
           {
             "name": "font-semibold",
@@ -2993,15 +3027,15 @@
           },
           {
             "name": "font-normal",
-            "count": 9,
+            "count": 10,
             "byZone": {
-              "cabinet-component": 6,
+              "cabinet-component": 7,
               "page": 3
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 5
+                "count": 6
               },
               {
                 "name": "бейдж",
@@ -3015,7 +3049,7 @@
             "tags": [
               {
                 "name": "span",
-                "count": 5
+                "count": 6
               },
               {
                 "name": "Button",
@@ -3072,7 +3106,7 @@
                 "classText": ""
               }
             ],
-            "more": 4
+            "more": 5
           },
           {
             "name": "font-black",
@@ -3142,20 +3176,20 @@
           },
           {
             "name": "font-light",
-            "count": 3,
+            "count": 4,
             "byZone": {
-              "cabinet-component": 3
+              "cabinet-component": 4
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 3
+                "count": 4
               }
             ],
             "tags": [
               {
                 "name": "p",
-                "count": 3
+                "count": 4
               }
             ],
             "samples": [
@@ -3182,6 +3216,14 @@
                 "tag": "p",
                 "kind": "текст",
                 "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 108,
+                "zone": "cabinet-component",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
               }
             ],
             "more": 0
@@ -3190,19 +3232,19 @@
         "tracking": [
           {
             "name": "tracking-widest",
-            "count": 70,
+            "count": 76,
             "byZone": {
               "page": 46,
-              "cabinet-component": 24
+              "cabinet-component": 30
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 27
+                "count": 31
               },
               {
                 "name": "кнопка",
-                "count": 16
+                "count": 18
               },
               {
                 "name": "пункт меню",
@@ -3228,11 +3270,11 @@
             "tags": [
               {
                 "name": "p",
-                "count": 18
+                "count": 22
               },
               {
                 "name": "Button",
-                "count": 16
+                "count": 18
               },
               {
                 "name": "span",
@@ -3317,7 +3359,7 @@
                 "classText": ""
               }
             ],
-            "more": 65
+            "more": 71
           },
           {
             "name": "tracking-wider",
@@ -3724,10 +3766,10 @@
         "textColors": [
           {
             "name": "text-white",
-            "count": 166,
+            "count": 170,
             "byZone": {
               "page": 104,
-              "cabinet-component": 62
+              "cabinet-component": 66
             },
             "kinds": [
               {
@@ -3736,7 +3778,7 @@
               },
               {
                 "name": "текст",
-                "count": 31
+                "count": 33
               },
               {
                 "name": "подпись",
@@ -3744,7 +3786,7 @@
               },
               {
                 "name": "заголовок",
-                "count": 21
+                "count": 23
               },
               {
                 "name": "компонент",
@@ -3778,7 +3820,7 @@
               },
               {
                 "name": "span",
-                "count": 21
+                "count": 22
               },
               {
                 "name": "div",
@@ -3794,14 +3836,14 @@
               },
               {
                 "name": "p",
+                "count": 11
+              },
+              {
+                "name": "h3",
                 "count": 10
               },
               {
                 "name": "CardTitle",
-                "count": 8
-              },
-              {
-                "name": "h3",
                 "count": 8
               },
               {
@@ -3891,19 +3933,202 @@
                 "classText": ""
               }
             ],
-            "more": 161
+            "more": 165
           },
           {
-            "name": "text-gray-400",
-            "count": 130,
+            "name": "text-xs",
+            "count": 139,
             "byZone": {
-              "page": 100,
-              "cabinet-component": 30
+              "page": 93,
+              "cabinet-component": 46
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 55
+                "count": 67
+              },
+              {
+                "name": "кнопка",
+                "count": 18
+              },
+              {
+                "name": "блок",
+                "count": 13
+              },
+              {
+                "name": "таблица",
+                "count": 11
+              },
+              {
+                "name": "подпись",
+                "count": 9
+              },
+              {
+                "name": "компонент",
+                "count": 8
+              },
+              {
+                "name": "список",
+                "count": 5
+              },
+              {
+                "name": "оверлей",
+                "count": 3
+              },
+              {
+                "name": "бейдж",
+                "count": 1
+              },
+              {
+                "name": "заголовок",
+                "count": 1
+              },
+              {
+                "name": "пункт меню",
+                "count": 1
+              },
+              {
+                "name": "ссылка",
+                "count": 1
+              },
+              {
+                "name": "чип",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "p",
+                "count": 52
+              },
+              {
+                "name": "Button",
+                "count": 18
+              },
+              {
+                "name": "span",
+                "count": 15
+              },
+              {
+                "name": "div",
+                "count": 12
+              },
+              {
+                "name": "DataTableCell",
+                "count": 11
+              },
+              {
+                "name": "Label",
+                "count": 9
+              },
+              {
+                "name": "ul",
+                "count": 5
+              },
+              {
+                "name": "TooltipContent",
+                "count": 3
+              },
+              {
+                "name": "CommandEmpty",
+                "count": 2
+              },
+              {
+                "name": "DialogDescription",
+                "count": 2
+              },
+              {
+                "name": "TabsTrigger",
+                "count": 2
+              },
+              {
+                "name": "a",
+                "count": 1
+              },
+              {
+                "name": "Badge",
+                "count": 1
+              },
+              {
+                "name": "CommandInput",
+                "count": 1
+              },
+              {
+                "name": "CommandItem",
+                "count": 1
+              },
+              {
+                "name": "FilterChip",
+                "count": 1
+              },
+              {
+                "name": "h3",
+                "count": 1
+              },
+              {
+                "name": "pre",
+                "count": 1
+              },
+              {
+                "name": "Title",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 298,
+                "zone": "page",
+                "tag": "Button",
+                "kind": "кнопка",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 313,
+                "zone": "page",
+                "tag": "Button",
+                "kind": "кнопка",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 387,
+                "zone": "page",
+                "tag": "CommandEmpty",
+                "kind": "компонент",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 500,
+                "zone": "page",
+                "tag": "DataTableCell",
+                "kind": "таблица",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 517,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              }
+            ],
+            "more": 134
+          },
+          {
+            "name": "text-gray-400",
+            "count": 134,
+            "byZone": {
+              "page": 100,
+              "cabinet-component": 34
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 59
               },
               {
                 "name": "таблица",
@@ -3949,7 +4174,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 32
+                "count": 36
               },
               {
                 "name": "span",
@@ -4046,202 +4271,19 @@
                 "classText": ""
               }
             ],
-            "more": 125
-          },
-          {
-            "name": "text-xs",
-            "count": 130,
-            "byZone": {
-              "page": 93,
-              "cabinet-component": 37
-            },
-            "kinds": [
-              {
-                "name": "текст",
-                "count": 62
-              },
-              {
-                "name": "кнопка",
-                "count": 16
-              },
-              {
-                "name": "блок",
-                "count": 12
-              },
-              {
-                "name": "таблица",
-                "count": 11
-              },
-              {
-                "name": "подпись",
-                "count": 9
-              },
-              {
-                "name": "компонент",
-                "count": 8
-              },
-              {
-                "name": "список",
-                "count": 4
-              },
-              {
-                "name": "оверлей",
-                "count": 3
-              },
-              {
-                "name": "бейдж",
-                "count": 1
-              },
-              {
-                "name": "заголовок",
-                "count": 1
-              },
-              {
-                "name": "пункт меню",
-                "count": 1
-              },
-              {
-                "name": "ссылка",
-                "count": 1
-              },
-              {
-                "name": "чип",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "p",
-                "count": 47
-              },
-              {
-                "name": "Button",
-                "count": 16
-              },
-              {
-                "name": "span",
-                "count": 15
-              },
-              {
-                "name": "DataTableCell",
-                "count": 11
-              },
-              {
-                "name": "div",
-                "count": 11
-              },
-              {
-                "name": "Label",
-                "count": 9
-              },
-              {
-                "name": "ul",
-                "count": 4
-              },
-              {
-                "name": "TooltipContent",
-                "count": 3
-              },
-              {
-                "name": "CommandEmpty",
-                "count": 2
-              },
-              {
-                "name": "DialogDescription",
-                "count": 2
-              },
-              {
-                "name": "TabsTrigger",
-                "count": 2
-              },
-              {
-                "name": "a",
-                "count": 1
-              },
-              {
-                "name": "Badge",
-                "count": 1
-              },
-              {
-                "name": "CommandInput",
-                "count": 1
-              },
-              {
-                "name": "CommandItem",
-                "count": 1
-              },
-              {
-                "name": "FilterChip",
-                "count": 1
-              },
-              {
-                "name": "h3",
-                "count": 1
-              },
-              {
-                "name": "pre",
-                "count": 1
-              },
-              {
-                "name": "Title",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 298,
-                "zone": "page",
-                "tag": "Button",
-                "kind": "кнопка",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 313,
-                "zone": "page",
-                "tag": "Button",
-                "kind": "кнопка",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 387,
-                "zone": "page",
-                "tag": "CommandEmpty",
-                "kind": "компонент",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 500,
-                "zone": "page",
-                "tag": "DataTableCell",
-                "kind": "таблица",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 517,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              }
-            ],
-            "more": 125
+            "more": 129
           },
           {
             "name": "text-sm",
-            "count": 124,
+            "count": 129,
             "byZone": {
               "page": 70,
-              "cabinet-component": 54
+              "cabinet-component": 59
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 61
+                "count": 66
               },
               {
                 "name": "блок",
@@ -4291,7 +4333,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 46
+                "count": 50
               },
               {
                 "name": "div",
@@ -4299,7 +4341,7 @@
               },
               {
                 "name": "span",
-                "count": 15
+                "count": 16
               },
               {
                 "name": "Label",
@@ -4404,19 +4446,19 @@
                 "classText": ""
               }
             ],
-            "more": 119
+            "more": 124
           },
           {
             "name": "text-gray-500",
-            "count": 115,
+            "count": 117,
             "byZone": {
               "page": 92,
-              "cabinet-component": 23
+              "cabinet-component": 25
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 77
+                "count": 79
               },
               {
                 "name": "блок",
@@ -4450,7 +4492,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 50
+                "count": 52
               },
               {
                 "name": "span",
@@ -4543,7 +4585,7 @@
                 "classText": ""
               }
             ],
-            "more": 110
+            "more": 112
           },
           {
             "name": "text-base",
@@ -4650,15 +4692,15 @@
           },
           {
             "name": "text-[10px]",
-            "count": 56,
+            "count": 57,
             "byZone": {
               "page": 41,
-              "cabinet-component": 15
+              "cabinet-component": 16
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 30
+                "count": 31
               },
               {
                 "name": "пункт меню",
@@ -4688,7 +4730,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 19
+                "count": 20
               },
               {
                 "name": "span",
@@ -4765,7 +4807,7 @@
                 "classText": ""
               }
             ],
-            "more": 51
+            "more": 52
           },
           {
             "name": "text-lg",
@@ -4868,15 +4910,15 @@
           },
           {
             "name": "text-gray-300",
-            "count": 48,
+            "count": 49,
             "byZone": {
               "page": 40,
-              "cabinet-component": 8
+              "cabinet-component": 9
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 12
+                "count": 13
               },
               {
                 "name": "кнопка",
@@ -4917,11 +4959,11 @@
             ],
             "tags": [
               {
-                "name": "Button",
-                "count": 11
+                "name": "span",
+                "count": 12
               },
               {
-                "name": "span",
+                "name": "Button",
                 "count": 11
               },
               {
@@ -5007,7 +5049,7 @@
                 "classText": ""
               }
             ],
-            "more": 43
+            "more": 44
           },
           {
             "name": "text-xl",
@@ -5189,15 +5231,15 @@
           },
           {
             "name": "text-primary",
-            "count": 31,
+            "count": 32,
             "byZone": {
               "page": 26,
-              "cabinet-component": 5
+              "cabinet-component": 6
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 24
+                "count": 25
               },
               {
                 "name": "кнопка",
@@ -5219,7 +5261,7 @@
             "tags": [
               {
                 "name": "span",
-                "count": 20
+                "count": 21
               },
               {
                 "name": "p",
@@ -5284,18 +5326,19 @@
                 "classText": ""
               }
             ],
-            "more": 26
+            "more": 27
           },
           {
             "name": "text-[11px]",
-            "count": 20,
+            "count": 22,
             "byZone": {
-              "page": 20
+              "page": 20,
+              "cabinet-component": 2
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 18
+                "count": 20
               },
               {
                 "name": "блок",
@@ -5308,12 +5351,12 @@
                 "count": 17
               },
               {
-                "name": "dl",
-                "count": 2
+                "name": "p",
+                "count": 3
               },
               {
-                "name": "p",
-                "count": 1
+                "name": "dl",
+                "count": 2
               }
             ],
             "samples": [
@@ -5358,7 +5401,7 @@
                 "classText": ""
               }
             ],
-            "more": 15
+            "more": 17
           },
           {
             "name": "text-center",
@@ -5934,15 +5977,15 @@
           },
           {
             "name": "text-red-400",
-            "count": 10,
+            "count": 11,
             "byZone": {
               "page": 6,
-              "cabinet-component": 4
+              "cabinet-component": 5
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 5
+                "count": 6
               },
               {
                 "name": "пункт меню",
@@ -5959,11 +6002,11 @@
             ],
             "tags": [
               {
-                "name": "DropdownMenuItem",
-                "count": 3
+                "name": "span",
+                "count": 4
               },
               {
-                "name": "span",
+                "name": "DropdownMenuItem",
                 "count": 3
               },
               {
@@ -6021,7 +6064,7 @@
                 "classText": ""
               }
             ],
-            "more": 5
+            "more": 6
           },
           {
             "name": "text-2xl",
@@ -6357,6 +6400,77 @@
               }
             ],
             "more": 3
+          },
+          {
+            "name": "text-3xl",
+            "count": 6,
+            "byZone": {
+              "cabinet-component": 3,
+              "page": 3
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 4
+              },
+              {
+                "name": "заголовок",
+                "count": 2
+              }
+            ],
+            "tags": [
+              {
+                "name": "span",
+                "count": 4
+              },
+              {
+                "name": "h3",
+                "count": 2
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 704,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
+                "line": 328,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/artist/[username]/settings/artist-settings-client.tsx",
+                "line": 212,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 128,
+                "zone": "cabinet-component",
+                "tag": "h3",
+                "kind": "заголовок",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 148,
+                "zone": "cabinet-component",
+                "tag": "h3",
+                "kind": "заголовок",
+                "classText": ""
+              }
+            ],
+            "more": 1
           },
           {
             "name": "text-accent-azure",
@@ -7108,54 +7222,62 @@
             "more": 0
           },
           {
-            "name": "text-3xl",
+            "name": "text-amber-200/90",
             "count": 4,
             "byZone": {
-              "page": 3,
-              "cabinet-component": 1
+              "cabinet-component": 3,
+              "page": 1
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 4
+                "count": 3
+              },
+              {
+                "name": "список",
+                "count": 1
               }
             ],
             "tags": [
               {
-                "name": "span",
-                "count": 4
+                "name": "p",
+                "count": 3
+              },
+              {
+                "name": "ul",
+                "count": 1
               }
             ],
             "samples": [
               {
                 "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 704,
+                "line": 646,
                 "zone": "page",
-                "tag": "span",
+                "tag": "p",
                 "kind": "текст",
                 "classText": ""
               },
               {
-                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
-                "line": 328,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/artist/[username]/settings/artist-settings-client.tsx",
-                "line": 212,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "components/top-nav.tsx",
-                "line": 80,
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 111,
                 "zone": "cabinet-component",
-                "tag": "span",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/report-processor.tsx",
+                "line": 431,
+                "zone": "cabinet-component",
+                "tag": "ul",
+                "kind": "список",
+                "classText": ""
+              },
+              {
+                "file": "components/report-processor.tsx",
+                "line": 443,
+                "zone": "cabinet-component",
+                "tag": "p",
                 "kind": "текст",
                 "classText": ""
               }
@@ -7474,52 +7596,43 @@
             "more": 0
           },
           {
-            "name": "text-amber-200/90",
+            "name": "text-amber-100",
             "count": 3,
             "byZone": {
-              "cabinet-component": 2,
-              "page": 1
+              "cabinet-component": 3
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 2
-              },
-              {
-                "name": "список",
-                "count": 1
+                "count": 3
               }
             ],
             "tags": [
               {
                 "name": "p",
-                "count": 2
-              },
-              {
-                "name": "ul",
-                "count": 1
+                "count": 3
               }
             ],
             "samples": [
               {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 646,
-                "zone": "page",
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 63,
+                "zone": "cabinet-component",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 91,
+                "zone": "cabinet-component",
                 "tag": "p",
                 "kind": "текст",
                 "classText": ""
               },
               {
                 "file": "components/report-processor.tsx",
-                "line": 431,
-                "zone": "cabinet-component",
-                "tag": "ul",
-                "kind": "список",
-                "classText": ""
-              },
-              {
-                "file": "components/report-processor.tsx",
-                "line": 443,
+                "line": 422,
                 "zone": "cabinet-component",
                 "tag": "p",
                 "kind": "текст",
@@ -8796,30 +8909,30 @@
             "more": 0
           },
           {
-            "name": "text-amber-100",
+            "name": "text-amber-100/90",
             "count": 1,
             "byZone": {
               "cabinet-component": 1
             },
             "kinds": [
               {
-                "name": "текст",
+                "name": "список",
                 "count": 1
               }
             ],
             "tags": [
               {
-                "name": "p",
+                "name": "ul",
                 "count": 1
               }
             ],
             "samples": [
               {
-                "file": "components/report-processor.tsx",
-                "line": 422,
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 121,
                 "zone": "cabinet-component",
-                "tag": "p",
-                "kind": "текст",
+                "tag": "ul",
+                "kind": "список",
                 "classText": ""
               }
             ],
@@ -8850,6 +8963,66 @@
                 "zone": "page",
                 "tag": "div",
                 "kind": "блок",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "text-amber-200/60",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "список",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "li",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 129,
+                "zone": "cabinet-component",
+                "tag": "li",
+                "kind": "список",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "text-amber-200/70",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "p",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 108,
+                "zone": "cabinet-component",
+                "tag": "p",
+                "kind": "текст",
                 "classText": ""
               }
             ],
@@ -8967,6 +9140,36 @@
               {
                 "file": "components/analytics/unmapped-artists-panel.tsx",
                 "line": 273,
+                "zone": "cabinet-component",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "text-brand",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "p",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 105,
                 "zone": "cabinet-component",
                 "tag": "p",
                 "kind": "текст",
@@ -9491,6 +9694,137 @@
             "more": 28
           },
           {
+            "name": "px-3",
+            "count": 32,
+            "byZone": {
+              "page": 20,
+              "cabinet-component": 12
+            },
+            "kinds": [
+              {
+                "name": "поле",
+                "count": 17
+              },
+              {
+                "name": "кнопка",
+                "count": 4
+              },
+              {
+                "name": "баннер",
+                "count": 3
+              },
+              {
+                "name": "блок",
+                "count": 3
+              },
+              {
+                "name": "компонент",
+                "count": 1
+              },
+              {
+                "name": "оверлей",
+                "count": 1
+              },
+              {
+                "name": "ссылка",
+                "count": 1
+              },
+              {
+                "name": "текст",
+                "count": 1
+              },
+              {
+                "name": "чип",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "Input",
+                "count": 11
+              },
+              {
+                "name": "SelectTrigger",
+                "count": 6
+              },
+              {
+                "name": "Button",
+                "count": 4
+              },
+              {
+                "name": "Banner",
+                "count": 3
+              },
+              {
+                "name": "div",
+                "count": 3
+              },
+              {
+                "name": "a",
+                "count": 1
+              },
+              {
+                "name": "FilterChip",
+                "count": 1
+              },
+              {
+                "name": "span",
+                "count": 1
+              },
+              {
+                "name": "Title",
+                "count": 1
+              },
+              {
+                "name": "TooltipContent",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 457,
+                "zone": "page",
+                "tag": "SelectTrigger",
+                "kind": "поле",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 493,
+                "zone": "page",
+                "tag": "SelectTrigger",
+                "kind": "поле",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 515,
+                "zone": "page",
+                "tag": "SelectTrigger",
+                "kind": "поле",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 376,
+                "zone": "page",
+                "tag": "Input",
+                "kind": "поле",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 391,
+                "zone": "page",
+                "tag": "Input",
+                "kind": "поле",
+                "classText": ""
+              }
+            ],
+            "more": 27
+          },
+          {
             "name": "p-0",
             "count": 28,
             "byZone": {
@@ -9584,137 +9918,6 @@
                 "zone": "page",
                 "tag": "CardHeader",
                 "kind": "карточка",
-                "classText": ""
-              }
-            ],
-            "more": 23
-          },
-          {
-            "name": "px-3",
-            "count": 28,
-            "byZone": {
-              "page": 20,
-              "cabinet-component": 8
-            },
-            "kinds": [
-              {
-                "name": "поле",
-                "count": 17
-              },
-              {
-                "name": "баннер",
-                "count": 3
-              },
-              {
-                "name": "кнопка",
-                "count": 2
-              },
-              {
-                "name": "блок",
-                "count": 1
-              },
-              {
-                "name": "компонент",
-                "count": 1
-              },
-              {
-                "name": "оверлей",
-                "count": 1
-              },
-              {
-                "name": "ссылка",
-                "count": 1
-              },
-              {
-                "name": "текст",
-                "count": 1
-              },
-              {
-                "name": "чип",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "Input",
-                "count": 11
-              },
-              {
-                "name": "SelectTrigger",
-                "count": 6
-              },
-              {
-                "name": "Banner",
-                "count": 3
-              },
-              {
-                "name": "Button",
-                "count": 2
-              },
-              {
-                "name": "a",
-                "count": 1
-              },
-              {
-                "name": "div",
-                "count": 1
-              },
-              {
-                "name": "FilterChip",
-                "count": 1
-              },
-              {
-                "name": "span",
-                "count": 1
-              },
-              {
-                "name": "Title",
-                "count": 1
-              },
-              {
-                "name": "TooltipContent",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 457,
-                "zone": "page",
-                "tag": "SelectTrigger",
-                "kind": "поле",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 493,
-                "zone": "page",
-                "tag": "SelectTrigger",
-                "kind": "поле",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 515,
-                "zone": "page",
-                "tag": "SelectTrigger",
-                "kind": "поле",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 376,
-                "zone": "page",
-                "tag": "Input",
-                "kind": "поле",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 391,
-                "zone": "page",
-                "tag": "Input",
-                "kind": "поле",
                 "classText": ""
               }
             ],
@@ -9880,10 +10083,10 @@
           },
           {
             "name": "py-2",
-            "count": 17,
+            "count": 20,
             "byZone": {
               "page": 13,
-              "cabinet-component": 4
+              "cabinet-component": 7
             },
             "kinds": [
               {
@@ -9891,16 +10094,16 @@
                 "count": 6
               },
               {
+                "name": "блок",
+                "count": 5
+              },
+              {
                 "name": "баннер",
                 "count": 3
               },
               {
-                "name": "блок",
-                "count": 3
-              },
-              {
                 "name": "кнопка",
-                "count": 2
+                "count": 3
               },
               {
                 "name": "оверлей",
@@ -9921,16 +10124,16 @@
                 "count": 6
               },
               {
+                "name": "div",
+                "count": 5
+              },
+              {
                 "name": "Banner",
                 "count": 3
               },
               {
-                "name": "div",
-                "count": 3
-              },
-              {
                 "name": "Button",
-                "count": 2
+                "count": 3
               },
               {
                 "name": "a",
@@ -9987,7 +10190,7 @@
                 "classText": ""
               }
             ],
-            "more": 12
+            "more": 15
           },
           {
             "name": "px-2",
@@ -11377,6 +11580,69 @@
             "more": 0
           },
           {
+            "name": "py-1.5",
+            "count": 4,
+            "byZone": {
+              "cabinet-component": 2,
+              "page": 2
+            },
+            "kinds": [
+              {
+                "name": "кнопка",
+                "count": 2
+              },
+              {
+                "name": "текст",
+                "count": 2
+              }
+            ],
+            "tags": [
+              {
+                "name": "Button",
+                "count": 2
+              },
+              {
+                "name": "span",
+                "count": 2
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 836,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
+                "line": 449,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/artist-reports.tsx",
+                "line": 185,
+                "zone": "cabinet-component",
+                "tag": "Button",
+                "kind": "кнопка",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 94,
+                "zone": "cabinet-component",
+                "tag": "Button",
+                "kind": "кнопка",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
             "name": "py-10",
             "count": 4,
             "byZone": {
@@ -11761,55 +12027,63 @@
             "more": 0
           },
           {
-            "name": "py-1.5",
+            "name": "py-0",
             "count": 3,
             "byZone": {
-              "page": 2,
-              "cabinet-component": 1
+              "cabinet-component": 2,
+              "page": 1
             },
             "kinds": [
               {
-                "name": "текст",
-                "count": 2
+                "name": "бейдж",
+                "count": 1
               },
               {
                 "name": "кнопка",
+                "count": 1
+              },
+              {
+                "name": "пустое состояние",
                 "count": 1
               }
             ],
             "tags": [
               {
-                "name": "span",
-                "count": 2
+                "name": "Button",
+                "count": 1
               },
               {
-                "name": "Button",
+                "name": "EmptyState",
+                "count": 1
+              },
+              {
+                "name": "StatusBadge",
                 "count": 1
               }
             ],
             "samples": [
               {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 836,
+                "file": "app/dashboard/admin/artists/admin-artists-client.tsx",
+                "line": 336,
                 "zone": "page",
-                "tag": "span",
-                "kind": "текст",
+                "tag": "StatusBadge",
+                "kind": "бейдж",
                 "classText": ""
               },
               {
-                "file": "app/dashboard/artist/[username]/analytics/page.tsx",
-                "line": 449,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "components/artist-reports.tsx",
-                "line": 185,
+                "file": "components/analytics/track-top-list.tsx",
+                "line": 47,
                 "zone": "cabinet-component",
                 "tag": "Button",
                 "kind": "кнопка",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 131,
+                "zone": "cabinet-component",
+                "tag": "EmptyState",
+                "kind": "пустое состояние",
                 "classText": ""
               }
             ],
@@ -11861,6 +12135,82 @@
                 "zone": "cabinet-component",
                 "tag": "div",
                 "kind": "блок",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "md:px-6",
+            "count": 2,
+            "byZone": {
+              "cabinet-component": 2
+            },
+            "kinds": [
+              {
+                "name": "баннер",
+                "count": 2
+              }
+            ],
+            "tags": [
+              {
+                "name": "Banner",
+                "count": 2
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 62,
+                "zone": "cabinet-component",
+                "tag": "Banner",
+                "kind": "баннер",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 88,
+                "zone": "cabinet-component",
+                "tag": "Banner",
+                "kind": "баннер",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "md:py-4",
+            "count": 2,
+            "byZone": {
+              "cabinet-component": 2
+            },
+            "kinds": [
+              {
+                "name": "баннер",
+                "count": 2
+              }
+            ],
+            "tags": [
+              {
+                "name": "Banner",
+                "count": 2
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 62,
+                "zone": "cabinet-component",
+                "tag": "Banner",
+                "kind": "баннер",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 88,
+                "zone": "cabinet-component",
+                "tag": "Banner",
+                "kind": "баннер",
                 "classText": ""
               }
             ],
@@ -12035,53 +12385,6 @@
                 "zone": "cabinet-component",
                 "tag": "header",
                 "kind": "панель",
-                "classText": ""
-              }
-            ],
-            "more": 0
-          },
-          {
-            "name": "py-0",
-            "count": 2,
-            "byZone": {
-              "cabinet-component": 1,
-              "page": 1
-            },
-            "kinds": [
-              {
-                "name": "бейдж",
-                "count": 1
-              },
-              {
-                "name": "кнопка",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "Button",
-                "count": 1
-              },
-              {
-                "name": "StatusBadge",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/artists/admin-artists-client.tsx",
-                "line": 336,
-                "zone": "page",
-                "tag": "StatusBadge",
-                "kind": "бейдж",
-                "classText": ""
-              },
-              {
-                "file": "components/analytics/track-top-list.tsx",
-                "line": 47,
-                "zone": "cabinet-component",
-                "tag": "Button",
-                "kind": "кнопка",
                 "classText": ""
               }
             ],
@@ -12426,6 +12729,36 @@
             "more": 0
           },
           {
+            "name": "pl-2",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "span",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 116,
+                "zone": "cabinet-component",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
             "name": "pr-1",
             "count": 1,
             "byZone": {
@@ -12669,15 +13002,15 @@
         "gap": [
           {
             "name": "gap-2",
-            "count": 91,
+            "count": 92,
             "byZone": {
               "page": 67,
-              "cabinet-component": 24
+              "cabinet-component": 25
             },
             "kinds": [
               {
                 "name": "блок",
-                "count": 64
+                "count": 65
               },
               {
                 "name": "компонент",
@@ -12703,7 +13036,7 @@
             "tags": [
               {
                 "name": "div",
-                "count": 64
+                "count": 65
               },
               {
                 "name": "span",
@@ -12788,7 +13121,7 @@
                 "classText": ""
               }
             ],
-            "more": 86
+            "more": 87
           },
           {
             "name": "gap-3",
@@ -13457,15 +13790,15 @@
           },
           {
             "name": "gap-x-3",
-            "count": 4,
+            "count": 5,
             "byZone": {
               "page": 3,
-              "cabinet-component": 1
+              "cabinet-component": 2
             },
             "kinds": [
               {
                 "name": "блок",
-                "count": 3
+                "count": 4
               },
               {
                 "name": "текст",
@@ -13474,12 +13807,12 @@
             ],
             "tags": [
               {
-                "name": "dl",
+                "name": "div",
                 "count": 2
               },
               {
-                "name": "div",
-                "count": 1
+                "name": "dl",
+                "count": 2
               },
               {
                 "name": "span",
@@ -13514,6 +13847,77 @@
               {
                 "file": "components/artist-reports.tsx",
                 "line": 181,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 89,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "gap-y-1",
+            "count": 4,
+            "byZone": {
+              "cabinet-component": 3,
+              "page": 1
+            },
+            "kinds": [
+              {
+                "name": "блок",
+                "count": 3
+              },
+              {
+                "name": "текст",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "div",
+                "count": 3
+              },
+              {
+                "name": "span",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/artist/[username]/releases/[id]/page.tsx",
+                "line": 224,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/artist-advances.tsx",
+                "line": 230,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              },
+              {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 89,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              },
+              {
+                "file": "components/pending-signature-list.tsx",
+                "line": 150,
                 "zone": "cabinet-component",
                 "tag": "div",
                 "kind": "блок",
@@ -13670,61 +14074,6 @@
                 "file": "app/dashboard/artist/[username]/analytics/page.tsx",
                 "line": 397,
                 "zone": "page",
-                "tag": "div",
-                "kind": "блок",
-                "classText": ""
-              }
-            ],
-            "more": 0
-          },
-          {
-            "name": "gap-y-1",
-            "count": 3,
-            "byZone": {
-              "cabinet-component": 2,
-              "page": 1
-            },
-            "kinds": [
-              {
-                "name": "блок",
-                "count": 2
-              },
-              {
-                "name": "текст",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "div",
-                "count": 2
-              },
-              {
-                "name": "span",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/artist/[username]/releases/[id]/page.tsx",
-                "line": 224,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "components/artist-advances.tsx",
-                "line": 230,
-                "zone": "cabinet-component",
-                "tag": "div",
-                "kind": "блок",
-                "classText": ""
-              },
-              {
-                "file": "components/pending-signature-list.tsx",
-                "line": 150,
-                "zone": "cabinet-component",
                 "tag": "div",
                 "kind": "блок",
                 "classText": ""
@@ -14415,15 +14764,15 @@
           },
           {
             "name": "space-y-1",
-            "count": 14,
+            "count": 15,
             "byZone": {
               "page": 9,
-              "cabinet-component": 5
+              "cabinet-component": 6
             },
             "kinds": [
               {
                 "name": "список",
-                "count": 7
+                "count": 8
               },
               {
                 "name": "блок",
@@ -14437,7 +14786,7 @@
             "tags": [
               {
                 "name": "ul",
-                "count": 7
+                "count": 8
               },
               {
                 "name": "div",
@@ -14494,7 +14843,7 @@
                 "classText": ""
               }
             ],
-            "more": 9
+            "more": 10
           },
           {
             "name": "space-y-1.5",
@@ -14599,123 +14948,50 @@
               }
             ],
             "more": 0
-          }
-        ],
-        "margin": [
+          },
           {
-            "name": "mb-6",
-            "count": 31,
+            "name": "space-y-0.5",
+            "count": 1,
             "byZone": {
-              "page": 25,
-              "cabinet-component": 6
+              "cabinet-component": 1
             },
             "kinds": [
               {
-                "name": "заголовок секции",
-                "count": 22
-              },
-              {
                 "name": "блок",
-                "count": 4
-              },
-              {
-                "name": "текст",
-                "count": 2
-              },
-              {
-                "name": "баннер",
-                "count": 1
-              },
-              {
-                "name": "компонент",
-                "count": 1
-              },
-              {
-                "name": "тулбар",
                 "count": 1
               }
             ],
             "tags": [
               {
-                "name": "SectionHeader",
-                "count": 22
-              },
-              {
                 "name": "div",
-                "count": 4
-              },
-              {
-                "name": "p",
-                "count": 2
-              },
-              {
-                "name": "Banner",
-                "count": 1
-              },
-              {
-                "name": "TabsList",
-                "count": 1
-              },
-              {
-                "name": "Toolbar",
                 "count": 1
               }
             ],
             "samples": [
               {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 334,
-                "zone": "page",
-                "tag": "TabsList",
-                "kind": "компонент",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 368,
-                "zone": "page",
-                "tag": "SectionHeader",
-                "kind": "заголовок секции",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 690,
-                "zone": "page",
-                "tag": "SectionHeader",
-                "kind": "заголовок секции",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 711,
-                "zone": "page",
-                "tag": "SectionHeader",
-                "kind": "заголовок секции",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/artists/add/page.tsx",
-                "line": 165,
-                "zone": "page",
-                "tag": "SectionHeader",
-                "kind": "заголовок секции",
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 107,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
                 "classText": ""
               }
             ],
-            "more": 26
-          },
+            "more": 0
+          }
+        ],
+        "margin": [
           {
             "name": "mb-1",
-            "count": 28,
+            "count": 33,
             "byZone": {
               "page": 21,
-              "cabinet-component": 7
+              "cabinet-component": 12
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 9
+                "count": 14
               },
               {
                 "name": "карточка",
@@ -14737,7 +15013,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 8
+                "count": 13
               },
               {
                 "name": "CardHeader",
@@ -14810,19 +15086,122 @@
                 "classText": ""
               }
             ],
-            "more": 23
+            "more": 28
+          },
+          {
+            "name": "mb-6",
+            "count": 33,
+            "byZone": {
+              "page": 25,
+              "cabinet-component": 8
+            },
+            "kinds": [
+              {
+                "name": "заголовок секции",
+                "count": 22
+              },
+              {
+                "name": "блок",
+                "count": 6
+              },
+              {
+                "name": "текст",
+                "count": 2
+              },
+              {
+                "name": "баннер",
+                "count": 1
+              },
+              {
+                "name": "компонент",
+                "count": 1
+              },
+              {
+                "name": "тулбар",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "SectionHeader",
+                "count": 22
+              },
+              {
+                "name": "div",
+                "count": 6
+              },
+              {
+                "name": "p",
+                "count": 2
+              },
+              {
+                "name": "Banner",
+                "count": 1
+              },
+              {
+                "name": "TabsList",
+                "count": 1
+              },
+              {
+                "name": "Toolbar",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 334,
+                "zone": "page",
+                "tag": "TabsList",
+                "kind": "компонент",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 368,
+                "zone": "page",
+                "tag": "SectionHeader",
+                "kind": "заголовок секции",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 690,
+                "zone": "page",
+                "tag": "SectionHeader",
+                "kind": "заголовок секции",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 711,
+                "zone": "page",
+                "tag": "SectionHeader",
+                "kind": "заголовок секции",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/artists/add/page.tsx",
+                "line": 165,
+                "zone": "page",
+                "tag": "SectionHeader",
+                "kind": "заголовок секции",
+                "classText": ""
+              }
+            ],
+            "more": 28
           },
           {
             "name": "mt-1",
-            "count": 23,
+            "count": 24,
             "byZone": {
               "page": 18,
-              "cabinet-component": 5
+              "cabinet-component": 6
             },
             "kinds": [
               {
                 "name": "текст",
-                "count": 15
+                "count": 16
               },
               {
                 "name": "блок",
@@ -14836,7 +15215,7 @@
             "tags": [
               {
                 "name": "p",
-                "count": 13
+                "count": 14
               },
               {
                 "name": "dd",
@@ -14897,19 +15276,19 @@
                 "classText": ""
               }
             ],
-            "more": 18
+            "more": 19
           },
           {
             "name": "mb-4",
-            "count": 19,
+            "count": 20,
             "byZone": {
               "page": 12,
-              "cabinet-component": 7
+              "cabinet-component": 8
             },
             "kinds": [
               {
                 "name": "блок",
-                "count": 5
+                "count": 6
               },
               {
                 "name": "баннер",
@@ -14935,7 +15314,7 @@
             "tags": [
               {
                 "name": "div",
-                "count": 5
+                "count": 6
               },
               {
                 "name": "Banner",
@@ -15004,7 +15383,114 @@
                 "classText": ""
               }
             ],
-            "more": 14
+            "more": 15
+          },
+          {
+            "name": "mt-3",
+            "count": 18,
+            "byZone": {
+              "page": 12,
+              "cabinet-component": 6
+            },
+            "kinds": [
+              {
+                "name": "карточка",
+                "count": 6
+              },
+              {
+                "name": "текст",
+                "count": 4
+              },
+              {
+                "name": "блок",
+                "count": 3
+              },
+              {
+                "name": "кнопка",
+                "count": 2
+              },
+              {
+                "name": "компонент",
+                "count": 2
+              },
+              {
+                "name": "скелетон",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "CardContent",
+                "count": 6
+              },
+              {
+                "name": "p",
+                "count": 4
+              },
+              {
+                "name": "Button",
+                "count": 2
+              },
+              {
+                "name": "div",
+                "count": 2
+              },
+              {
+                "name": "ScrollArea",
+                "count": 2
+              },
+              {
+                "name": "dl",
+                "count": 1
+              },
+              {
+                "name": "SkeletonLine",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 395,
+                "zone": "page",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 649,
+                "zone": "page",
+                "tag": "Button",
+                "kind": "кнопка",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 780,
+                "zone": "page",
+                "tag": "CardContent",
+                "kind": "карточка",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 824,
+                "zone": "page",
+                "tag": "CardContent",
+                "kind": "карточка",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/analytics/page.tsx",
+                "line": 864,
+                "zone": "page",
+                "tag": "CardContent",
+                "kind": "карточка",
+                "classText": ""
+              }
+            ],
+            "more": 13
           },
           {
             "name": "mb-2",
@@ -15183,113 +15669,6 @@
                 "zone": "page",
                 "tag": "span",
                 "kind": "текст",
-                "classText": ""
-              }
-            ],
-            "more": 11
-          },
-          {
-            "name": "mt-3",
-            "count": 16,
-            "byZone": {
-              "page": 12,
-              "cabinet-component": 4
-            },
-            "kinds": [
-              {
-                "name": "карточка",
-                "count": 6
-              },
-              {
-                "name": "текст",
-                "count": 4
-              },
-              {
-                "name": "блок",
-                "count": 3
-              },
-              {
-                "name": "кнопка",
-                "count": 1
-              },
-              {
-                "name": "компонент",
-                "count": 1
-              },
-              {
-                "name": "скелетон",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "CardContent",
-                "count": 6
-              },
-              {
-                "name": "p",
-                "count": 4
-              },
-              {
-                "name": "div",
-                "count": 2
-              },
-              {
-                "name": "Button",
-                "count": 1
-              },
-              {
-                "name": "dl",
-                "count": 1
-              },
-              {
-                "name": "ScrollArea",
-                "count": 1
-              },
-              {
-                "name": "SkeletonLine",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 395,
-                "zone": "page",
-                "tag": "div",
-                "kind": "блок",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 649,
-                "zone": "page",
-                "tag": "Button",
-                "kind": "кнопка",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 780,
-                "zone": "page",
-                "tag": "CardContent",
-                "kind": "карточка",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 824,
-                "zone": "page",
-                "tag": "CardContent",
-                "kind": "карточка",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/analytics/page.tsx",
-                "line": 864,
-                "zone": "page",
-                "tag": "CardContent",
-                "kind": "карточка",
                 "classText": ""
               }
             ],
@@ -15549,6 +15928,101 @@
             "more": 9
           },
           {
+            "name": "mt-2",
+            "count": 13,
+            "byZone": {
+              "cabinet-component": 7,
+              "page": 6
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 6
+              },
+              {
+                "name": "блок",
+                "count": 3
+              },
+              {
+                "name": "список",
+                "count": 2
+              },
+              {
+                "name": "кнопка",
+                "count": 1
+              },
+              {
+                "name": "компонент",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "p",
+                "count": 6
+              },
+              {
+                "name": "div",
+                "count": 3
+              },
+              {
+                "name": "ul",
+                "count": 2
+              },
+              {
+                "name": "Button",
+                "count": 1
+              },
+              {
+                "name": "ScrollArea",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/artists/[id]/page.tsx",
+                "line": 612,
+                "zone": "page",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/playlists/page.tsx",
+                "line": 255,
+                "zone": "page",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/releases/koala-parser/page.tsx",
+                "line": 231,
+                "zone": "page",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/releases/koala-parser/page.tsx",
+                "line": 237,
+                "zone": "page",
+                "tag": "ul",
+                "kind": "список",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/releases/zvonko-parser/page.tsx",
+                "line": 332,
+                "zone": "page",
+                "tag": "p",
+                "kind": "текст",
+                "classText": ""
+              }
+            ],
+            "more": 8
+          },
+          {
             "name": "mb-8",
             "count": 11,
             "byZone": {
@@ -15632,101 +16106,6 @@
             "more": 6
           },
           {
-            "name": "mt-2",
-            "count": 11,
-            "byZone": {
-              "page": 6,
-              "cabinet-component": 5
-            },
-            "kinds": [
-              {
-                "name": "текст",
-                "count": 5
-              },
-              {
-                "name": "блок",
-                "count": 2
-              },
-              {
-                "name": "список",
-                "count": 2
-              },
-              {
-                "name": "кнопка",
-                "count": 1
-              },
-              {
-                "name": "компонент",
-                "count": 1
-              }
-            ],
-            "tags": [
-              {
-                "name": "p",
-                "count": 5
-              },
-              {
-                "name": "div",
-                "count": 2
-              },
-              {
-                "name": "ul",
-                "count": 2
-              },
-              {
-                "name": "Button",
-                "count": 1
-              },
-              {
-                "name": "ScrollArea",
-                "count": 1
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/artists/[id]/page.tsx",
-                "line": 612,
-                "zone": "page",
-                "tag": "p",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/playlists/page.tsx",
-                "line": 255,
-                "zone": "page",
-                "tag": "p",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/releases/koala-parser/page.tsx",
-                "line": 231,
-                "zone": "page",
-                "tag": "p",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/releases/koala-parser/page.tsx",
-                "line": 237,
-                "zone": "page",
-                "tag": "ul",
-                "kind": "список",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/releases/zvonko-parser/page.tsx",
-                "line": 332,
-                "zone": "page",
-                "tag": "p",
-                "kind": "текст",
-                "classText": ""
-              }
-            ],
-            "more": 6
-          },
-          {
             "name": "mb-12",
             "count": 7,
             "byZone": {
@@ -15803,17 +16182,18 @@
           },
           {
             "name": "ml-auto",
-            "count": 6,
+            "count": 7,
             "byZone": {
-              "page": 6
+              "page": 6,
+              "cabinet-component": 1
             },
             "kinds": [
               {
-                "name": "кнопка",
-                "count": 2
+                "name": "текст",
+                "count": 3
               },
               {
-                "name": "текст",
+                "name": "кнопка",
                 "count": 2
               },
               {
@@ -15826,6 +16206,10 @@
               }
             ],
             "tags": [
+              {
+                "name": "span",
+                "count": 2
+              },
               {
                 "name": "ActionMenu",
                 "count": 1
@@ -15844,10 +16228,6 @@
               },
               {
                 "name": "SkeletonValue",
-                "count": 1
-              },
-              {
-                "name": "span",
                 "count": 1
               }
             ],
@@ -15893,7 +16273,7 @@
                 "classText": ""
               }
             ],
-            "more": 1
+            "more": 2
           },
           {
             "name": "mb-0",
@@ -15953,6 +16333,61 @@
                 "zone": "cabinet-component",
                 "tag": "SectionHeader",
                 "kind": "заголовок секции",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "ml-2",
+            "count": 4,
+            "byZone": {
+              "cabinet-component": 2,
+              "page": 2
+            },
+            "kinds": [
+              {
+                "name": "текст",
+                "count": 4
+              }
+            ],
+            "tags": [
+              {
+                "name": "span",
+                "count": 4
+              }
+            ],
+            "samples": [
+              {
+                "file": "app/dashboard/admin/activity/page.tsx",
+                "line": 369,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "app/dashboard/admin/playlists/page.tsx",
+                "line": 765,
+                "zone": "page",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/sidebar.tsx",
+                "line": 203,
+                "zone": "cabinet-component",
+                "tag": "span",
+                "kind": "текст",
+                "classText": ""
+              },
+              {
+                "file": "components/streaming-chart.tsx",
+                "line": 150,
+                "zone": "cabinet-component",
+                "tag": "span",
+                "kind": "текст",
                 "classText": ""
               }
             ],
@@ -16062,53 +16497,6 @@
                 "zone": "page",
                 "tag": "h3",
                 "kind": "заголовок",
-                "classText": ""
-              }
-            ],
-            "more": 0
-          },
-          {
-            "name": "ml-2",
-            "count": 3,
-            "byZone": {
-              "page": 2,
-              "cabinet-component": 1
-            },
-            "kinds": [
-              {
-                "name": "текст",
-                "count": 3
-              }
-            ],
-            "tags": [
-              {
-                "name": "span",
-                "count": 3
-              }
-            ],
-            "samples": [
-              {
-                "file": "app/dashboard/admin/activity/page.tsx",
-                "line": 369,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "app/dashboard/admin/playlists/page.tsx",
-                "line": 765,
-                "zone": "page",
-                "tag": "span",
-                "kind": "текст",
-                "classText": ""
-              },
-              {
-                "file": "components/sidebar.tsx",
-                "line": 203,
-                "zone": "cabinet-component",
-                "tag": "span",
-                "kind": "текст",
                 "classText": ""
               }
             ],
@@ -16836,18 +17224,19 @@
             },
             {
               "name": "bg-surface-raised/60",
-              "count": 3,
+              "count": 4,
               "byZone": {
-                "page": 3
+                "page": 3,
+                "cabinet-component": 1
               },
               "kinds": [
                 {
-                  "name": "карточка",
+                  "name": "блок",
                   "count": 2
                 },
                 {
-                  "name": "блок",
-                  "count": 1
+                  "name": "карточка",
+                  "count": 2
                 }
               ],
               "tags": [
@@ -16857,7 +17246,7 @@
                 },
                 {
                   "name": "div",
-                  "count": 1
+                  "count": 2
                 }
               ],
               "samples": [
@@ -16884,6 +17273,14 @@
                   "tag": "Card",
                   "kind": "карточка",
                   "classText": "stat-card-glass bg-surface-raised/60 backdrop-blur-xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-2xl relative overflow-hidden"
+                },
+                {
+                  "file": "components/charts/chart-tooltip.tsx",
+                  "line": 261,
+                  "zone": "cabinet-component",
+                  "tag": "div",
+                  "kind": "блок",
+                  "classText": "mt-2 rounded-lg border border-white/10 bg-surface-raised/60 px-3 py-2"
                 }
               ],
               "more": 0
@@ -17110,6 +17507,36 @@
                   "tag": "TooltipContent",
                   "kind": "оверлей",
                   "classText": "z-[250] max-w-xs border border-white/10 bg-surface-dialog/[0.96] px-3 py-2 text-xs font-mono text-white shadow-lg"
+                }
+              ],
+              "more": 0
+            },
+            {
+              "name": "bg-surface-dialog/95",
+              "count": 1,
+              "byZone": {
+                "cabinet-component": 1
+              },
+              "kinds": [
+                {
+                  "name": "блок",
+                  "count": 1
+                }
+              ],
+              "tags": [
+                {
+                  "name": "div",
+                  "count": 1
+                }
+              ],
+              "samples": [
+                {
+                  "file": "components/charts/chart-tooltip.tsx",
+                  "line": 234,
+                  "zone": "cabinet-component",
+                  "tag": "div",
+                  "kind": "блок",
+                  "classText": "pointer-events-none max-w-[280px] rounded-lg border border-brand/30 bg-surface-dialog/95 px-3 py-2 shadow-xl"
                 }
               ],
               "more": 0
@@ -21864,7 +22291,7 @@
       ],
       "hardcoded": {
         "note": "Литералы цвета вне app/tokens.css: в классах, в инлайн-стилях, в dashboard.css и внутри кита. tokens.css исключён — там они и должны быть.",
-        "total": 103,
+        "total": 49,
         "values": [
           {
             "value": "rgba(0,0,0,0.2)",
@@ -21970,134 +22397,6 @@
             "more": 0
           },
           {
-            "value": "rgba(16,185,129,0.31)",
-            "swatch": "rgba(16,185,129,0.31)",
-            "luminance": 0.5687349019607844,
-            "count": 7,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 7
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/contact-form-section.tsx",
-                "line": 206,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "className=\"w-full bg-emerald-500 hover:bg-emerald-600 text-white py-7 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/faq-section.tsx",
-                "line": 181,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,bo",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/faq-section.tsx",
-                "line": 282,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,bo",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/hero.tsx",
-                "line": 92,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "? \"bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,1",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/hero.tsx",
-                "line": 93,
-                "value": "rgba(16,185,129,0.31)",
-                "context": ": \"bg-emerald-500 hover:bg-emerald-600 text-white px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/navbar.tsx",
-                "line": 124,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/navbar.tsx",
-                "line": 171,
-                "value": "rgba(16,185,129,0.31)",
-                "context": "<Button className=\"w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(16,185,129,0.44)",
-            "swatch": "rgba(16,185,129,0.44)",
-            "luminance": 0.5687349019607844,
-            "count": 7,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 7
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/contact-form-section.tsx",
-                "line": 206,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "className=\"w-full bg-emerald-500 hover:bg-emerald-600 text-white py-7 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/faq-section.tsx",
-                "line": 181,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,bo",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/faq-section.tsx",
-                "line": 282,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-[background-color,bo",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/hero.tsx",
-                "line": 92,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "? \"bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_20px_rgba(16,1",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/hero.tsx",
-                "line": 93,
-                "value": "rgba(16,185,129,0.44)",
-                "context": ": \"bg-emerald-500 hover:bg-emerald-600 text-white px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/navbar.tsx",
-                "line": 124,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "<Button className=\"bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_0_",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/navbar.tsx",
-                "line": 171,
-                "value": "rgba(16,185,129,0.44)",
-                "context": "<Button className=\"w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-md shadow-[0_0_15px_rgba(16,185,129,0.31)] transition-all hover:shadow-[0_",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "rgba(255,255,255,0.04)",
             "swatch": "rgba(255,255,255,0.04)",
             "luminance": 0.9999999999999999,
@@ -22108,11 +22407,11 @@
                 "count": 5
               },
               {
-                "name": "kit",
+                "name": "cabinet-component",
                 "count": 1
               },
               {
-                "name": "landing-component",
+                "name": "kit",
                 "count": 1
               }
             ],
@@ -22157,7 +22456,7 @@
                 "line": 179,
                 "value": "rgba(255,255,255,0.04)",
                 "context": "stroke=\"rgba(255,255,255,0.04)\"",
-                "zone": "landing-component"
+                "zone": "cabinet-component"
               },
               {
                 "file": "components/ui/segmented-control.tsx",
@@ -22212,121 +22511,6 @@
                 "value": "rgba(255, 255, 255, 0.1)",
                 "context": "border: 1px solid rgba(255, 255, 255, 0.1);",
                 "zone": "page"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(6,182,212,0.4)",
-            "swatch": "rgba(6, 182, 212, 0.4)",
-            "luminance": 0.5754839215686274,
-            "count": 4,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 4
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/artists-section.tsx",
-                "line": 154,
-                "value": "rgba(6, 182, 212, 0.4)",
-                "context": "${index % 2 === 0 ? \"rgba(16, 185, 129, 0.4)\" : \"rgba(6, 182, 212, 0.4)\"} 0%,",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 271,
-                "value": "rgba(6, 182, 212, 0.4)",
-                "context": "colorStyle === \"azure\" ? \"rgba(6, 182, 212, 0.4)\" :",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 273,
-                "value": "rgba(6, 182, 212, 0.4)",
-                "context": "colorStyle === \"cyan\" ? \"rgba(6, 182, 212, 0.4)\" :",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 274,
-                "value": "rgba(6, 182, 212, 0.4)",
-                "context": "\"rgba(6, 182, 212, 0.4)\"",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#06b6d4",
-            "swatch": "#06b6d4",
-            "luminance": 0.5754839215686274,
-            "count": 3,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 3
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 43,
-                "value": "#06b6d4",
-                "context": "\"#06b6d4\", // cyan-500",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 286,
-                "value": "#06b6d4",
-                "context": "color: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4')",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 291,
-                "value": "#06b6d4",
-                "context": "style={{ backgroundColor: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4') }}",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#10b981",
-            "swatch": "#10b981",
-            "luminance": 0.5687349019607844,
-            "count": 3,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 3
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 24,
-                "value": "#10b981",
-                "context": "\"#10b981\", // emerald-500",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 286,
-                "value": "#10b981",
-                "context": "color: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4')",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 291,
-                "value": "#10b981",
-                "context": "style={{ backgroundColor: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4') }}",
-                "zone": "landing-component"
               }
             ],
             "more": 0
@@ -22408,42 +22592,6 @@
             "more": 0
           },
           {
-            "value": "rgba(16,185,129,0.4)",
-            "swatch": "rgba(16, 185, 129, 0.4)",
-            "luminance": 0.5687349019607844,
-            "count": 3,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 3
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/artists-section.tsx",
-                "line": 154,
-                "value": "rgba(16, 185, 129, 0.4)",
-                "context": "${index % 2 === 0 ? \"rgba(16, 185, 129, 0.4)\" : \"rgba(6, 182, 212, 0.4)\"} 0%,",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 266,
-                "value": "rgba(16, 185, 129, 0.4)",
-                "context": "colorStyle === \"emerald\" ? \"rgba(16, 185, 129, 0.4)\" :",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/streaming-chart.tsx",
-                "line": 203,
-                "value": "rgba(16,185,129,0.4)",
-                "context": "style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.4))' }}",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "rgba(255,255,255,0.05)",
             "swatch": "rgba(255,255,255,0.05)",
             "luminance": 0.9999999999999999,
@@ -22454,7 +22602,7 @@
                 "count": 2
               },
               {
-                "name": "landing-component",
+                "name": "cabinet-component",
                 "count": 1
               }
             ],
@@ -22464,7 +22612,7 @@
                 "line": 33,
                 "value": "rgba(255,255,255,0.05)",
                 "context": "<CartesianGrid strokeDasharray=\"4 4\" stroke=\"rgba(255,255,255,0.05)\" vertical={false} />",
-                "zone": "landing-component"
+                "zone": "cabinet-component"
               },
               {
                 "file": "app/dashboard/dashboard.css",
@@ -22542,93 +22690,6 @@
             "more": 0
           },
           {
-            "value": "rgb(94234212)",
-            "swatch": "rgb(94 234 212)",
-            "luminance": null,
-            "count": 2,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 2
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/services-section.tsx",
-                "line": 286,
-                "value": "rgb(94 234 212)",
-                "context": "color: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4')",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 291,
-                "value": "rgb(94 234 212)",
-                "context": "style={{ backgroundColor: colorStyle === 'mixed' ? 'rgb(94 234 212)' : (colorStyle === 'emerald' ? '#10b981' : '#06b6d4') }}",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(13,183,189,0.4)",
-            "swatch": "rgba(13, 183, 189, 0.4)",
-            "luminance": 0.5776125490196079,
-            "count": 2,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 2
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/services-section.tsx",
-                "line": 269,
-                "value": "rgba(13, 183, 189, 0.4)",
-                "context": "colorStyle === \"cyan-teal\" ? \"rgba(13, 183, 189, 0.4)\" : // Mix",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 272,
-                "value": "rgba(13, 183, 189, 0.4)",
-                "context": "colorStyle === \"teal-cyan\" ? \"rgba(13, 183, 189, 0.4)\" : // Mix",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(20,184,166,0.4)",
-            "swatch": "rgba(20, 184, 166, 0.4)",
-            "luminance": 0.5797411764705882,
-            "count": 2,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 2
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/services-section.tsx",
-                "line": 268,
-                "value": "rgba(20, 184, 166, 0.4)",
-                "context": "colorStyle === \"mixed\" ? \"rgba(20, 184, 166, 0.4)\" :",
-                "zone": "landing-component"
-              },
-              {
-                "file": "components/services-section.tsx",
-                "line": 270,
-                "value": "rgba(20, 184, 166, 0.4)",
-                "context": "colorStyle === \"teal\" ? \"rgba(20, 184, 166, 0.4)\" :",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "rgba(255,255,255,0.03)",
             "swatch": "rgba(255, 255, 255, 0.03)",
             "luminance": 0.9999999999999999,
@@ -22687,50 +22748,6 @@
             "more": 0
           },
           {
-            "value": "#14b789",
-            "swatch": "#14b789",
-            "luminance": 0.5687254901960784,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 25,
-                "value": "#14b789",
-                "context": "\"#14b789\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#18b590",
-            "swatch": "#18b590",
-            "luminance": 0.5684329411764706,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 26,
-                "value": "#18b590",
-                "context": "\"#18b590\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "#1a1a1a",
             "swatch": "#1a1a1a",
             "luminance": 0.10196078431372547,
@@ -22753,365 +22770,13 @@
             "more": 0
           },
           {
-            "value": "#1cb298",
-            "swatch": "#1cb298",
-            "luminance": 0.5656188235294117,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 27,
-                "value": "#1cb298",
-                "context": "\"#1cb298\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#20b0a0",
-            "swatch": "#20b0a0",
-            "luminance": 0.5656094117647058,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 28,
-                "value": "#20b0a0",
-                "context": "\"#20b0a0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#24ada8",
-            "swatch": "#24ada8",
-            "luminance": 0.5627952941176471,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 29,
-                "value": "#24ada8",
-                "context": "\"#24ada8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#28abb0",
-            "swatch": "#28abb0",
-            "luminance": 0.5627858823529411,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 30,
-                "value": "#28abb0",
-                "context": "\"#28abb0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#2ca8b8",
-            "swatch": "#2ca8b8",
-            "luminance": 0.5599717647058824,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 31,
-                "value": "#2ca8b8",
-                "context": "\"#2ca8b8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#30a6c0",
-            "swatch": "#30a6c0",
-            "luminance": 0.5599623529411765,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 32,
-                "value": "#30a6c0",
-                "context": "\"#30a6c0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#34a3c8",
-            "swatch": "#34a3c8",
-            "luminance": 0.5571482352941176,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 33,
-                "value": "#34a3c8",
-                "context": "\"#34a3c8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#38a1d0",
-            "swatch": "#38a1d0",
-            "luminance": 0.5571388235294117,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 34,
-                "value": "#38a1d0",
-                "context": "\"#38a1d0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#3c9ed8",
-            "swatch": "#3c9ed8",
-            "luminance": 0.5543247058823529,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 35,
-                "value": "#3c9ed8",
-                "context": "\"#3c9ed8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#409ce0",
-            "swatch": "#409ce0",
-            "luminance": 0.554315294117647,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 36,
-                "value": "#409ce0",
-                "context": "\"#409ce0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#4499e8",
-            "swatch": "#4499e8",
-            "luminance": 0.5515011764705882,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 37,
-                "value": "#4499e8",
-                "context": "\"#4499e8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#4897f0",
-            "swatch": "#4897f0",
-            "luminance": 0.5514917647058823,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 38,
-                "value": "#4897f0",
-                "context": "\"#4897f0\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#4c94f8",
-            "swatch": "#4c94f8",
-            "luminance": 0.5486776470588235,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 39,
-                "value": "#4c94f8",
-                "context": "\"#4c94f8\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#5092ff",
-            "swatch": "#5092ff",
-            "luminance": 0.5483850980392156,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 40,
-                "value": "#5092ff",
-                "context": "\"#5092ff\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#548fd7",
-            "swatch": "#548fd7",
-            "luminance": 0.5319803921568628,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 41,
-                "value": "#548fd7",
-                "context": "\"#548fd7\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "#588dcf",
-            "swatch": "#588dcf",
-            "luminance": 0.5274407843137255,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/custom-cursor.tsx",
-                "line": 42,
-                "value": "#588dcf",
-                "context": "\"#588dcf\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "#6b7280",
             "swatch": "#6b7280",
             "luminance": 0.4451866666666667,
             "count": 1,
             "zones": [
               {
-                "name": "landing-component",
+                "name": "cabinet-component",
                 "count": 1
               }
             ],
@@ -23121,7 +22786,7 @@
                 "line": 19,
                 "value": "#6b7280",
                 "context": "fill: \"#6b7280\",",
-                "zone": "landing-component"
+                "zone": "cabinet-component"
               }
             ],
             "more": 0
@@ -23193,28 +22858,6 @@
             "more": 0
           },
           {
-            "value": "rgba(0,0,0,0.9)",
-            "swatch": "rgba(0, 0, 0, 0.9)",
-            "luminance": 0,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/navbar.tsx",
-                "line": 78,
-                "value": "rgba(0, 0, 0, 0.9)",
-                "context": "backgroundColor: mobileMenuOpen ? \"rgba(0, 0, 0, 0.9)\" : \"\",",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
             "value": "rgba(16,185,129,${(math.random()",
             "swatch": "rgba(16, 185, 129, ${(Math.random()",
             "luminance": 0.5687349019607844,
@@ -23259,67 +22902,23 @@
             "more": 0
           },
           {
-            "value": "rgba(16,185,129,0.5)",
-            "swatch": "rgba(16,185,129,0.5)",
+            "value": "rgba(16,185,129,0.4)",
+            "swatch": "rgba(16,185,129,0.4)",
             "luminance": 0.5687349019607844,
             "count": 1,
             "zones": [
               {
-                "name": "landing-component",
+                "name": "cabinet-component",
                 "count": 1
               }
             ],
             "occurrences": [
               {
-                "file": "components/analytics/TrackPaidFreeDistribution.tsx",
-                "line": 33,
-                "value": "rgba(16,185,129,0.5)",
-                "context": "className=\"h-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-all duration-500 cursor-crosshair z-10\"",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(16,185,129,0.6)",
-            "swatch": "rgba(16,185,129,0.6)",
-            "luminance": 0.5687349019607844,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/floating_paper.tsx",
-                "line": 137,
-                "value": "rgba(16,185,129,0.6)",
-                "context": "<div className=\"opacity-40 filter blur-[0.5px] drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]\">",
-                "zone": "landing-component"
-              }
-            ],
-            "more": 0
-          },
-          {
-            "value": "rgba(18,186,147,0.4)",
-            "swatch": "rgba(18, 186, 147, 0.4)",
-            "luminance": 0.5783035294117647,
-            "count": 1,
-            "zones": [
-              {
-                "name": "landing-component",
-                "count": 1
-              }
-            ],
-            "occurrences": [
-              {
-                "file": "components/services-section.tsx",
-                "line": 267,
-                "value": "rgba(18, 186, 147, 0.4)",
-                "context": "colorStyle === \"emerald-cyan\" ? \"rgba(18, 186, 147, 0.4)\" : // Mix",
-                "zone": "landing-component"
+                "file": "components/streaming-chart.tsx",
+                "line": 203,
+                "value": "rgba(16,185,129,0.4)",
+                "context": "style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.4))' }}",
+                "zone": "cabinet-component"
               }
             ],
             "more": 0
@@ -23349,7 +22948,7 @@
         ],
         "darkSurfaces": {
           "note": "Тёмные значения (относительная светлота < 0.16) — те, что задают фон панелей и подложек мимо токенов.",
-          "count": 9,
+          "count": 8,
           "values": [
             {
               "value": "rgba(0,0,0,0.2)",
@@ -23646,28 +23245,6 @@
                 }
               ],
               "more": 0
-            },
-            {
-              "value": "rgba(0,0,0,0.9)",
-              "swatch": "rgba(0, 0, 0, 0.9)",
-              "luminance": 0,
-              "count": 1,
-              "zones": [
-                {
-                  "name": "landing-component",
-                  "count": 1
-                }
-              ],
-              "occurrences": [
-                {
-                  "file": "components/navbar.tsx",
-                  "line": 78,
-                  "value": "rgba(0, 0, 0, 0.9)",
-                  "context": "backgroundColor: mobileMenuOpen ? \"rgba(0, 0, 0, 0.9)\" : \"\",",
-                  "zone": "landing-component"
-                }
-              ],
-              "more": 0
             }
           ]
         }
@@ -23690,7 +23267,7 @@
             "value": "15 15 15",
             "swatch": "rgb(15 15 15)",
             "where": "app/tokens.css:30",
-            "usage": 6,
+            "usage": 7,
             "comment": "#0f0f0f — фон DialogContent: 9 вхождений в 7 файлах."
           },
           {
@@ -23708,7 +23285,7 @@
             "value": "20 20 20",
             "swatch": "rgb(20 20 20)",
             "where": "app/tokens.css:39",
-            "usage": 11,
+            "usage": 12,
             "comment": "#141414 — приподнятая поверхность: карточки аналитики, тултипы шкал, дорожки прогресс-баров; она же под .stat-card-glass (0.6)."
           },
           {
@@ -23894,15 +23471,6 @@
             "where": "components/ui/select.tsx:93",
             "usage": 1,
             "comment": null
-          },
-          {
-            "kind": "литерал",
-            "name": "rgba(0,0,0,0.9)",
-            "value": "rgba(0,0,0,0.9)",
-            "swatch": "rgba(0, 0, 0, 0.9)",
-            "where": "components/navbar.tsx:78",
-            "usage": 1,
-            "comment": null
           }
         ]
       }
@@ -23916,15 +23484,15 @@
       "entries": [
         {
           "name": "rounded-lg",
-          "count": 115,
+          "count": 119,
           "byZone": {
             "page": 78,
-            "cabinet-component": 37
+            "cabinet-component": 41
           },
           "kinds": [
             {
               "name": "кнопка",
-              "count": 54
+              "count": 56
             },
             {
               "name": "поле",
@@ -23932,7 +23500,7 @@
             },
             {
               "name": "блок",
-              "count": 16
+              "count": 18
             },
             {
               "name": "компонент",
@@ -23970,11 +23538,11 @@
           "tags": [
             {
               "name": "Button",
-              "count": 54
+              "count": 56
             },
             {
               "name": "div",
-              "count": 18
+              "count": 20
             },
             {
               "name": "Input",
@@ -24123,14 +23691,14 @@
               "classText": "h-11 w-full rounded-lg border border-white/10 bg-white/5 px-3 font-mono text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             }
           ],
-          "more": 103
+          "more": 107
         },
         {
           "name": "rounded-2xl",
-          "count": 76,
+          "count": 78,
           "byZone": {
             "page": 69,
-            "cabinet-component": 7
+            "cabinet-component": 9
           },
           "kinds": [
             {
@@ -24142,16 +23710,16 @@
               "count": 6
             },
             {
+              "name": "баннер",
+              "count": 3
+            },
+            {
               "name": "пустое состояние",
               "count": 3
             },
             {
               "name": "скелетон",
               "count": 3
-            },
-            {
-              "name": "баннер",
-              "count": 1
             },
             {
               "name": "изображение",
@@ -24172,6 +23740,10 @@
               "count": 10
             },
             {
+              "name": "Banner",
+              "count": 3
+            },
+            {
               "name": "EmptyState",
               "count": 3
             },
@@ -24185,10 +23757,6 @@
             },
             {
               "name": "a",
-              "count": 1
-            },
-            {
-              "name": "Banner",
               "count": 1
             },
             {
@@ -24294,7 +23862,7 @@
               "classText": "card-glass rounded-2xl border border-white/5 p-4 text-white"
             }
           ],
-          "more": 64
+          "more": 66
         },
         {
           "name": "rounded-xl",
@@ -24489,10 +24057,10 @@
         },
         {
           "name": "rounded-full",
-          "count": 38,
+          "count": 39,
           "byZone": {
             "page": 25,
-            "cabinet-component": 13
+            "cabinet-component": 14
           },
           "kinds": [
             {
@@ -24501,7 +24069,7 @@
             },
             {
               "name": "текст",
-              "count": 9
+              "count": 10
             },
             {
               "name": "кнопка",
@@ -24527,7 +24095,7 @@
             },
             {
               "name": "span",
-              "count": 9
+              "count": 10
             },
             {
               "name": "Button",
@@ -24648,7 +24216,7 @@
               "classText": "h-8 w-8 rounded-full bg-primary/90 text-black hover:bg-primary max-md:h-11 max-md:w-11"
             }
           ],
-          "more": 26
+          "more": 27
         },
         {
           "name": "rounded",
@@ -25635,7 +25203,7 @@
       "byKind": [
         {
           "kind": "блок",
-          "total": 77,
+          "total": 79,
           "radii": [
             {
               "name": "rounded-xl",
@@ -25647,7 +25215,7 @@
             },
             {
               "name": "rounded-lg",
-              "count": 16
+              "count": 18
             },
             {
               "name": "rounded-2xl",
@@ -25687,11 +25255,11 @@
         },
         {
           "kind": "кнопка",
-          "total": 61,
+          "total": 63,
           "radii": [
             {
               "name": "rounded-lg",
-              "count": 54
+              "count": 56
             },
             {
               "name": "rounded-full",
@@ -25723,11 +25291,11 @@
         },
         {
           "kind": "текст",
-          "total": 12,
+          "total": 13,
           "radii": [
             {
               "name": "rounded-full",
-              "count": 9
+              "count": 10
             },
             {
               "name": "rounded-lg",
@@ -25736,6 +25304,24 @@
             {
               "name": "rounded",
               "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "баннер",
+          "total": 11,
+          "radii": [
+            {
+              "name": "rounded-lg",
+              "count": 6
+            },
+            {
+              "name": "rounded-2xl",
+              "count": 3
+            },
+            {
+              "name": "rounded-xl",
+              "count": 2
             }
           ]
         },
@@ -25753,24 +25339,6 @@
             },
             {
               "name": "rounded-full",
-              "count": 1
-            }
-          ]
-        },
-        {
-          "kind": "баннер",
-          "total": 9,
-          "radii": [
-            {
-              "name": "rounded-lg",
-              "count": 6
-            },
-            {
-              "name": "rounded-xl",
-              "count": 2
-            },
-            {
-              "name": "rounded-2xl",
               "count": 1
             }
           ]
@@ -25913,7 +25481,7 @@
         {
           "name": "rounded-lg",
           "value": "0.5rem",
-          "usage": 115
+          "usage": 119
         },
         {
           "name": "rounded-xl",
@@ -25923,7 +25491,7 @@
         {
           "name": "rounded-2xl",
           "value": "1rem",
-          "usage": 78
+          "usage": 80
         },
         {
           "name": "rounded-3xl",
@@ -25941,10 +25509,10 @@
       "widths": [
         {
           "name": "border",
-          "count": 181,
+          "count": 183,
           "byZone": {
             "page": 138,
-            "cabinet-component": 43
+            "cabinet-component": 45
           },
           "kinds": [
             {
@@ -25953,7 +25521,7 @@
             },
             {
               "name": "блок",
-              "count": 44
+              "count": 46
             },
             {
               "name": "поле",
@@ -25995,7 +25563,7 @@
           "tags": [
             {
               "name": "div",
-              "count": 95
+              "count": 97
             },
             {
               "name": "Input",
@@ -26144,7 +25712,7 @@
               "classText": ""
             }
           ],
-          "more": 173
+          "more": 175
         },
         {
           "name": "border-t",
@@ -26582,6 +26150,36 @@
       ],
       "colors": {
         "token": [
+          {
+            "name": "border-brand/30",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "блок",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "div",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 234,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
           {
             "name": "border-status-warning/20",
             "count": 1,
@@ -27053,15 +26651,15 @@
         "palette": [
           {
             "name": "border-white/10",
-            "count": 106,
+            "count": 107,
             "byZone": {
               "page": 77,
-              "cabinet-component": 29
+              "cabinet-component": 30
             },
             "kinds": [
               {
                 "name": "блок",
-                "count": 31
+                "count": 32
               },
               {
                 "name": "поле",
@@ -27103,7 +26701,7 @@
             "tags": [
               {
                 "name": "div",
-                "count": 31
+                "count": 32
               },
               {
                 "name": "Input",
@@ -27236,7 +26834,7 @@
                 "classText": ""
               }
             ],
-            "more": 98
+            "more": 99
           },
           {
             "name": "border-white/5",
@@ -28964,6 +28562,60 @@
           "more": 0
         },
         {
+          "name": "shadow-xl",
+          "count": 3,
+          "byZone": {
+            "cabinet-component": 3
+          },
+          "kinds": [
+            {
+              "name": "оверлей",
+              "count": 2
+            },
+            {
+              "name": "блок",
+              "count": 1
+            }
+          ],
+          "tags": [
+            {
+              "name": "TooltipContent",
+              "count": 2
+            },
+            {
+              "name": "div",
+              "count": 1
+            }
+          ],
+          "samples": [
+            {
+              "file": "components/analytics/TrackThinPaidFreeBar.tsx",
+              "line": 41,
+              "zone": "cabinet-component",
+              "tag": "TooltipContent",
+              "kind": "оверлей",
+              "classText": ""
+            },
+            {
+              "file": "components/analytics/TrackThinPaidFreeBar.tsx",
+              "line": 58,
+              "zone": "cabinet-component",
+              "tag": "TooltipContent",
+              "kind": "оверлей",
+              "classText": ""
+            },
+            {
+              "file": "components/charts/chart-tooltip.tsx",
+              "line": 234,
+              "zone": "cabinet-component",
+              "tag": "div",
+              "kind": "блок",
+              "classText": ""
+            }
+          ],
+          "more": 0
+        },
+        {
           "name": "shadow-[0_4px_20px_rgba(0,0,0,0.3)]",
           "count": 2,
           "byZone": {
@@ -29079,44 +28731,6 @@
               "file": "app/dashboard/admin/dashboard/admin-dashboard-client.tsx",
               "line": 110,
               "zone": "page",
-              "tag": "TooltipContent",
-              "kind": "оверлей",
-              "classText": ""
-            }
-          ],
-          "more": 0
-        },
-        {
-          "name": "shadow-xl",
-          "count": 2,
-          "byZone": {
-            "cabinet-component": 2
-          },
-          "kinds": [
-            {
-              "name": "оверлей",
-              "count": 2
-            }
-          ],
-          "tags": [
-            {
-              "name": "TooltipContent",
-              "count": 2
-            }
-          ],
-          "samples": [
-            {
-              "file": "components/analytics/TrackThinPaidFreeBar.tsx",
-              "line": 41,
-              "zone": "cabinet-component",
-              "tag": "TooltipContent",
-              "kind": "оверлей",
-              "classText": ""
-            },
-            {
-              "file": "components/analytics/TrackThinPaidFreeBar.tsx",
-              "line": 58,
-              "zone": "cabinet-component",
               "tag": "TooltipContent",
               "kind": "оверлей",
               "classText": ""
@@ -31829,15 +31443,15 @@
           },
           {
             "name": "space-y-1",
-            "count": 14,
+            "count": 15,
             "byZone": {
               "page": 9,
-              "cabinet-component": 5
+              "cabinet-component": 6
             },
             "kinds": [
               {
                 "name": "список",
-                "count": 7
+                "count": 8
               },
               {
                 "name": "блок",
@@ -31851,7 +31465,7 @@
             "tags": [
               {
                 "name": "ul",
-                "count": 7
+                "count": 8
               },
               {
                 "name": "div",
@@ -31940,6 +31554,14 @@
                 "classText": "space-y-1 text-xs text-gray-500 font-mono"
               },
               {
+                "file": "components/missing-contract-banner-client.tsx",
+                "line": 121,
+                "zone": "cabinet-component",
+                "tag": "ul",
+                "kind": "список",
+                "classText": "text-xs text-amber-100/90 space-y-1 font-mono"
+              },
+              {
                 "file": "components/report-processor.tsx",
                 "line": 431,
                 "zone": "cabinet-component",
@@ -31954,17 +31576,9 @@
                 "tag": "div",
                 "kind": "блок",
                 "classText": "mt-4 space-y-1 rounded-lg border border-white/10 bg-white/5 p-4 text-sm"
-              },
-              {
-                "file": "components/report-processor.tsx",
-                "line": 457,
-                "zone": "cabinet-component",
-                "tag": "ul",
-                "kind": "список",
-                "classText": "space-y-1 font-mono text-xs text-gray-400"
               }
             ],
-            "more": 2
+            "more": 3
           },
           {
             "name": "space-y-1.5",
@@ -32106,6 +31720,36 @@
                 "tag": "dl",
                 "kind": "блок",
                 "classText": "space-y-5"
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "space-y-0.5",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "блок",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "div",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 107,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
+                "classText": "space-y-0.5"
               }
             ],
             "more": 0
@@ -32898,15 +32542,15 @@
         "entries": [
           {
             "name": "w-full",
-            "count": 125,
+            "count": 126,
             "byZone": {
               "page": 98,
-              "cabinet-component": 27
+              "cabinet-component": 28
             },
             "kinds": [
               {
                 "name": "блок",
-                "count": 48
+                "count": 49
               },
               {
                 "name": "поле",
@@ -32948,7 +32592,7 @@
             "tags": [
               {
                 "name": "div",
-                "count": 50
+                "count": 51
               },
               {
                 "name": "Input",
@@ -33065,14 +32709,14 @@
                 "classText": ""
               }
             ],
-            "more": 119
+            "more": 120
           },
           {
             "name": "min-w-0",
-            "count": 58,
+            "count": 59,
             "byZone": {
               "page": 43,
-              "cabinet-component": 15
+              "cabinet-component": 16
             },
             "kinds": [
               {
@@ -33088,11 +32732,11 @@
                 "count": 4
               },
               {
-                "name": "компонент",
-                "count": 2
+                "name": "текст",
+                "count": 3
               },
               {
-                "name": "текст",
+                "name": "компонент",
                 "count": 2
               },
               {
@@ -33122,6 +32766,10 @@
                 "count": 2
               },
               {
+                "name": "span",
+                "count": 2
+              },
+              {
                 "name": "dl",
                 "count": 1
               },
@@ -33135,10 +32783,6 @@
               },
               {
                 "name": "p",
-                "count": 1
-              },
-              {
-                "name": "span",
                 "count": 1
               }
             ],
@@ -33192,7 +32836,7 @@
                 "classText": ""
               }
             ],
-            "more": 52
+            "more": 53
           },
           {
             "name": "max-w-md",
@@ -33921,6 +33565,36 @@
                 "zone": "page",
                 "tag": "DataTableCell",
                 "kind": "таблица",
+                "classText": ""
+              }
+            ],
+            "more": 0
+          },
+          {
+            "name": "max-w-[280px]",
+            "count": 1,
+            "byZone": {
+              "cabinet-component": 1
+            },
+            "kinds": [
+              {
+                "name": "блок",
+                "count": 1
+              }
+            ],
+            "tags": [
+              {
+                "name": "div",
+                "count": 1
+              }
+            ],
+            "samples": [
+              {
+                "file": "components/charts/chart-tooltip.tsx",
+                "line": 234,
+                "zone": "cabinet-component",
+                "tag": "div",
+                "kind": "блок",
                 "classText": ""
               }
             ],
@@ -34676,7 +34350,7 @@
         }
       },
       "usage": {
-        "total": 111,
+        "total": 113,
         "byVariant": [
           {
             "name": "outline",
@@ -34703,18 +34377,18 @@
             "count": 6
           },
           {
-            "name": "destructive",
-            "count": 2
+            "name": "warning-outline",
+            "count": 3
           },
           {
-            "name": "warning-outline",
-            "count": 1
+            "name": "destructive",
+            "count": 2
           }
         ],
         "bySize": [
           {
             "name": "default (без пропа)",
-            "count": 68
+            "count": 70
           },
           {
             "name": "sm",
@@ -35210,6 +34884,32 @@
               "classText": "whitespace-nowrap"
             }
           ],
+          "warning-outline": [
+            {
+              "file": "app/dashboard/admin/analytics/page.tsx",
+              "line": 649,
+              "zone": "page",
+              "tag": "Button",
+              "kind": "кнопка",
+              "classText": "mt-3 w-full text-[10px] font-mono uppercase tracking-widest"
+            },
+            {
+              "file": "components/missing-contract-banner-client.tsx",
+              "line": 94,
+              "zone": "cabinet-component",
+              "tag": "Button",
+              "kind": "кнопка",
+              "classText": "h-auto rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-widest"
+            },
+            {
+              "file": "components/missing-contract-banner-client.tsx",
+              "line": 133,
+              "zone": "cabinet-component",
+              "tag": "Button",
+              "kind": "кнопка",
+              "classText": "mt-3 h-auto self-start rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-widest sm:self-end"
+            }
+          ],
           "destructive": [
             {
               "file": "app/dashboard/admin/artists/[id]/page.tsx",
@@ -35226,16 +34926,6 @@
               "tag": "Button",
               "kind": "кнопка",
               "classText": "h-8 w-8 rounded-full bg-destructive/90 hover:bg-destructive max-md:h-11 max-md:w-11"
-            }
-          ],
-          "warning-outline": [
-            {
-              "file": "app/dashboard/admin/analytics/page.tsx",
-              "line": 649,
-              "zone": "page",
-              "tag": "Button",
-              "kind": "кнопка",
-              "classText": "mt-3 w-full text-[10px] font-mono uppercase tracking-widest"
             }
           ]
         }
@@ -35295,8 +34985,7 @@
             "why": "raw <button> вместо ui/button",
             "guarded": false
           }
-        ],
-        "outsideCabinet": 6
+        ]
       },
       "other": {
         "toolbar": {
@@ -37823,7 +37512,7 @@
       },
       "empty": {
         "kit": {
-          "count": 30,
+          "count": 31,
           "items": [
             {
               "file": "app/dashboard/admin/activity/page.tsx",
@@ -38192,6 +37881,19 @@
               ]
             },
             {
+              "file": "components/streaming-chart.tsx",
+              "line": 131,
+              "zone": "cabinet-component",
+              "tag": "EmptyState",
+              "kind": "пустое состояние",
+              "classText": "flex-1 py-0",
+              "props": [
+                "icon",
+                "title",
+                "description"
+              ]
+            },
+            {
               "file": "components/unregistered-reports-list.tsx",
               "line": 198,
               "zone": "cabinet-component",
@@ -38321,7 +38023,7 @@
       "loading": {
         "layouts": {
           "note": "Классы контейнера, в который завёрнут спиннер, когда он заменяет собой экран. B-03 бэклога: одна и та же «загрузка посреди страницы» сверстана по-разному, и высота, на которой она появляется, прыгает от экрана к экрану.",
-          "variants": 10,
+          "variants": 11,
           "items": [
             {
               "classText": "flex items-center justify-center h-64",
@@ -38497,6 +38199,18 @@
                 }
               ],
               "more": 0
+            },
+            {
+              "classText": "flex-1 flex items-center justify-center",
+              "count": 1,
+              "samples": [
+                {
+                  "file": "components/streaming-chart.tsx",
+                  "line": 115,
+                  "inner": "Spinner"
+                }
+              ],
+              "more": 0
             }
           ]
         },
@@ -38639,7 +38353,7 @@
         "spinner": [
           {
             "name": "Spinner",
-            "count": 30
+            "count": 31
           },
           {
             "name": "span",
@@ -38647,7 +38361,7 @@
           }
         ],
         "skeleton": {
-          "count": 19,
+          "count": 20,
           "byComponent": [
             {
               "name": "Skeleton",
@@ -38659,7 +38373,7 @@
             },
             {
               "name": "SkeletonValue",
-              "count": 3
+              "count": 4
             },
             {
               "name": "SkeletonRows",
@@ -38775,7 +38489,7 @@
       },
       "errors": {
         "banners": {
-          "count": 33,
+          "count": 35,
           "byVariant": [
             {
               "name": "Banner variant=danger",
@@ -38790,11 +38504,11 @@
               "count": 5
             },
             {
-              "name": "Banner variant=info",
-              "count": 3
+              "name": "Banner variant=warning",
+              "count": 5
             },
             {
-              "name": "Banner variant=warning",
+              "name": "Banner variant=info",
               "count": 3
             }
           ],
@@ -38898,7 +38612,7 @@
           ]
         },
         "mentions": {
-          "count": 124,
+          "count": 125,
           "items": [
             {
               "file": "app/dashboard/admin/activity/page.tsx",
@@ -39321,7 +39035,7 @@
               "zone": "page"
             }
           ],
-          "more": 64
+          "more": 65
         }
       }
     },
@@ -39395,7 +39109,7 @@
             "guards": [],
             "note": "Не запрещено и не проверяется ничем."
           },
-          "count": 489,
+          "count": 497,
           "items": [
             {
               "file": "app/dashboard/admin/activity/page.tsx",
@@ -39958,7 +39672,7 @@
               "context": "<TabsTrigger> flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3 rounded-lg data-[state=active]:bg-primary/20 data-[state=active]:text-primary da"
             }
           ],
-          "more": 409
+          "more": 417
         },
         {
           "id": "inline-color",
@@ -39971,7 +39685,7 @@
             ],
             "note": "Запрещено ESLint в app/dashboard/**; в components/** — нет."
           },
-          "count": 7,
+          "count": 8,
           "items": [
             {
               "file": "components/analytics/TrackThinPaidFreeBar.tsx",
@@ -39986,6 +39700,13 @@
               "zone": "cabinet-component",
               "value": "boxShadow: 0 0 4px rgba(16,185,129,0.3)",
               "context": "<div>"
+            },
+            {
+              "file": "components/charts/chart-tooltip.tsx",
+              "line": 110,
+              "zone": "cabinet-component",
+              "value": "backgroundColor: row.color",
+              "context": "<span>"
             },
             {
               "file": "components/charts/series-bar.tsx",
@@ -40034,7 +39755,7 @@
             "guards": [],
             "note": "Не запрещено и не проверяется."
           },
-          "count": 24,
+          "count": 27,
           "items": [
             {
               "file": "app/dashboard/admin/analytics/page.tsx",
@@ -40156,6 +39877,20 @@
               "context": "<div> style={{ width: `${advanceProgress}%` }}"
             },
             {
+              "file": "components/charts/chart-tooltip.tsx",
+              "line": 110,
+              "zone": "cabinet-component",
+              "value": "backgroundColor",
+              "context": "<span> style={{ backgroundColor: row.color }}"
+            },
+            {
+              "file": "components/charts/DspStreamChart.tsx",
+              "line": 55,
+              "zone": "cabinet-component",
+              "value": "filter",
+              "context": "<Area> style={{ filter: `drop-shadow(0 0 8px ${DSP_SERIES_COLORS[i % DSP_SERIES_COLORS.length]}80)` }}"
+            },
+            {
               "file": "components/charts/series-bar.tsx",
               "line": 37,
               "zone": "cabinet-component",
@@ -40182,6 +39917,13 @@
               "zone": "cabinet-component",
               "value": "width, height, pointerEvents",
               "context": "<canvas> style={{ width: dimensions.width; height: dimensions.height; pointerEvents: isTouch ? 'none' : 'auto' }}"
+            },
+            {
+              "file": "components/streaming-chart.tsx",
+              "line": 194,
+              "zone": "cabinet-component",
+              "value": "filter",
+              "context": "<Area> style={{ filter: drop-shadow(0 0 6px rgba(16,185,129,0.4)) }}"
             },
             {
               "file": "components/ui/platform-badge.tsx",
@@ -40290,7 +40032,7 @@
             ],
             "note": "ESLint ловит только форму `bg-[#…]` в className и только в app/dashboard/**."
           },
-          "count": 6,
+          "count": 7,
           "items": [
             {
               "file": "app/layout.tsx",
@@ -40319,6 +40061,13 @@
               "zone": "cabinet-component",
               "value": "#141414",
               "context": "className=\"relative text-[10px] text-gray-500 hover:text-white hover:bg-[#141414] uppercase font-bold tracking-wider px-2 h-7 font-mono\""
+            },
+            {
+              "file": "components/charts/chart-axis.ts",
+              "line": 19,
+              "zone": "cabinet-component",
+              "value": "#6b7280",
+              "context": "fill: \"#6b7280\","
             },
             {
               "file": "components/particles-background.tsx",
@@ -40554,19 +40303,19 @@
         {
           "id": "arbitrary-value",
           "title": "Прочие arbitrary-значения",
-          "count": 489,
+          "count": 497,
           "status": "none"
         },
         {
           "id": "inline-color",
           "title": "Инлайн-стиль цвета",
-          "count": 7,
+          "count": 8,
           "status": "partial"
         },
         {
           "id": "inline-style-any",
           "title": "Любые инлайн-стили",
-          "count": 24,
+          "count": 27,
           "status": "none"
         },
         {
@@ -40584,7 +40333,7 @@
         {
           "id": "hardcoded-hex",
           "title": "Хекс-литералы в коде экранов и кита",
-          "count": 6,
+          "count": 7,
           "status": "partial"
         },
         {

@@ -98,12 +98,36 @@ function sourceOf(file: string): ts.SourceFile {
 function importsOf(file: string): string[] {
   const sf = sourceOf(file)
   const out: string[] = []
-  for (const st of sf.statements) {
-    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier)) {
-      const r = resolveImport(st.moduleSpecifier.text, file)
-      if (r) out.push(r)
-    }
+  const add = (spec: string) => {
+    const r = resolveImport(spec, file)
+    if (r) out.push(r)
   }
+
+  for (const st of sf.statements) {
+    // import … from "…"
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier)) add(st.moduleSpecifier.text)
+    // export { X } from "…" — реэкспорт-обёртка. Так `/admin/reports` тянет
+    // `missing-contract-banner-client` через однострочный `missing-contract-banner`.
+    if (ts.isExportDeclaration(st) && st.moduleSpecifier && ts.isStringLiteral(st.moduleSpecifier))
+      add(st.moduleSpecifier.text)
+  }
+
+  /*
+   * `dynamic(() => import("…"))` из next/dynamic. Без этого весь слой графиков
+   * (`streaming-chart` → `chart-tooltip`, `chart-axis`, `DspStreamChart`)
+   * считался недостижимым из кабинета, хотя оба дашборда монтируют его через
+   * `streaming-chart-lazy`. Динамический импорт — выражение, а не объявление,
+   * поэтому обход по `statements` его не видит: нужен спуск по дереву.
+   */
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const arg = node.arguments[0]
+      if (arg && ts.isStringLiteral(arg)) add(arg.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  ts.forEachChild(sf, visit)
+
   return out
 }
 
@@ -177,7 +201,26 @@ function zoneOf(file: string): Zone {
  * ParticlesBackground, то есть физически входит в кадр кабинета.
  */
 const ROOT_LAYOUT = "app/layout.tsx"
-const scannedFiles = [...(existsSync(ROOT_LAYOUT) ? [ROOT_LAYOUT] : []), ...pageFiles, ...nonKitComponentFiles, ...kitFiles]
+
+/**
+ * Скоуп карты — ТОЛЬКО кабинеты. `components/**` приходится обходить целиком
+ * (по имени файла не видно, кто его монтирует), но в скан попадают лишь те, кто
+ * реально достижим из роута кабинета. Раньше лендинговые компоненты
+ * сканировались наравне с кабинетными и отсеивались фильтром `zone !==
+ * "landing-component"` в каждой секции по отдельности — семнадцать мест, и в
+ * двух фильтр забыли: счётчик хардкода цвета набирал 58 лендинговых вхождений
+ * из 103, а `rgba(0,0,0,0.9)` из navbar.tsx попадал в перечень тёмных фонов
+ * кабинета. Отсекаем один раз здесь — тогда протечь неоткуда, а фильтры по
+ * зонам ниже остаются второй линией.
+ *
+ * Выкинутое не пропадает молча: список уезжает в `meta.scope.excluded` и в
+ * консоль. Если компонент кабинета вдруг окажется недостижим для обходчика
+ * импортов, это будет видно, а не превратится в тихо пропавшие числа.
+ */
+const cabinetComponentFiles = nonKitComponentFiles.filter((f) => (mountedIn.get(f)?.length ?? 0) > 0)
+const excludedComponentFiles = nonKitComponentFiles.filter((f) => (mountedIn.get(f)?.length ?? 0) === 0)
+
+const scannedFiles = [...(existsSync(ROOT_LAYOUT) ? [ROOT_LAYOUT] : []), ...pageFiles, ...cabinetComponentFiles, ...kitFiles]
 
 // ---------------------------------------------------------------------------
 // 2. Разбор JSX: классы, инлайн-стили, атрибуты
@@ -1519,7 +1562,6 @@ const sectionButtons = {
     total: offKitButtons.length,
     unguarded: offKitButtons.filter((b) => !b.guarded).length,
     items: offKitButtons,
-    outsideCabinet: elements.filter((e) => e.zone === "landing-component" && e.tag === "button").length,
   },
   other: {
     toolbar: parseCva("components/ui/toolbar.tsx"),
@@ -2260,11 +2302,21 @@ const map = {
     note:
       "Инвентаризация фактического состояния кода. Ничего не унифицировано и не починено: карта показывает, что есть, а не что задумано.",
     scope: {
-      roots: [PAGES_ROOT + "/**", COMPONENTS_ROOT + "/** (кроме ui)", KIT_ROOT + "/** — отдельной секцией как эталон"],
+      roots: [
+        PAGES_ROOT + "/**",
+        COMPONENTS_ROOT + "/** — только достижимые из роутов кабинета",
+        KIT_ROOT + "/** — отдельной секцией как эталон",
+      ],
       files: scannedFiles.length,
       byZone: zoneCounts.map((z) => ({ ...z, title: ZONE_TITLE[z.name as Zone] })),
       routes: routes.length,
       jsxElements: elements.length,
+      excluded: {
+        note:
+          "Файлы components/**, не достижимые ни из одного роута кабинета: лендинг и формы. В скоуп карты не входят и ни в одно число не попадают.",
+        count: excludedComponentFiles.length,
+        files: excludedComponentFiles,
+      },
     },
     zoneTitles: ZONE_TITLE,
   },
@@ -2288,5 +2340,8 @@ writeFileSync(OUT, JSON.stringify(map, null, 2) + "\n", "utf8")
 const kb = Math.round(Buffer.byteLength(JSON.stringify(map)) / 1024)
 console.log(`✔ Карта собрана: ${OUT} (${kb} КБ)`)
 console.log(`  файлов просканировано: ${scannedFiles.length}, JSX-элементов: ${elements.length}, роутов: ${routes.length}`)
+console.log(
+  `  вне скоупа (не достижимы из кабинета): ${excludedComponentFiles.length} — ${excludedComponentFiles.join(", ")}`
+)
 console.log(`  скруглений: ${sectionRadii.entries.length}, фонов: ${sectionSurfaces.families.reduce((n, f) => n + f.entries.length, 0)}, шапок: ${headerRows.length}`)
 console.log(`  отклонений: ${deviations.reduce((n, d) => n + d.count, 0)} в ${deviations.length} группах`)

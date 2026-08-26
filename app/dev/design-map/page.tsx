@@ -891,8 +891,8 @@ function SectionButtons() {
           </div>
         )}
         <p className="mt-2 text-[11px] text-gray-500">
-          Для сравнения: raw-кнопок вне кабинета (лендинг, формы) — {b.offKit.outsideCabinet}. Скоуп overhaul их не
-          покрывает.
+          Лендинг и формы в скоуп карты не входят и здесь не считаются: что там с кнопками — отдельный вопрос,
+          выходящий за overhaul кабинетов.
         </p>
       </Block>
 
