@@ -27,6 +27,15 @@
         "set -a; . ./.env.staging.local; DATABASE_URL=\"$STAGING_DATABASE_URL\"; NEXT_PUBLIC_SUPABASE_URL=\"$STAGING_SUPABASE_URL\"; SUPABASE_SERVICE_ROLE_KEY=\"$STAGING_SUPABASE_SERVICE_ROLE_KEY\"; AUTH_SECRET=\"$STAGING_AUTH_SECRET\"; BUILDIN_DUAL_WRITE=false; PYRUS_WRITE_DISABLED=true; ENABLE_IN_PROCESS_SCHEDULER=false; set +a; exec pnpm exec next dev -p 3001"
       ],
       "port": 3001
+    },
+    {
+      "name": "rossel-stand-3002",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "set -a; . ./.env.e2e; set +a; exec pnpm exec next dev -p 3002"
+      ],
+      "port": 3002
     }
   ]
 }
