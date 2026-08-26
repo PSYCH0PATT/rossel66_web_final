@@ -37,6 +37,7 @@ import {
   ZoneLine,
   samplesToFiles,
 } from "./parts"
+import { SectionProposal } from "./proposal"
 import type {
   ClassEntry,
   EmptyPhrase,
@@ -1514,6 +1515,20 @@ function Nav() {
     <nav className="lg:sticky lg:top-6 lg:w-56 lg:shrink-0 lg:self-start">
       <div className="mb-2 text-[10px] uppercase tracking-widest text-gray-600">Секции</div>
       <ol className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+        {/*
+          «Предложение» — не одиннадцатая секция карты, а другой жанр: карта
+          фиксирует факт, предложение показывает канон. Поэтому вне нумерации,
+          как и «Сторожа», и отмечено акцентом.
+        */}
+        <li className="shrink-0">
+          <a
+            href="#proposal"
+            className="flex items-baseline gap-2 whitespace-nowrap rounded-lg border border-status-success/30 bg-status-success/10 px-2 py-1.5 text-xs text-emerald-300 transition-colors hover:bg-status-success/15 hover:text-emerald-200"
+          >
+            <span className="font-mono text-[10px] text-emerald-600">ПР</span>
+            Предложение
+          </a>
+        </li>
         {SECTIONS.map((s, i) => (
           <li key={s.id} className="shrink-0">
             <a
@@ -1617,6 +1632,7 @@ export default function DesignMapPage() {
       <div className="lg:flex lg:gap-10">
         <Nav />
         <div className="min-w-0 flex-1 space-y-10">
+          <SectionProposal />
           <SectionTokens />
           <SectionSurfaces />
           <SectionRadii />
