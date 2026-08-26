@@ -52,6 +52,7 @@
     "test:forms": "pnpm test && pnpm test:integration",
     "check:drift": "npx tsx scripts/check-schema-drift.ts",
     "check:page-shell": "npx tsx scripts/check-page-shell.ts",
+    "design:map": "npx tsx scripts/design-map.ts",
     "seed:e2e": "npx tsx scripts/seed-e2e.ts",
     "visual:baseline": "npx tsx scripts/visual-baseline.ts",
     "visual:diff": "npx tsx scripts/visual-diff.ts",

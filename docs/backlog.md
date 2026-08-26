@@ -601,3 +601,215 @@ B-10 и B-12 закрыты в части Б, B-09 и B-11 — в части Г.
 раскладывает порядок артистов, поэтому `pnpm seed:e2e` (в том числе внутри
 `global-setup` playwright) между двумя съёмками даёт ложные DIFF на
 `/admin/analytics` и `/admin/artists`.
+
+---
+
+# Находки карты фактического дизайна (26.08.2026)
+
+Собраны не проходом глазами, а генератором: [scripts/design-map.ts](../scripts/design-map.ts)
+(`pnpm design:map`) читает `app/dashboard/**`, `components/**` и `components/ui/**`,
+складывает фактические значения в JSON, а страница `/dev/design-map` его рисует
+с живыми образцами. Отсюда и разница с прежними списками: они снимались по
+`app/dashboard/**`, а тело половины экранов живёт в `components/**`.
+
+Скоуп среза: 143 файла (51 экран, 29 компонентов кабинета, 42 файла кита,
+21 компонент вне кабинета), 3139 JSX-элементов, 38 роутов.
+
+**Ничего из списка не чинилось** — это инвентаризация. Пересобрать в любой
+момент: `pnpm design:map`.
+
+## Б-27. Запреты ESLint кончаются на границе `app/dashboard/**`
+
+`no-restricted-syntax` в [.eslintrc.json](../.eslintrc.json) объявлен в
+`overrides.files = ["app/dashboard/**"]`. Тело экранов, вынесенное в
+`components/**`, под правило не попадает — а это 29 файлов, которые
+монтируются в кабинете. Что там прямо сейчас, при формально зелёном линте:
+
+| Что | Где |
+|---|---|
+| raw `<button>` | [sidebar.tsx:119,210](../components/sidebar.tsx#L119), [top-nav.tsx:74,124](../components/top-nav.tsx#L74) |
+| raw `<table>` | [report-preview.tsx:102](../components/report-preview.tsx#L102) |
+| arbitrary-цвет | [unmapped-artists-panel.tsx:74,211,313](../components/analytics/unmapped-artists-panel.tsx#L74) — `bg-[#1a1a1a]`, `bg-[#141414]`, `hover:bg-[#141414]` |
+
+Плюс `app/layout.tsx:75,76` — `bg-[#0a0a0a]` на `html` и `body`. Это фон под
+всеми экранами кабинета, но файл вне скоупа правила.
+
+Правило написано и работает; расширяется одним ключом `files`. Цена расширения
+— перечисленные выше семь мест придётся или починить, или явно исключить.
+
+## Б-28. Фон оверлеев: шесть значений на восьми примитивах
+
+Жалоба владельца на «чёрный фон в выпадающих» имеет точный адрес — меню
+«Сервис»/«Ещё» задаёт себе буквально чёрный, тогда как соседний
+`DropdownMenu` берёт фон темы.
+
+| Класс | Реальное значение | Объявлено | Кто использует |
+|---|---|---|---|
+| `bg-popover` | `hsl(220 10% 12%)` | [dashboard.css:6](../app/dashboard/dashboard.css#L6) | Popover, DropdownMenu, Tooltip, Command |
+| `bg-background` | `hsl(0 0% 4%)` | [dashboard.css:2](../app/dashboard/dashboard.css#L2) | Dialog, Sheet |
+| `bg-surface-glass/50` | `rgb(12 12 12 / 0.5)` + blur | [tokens.css:54](../app/tokens.css#L54) | Select |
+| `bg-black/90` | `rgb(0 0 0 / 0.9)` | палитра Tailwind, не токен | **ActionMenu** ([action-menu.tsx](../components/ui/action-menu.tsx)) |
+| `bg-black/80` | `rgb(0 0 0 / 0.8)` | палитра Tailwind, не токен | подложка Dialog |
+| `bg-black/70` | `rgb(0 0 0 / 0.7)` | палитра Tailwind, не токен | подложка Sheet |
+
+Радиусы там же расходятся: `rounded-md` у Popover/DropdownMenu/Tooltip,
+`sm:rounded-lg` у Dialog, `rounded-xl` у Select.
+
+## Б-29. Кит оверлеев переопределяют почти в каждом вызове
+
+Сколько вызовов дописывают компоненту свой фон, рамку, радиус, тень или ширину
+поверх китовых:
+
+```
+DialogContent        13 вызовов → 12 с правками
+DropdownMenuContent   4 → 4      TooltipContent 3 → 3
+PopoverContent        2 → 2      SheetContent   1 → 1
+SelectContent        30 → 0      ActionMenu     4 → 0
+```
+
+То есть диалог из кита в чистом виде не используется практически нигде, а
+`SelectContent` — наоборот, эталон. Полный список правок с файлами и строками —
+в секции «Оверлеи» карты.
+
+## Б-30. Тёмных фонов в кабинете 25 разных значений
+
+C-05 закрывался как «хардкод → токены», и хардкод действительно почти ушёл. Но
+токенизация не сократила число значений, а только дала им имена:
+
+```
+10 токенов surface-*        (app/tokens.css)
+ 6 переменных тёмной темы   (--background, --card, --popover, --muted, --accent, --secondary)
+ 9 литералов в коде и CSS   (rgba(0,0,0,0.2…0.9) в шести градациях, #1a1a1a)
+```
+
+Отдельного разбора стоит `rgba(0,0,0,0.2)` — 12 вхождений, самое частое
+значение тени/фона мимо токенов.
+
+## Б-31. Радиус не связан с типом элемента
+
+Шкала в `tailwind.config.js` объявлена целиком (7 ступеней), но правила «какой
+элемент — какой радиус» нет. Из 16 типов элементов **11 несут больше одного
+радиуса**:
+
+| Тип | Радиусы на нём |
+|---|---|
+| кнопка | `rounded-lg`, `rounded-full`, `rounded-xl`, `rounded-none` |
+| карточка | `rounded-2xl`, `rounded-xl`, `rounded-lg` |
+| баннер | `rounded-lg`, `rounded-xl`, `rounded-2xl` |
+| поле | `rounded-lg`, `rounded-xl` |
+| пустое состояние | `rounded-xl`, `rounded-2xl` |
+
+Всего в кабинете 10 написаний `rounded-*`; самые частые — `rounded-lg` (115),
+`rounded-2xl` (76), `rounded-xl` (55), `rounded-full` (38).
+
+## Б-32. Тени: девять написаний, семь из них — arbitrary-строки
+
+Токена тени в `app/tokens.css` нет вовсе, поэтому тень пишется значением:
+
+```
+10 × shadow-[0_4px_20px_rgba(0,0,0,0.2)]     6 × shadow-2xl
+ 5 × shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]
+ 2 × shadow-[0_4px_20px_rgba(0,0,0,0.3)]      2 × shadow-[0_4px_30px_rgba(0,0,0,0.5)]
+ 2 × shadow-lg   2 × shadow-xl   1 × shadow-[0_8px_32px_rgba(0,0,0,0.25)]   1 × shadow-none
+```
+
+В ките — ещё 7 своих написаний. Ни одно не ловится линтером: запрет arbitrary
+касается только цвета в `bg-`/`text-`/`border-`.
+
+## Б-33. Слот `actions` шапки: восемь разных «первых» элементов
+
+Канон C-01 закрепил саму шапку — кегль, координаты, отступ, — но не содержимое
+слота действий. Отсюда и ощущение «кнопки в шапке в разном положении»:
+
+- **сколько действий:** 0 — на 15 шапках, 1 — на 8, 2 — на 3, **6** — на двух
+  (админская аналитика — три `Select`, `SegmentedControl` и два `DatePicker`;
+  артистская — `ProfileFilter`, два `Select`, `SegmentedControl` и два `DatePicker`);
+- **что стоит первым:** `Button variant=ghost` (3), `ActionMenu` (2),
+  `Button variant=cta` (2), `ProfileFilter` (2), `FilterChip`, `ProfileFilterUrl`,
+  `Select`, `span` — по одному;
+- на двух экранах primary (`cta`) стоит **вторым**, после `ghost`:
+  [releases/add](../app/dashboard/admin/releases/add/page.tsx),
+  [releases/zvonko-parser](../app/dashboard/admin/releases/zvonko-parser/page.tsx);
+- 6 шапок правят раскладку ряда через `rowClassName`, 4 — сам слот через
+  `actionsClassName`, то есть выравнивание задаётся по месту.
+
+Полная таблица «роут → что в actions, в каком порядке» — секция 8 карты.
+
+## Б-34. Раскладок загрузочного экрана десять, а не четыре
+
+Уточнение к B-03: тот список снимался по `app/dashboard/**`, а спиннер посреди
+экрана рисуют и компоненты. Фактически:
+
+```
+7 × flex items-center justify-center h-64          3 × flex justify-center py-16
+2 × flex justify-center items-center py-20         2 × flex justify-center py-8
+2 × flex items-center justify-center py-8          1 × flex justify-center py-12
+1 × flex justify-center py-10                      1 × flex min-h-[40vh] items-center justify-center
+1 × flex h-[280px] w-full items-center justify-center rounded-xl …
+1 × absolute inset-0 z-10 flex items-center justify-center bg-black/30 …
+```
+
+Новые по сравнению с B-03: `py-8` ([pending-signature-list.tsx:128](../components/pending-signature-list.tsx#L128),
+[reports-list.tsx:350,468](../components/reports-list.tsx#L350),
+[unregistered-reports-list.tsx:177](../components/unregistered-reports-list.tsx#L177)),
+`py-20` ([admin-releases-client.tsx:332](../app/dashboard/admin/releases/admin-releases-client.tsx#L332),
+[releases-client.tsx:147](../app/dashboard/artist/[username]/releases/releases-client.tsx#L147)),
+`py-12` ([playlists/history:281](../app/dashboard/admin/playlists/history/page.tsx#L281)),
+`py-10` ([admin/settings:449](../app/dashboard/admin/settings/page.tsx#L449)),
+`h-[280px]` ([streaming-chart-lazy.tsx:9](../components/streaming-chart-lazy.tsx#L9)).
+
+Заодно уточняется и B-04: фраз пустоты, нарисованных мимо `EmptyState`, —
+девять, и две из них уходят в `Banner`, то есть пустой список и ошибка на этих
+экранах выглядят одинаково.
+
+## Б-35. lucide в кабинете остался — шесть файлов (хвост Б-21)
+
+Б-21 закрывался проверкой «грепом по `app/dashboard/**`» и в этих границах
+верен. Но импорты остались в компонентах кабинета:
+[pending-signature-list.tsx:13](../components/pending-signature-list.tsx#L13),
+[report-processor.tsx:14](../components/report-processor.tsx#L14),
+[report-sort-controls.tsx:3](../components/report-sort-controls.tsx#L3),
+[reports-list.tsx:14](../components/reports-list.tsx#L14),
+[simple-report-uploader.tsx:11](../components/simple-report-uploader.tsx#L11),
+[unregistered-reports-list.tsx:18](../components/unregistered-reports-list.tsx#L18).
+Внутри `components/ui/**` lucide по-прежнему законен — это поставка shadcn.
+
+## Б-36. Мёртвый токен `--brand-cyan`
+
+Объявлен в [tokens.css:85](../app/tokens.css#L85) и продублирован утилитой
+`brand-cyan` в `tailwind.config.js`. Потребителей ноль — ни классом, ни через
+`var()`, ни в кабинете, ни на лендинге. Единственный токен без единого
+обращения; все десять `surface-*` востребованы, в том числе те, что видны
+только из CSS (`--surface-hover` — 3 обращения, `--surface-scrollbar-*` — 2 и 8).
+
+## Б-37. Arbitrary-значения размеров и позиций — 489 вхождений
+
+`z-[250]`, `max-h-[85vh]`, `w-[var(--radix-popover-trigger-width)]`,
+`max-[1023px]:…` и прочее в квадратных скобках. Запрет ESLint написан только
+для цвета, так что этот пласт не видит вообще никто. Часть из них осмысленна
+(переменные Radix, произвольные брейкпоинты канона шапки), часть — обход шкалы.
+Разделить их можно только глазами, поэтому здесь только масштаб.
+
+Заодно: `!important` в кабинете ровно один — `!max-w-lg` в
+[admin-releases-client.tsx:213](../app/dashboard/admin/releases/admin-releases-client.tsx#L213),
+и он борется с `.grid { max-width: 100% }` из `globals.css`. Это не находка, а
+маркер: каскад лендинга достаёт до кабинета.
+
+## Б-38. `<img>` вместо `next/image` — 17 мест в восьми файлах
+
+Известный долг (линтер даёт предупреждение, не ошибку), но списка до сих пор не
+было: [admin/artists/[id]](../app/dashboard/admin/artists/[id]/page.tsx),
+[admin/artists/add](../app/dashboard/admin/artists/add/page.tsx),
+[admin/playlists](../app/dashboard/admin/playlists/page.tsx),
+[admin/releases/zvonko-parser](../app/dashboard/admin/releases/zvonko-parser/page.tsx),
+[artist-settings-client](../app/dashboard/artist/[username]/settings/artist-settings-client.tsx),
+[dashboard-not-found](../components/dashboard-not-found.tsx),
+[sidebar](../components/sidebar.tsx), [top-nav](../components/top-nav.tsx).
+
+---
+
+**Итого по карте: двенадцать пунктов Б-27…Б-38, открыты все.** Три из них —
+уточнения уже известных (B-03 → Б-34, Б-21 → Б-35, C-05 → Б-30), остальные
+девять раньше не фиксировались. Самый дешёвый по цене решения — Б-36 (удалить
+мёртвый токен). Самый ценный для второй волны — Б-27: пока запрет не доходит до
+`components/**`, любой новый канон будет охраняться только на половине кода.
