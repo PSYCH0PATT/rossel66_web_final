@@ -35,7 +35,7 @@ interface ArtistReportsProps {
    * Не передан — это админская вкладка отчётов артиста, она не меняется.
    */
   balance?: ArtistBalance | null
-  /** Подзаголовок шапки; у объединённого экрана он про деньги, а не только про PDF. */
+  /** Подзаголовок шапки; у объединённого экрана он про деньги, а не только про файлы. */
   subtitle?: ReactNode
 }
 
@@ -45,7 +45,7 @@ export default function ArtistReports({
   artistName,
   title = "ОТЧЁТЫ",
   balance,
-  subtitle = "Квартальные отчёты, предпросмотр и скачивание PDF.",
+  subtitle = "Квартальные отчёты, предпросмотр и скачивание.",
 }: ArtistReportsProps) {
   /** Экран денег показывается только там, где есть баланс (кабинет артиста). */
   const showMoney = balance !== undefined
@@ -266,7 +266,7 @@ export default function ArtistReports({
                             <span className="material-symbols-outlined mr-2 text-[18px]" aria-hidden>
                               download
                             </span>
-                            Скачать PDF
+                            Скачать
                           </Button>
                         </div>
                         </div>
